@@ -1,0 +1,6077 @@
+{
+  "$schemaVersion": 1,
+  "generatedFrom": {
+    "note": "自動生成。手で編集しない。RETAC_SCHEMA_UPDATE=1 dotnet test で更新する",
+    "assemblies": [
+      "ReTAC.Domain",
+      "ReTAC.App"
+    ]
+  },
+  "settings": {
+    "file": "retac.settings.json",
+    "sourceType": "type:ReTAC.App.AppSettings",
+    "paths": {
+      "primary": "AppContext.BaseDirectory",
+      "fallback": "%APPDATA%\\ReTAC\\",
+      "specId": "R-55-3"
+    },
+    "versioning": {
+      "hasVersionField": false,
+      "migration": "forbidden",
+      "reason": "一般リリース前のため旧設定からの移行・互換は考慮しない"
+    },
+    "onLoadFailure": "silent-fallback-to-defaults",
+    "writeStrategy": {
+      "mode": "atomic-temp-rename",
+      "specId": "V-07"
+    },
+    "keys": [
+      {
+        "key": "KeepLastFolder",
+        "type": "bool",
+        "nullable": false,
+        "default": true
+      },
+      {
+        "key": "LastFolder",
+        "type": "string",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "key": "StartFolder",
+        "type": "string",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "key": "Resident",
+        "type": "bool",
+        "nullable": false,
+        "default": true
+      },
+      {
+        "key": "StartMinimized",
+        "type": "bool",
+        "nullable": false,
+        "default": false
+      },
+      {
+        "key": "WindowX",
+        "type": "int",
+        "nullable": false,
+        "default": -1
+      },
+      {
+        "key": "WindowY",
+        "type": "int",
+        "nullable": false,
+        "default": -1
+      },
+      {
+        "key": "WindowWidth",
+        "type": "int",
+        "nullable": false,
+        "default": 1200
+      },
+      {
+        "key": "WindowHeight",
+        "type": "int",
+        "nullable": false,
+        "default": 700
+      },
+      {
+        "key": "SortKey",
+        "type": "ReTAC.Domain.Listing.SortKey",
+        "nullable": false,
+        "default": "Name"
+      },
+      {
+        "key": "SortDirection",
+        "type": "ReTAC.Domain.Listing.SortDirection",
+        "nullable": false,
+        "default": "Ascending"
+      },
+      {
+        "key": "SortMode",
+        "type": "ReTAC.Domain.Listing.ComparisonMode",
+        "nullable": false,
+        "default": "Natural"
+      },
+      {
+        "key": "ShowFolders",
+        "type": "bool",
+        "nullable": false,
+        "default": true
+      },
+      {
+        "key": "ShowPrograms",
+        "type": "bool",
+        "nullable": false,
+        "default": true
+      },
+      {
+        "key": "ShowAssociated",
+        "type": "bool",
+        "nullable": false,
+        "default": true
+      },
+      {
+        "key": "ShowArchives",
+        "type": "bool",
+        "nullable": false,
+        "default": true
+      },
+      {
+        "key": "ShowOthers",
+        "type": "bool",
+        "nullable": false,
+        "default": true
+      },
+      {
+        "key": "ShowSystemFiles",
+        "type": "bool",
+        "nullable": false,
+        "default": true
+      },
+      {
+        "key": "ShowHiddenFiles",
+        "type": "bool",
+        "nullable": false,
+        "default": true
+      },
+      {
+        "key": "HiddenDrives",
+        "type": "List<string>",
+        "nullable": false,
+        "default": "[] (0 件)"
+      },
+      {
+        "key": "DriveFolders",
+        "type": "Dictionary<string, string>",
+        "nullable": false,
+        "default": "{} (0 件)"
+      },
+      {
+        "key": "ShowDesktopButton",
+        "type": "bool",
+        "nullable": false,
+        "default": true
+      },
+      {
+        "key": "Colors",
+        "type": "Dictionary<string, string>",
+        "nullable": false,
+        "default": "{} (0 件)"
+      },
+      {
+        "key": "FontFamily",
+        "type": "string",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "key": "FontSize",
+        "type": "float?",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "key": "KeyBindings",
+        "type": "Dictionary<string, string>",
+        "nullable": false,
+        "default": "{} (0 件)"
+      },
+      {
+        "key": "SuppressMultipleToolLaunch",
+        "type": "bool",
+        "nullable": false,
+        "default": true
+      },
+      {
+        "key": "ExternalTools",
+        "type": "List<ReTAC.Domain.Tools.ExternalTool>",
+        "nullable": false,
+        "default": "[] (3 件)"
+      },
+      {
+        "key": "NextExternalToolId",
+        "type": "int",
+        "nullable": false,
+        "default": 4
+      },
+      {
+        "key": "QuickAccess",
+        "type": "List<ReTAC.Domain.Navigation.QuickAccessEntry>",
+        "nullable": false,
+        "default": "[] (0 件)"
+      },
+      {
+        "key": "QuickAccessShowTitles",
+        "type": "bool",
+        "nullable": false,
+        "default": true
+      },
+      {
+        "key": "QuickAccessFixMissing",
+        "type": "bool",
+        "nullable": false,
+        "default": false
+      },
+      {
+        "key": "FolderHistory",
+        "type": "List<string>",
+        "nullable": false,
+        "default": "[] (0 件)"
+      }
+    ]
+  },
+  "types": {
+    "ReTAC.Domain.Commands.BuiltinTarget": {
+      "id": "type:ReTAC.Domain.Commands.BuiltinTarget",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Commands/CommandTarget.cs",
+      "fields": [
+        {
+          "name": "Command",
+          "type": "ReTAC.Domain.Commands.CommandId",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Commands.CommandId": {
+      "id": "type:ReTAC.Domain.Commands.CommandId",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Commands/CommandId.cs",
+      "doc": "R-13: コマンドIDは卓駆と同じ値を用いる。 ReTAC 独自のコマンドは卓駆が使用していない 0x9000 帯を用いる。 列挙するのは Phase 1 のスコープ内コマンドのみ。",
+      "members": [
+        "CopyFileNameOnly",
+        "VisibleDriveSettings",
+        "QuitAll",
+        "ColorAndFontSettings",
+        "KeyAssignSettings",
+        "ExternalToolSettings",
+        "OpenFile",
+        "CopyToFolder",
+        "Delete",
+        "MoveToFolder",
+        "Rename",
+        "ChangeAttributes",
+        "ConcatFiles",
+        "RunCommandLine",
+        "CreateShortcut",
+        "ShowProperties",
+        "SelectDrive",
+        "CreateFolder",
+        "QuickAccessSettings",
+        "GoRoot",
+        "QuickAccess",
+        "FolderHistory",
+        "FileTypeSettings",
+        "SortSettings",
+        "ToggleAllMarks",
+        "NewWindow",
+        "Refresh",
+        "InvertMarks",
+        "EnvironmentSettings",
+        "Quit",
+        "CopyFileName",
+        "ShowPopupMenu",
+        "GoParent",
+        "DriveByNumberKey",
+        "MarkBySameExtension",
+        "MarkByWildcard",
+        "DirectJump",
+        "ShowContextMenu",
+        "QuickAccessAdd",
+        "GoBack",
+        "GoForward",
+        "GoDesktop",
+        "CopyFileNameWithPath",
+        "CopyFileNameWithPathSlash",
+        "ExternalToolQueue",
+        "ClipboardCopy",
+        "ClipboardCut",
+        "ClipboardPaste",
+        "About"
+      ]
+    },
+    "ReTAC.Domain.Commands.CommandTarget": {
+      "id": "type:ReTAC.Domain.Commands.CommandTarget",
+      "kind": "abstract record",
+      "file": "src/ReTAC.Domain/Commands/CommandTarget.cs",
+      "doc": "キーやメニューが指す先（F-06）。組み込みのコマンドか、登録した外部ツール。 後から種類を足せるように、2 択の型（bool や enum）ではなく派生の record で表す（予定 §7）。 設定ファイルには の文字列で書く。"
+    },
+    "ReTAC.Domain.Commands.ToolTarget": {
+      "id": "type:ReTAC.Domain.Commands.ToolTarget",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Commands/CommandTarget.cs",
+      "fields": [
+        {
+          "name": "ToolId",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Entries.AttributeColor": {
+      "id": "type:ReTAC.Domain.Entries.AttributeColor",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Entries/AttributeColorRule.cs",
+      "doc": "属性配色の区分。実際の色は UI 層が割り当てる（Domain は System.Drawing に依存しない）。",
+      "members": [
+        "Normal",
+        "System",
+        "ReadOnly",
+        "Hidden",
+        "Compressed",
+        "Encrypted"
+      ]
+    },
+    "ReTAC.Domain.Entries.AttributeColorRule": {
+      "id": "type:ReTAC.Domain.Entries.AttributeColorRule",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Entries/AttributeColorRule.cs",
+      "doc": "R-06: システム ＞ 書込禁止 ＞ 隠し ＞ NTFS圧縮／暗号化 ＞ 通常。"
+    },
+    "ReTAC.Domain.Entries.Entry": {
+      "id": "type:ReTAC.Domain.Entries.Entry",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Entries/Entry.cs",
+      "doc": "ファイルリストの 1 行が表す対象。",
+      "fields": [
+        {
+          "name": "FullPath",
+          "type": "string",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "nullable": false,
+          "required": true,
+          "mutability": "init",
+          "doc": "表示名（基底名 + 拡張子）。"
+        },
+        {
+          "name": "BaseName",
+          "type": "string",
+          "nullable": false,
+          "required": true,
+          "mutability": "init",
+          "doc": "R-09: 名前の最後のピリオドより前。フォルダは名前全体。"
+        },
+        {
+          "name": "Extension",
+          "type": "string",
+          "nullable": false,
+          "required": true,
+          "mutability": "init",
+          "doc": "R-07: ピリオドを含む拡張子。フォルダは常に空。"
+        },
+        {
+          "name": "Kind",
+          "type": "ReTAC.Domain.Entries.EntryKind",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "Attributes",
+          "type": "System.IO.FileAttributes",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "Size",
+          "type": "long",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "LastWriteTime",
+          "type": "System.DateTime",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "IsParent",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only",
+          "doc": "R-04: 親フォルダ項目はソート対象外・マーク対象外。"
+        }
+      ]
+    },
+    "ReTAC.Domain.Entries.EntryKind": {
+      "id": "type:ReTAC.Domain.Entries.EntryKind",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Entries/Entry.cs",
+      "doc": "エントリの種別。Parent は親フォルダ項目（R-04）。",
+      "members": [
+        "Parent",
+        "Folder",
+        "File"
+      ]
+    },
+    "ReTAC.Domain.FileOps.ConflictResolver": {
+      "id": "type:ReTAC.Domain.FileOps.ConflictResolver",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/FileOps/CopyPolicy.cs",
+      "doc": "R-41-4: 同名衝突時の複写条件を本システムが判定し、実際に転送すべき対象だけを OS に渡す。 OS の衝突解決 UI に丸投げしない。"
+    },
+    "ReTAC.Domain.FileOps.CopyCondition": {
+      "id": "type:ReTAC.Domain.FileOps.CopyCondition",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/FileOps/CopyPolicy.cs",
+      "doc": "R-41-5: 同名衝突時の複写条件。既定は「新しい時に複写」。",
+      "members": [
+        "NewerOnly",
+        "Overwrite",
+        "Skip",
+        "RenameCopy"
+      ]
+    },
+    "ReTAC.Domain.FileOps.CopyPlan": {
+      "id": "type:ReTAC.Domain.FileOps.CopyPlan",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/FileOps/CopyPlan.cs",
+      "fields": [
+        {
+          "name": "Folders",
+          "type": "IReadOnlyList<string>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "先に作っておく必要のあるフォルダ（深い順ではなく浅い順）"
+        },
+        {
+          "name": "Items",
+          "type": "IReadOnlyList<ReTAC.Domain.FileOps.CopyPlanItem>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "実際に OS へ渡す転送"
+        },
+        {
+          "name": "Skipped",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "複写条件によって転送しないと判断した件数"
+        },
+        {
+          "name": "Conflicts",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "同名衝突が起きた件数。0 なら宛先に重なるものが一つも無いことを意味する。 移動をフォルダごと OS に渡してよいかの判断に使う（数千件の移動で効く）。"
+        }
+      ]
+    },
+    "ReTAC.Domain.FileOps.CopyPlanItem": {
+      "id": "type:ReTAC.Domain.FileOps.CopyPlanItem",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/FileOps/CopyPlan.cs",
+      "doc": "転送 1 件。フォルダは作るだけで、転送するのはファイルだけ。",
+      "fields": [
+        {
+          "name": "Source",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "転送元のファイル"
+        },
+        {
+          "name": "DestinationFolder",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "転送先のフォルダ（存在しなければ作る）"
+        },
+        {
+          "name": "NewName",
+          "type": "string",
+          "nullable": true,
+          "required": false,
+          "mutability": "init",
+          "doc": "別名で複写する場合の名前。元の名前のままなら null"
+        }
+      ]
+    },
+    "ReTAC.Domain.FileOps.CopyPlanner": {
+      "id": "type:ReTAC.Domain.FileOps.CopyPlanner",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/FileOps/CopyPlan.cs",
+      "doc": "R-41-4: 同名衝突時の複写条件を自前で判定し、実際に転送すべき対象だけを OS に渡すための計画を作る。 フォルダは再帰的に辿る。これにより「新しい時に複写」が何百件の衝突でも 1 回の指定で済む（R-41-6）。"
+    },
+    "ReTAC.Domain.FileOps.CopyPlanner+Conflict": {
+      "id": "type:ReTAC.Domain.FileOps.CopyPlanner+Conflict",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/FileOps/CopyPlan.cs",
+      "fields": [
+        {
+          "name": "Source",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Destination",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "SourceTime",
+          "type": "System.DateTime",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "DestinationTime",
+          "type": "System.DateTime",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "SourceSize",
+          "type": "long",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "DestinationSize",
+          "type": "long",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.FileOps.DropAction": {
+      "id": "type:ReTAC.Domain.FileOps.DropAction",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/FileOps/DropRules.cs",
+      "doc": "ドロップで起こす操作。",
+      "members": [
+        "None",
+        "Copy",
+        "Move"
+      ]
+    },
+    "ReTAC.Domain.FileOps.DropRules": {
+      "id": "type:ReTAC.Domain.FileOps.DropRules",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/FileOps/DropRules.cs",
+      "doc": "R-65: ドラッグ＆ドロップで「コピーになるか移動になるか」の判定。 Windows の作法に合わせる ── 同じドライブなら移動、別のドライブならコピー。 `Ctrl` はコピー、`Shift` は移動を強制する。利用者はこの挙動を他のアプリで身につけている。"
+    },
+    "ReTAC.Domain.FileOps.FileConcat": {
+      "id": "type:ReTAC.Domain.FileOps.FileConcat",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/FileOps/FileConcat.cs",
+      "doc": "ファイルの連結（0x82E4）。 R-35: 連結順は利用者が並べ替えられること。順序の指定ができなければ機能として成立しない。 R-35-2: オプションは「EOF をカットする」（既定オン）と「末尾に改行コードをつける」の 2 つ。"
+    },
+    "ReTAC.Domain.FileOps.FileNameRules": {
+      "id": "type:ReTAC.Domain.FileOps.FileNameRules",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/FileOps/FileNameRules.cs",
+      "doc": "ファイル名・フォルダ名として使えるかの検査。R-48 の「誤りは中止せず入力欄に戻す」ための文言を返す。 名前の変更（`N`）・フォルダ作成（`K`）・名前を変えて複写（R-63）で共用する。"
+    },
+    "ReTAC.Domain.FileOps.TransferDecision": {
+      "id": "type:ReTAC.Domain.FileOps.TransferDecision",
+      "kind": "struct",
+      "file": "src/ReTAC.Domain/FileOps/CopyPolicy.cs",
+      "fields": [
+        {
+          "name": "Transfer",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "OS に渡して実際に転送するか。"
+        },
+        {
+          "name": "RenameTarget",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "別名で複写するか（Transfer が true のときのみ意味を持つ）。"
+        }
+      ]
+    },
+    "ReTAC.Domain.FileOps.TransferGuards": {
+      "id": "type:ReTAC.Domain.FileOps.TransferGuards",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/FileOps/TransferGuards.cs",
+      "doc": "ファイルシステムを辿る／転送するときに、触ってはいけない対象を外すための判断。 この 2 つは同じ判断が複数の経路で要る。散らすと片方だけ直して片方が残るので （実際にそうなっていた）、ここ 1 か所に置いて全経路から呼ぶ。"
+    },
+    "ReTAC.Domain.Formatting.Display": {
+      "id": "type:ReTAC.Domain.Formatting.Display",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Formatting/Display.cs",
+      "doc": "ステータスバーの表示書式。5-1 節「ファイル日付は西暦 4 桁」・R-69「単位付き表示に固定」。"
+    },
+    "ReTAC.Domain.Formatting.NameFormat": {
+      "id": "type:ReTAC.Domain.Formatting.NameFormat",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Formatting/NameFormats.cs",
+      "doc": "`I`（ファイル名をコピー）の 3 形式（D-04 / scope §7.1）。",
+      "members": [
+        "PathAndName",
+        "NameOnly",
+        "SlashPath"
+      ]
+    },
+    "ReTAC.Domain.Formatting.NameFormats": {
+      "id": "type:ReTAC.Domain.Formatting.NameFormats",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Formatting/NameFormats.cs"
+    },
+    "ReTAC.Domain.Keys.DefaultKeyMap": {
+      "id": "type:ReTAC.Domain.Keys.DefaultKeyMap",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+      "doc": "R-14: 現行の TACKEY.KFM 全 65 件を初期キーマップとして組み込む。 スコープ外の 6 件（F=内蔵検索 / P=圧縮 / U=書庫復元 / Y=絞込み / F2=CTRL+キー実行 / F10=サブ関連付け）は 未割り当てとする（X-01・X-03）。 結果: ReTAC では Esc を割り当て枠に含めないため、修飾なし・Shift の 64 枠のうち 39 枠が有効、25 枠が空。 Ctrl の 48 枠（F-06）には既定の割り当てを付けない。 B-17: マウスの 3 枠（R-73）はボタン4/5 の 2 枠が有効。ボタン3 は空。 F-01: E / Shift+Enter / V / Z / F3 は、初期登録の外部ツール（）を指す。"
+    },
+    "ReTAC.Domain.Keys.KeyBinding": {
+      "id": "type:ReTAC.Domain.Keys.KeyBinding",
+      "kind": "struct",
+      "file": "src/ReTAC.Domain/Keys/KeyMap.cs",
+      "doc": "キーバインド。仮想キーコード（VK_*）＋ Shift ＋ Ctrl（F-06）。Alt はキーマップに含まれない。 Ctrl+Shift の枠は無い（仕様書 F-06）。",
+      "fields": [
+        {
+          "name": "VirtualKey",
+          "type": "ushort",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Shift",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Ctrl",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Keys.KeyMap": {
+      "id": "type:ReTAC.Domain.Keys.KeyMap",
+      "kind": "sealed class",
+      "file": "src/ReTAC.Domain/Keys/KeyMap.cs",
+      "doc": "R-12: キー入力からコマンドへの解決は、この 1 つの経路だけで行う。",
+      "fields": [
+        {
+          "name": "Bindings",
+          "type": "IReadOnlyDictionary<ReTAC.Domain.Keys.KeyBinding, ReTAC.Domain.Commands.CommandTarget>",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        }
+      ]
+    },
+    "ReTAC.Domain.Keys.KeySlotList": {
+      "id": "type:ReTAC.Domain.Keys.KeySlotList",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Keys/KeySlotList.cs",
+      "doc": "キー割り当ての枠（5-2 節 / F-06）。表示と保存の表記は App の KeySlots が受け持つ。 修飾なし・Shift の 64 枠: 英字 26 ＋ 数字 10 ＋ F キー 12 ＋ Shift+F キー 12 ＋ その他 4（Enter・Shift+Enter・BackSpace・Delete）。 卓駆の `TACKEY.KFM` は 65 枠だが、Esc は割り当てさせない（R-18 により常に「中止」として働く）。 Ctrl の 48 枠: 英字 23（C / X / V は固定のキー・R-25）＋ 数字 10 ＋ F キー 12 ＋ Enter・BackSpace・Delete。Ctrl+Shift は作らない。 マウスの 3 枠（R-73）: ボタン3（ホイール押し込み）・ボタン4・ボタン5。左右のボタンは固定なので枠に無い。"
+    },
+    "ReTAC.Domain.Keys.Vk": {
+      "id": "type:ReTAC.Domain.Keys.Vk",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+      "doc": "Phase 1 で使う仮想キーコード。値は Win32 の VK_* と同じ（WinForms の Keys とも一致する）。"
+    },
+    "ReTAC.Domain.Listing.ColumnLayout": {
+      "id": "type:ReTAC.Domain.Listing.ColumnLayout",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
+      "doc": "仕様書 §5.1 のレイアウト計算。R-01-3（ジャストフィット）・R-01-6（拡張子の固定オフセット）。 列幅はウィンドウ幅から独立し、フォルダを開くたびに再計算する（N-04-3）。 R-66-3: すべて実測値と DPI から算出し、物理ピクセルを直書きしない。 文字の実測は呼び出し側（描画層）が行い、ここには結果の数値だけを渡す。",
+      "fields": [
+        {
+          "name": "RowHeight",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "IconWidth",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "ColumnPadding",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init",
+          "doc": "B-07: 列の先頭と末尾に置く余白。卓駆と同じく、左端にアイコンが接しないようにする。"
+        },
+        {
+          "name": "ExtensionOffset",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init",
+          "doc": "列の先頭から拡張子を描き始めるまでの距離（R-01-6）。"
+        },
+        {
+          "name": "ColumnWidth",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "RowsPerColumn",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "ColumnCount",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "TotalWidth",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        }
+      ]
+    },
+    "ReTAC.Domain.Listing.ComparisonMode": {
+      "id": "type:ReTAC.Domain.Listing.ComparisonMode",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Listing/SortOrder.cs",
+      "doc": "R-05-2: ソートキーから独立した第 3 の軸。",
+      "members": [
+        "Strict",
+        "Natural"
+      ]
+    },
+    "ReTAC.Domain.Listing.FileTypeFilter": {
+      "id": "type:ReTAC.Domain.Listing.FileTypeFilter",
+      "kind": "sealed class",
+      "file": "src/ReTAC.Domain/Listing/FileTypeFilter.cs",
+      "doc": "表示するファイルタイプの設定（0x82FF）。16.4 節の 7 項目。現行はすべて ON。 隠し・システムは属性で、それ以外は種類で決まる。",
+      "fields": [
+        {
+          "name": "Folders",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "set"
+        },
+        {
+          "name": "Programs",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "set"
+        },
+        {
+          "name": "Associated",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "set"
+        },
+        {
+          "name": "Archives",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "set"
+        },
+        {
+          "name": "Others",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "set"
+        },
+        {
+          "name": "SystemFiles",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "set"
+        },
+        {
+          "name": "HiddenFiles",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "set"
+        },
+        {
+          "name": "AcceptsEverything",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only",
+          "doc": "すべて ON か。既定の状態と同じなら列挙時に判定そのものを省ける。"
+        }
+      ]
+    },
+    "ReTAC.Domain.Listing.FileTypeKind": {
+      "id": "type:ReTAC.Domain.Listing.FileTypeKind",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Listing/FileTypeFilter.cs",
+      "doc": "表示ファイルタイプの区分（16.4 節の 7 項目のうち、種類で分かれる 5 つ）。",
+      "members": [
+        "Folder",
+        "Program",
+        "Associated",
+        "Archive",
+        "Other"
+      ]
+    },
+    "ReTAC.Domain.Listing.FolderEnumerator": {
+      "id": "type:ReTAC.Domain.Listing.FolderEnumerator",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Listing/FolderEnumerator.cs",
+      "doc": "カレントフォルダ直下を列挙し、親フォルダ項目を先頭に付けてソートする。"
+    },
+    "ReTAC.Domain.Listing.FolderListing": {
+      "id": "type:ReTAC.Domain.Listing.FolderListing",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Listing/FolderListing.cs",
+      "doc": "R-04 / R-05: 親フォルダ項目を先頭に固定し、フォルダ優先で並べる。"
+    },
+    "ReTAC.Domain.Listing.NameComparers": {
+      "id": "type:ReTAC.Domain.Listing.NameComparers",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Listing/NameComparers.cs",
+      "doc": "R-05-3: 名前・拡張子の比較は大文字小文字を区別しない。"
+    },
+    "ReTAC.Domain.Listing.SortDirection": {
+      "id": "type:ReTAC.Domain.Listing.SortDirection",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Listing/SortOrder.cs",
+      "members": [
+        "Ascending",
+        "Descending"
+      ]
+    },
+    "ReTAC.Domain.Listing.SortKey": {
+      "id": "type:ReTAC.Domain.Listing.SortKey",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Listing/SortOrder.cs",
+      "members": [
+        "Name",
+        "Extension",
+        "Size",
+        "Date",
+        "None"
+      ]
+    },
+    "ReTAC.Domain.Listing.SortOrder": {
+      "id": "type:ReTAC.Domain.Listing.SortOrder",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Listing/SortOrder.cs",
+      "doc": "R-05-2: ソートキー × ソート方向 × 比較方式 の 3 軸。",
+      "fields": [
+        {
+          "name": "Key",
+          "type": "ReTAC.Domain.Listing.SortKey",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Direction",
+          "type": "ReTAC.Domain.Listing.SortDirection",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Mode",
+          "type": "ReTAC.Domain.Listing.ComparisonMode",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Listing.Wildcard": {
+      "id": "type:ReTAC.Domain.Listing.Wildcard",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Listing/Wildcard.cs",
+      "doc": "ワイルドカードで選択（R-22 / 0x8326）で使うパターン照合。大文字小文字を区別しない。"
+    },
+    "ReTAC.Domain.Navigation.FolderHistory": {
+      "id": "type:ReTAC.Domain.Navigation.FolderHistory",
+      "kind": "sealed class",
+      "file": "src/ReTAC.Domain/Navigation/FolderHistory.cs",
+      "doc": "フォルダ履歴（0x82FD）と前後フォルダ（0x832D / 0x832E）。 N-02: 移動の履歴とコピー先の履歴は共通のひとつ。宛先入力欄もこの履歴を引く。",
+      "fields": [
+        {
+          "name": "Recent",
+          "type": "IReadOnlyList<string>",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only",
+          "doc": "新しい順。ポップアップ（N-06）と宛先入力欄の ↑ が引く。"
+        },
+        {
+          "name": "CanGoBack",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "CanGoForward",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        }
+      ]
+    },
+    "ReTAC.Domain.Navigation.InputText": {
+      "id": "type:ReTAC.Domain.Navigation.InputText",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Navigation/InputText.cs",
+      "doc": "B-01: 入力欄から受け取ったパス・名前の端を落とす。 string.Trim() は Unicode の空白をすべて落とすため、全角空白（U+3000）まで消える。 末尾に全角空白を持つフォルダは Windows 上に実在するので、これを落とすと 「作成できない」「存在しないと判定される」という形で表に出る。 落とす対象を ASCII の空白とタブに限る。Windows はファイル名の末尾に ASCII 空白を許さないので、こちらは落とすのが正しい。"
+    },
+    "ReTAC.Domain.Navigation.PathResolver": {
+      "id": "type:ReTAC.Domain.Navigation.PathResolver",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
+      "doc": "R-61: コピー・移動の宛先入力欄が受け付ける相対パスを、カレントフォルダ基準で解決する。"
+    },
+    "ReTAC.Domain.Navigation.QuickAccessEntry": {
+      "id": "type:ReTAC.Domain.Navigation.QuickAccessEntry",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Navigation/QuickAccessList.cs",
+      "doc": "クイックアクセスの登録項目。タイトル（フォルダの別名）＋ フォルダパスの対（16.2 節）。",
+      "fields": [
+        {
+          "name": "Title",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Path",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Navigation.QuickAccessList": {
+      "id": "type:ReTAC.Domain.Navigation.QuickAccessList",
+      "kind": "sealed class",
+      "file": "src/ReTAC.Domain/Navigation/QuickAccessList.cs",
+      "doc": "クイックアクセス（0x82FC）の登録リストと実行時オプション。 設定・編集（0x82FA）と追加（0x832C）が触る対象でもある。",
+      "fields": [
+        {
+          "name": "Items",
+          "type": "IReadOnlyList<ReTAC.Domain.Navigation.QuickAccessEntry>",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "ShowTitles",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "set",
+          "doc": "実行時オプション「タイトル（フォルダの別名）を表示する」。現行設定は ON（16.2 節）。"
+        },
+        {
+          "name": "FixMissingAutomatically",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "set",
+          "doc": "実行時オプション「フォルダが存在しない時は自動でリストを修正する」。現行設定は OFF。"
+        }
+      ]
+    },
+    "ReTAC.Domain.Selection.CursorRestore": {
+      "id": "type:ReTAC.Domain.Selection.CursorRestore",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Selection/CursorRestore.cs",
+      "doc": "B-09 / R-70: 再表示（移動・削除・自動更新のあと）でカーソルをどこに置くか。 カーソルの項目が残っていればそこ。消えていれば、元の一覧でその上にあった項目のうち 再表示後も残っている最も近いもの。どれも残っていなければ先頭。 「元の添字 − 1」で決めないのは、マークをまとめて移動すると 1 つ上も消えていることが多く、 添字では新しい一覧の無関係な項目を指すため。名前で上へ辿れば並びの意味が保たれる。"
+    },
+    "ReTAC.Domain.Selection.ListState": {
+      "id": "type:ReTAC.Domain.Selection.ListState",
+      "kind": "sealed class",
+      "file": "src/ReTAC.Domain/Selection/ListState.cs",
+      "doc": "カーソルとマークの状態。カーソル移動はマークを変更しない（R-11）。 マークが変化するのは R-11-2 が列挙する操作のみ。",
+      "fields": [
+        {
+          "name": "Entries",
+          "type": "IReadOnlyList<ReTAC.Domain.Entries.Entry>",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "Count",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "CursorIndex",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "Marks",
+          "type": "IReadOnlySet<int>",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "Cursor",
+          "type": "ReTAC.Domain.Entries.Entry",
+          "nullable": true,
+          "required": false,
+          "mutability": "get-only"
+        }
+      ]
+    },
+    "ReTAC.Domain.Selection.ListSummary": {
+      "id": "type:ReTAC.Domain.Selection.ListSummary",
+      "kind": "struct",
+      "file": "src/ReTAC.Domain/Selection/ListSummary.cs",
+      "doc": "ステータスバー ②③ 区画の内容（R-34 / R-34-2 / R-34-3）。 利用者による実機確認（2026-09-09）で、②③ は同時にではなく区画ごとに独立して 切り替わることが分かった。R-34-3 の本文より、こちらの実測が正である。 マークなし②③ ともアイコンはそのまま。カレントフォルダ全体の件数を表示ファイルだけマーク③ のみ★に切り替わりマーク数を表示。② はフォルダアイコンのまま総数を表示フォルダをマーク②③ とも★に切り替わり、それぞれマーク数を表示",
+      "fields": [
+        {
+          "name": "FolderCount",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "FolderFromMarks",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "FileCount",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "TotalSize",
+          "type": "long",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "FileFromMarks",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.ArgumentExpander": {
+      "id": "type:ReTAC.Domain.Tools.ArgumentExpander",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Tools/ArgumentExpander.cs",
+      "doc": "引数の展開（F-02 / R-71 / R-72）。"
+    },
+    "ReTAC.Domain.Tools.ArgumentTemplate": {
+      "id": "type:ReTAC.Domain.Tools.ArgumentTemplate",
+      "kind": "sealed class",
+      "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
+      "doc": "外部ツールの引数の文字列を解析したもの（F-02 / R-71）。 引数を区切ってから展開するので、展開した値に空白があっても 1 つの引数のまま渡る。 知らない名前は誤りにする。文字どおり渡すと、後で同じ名前のマクロを足した瞬間に既存の設定の意味が変わる（予定 §7 C-1）。",
+      "fields": [
+        {
+          "name": "Arguments",
+          "type": "IReadOnlyList<ReTAC.Domain.Tools.TemplateArgument>",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "Prompts",
+          "type": "IReadOnlyList<ReTAC.Domain.Tools.PromptRequest>",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "Errors",
+          "type": "IReadOnlyList<ReTAC.Domain.Tools.TemplateError>",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "IsValid",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.DefaultExternalTools": {
+      "id": "type:ReTAC.Domain.Tools.DefaultExternalTools",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
+      "doc": "初期状態の 3 件（F-01）。既定のキー割り当て（）がこの番号を指す。 B-05: 既定値に誰かの好みは埋めない。ただし設定ファイルが無い環境でも最低限動くことは それとは別の要件なので、どの Windows にも必ずある notepad.exe と cmd.exe を置く。 好みの道具に替えたい利用者は外部ツールの設定（0x815A）で変えられる。 ここに特定の製品をインストールした環境でしか通らないパスを足さないこと。 エディタは ${file}、ビューアは ${file}! と、必須マクロの有無をわざと違えてある。 対象が無いときエディタは空のまま開き、ビューアは起動しない。初回の利用者がこの差に触れることで、 マクロの ! の意味が自然と分かる（F-02）。"
+    },
+    "ReTAC.Domain.Tools.ExternalTool": {
+      "id": "type:ReTAC.Domain.Tools.ExternalTool",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
+      "doc": "外部ツール 1 件（F-01）。件数可変で登録し、キー割り当てとメニューは で参照する （名前で参照すると改名で外れる）。設定 JSON にそのまま載るので required を付けない（S-14）。",
+      "fields": [
+        {
+          "name": "Id",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Name",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Path",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "実行ファイル。名前だけ（git.exe）でもよい。空なら何もしない"
+        },
+        {
+          "name": "Arguments",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "マクロを書ける（F-02）"
+        },
+        {
+          "name": "LaunchPerItem",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "全体の設定「連続起動はしない」が OFF のときだけ効く。外部ツールキューで順番に処理する（F-05）"
+        },
+        {
+          "name": "ShowInPopup",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "G →「外部ツール ▶」に出す（F-08）"
+        },
+        {
+          "name": "KeepWindowOpen",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "コンソールのツール向け。終了後もキーを押すまで結果を残す（F-03）"
+        },
+        {
+          "name": "ConfirmBeforeRun",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "展開後のコマンドラインを見せてから起動する（F-03）"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.ExternalToolQueue": {
+      "id": "type:ReTAC.Domain.Tools.ExternalToolQueue",
+      "kind": "sealed class",
+      "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
+      "doc": "外部ツールキュー（F-05）。「マークした項目ごとに起動する」を、前の 1 件の終了を待ってから次を起動する形で処理する。 完全に独立した仕組みで、ReTAC 内部の処理や将来の git 統合の処理は使わない（予定 §7 C-2）。 起動と終了待ちは run に任せる（App がプロセスを扱う）。このクラスはプロセスを知らない。 待つのは裏のスレッドで、ReTAC の操作は止めない（R-23）。",
+      "fields": [
+        {
+          "name": "WaitingCount",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only",
+          "doc": "待っている件数（動いている 1 件を含まない）。ReTAC の終了時の確認に使う（K-5）。"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.LaunchPlanner": {
+      "id": "type:ReTAC.Domain.Tools.LaunchPlanner",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
+      "doc": "外部ツールの 1 回の実行を、起動の並びにする（F-03 / F-09）。 実効対象を求めるのはこちら（コマンドの側）で、起動の処理は渡された対象だけを扱う。"
+    },
+    "ReTAC.Domain.Tools.LaunchRequest": {
+      "id": "type:ReTAC.Domain.Tools.LaunchRequest",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
+      "doc": "1 回の起動（F-03）。",
+      "fields": [
+        {
+          "name": "Tool",
+          "type": "ReTAC.Domain.Tools.ExternalTool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Arguments",
+          "type": "IReadOnlyList<string>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "WorkingDirectory",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "常にカレントフォルダ（R-37-3）。値として持ち、奥で決め打ちしない"
+        },
+        {
+          "name": "TargetLabel",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "外部ツールキューの一覧に出す対象の名前"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.LaunchTargets": {
+      "id": "type:ReTAC.Domain.Tools.LaunchTargets",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Tools/LaunchTargets.cs",
+      "doc": "プロパティの表示（`R`）で開く対象の決め方（R-68 / R-56-2 / R-56-3）。 外部ツールは を使う（`..` を含める点が違う）。 どちらも全体の設定「複数選択の時外部ツールの連続起動はしない」に従う（F-09）。"
+    },
+    "ReTAC.Domain.Tools.LiteralPart": {
+      "id": "type:ReTAC.Domain.Tools.LiteralPart",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
+      "fields": [
+        {
+          "name": "Text",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.MacroCatalog": {
+      "id": "type:ReTAC.Domain.Tools.MacroCatalog",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
+      "doc": "外部ツールの設定ダイアログから開くマクロの一覧（F-04）。 利用者自身も名前と使い方を覚えきれないので、選んで挿入できるようにする（予定 §3.1.1）。 スクリプトの例は例であって既定値ではない（予定 §1.4 A-4）。"
+    },
+    "ReTAC.Domain.Tools.MacroCatalogEntry": {
+      "id": "type:ReTAC.Domain.Tools.MacroCatalogEntry",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
+      "fields": [
+        {
+          "name": "Group",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Label",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Insert",
+          "type": "string",
+          "nullable": true,
+          "required": false,
+          "mutability": "init",
+          "doc": "引数欄に挿入する文字。挿入しない項目（書き方の説明・例）は null"
+        },
+        {
+          "name": "CaretOffset",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "挿入後にカーソルを置く位置（挿入した文字の先頭から）"
+        },
+        {
+          "name": "Description",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.MacroContext": {
+      "id": "type:ReTAC.Domain.Tools.MacroContext",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/ArgumentExpander.cs",
+      "fields": [
+        {
+          "name": "Targets",
+          "type": "IReadOnlyList<ReTAC.Domain.Entries.Entry>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "渡す対象（表示順）。カーソルが .. のときは親フォルダ項目を含む"
+        },
+        {
+          "name": "Cursor",
+          "type": "ReTAC.Domain.Entries.Entry",
+          "nullable": true,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "CurrentFolder",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "PromptAnswers",
+          "type": "IReadOnlyList<string>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "入力ダイアログで入力された値。 と同じ順"
+        },
+        {
+          "name": "PathForm",
+          "type": "Func<string, string>",
+          "nullable": true,
+          "required": false,
+          "mutability": "init",
+          "doc": "パスの値に掛ける変換。長いパスを 8.3 形式にするために App が渡す"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.MacroName": {
+      "id": "type:ReTAC.Domain.Tools.MacroName",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
+      "doc": "外部ツールの引数に書けるマクロ（F-02）。名前は VS Code の変数に合わせる。",
+      "members": [
+        "File",
+        "Path",
+        "FileBasenameNoExtension",
+        "FileExtname",
+        "CursorFile",
+        "CursorPath",
+        "Cwd",
+        "Prompt"
+      ]
+    },
+    "ReTAC.Domain.Tools.MacroPart": {
+      "id": "type:ReTAC.Domain.Tools.MacroPart",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
+      "fields": [
+        {
+          "name": "Name",
+          "type": "ReTAC.Domain.Tools.MacroName",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Required",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "直後の !。空になったらツールを起動しない"
+        },
+        {
+          "name": "PromptIndex",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "${prompt} のとき、何番目の入力か。それ以外は -1"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.PromptRequest": {
+      "id": "type:ReTAC.Domain.Tools.PromptRequest",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
+      "fields": [
+        {
+          "name": "Title",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "空ならツールの名前をタイトルにする"
+        },
+        {
+          "name": "Default",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.QueueEntry": {
+      "id": "type:ReTAC.Domain.Tools.QueueEntry",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
+      "fields": [
+        {
+          "name": "Request",
+          "type": "ReTAC.Domain.Tools.LaunchRequest",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "State",
+          "type": "ReTAC.Domain.Tools.QueueItemState",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "ExitCode",
+          "type": "int?",
+          "nullable": true,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Killed",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Error",
+          "type": "string",
+          "nullable": true,
+          "required": false,
+          "mutability": "init",
+          "doc": "起動できなかったときの理由"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.QueueItemState": {
+      "id": "type:ReTAC.Domain.Tools.QueueItemState",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
+      "members": [
+        "Waiting",
+        "Running",
+        "Succeeded",
+        "Failed",
+        "Cancelled"
+      ]
+    },
+    "ReTAC.Domain.Tools.RunOutcome": {
+      "id": "type:ReTAC.Domain.Tools.RunOutcome",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
+      "fields": [
+        {
+          "name": "ExitCode",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Killed",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "利用者が「この 1 件を強制終了する」で終わらせた"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.TemplateArgument": {
+      "id": "type:ReTAC.Domain.Tools.TemplateArgument",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
+      "fields": [
+        {
+          "name": "Parts",
+          "type": "IReadOnlyList<ReTAC.Domain.Tools.TemplatePart>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Quoted",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "引用符を含んでいた。マクロが空になっても \"\" として残す"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.TemplateError": {
+      "id": "type:ReTAC.Domain.Tools.TemplateError",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
+      "fields": [
+        {
+          "name": "Position",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Message",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.TemplatePart": {
+      "id": "type:ReTAC.Domain.Tools.TemplatePart",
+      "kind": "abstract record",
+      "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs"
+    }
+  },
+  "edges": [
+    {
+      "from": "type:ReTAC.Domain.Commands.BuiltinTarget",
+      "to": "type:ReTAC.Domain.Commands.CommandId",
+      "type": "1:1",
+      "fk": {
+        "field": "Command",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Commands.ToolTarget",
+      "to": "type:ReTAC.Domain.Tools.ExternalTool",
+      "type": "N:1",
+      "fk": {
+        "field": "ToolId",
+        "byValue": true
+      },
+      "onDelete": "UNENFORCED",
+      "candidateId": "fk:ReTAC.Domain.Commands.ToolTarget#ToolId"
+    },
+    {
+      "from": "type:ReTAC.Domain.Entries.Entry",
+      "to": "type:ReTAC.Domain.Entries.EntryKind",
+      "type": "1:1",
+      "fk": {
+        "field": "Kind",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.FileOps.CopyPlan",
+      "to": "type:ReTAC.Domain.FileOps.CopyPlanItem",
+      "type": "1:N",
+      "fk": {
+        "field": "Items",
+        "container": "IReadOnlyList<ReTAC.Domain.FileOps.CopyPlanItem>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Keys.KeyMap",
+      "to": "type:ReTAC.Domain.Commands.CommandTarget",
+      "type": "1:N",
+      "fk": {
+        "field": "Bindings",
+        "container": "IReadOnlyDictionary<ReTAC.Domain.Keys.KeyBinding, ReTAC.Domain.Commands.CommandTarget>",
+        "unique": true
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Keys.KeyMap",
+      "to": "type:ReTAC.Domain.Commands.CommandTarget",
+      "type": "1:N",
+      "fk": {
+        "field": "_bindings",
+        "container": "Dictionary<ReTAC.Domain.Keys.KeyBinding, ReTAC.Domain.Commands.CommandTarget>",
+        "unique": true
+      },
+      "visibility": "private"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.SortOrder",
+      "to": "type:ReTAC.Domain.Listing.SortKey",
+      "type": "1:1",
+      "fk": {
+        "field": "Key",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.SortOrder",
+      "to": "type:ReTAC.Domain.Listing.SortDirection",
+      "type": "1:1",
+      "fk": {
+        "field": "Direction",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.SortOrder",
+      "to": "type:ReTAC.Domain.Listing.ComparisonMode",
+      "type": "1:1",
+      "fk": {
+        "field": "Mode",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Navigation.QuickAccessList",
+      "to": "type:ReTAC.Domain.Navigation.QuickAccessEntry",
+      "type": "1:N",
+      "fk": {
+        "field": "Items",
+        "container": "IReadOnlyList<ReTAC.Domain.Navigation.QuickAccessEntry>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Navigation.QuickAccessList",
+      "to": "type:ReTAC.Domain.Navigation.QuickAccessEntry",
+      "type": "1:N",
+      "fk": {
+        "field": "_items",
+        "container": "List<ReTAC.Domain.Navigation.QuickAccessEntry>",
+        "unique": false
+      },
+      "visibility": "private"
+    },
+    {
+      "from": "type:ReTAC.Domain.Selection.ListState",
+      "to": "type:ReTAC.Domain.Entries.Entry",
+      "type": "1:N",
+      "fk": {
+        "field": "Entries",
+        "container": "IReadOnlyList<ReTAC.Domain.Entries.Entry>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Selection.ListState",
+      "to": "type:ReTAC.Domain.Entries.Entry",
+      "type": "1:1",
+      "fk": {
+        "field": "Cursor",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Selection.ListState",
+      "to": "type:ReTAC.Domain.Entries.Entry",
+      "type": "1:N",
+      "fk": {
+        "field": "_entries",
+        "container": "List<ReTAC.Domain.Entries.Entry>",
+        "unique": false
+      },
+      "visibility": "private"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.ArgumentTemplate",
+      "to": "type:ReTAC.Domain.Tools.TemplateArgument",
+      "type": "1:N",
+      "fk": {
+        "field": "Arguments",
+        "container": "IReadOnlyList<ReTAC.Domain.Tools.TemplateArgument>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.ArgumentTemplate",
+      "to": "type:ReTAC.Domain.Tools.PromptRequest",
+      "type": "1:N",
+      "fk": {
+        "field": "Prompts",
+        "container": "IReadOnlyList<ReTAC.Domain.Tools.PromptRequest>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.ArgumentTemplate",
+      "to": "type:ReTAC.Domain.Tools.TemplateError",
+      "type": "1:N",
+      "fk": {
+        "field": "Errors",
+        "container": "IReadOnlyList<ReTAC.Domain.Tools.TemplateError>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.ExternalToolQueue",
+      "to": "type:ReTAC.Domain.Tools.QueueEntry",
+      "type": "1:N",
+      "fk": {
+        "field": "_entries",
+        "container": "List<ReTAC.Domain.Tools.QueueEntry>",
+        "unique": false
+      },
+      "visibility": "private"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.LaunchRequest",
+      "to": "type:ReTAC.Domain.Tools.ExternalTool",
+      "type": "1:1",
+      "fk": {
+        "field": "Tool",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.MacroContext",
+      "to": "type:ReTAC.Domain.Entries.Entry",
+      "type": "1:N",
+      "fk": {
+        "field": "Targets",
+        "container": "IReadOnlyList<ReTAC.Domain.Entries.Entry>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.MacroContext",
+      "to": "type:ReTAC.Domain.Entries.Entry",
+      "type": "1:1",
+      "fk": {
+        "field": "Cursor",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.MacroPart",
+      "to": "type:ReTAC.Domain.Tools.MacroName",
+      "type": "1:1",
+      "fk": {
+        "field": "Name",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.QueueEntry",
+      "to": "type:ReTAC.Domain.Tools.LaunchRequest",
+      "type": "1:1",
+      "fk": {
+        "field": "Request",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.QueueEntry",
+      "to": "type:ReTAC.Domain.Tools.QueueItemState",
+      "type": "1:1",
+      "fk": {
+        "field": "State",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.TemplateArgument",
+      "to": "type:ReTAC.Domain.Tools.TemplatePart",
+      "type": "1:N",
+      "fk": {
+        "field": "Parts",
+        "container": "IReadOnlyList<ReTAC.Domain.Tools.TemplatePart>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.App.AppSettings",
+      "to": "type:ReTAC.Domain.Listing.SortKey",
+      "type": "1:1",
+      "fk": {
+        "field": "SortKey",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.App.AppSettings",
+      "to": "type:ReTAC.Domain.Listing.SortDirection",
+      "type": "1:1",
+      "fk": {
+        "field": "SortDirection",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.App.AppSettings",
+      "to": "type:ReTAC.Domain.Listing.ComparisonMode",
+      "type": "1:1",
+      "fk": {
+        "field": "SortMode",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.App.AppSettings",
+      "to": "type:ReTAC.Domain.Tools.ExternalTool",
+      "type": "1:N",
+      "fk": {
+        "field": "ExternalTools",
+        "container": "List<ReTAC.Domain.Tools.ExternalTool>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.App.AppSettings",
+      "to": "type:ReTAC.Domain.Navigation.QuickAccessEntry",
+      "type": "1:N",
+      "fk": {
+        "field": "QuickAccess",
+        "container": "List<ReTAC.Domain.Navigation.QuickAccessEntry>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.App.AppSettings",
+      "to": "UNRESOLVED",
+      "type": "N:1",
+      "fk": {
+        "field": "NextExternalToolId",
+        "byValue": true
+      },
+      "onDelete": "UNENFORCED",
+      "candidateId": "fk:ReTAC.App.AppSettings#NextExternalToolId"
+    }
+  ],
+  "wiring": {
+    "commands": [
+      {
+        "id": "About",
+        "hex": "0xE140",
+        "label": null,
+        "category": null,
+        "assignable": false,
+        "defaultKeys": []
+      },
+      {
+        "id": "ChangeAttributes",
+        "hex": "0x82E2",
+        "label": "属性の変更",
+        "category": "ファイル操作",
+        "assignable": true,
+        "defaultKeys": [
+          "A"
+        ]
+      },
+      {
+        "id": "ClipboardCopy",
+        "hex": "0xE122",
+        "label": "コピー",
+        "category": "クリップボード",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "ClipboardCut",
+        "hex": "0xE123",
+        "label": "切り取り",
+        "category": "クリップボード",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "ClipboardPaste",
+        "hex": "0xE125",
+        "label": "貼り付け",
+        "category": "クリップボード",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "ColorAndFontSettings",
+        "hex": "0x8151",
+        "label": "配色・フォントの設定",
+        "category": "設定",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "ConcatFiles",
+        "hex": "0x82E4",
+        "label": "ファイルの連結",
+        "category": "ファイル操作",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "CopyFileName",
+        "hex": "0x831B",
+        "label": "ファイル名をコピー（形式を選ぶ）",
+        "category": "クリップボード",
+        "assignable": true,
+        "defaultKeys": [
+          "I"
+        ]
+      },
+      {
+        "id": "CopyFileNameOnly",
+        "hex": "0x7FC4",
+        "label": "ファイル名のみコピー",
+        "category": "クリップボード",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "CopyFileNameWithPath",
+        "hex": "0x83A9",
+        "label": "パスとファイル名をコピー",
+        "category": "クリップボード",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "CopyFileNameWithPathSlash",
+        "hex": "0x9001",
+        "label": "/ 区切りのパスをコピー",
+        "category": "クリップボード",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "CopyToFolder",
+        "hex": "0x82DE",
+        "label": "フォルダへコピー",
+        "category": "ファイル操作",
+        "assignable": true,
+        "defaultKeys": [
+          "C"
+        ]
+      },
+      {
+        "id": "CreateFolder",
+        "hex": "0x82F8",
+        "label": "フォルダ作成",
+        "category": "ファイル操作",
+        "assignable": true,
+        "defaultKeys": [
+          "K"
+        ]
+      },
+      {
+        "id": "CreateShortcut",
+        "hex": "0x82F1",
+        "label": "ショートカットの作成",
+        "category": "ファイル操作",
+        "assignable": true,
+        "defaultKeys": [
+          "O"
+        ]
+      },
+      {
+        "id": "Delete",
+        "hex": "0x82DF",
+        "label": "削除",
+        "category": "ファイル操作",
+        "assignable": true,
+        "defaultKeys": [
+          "D"
+        ]
+      },
+      {
+        "id": "DirectJump",
+        "hex": "0x8327",
+        "label": "ダイレクトジャンプ",
+        "category": "移動",
+        "assignable": true,
+        "defaultKeys": [
+          "T"
+        ]
+      },
+      {
+        "id": "DriveByNumberKey",
+        "hex": "0x831F",
+        "label": "数字キーのドライブ移動",
+        "category": "移動",
+        "assignable": true,
+        "defaultKeys": [
+          "D1",
+          "D2",
+          "D3",
+          "D4",
+          "D5",
+          "D6",
+          "D7",
+          "D8",
+          "D9"
+        ]
+      },
+      {
+        "id": "EnvironmentSettings",
+        "hex": "0x8318",
+        "label": "動作環境の設定",
+        "category": "設定",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "ExternalToolQueue",
+        "hex": "0x9002",
+        "label": "外部ツールキュー",
+        "category": "外部ツール",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "ExternalToolSettings",
+        "hex": "0x815A",
+        "label": "外部ツールの設定",
+        "category": "設定",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "FileTypeSettings",
+        "hex": "0x82FF",
+        "label": "表示するファイルタイプの設定",
+        "category": "設定",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "FolderHistory",
+        "hex": "0x82FD",
+        "label": "フォルダ履歴",
+        "category": "移動",
+        "assignable": true,
+        "defaultKeys": [
+          "H"
+        ]
+      },
+      {
+        "id": "GoBack",
+        "hex": "0x832D",
+        "label": "前のフォルダに戻る",
+        "category": "移動",
+        "assignable": true,
+        "defaultKeys": [
+          "F8",
+          "XButton1"
+        ]
+      },
+      {
+        "id": "GoDesktop",
+        "hex": "0x832F",
+        "label": "デスクトップへ移動",
+        "category": "移動",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "GoForward",
+        "hex": "0x832E",
+        "label": "次のフォルダに進む",
+        "category": "移動",
+        "assignable": true,
+        "defaultKeys": [
+          "F9",
+          "XButton2"
+        ]
+      },
+      {
+        "id": "GoParent",
+        "hex": "0x831E",
+        "label": "親フォルダに戻る",
+        "category": "移動",
+        "assignable": true,
+        "defaultKeys": [
+          "Back"
+        ]
+      },
+      {
+        "id": "GoRoot",
+        "hex": "0x82FB",
+        "label": "ルートフォルダに戻る",
+        "category": "移動",
+        "assignable": true,
+        "defaultKeys": [
+          "D0"
+        ]
+      },
+      {
+        "id": "InvertMarks",
+        "hex": "0x8312",
+        "label": "反転選択",
+        "category": "選択",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "KeyAssignSettings",
+        "hex": "0x8155",
+        "label": "キー割り当ての設定",
+        "category": "設定",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "MarkBySameExtension",
+        "hex": "0x8325",
+        "label": "同じ拡張子を選択",
+        "category": "選択",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "MarkByWildcard",
+        "hex": "0x8326",
+        "label": "ワイルドカードで選択",
+        "category": "選択",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "MoveToFolder",
+        "hex": "0x82E0",
+        "label": "フォルダへ移動",
+        "category": "ファイル操作",
+        "assignable": true,
+        "defaultKeys": [
+          "M"
+        ]
+      },
+      {
+        "id": "NewWindow",
+        "hex": "0x830B",
+        "label": "新しいウィンドウ",
+        "category": "表示",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "OpenFile",
+        "hex": "0x82DC",
+        "label": "開く",
+        "category": "ファイル操作",
+        "assignable": true,
+        "defaultKeys": [
+          "Enter"
+        ]
+      },
+      {
+        "id": "QuickAccess",
+        "hex": "0x82FC",
+        "label": "クイックアクセス",
+        "category": "移動",
+        "assignable": true,
+        "defaultKeys": [
+          "J"
+        ]
+      },
+      {
+        "id": "QuickAccessAdd",
+        "hex": "0x832C",
+        "label": "クイックアクセスに追加",
+        "category": "移動",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "QuickAccessSettings",
+        "hex": "0x82FA",
+        "label": "クイックアクセスの設定",
+        "category": "設定",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "Quit",
+        "hex": "0x831A",
+        "label": "ReTAC の終了",
+        "category": "表示",
+        "assignable": true,
+        "defaultKeys": [
+          "Q"
+        ]
+      },
+      {
+        "id": "QuitAll",
+        "hex": "0x814E",
+        "label": "ReTAC を完全に終了",
+        "category": "表示",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "Refresh",
+        "hex": "0x830C",
+        "label": "最新の情報に更新",
+        "category": "表示",
+        "assignable": true,
+        "defaultKeys": [
+          "F5",
+          "W"
+        ]
+      },
+      {
+        "id": "Rename",
+        "hex": "0x82E1",
+        "label": "名前の変更",
+        "category": "ファイル操作",
+        "assignable": true,
+        "defaultKeys": [
+          "N"
+        ]
+      },
+      {
+        "id": "RunCommandLine",
+        "hex": "0x82E9",
+        "label": "名前を指定し実行",
+        "category": "外部ツール",
+        "assignable": true,
+        "defaultKeys": [
+          "X"
+        ]
+      },
+      {
+        "id": "SelectDrive",
+        "hex": "0x82F3",
+        "label": "ドライブの選択",
+        "category": "移動",
+        "assignable": true,
+        "defaultKeys": [
+          "L"
+        ]
+      },
+      {
+        "id": "ShowContextMenu",
+        "hex": "0x8328",
+        "label": "コンテキストメニューの表示",
+        "category": "表示",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "ShowPopupMenu",
+        "hex": "0x831C",
+        "label": "ポップアップメニューの表示",
+        "category": "表示",
+        "assignable": true,
+        "defaultKeys": [
+          "G"
+        ]
+      },
+      {
+        "id": "ShowProperties",
+        "hex": "0x82F2",
+        "label": "プロパティ",
+        "category": "ファイル操作",
+        "assignable": true,
+        "defaultKeys": [
+          "R"
+        ]
+      },
+      {
+        "id": "SortSettings",
+        "hex": "0x8300",
+        "label": "ソートの設定",
+        "category": "設定",
+        "assignable": true,
+        "defaultKeys": [
+          "S"
+        ]
+      },
+      {
+        "id": "ToggleAllMarks",
+        "hex": "0x8307",
+        "label": "全選択＆選択解除",
+        "category": "選択",
+        "assignable": true,
+        "defaultKeys": [
+          "Delete"
+        ]
+      },
+      {
+        "id": "VisibleDriveSettings",
+        "hex": "0x814C",
+        "label": "表示するドライブの設定",
+        "category": "設定",
+        "assignable": true,
+        "defaultKeys": []
+      }
+    ],
+    "keySlots": [
+      {
+        "label": "A",
+        "vk": 65,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "ChangeAttributes"
+      },
+      {
+        "label": "B",
+        "vk": 66,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "C",
+        "vk": 67,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "CopyToFolder"
+      },
+      {
+        "label": "D",
+        "vk": 68,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "Delete"
+      },
+      {
+        "label": "E",
+        "vk": 69,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "Tool:1"
+      },
+      {
+        "label": "F",
+        "vk": 70,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "G",
+        "vk": 71,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "ShowPopupMenu"
+      },
+      {
+        "label": "H",
+        "vk": 72,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "FolderHistory"
+      },
+      {
+        "label": "I",
+        "vk": 73,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "CopyFileName"
+      },
+      {
+        "label": "J",
+        "vk": 74,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "QuickAccess"
+      },
+      {
+        "label": "K",
+        "vk": 75,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "CreateFolder"
+      },
+      {
+        "label": "L",
+        "vk": 76,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "SelectDrive"
+      },
+      {
+        "label": "M",
+        "vk": 77,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "MoveToFolder"
+      },
+      {
+        "label": "N",
+        "vk": 78,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "Rename"
+      },
+      {
+        "label": "O",
+        "vk": 79,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "CreateShortcut"
+      },
+      {
+        "label": "P",
+        "vk": 80,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Q",
+        "vk": 81,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "Quit"
+      },
+      {
+        "label": "R",
+        "vk": 82,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "ShowProperties"
+      },
+      {
+        "label": "S",
+        "vk": 83,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "SortSettings"
+      },
+      {
+        "label": "T",
+        "vk": 84,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "DirectJump"
+      },
+      {
+        "label": "U",
+        "vk": 85,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "V",
+        "vk": 86,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "Tool:2"
+      },
+      {
+        "label": "W",
+        "vk": 87,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "Refresh"
+      },
+      {
+        "label": "X",
+        "vk": 88,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "RunCommandLine"
+      },
+      {
+        "label": "Y",
+        "vk": 89,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Z",
+        "vk": 90,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "Tool:3"
+      },
+      {
+        "label": "D0",
+        "vk": 48,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "GoRoot"
+      },
+      {
+        "label": "D1",
+        "vk": 49,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "DriveByNumberKey"
+      },
+      {
+        "label": "D2",
+        "vk": 50,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "DriveByNumberKey"
+      },
+      {
+        "label": "D3",
+        "vk": 51,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "DriveByNumberKey"
+      },
+      {
+        "label": "D4",
+        "vk": 52,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "DriveByNumberKey"
+      },
+      {
+        "label": "D5",
+        "vk": 53,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "DriveByNumberKey"
+      },
+      {
+        "label": "D6",
+        "vk": 54,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "DriveByNumberKey"
+      },
+      {
+        "label": "D7",
+        "vk": 55,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "DriveByNumberKey"
+      },
+      {
+        "label": "D8",
+        "vk": 56,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "DriveByNumberKey"
+      },
+      {
+        "label": "D9",
+        "vk": 57,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "DriveByNumberKey"
+      },
+      {
+        "label": "F1",
+        "vk": 112,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "F2",
+        "vk": 113,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "F3",
+        "vk": 114,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "Tool:3"
+      },
+      {
+        "label": "F4",
+        "vk": 115,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "F5",
+        "vk": 116,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "Refresh"
+      },
+      {
+        "label": "F6",
+        "vk": 117,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "F7",
+        "vk": 118,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "F8",
+        "vk": 119,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "GoBack"
+      },
+      {
+        "label": "F9",
+        "vk": 120,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "GoForward"
+      },
+      {
+        "label": "F10",
+        "vk": 121,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "F11",
+        "vk": 122,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "F12",
+        "vk": 123,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Shift+F1",
+        "vk": 112,
+        "shift": true,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Shift+F2",
+        "vk": 113,
+        "shift": true,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Shift+F3",
+        "vk": 114,
+        "shift": true,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Shift+F4",
+        "vk": 115,
+        "shift": true,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Shift+F5",
+        "vk": 116,
+        "shift": true,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Shift+F6",
+        "vk": 117,
+        "shift": true,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Shift+F7",
+        "vk": 118,
+        "shift": true,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Shift+F8",
+        "vk": 119,
+        "shift": true,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Shift+F9",
+        "vk": 120,
+        "shift": true,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Shift+F10",
+        "vk": 121,
+        "shift": true,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Shift+F11",
+        "vk": 122,
+        "shift": true,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Shift+F12",
+        "vk": 123,
+        "shift": true,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "Enter",
+        "vk": 13,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "OpenFile"
+      },
+      {
+        "label": "Shift+Enter",
+        "vk": 13,
+        "shift": true,
+        "ctrl": false,
+        "defaultTarget": "Tool:1"
+      },
+      {
+        "label": "Back",
+        "vk": 8,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "GoParent"
+      },
+      {
+        "label": "Delete",
+        "vk": 46,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "ToggleAllMarks"
+      },
+      {
+        "label": "Ctrl+A",
+        "vk": 65,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+B",
+        "vk": 66,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+D",
+        "vk": 68,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+E",
+        "vk": 69,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+F",
+        "vk": 70,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+G",
+        "vk": 71,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+H",
+        "vk": 72,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+I",
+        "vk": 73,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+J",
+        "vk": 74,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+K",
+        "vk": 75,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+L",
+        "vk": 76,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+M",
+        "vk": 77,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+N",
+        "vk": 78,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+O",
+        "vk": 79,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+P",
+        "vk": 80,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+Q",
+        "vk": 81,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+R",
+        "vk": 82,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+S",
+        "vk": 83,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+T",
+        "vk": 84,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+U",
+        "vk": 85,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+W",
+        "vk": 87,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+Y",
+        "vk": 89,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+Z",
+        "vk": 90,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+D0",
+        "vk": 48,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+D1",
+        "vk": 49,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+D2",
+        "vk": 50,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+D3",
+        "vk": 51,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+D4",
+        "vk": 52,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+D5",
+        "vk": 53,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+D6",
+        "vk": 54,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+D7",
+        "vk": 55,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+D8",
+        "vk": 56,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+D9",
+        "vk": 57,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+F1",
+        "vk": 112,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+F2",
+        "vk": 113,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+F3",
+        "vk": 114,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+F4",
+        "vk": 115,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+F5",
+        "vk": 116,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+F6",
+        "vk": 117,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+F7",
+        "vk": 118,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+F8",
+        "vk": 119,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+F9",
+        "vk": 120,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+F10",
+        "vk": 121,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+F11",
+        "vk": 122,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+F12",
+        "vk": 123,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+Enter",
+        "vk": 13,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+Back",
+        "vk": 8,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "Ctrl+Delete",
+        "vk": 46,
+        "shift": false,
+        "ctrl": true,
+        "defaultTarget": null
+      },
+      {
+        "label": "MButton",
+        "vk": 4,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": null
+      },
+      {
+        "label": "XButton1",
+        "vk": 5,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "GoBack"
+      },
+      {
+        "label": "XButton2",
+        "vk": 6,
+        "shift": false,
+        "ctrl": false,
+        "defaultTarget": "GoForward"
+      }
+    ],
+    "themeSlots": [
+      {
+        "key": "Background",
+        "label": "背景"
+      },
+      {
+        "key": "Foreground",
+        "label": "文字"
+      },
+      {
+        "key": "MarkBackground",
+        "label": "選択の背景"
+      },
+      {
+        "key": "MarkForeground",
+        "label": "選択の文字"
+      },
+      {
+        "key": "CursorBackground",
+        "label": "カーソルの背景"
+      },
+      {
+        "key": "CursorForeground",
+        "label": "カーソルの文字"
+      },
+      {
+        "key": "SystemColor",
+        "label": "システム属性"
+      },
+      {
+        "key": "ReadOnlyColor",
+        "label": "書込禁止属性"
+      },
+      {
+        "key": "HiddenColor",
+        "label": "隠し属性"
+      },
+      {
+        "key": "CompressedColor",
+        "label": "圧縮属性"
+      },
+      {
+        "key": "EncryptedColor",
+        "label": "暗号化属性"
+      },
+      {
+        "key": "MarkStarColor",
+        "label": "マークの★"
+      }
+    ],
+    "defaultTools": [
+      {
+        "id": 1,
+        "name": "テキスト エディタ",
+        "path": "notepad.exe",
+        "arguments": "${file}"
+      },
+      {
+        "id": 2,
+        "name": "テキスト ビューア",
+        "path": "notepad.exe",
+        "arguments": "${file}!"
+      },
+      {
+        "id": 3,
+        "name": "ターミナル",
+        "path": "cmd.exe",
+        "arguments": ""
+      }
+    ],
+    "firstFreeToolId": 4
+  },
+  "specIndex": {
+    "A-01": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 431
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 731
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1173
+      }
+    ],
+    "A-02": [
+      {
+        "file": "src/ReTAC.App/MacroReferenceDialog.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.App/MenuBar.cs",
+        "line": 10
+      }
+    ],
+    "A-1": [
+      {
+        "file": "src/ReTAC.App/ToolProcess.cs",
+        "line": 12
+      },
+      {
+        "file": "src/ReTAC.Shell/Executables.cs",
+        "line": 6
+      }
+    ],
+    "A-3": [
+      {
+        "file": "src/ReTAC.App/ToolQueueHost.cs",
+        "line": 67
+      }
+    ],
+    "A-4": [
+      {
+        "file": "src/ReTAC.App/ExternalToolDialog.cs",
+        "line": 235
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.Shell/Executables.cs",
+        "line": 47
+      }
+    ],
+    "B-01": [
+      {
+        "file": "src/ReTAC.Domain/Navigation/InputText.cs",
+        "line": 4
+      }
+    ],
+    "B-02": [
+      {
+        "file": "src/ReTAC.Domain/Listing/NameComparers.cs",
+        "line": 17
+      }
+    ],
+    "B-03": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 144
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 156
+      },
+      {
+        "file": "src/ReTAC.App/Program.cs",
+        "line": 41
+      }
+    ],
+    "B-04": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 36
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 47
+      }
+    ],
+    "B-05": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 81
+      },
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 236
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 390
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
+        "line": 28
+      }
+    ],
+    "B-06": [
+      {
+        "file": "src/ReTAC.App/NumberedPopup.cs",
+        "line": 21
+      },
+      {
+        "file": "src/ReTAC.App/NumberedPopup.cs",
+        "line": 61
+      },
+      {
+        "file": "src/ReTAC.App/NumberedPopup.cs",
+        "line": 83
+      }
+    ],
+    "B-07": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 130
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 376
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
+        "line": 13
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
+        "line": 53
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
+        "line": 68
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
+        "line": 77
+      }
+    ],
+    "B-09": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1737
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/CursorRestore.cs",
+        "line": 6
+      }
+    ],
+    "B-10": [
+      {
+        "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
+        "line": 63
+      }
+    ],
+    "B-11": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 339
+      }
+    ],
+    "B-15": [
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 15
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 16
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 30
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 138
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 181
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 361
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellIcons.cs",
+        "line": 35
+      }
+    ],
+    "B-16": [
+      {
+        "file": "src/ReTAC.App/AboutDialog.cs",
+        "line": 24
+      },
+      {
+        "file": "src/ReTAC.App/AboutDialog.cs",
+        "line": 65
+      },
+      {
+        "file": "src/ReTAC.App/AttributeDialog.cs",
+        "line": 82
+      },
+      {
+        "file": "src/ReTAC.App/ChoiceDialog.cs",
+        "line": 49
+      },
+      {
+        "file": "src/ReTAC.App/ColorFontDialog.cs",
+        "line": 75
+      },
+      {
+        "file": "src/ReTAC.App/ConcatDialog.cs",
+        "line": 64
+      },
+      {
+        "file": "src/ReTAC.App/ConfirmDialog.cs",
+        "line": 33
+      },
+      {
+        "file": "src/ReTAC.App/ConflictDialog.cs",
+        "line": 58
+      },
+      {
+        "file": "src/ReTAC.App/DriveVisibilityDialog.cs",
+        "line": 61
+      },
+      {
+        "file": "src/ReTAC.App/EnvironmentDialog.cs",
+        "line": 64
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolDialog.cs",
+        "line": 121
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolQueueForm.cs",
+        "line": 65
+      },
+      {
+        "file": "src/ReTAC.App/FileTypeDialog.cs",
+        "line": 57
+      },
+      {
+        "file": "src/ReTAC.App/KeyAssignDialog.cs",
+        "line": 109
+      },
+      {
+        "file": "src/ReTAC.App/MacroReferenceDialog.cs",
+        "line": 85
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 101
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessDialog.cs",
+        "line": 86
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 69
+      },
+      {
+        "file": "src/ReTAC.App/RunDialog.cs",
+        "line": 52
+      },
+      {
+        "file": "src/ReTAC.App/ShortcutDialog.cs",
+        "line": 46
+      },
+      {
+        "file": "src/ReTAC.App/SortDialog.cs",
+        "line": 67
+      },
+      {
+        "file": "src/ReTAC.App/TextInputDialog.cs",
+        "line": 72
+      }
+    ],
+    "B-17": [
+      {
+        "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+        "line": 38
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+        "line": 87
+      }
+    ],
+    "C-1": [
+      {
+        "file": "src/ReTAC.App/AboutDialog.cs",
+        "line": 63
+      },
+      {
+        "file": "src/ReTAC.App/AttributeDialog.cs",
+        "line": 80
+      },
+      {
+        "file": "src/ReTAC.App/ChoiceDialog.cs",
+        "line": 47
+      },
+      {
+        "file": "src/ReTAC.App/ColorFontDialog.cs",
+        "line": 73
+      },
+      {
+        "file": "src/ReTAC.App/ConcatDialog.cs",
+        "line": 62
+      },
+      {
+        "file": "src/ReTAC.App/ConfirmDialog.cs",
+        "line": 32
+      },
+      {
+        "file": "src/ReTAC.App/ConflictDialog.cs",
+        "line": 56
+      },
+      {
+        "file": "src/ReTAC.App/DriveVisibilityDialog.cs",
+        "line": 59
+      },
+      {
+        "file": "src/ReTAC.App/EnvironmentDialog.cs",
+        "line": 62
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolDialog.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolDialog.cs",
+        "line": 120
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolQueueForm.cs",
+        "line": 64
+      },
+      {
+        "file": "src/ReTAC.App/FileTypeDialog.cs",
+        "line": 55
+      },
+      {
+        "file": "src/ReTAC.App/KeyAssignDialog.cs",
+        "line": 107
+      },
+      {
+        "file": "src/ReTAC.App/MacroReferenceDialog.cs",
+        "line": 84
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 99
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessDialog.cs",
+        "line": 84
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 67
+      },
+      {
+        "file": "src/ReTAC.App/RunDialog.cs",
+        "line": 50
+      },
+      {
+        "file": "src/ReTAC.App/ShortcutDialog.cs",
+        "line": 44
+      },
+      {
+        "file": "src/ReTAC.App/SortDialog.cs",
+        "line": 65
+      },
+      {
+        "file": "src/ReTAC.App/TextInputDialog.cs",
+        "line": 70
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
+        "line": 37
+      }
+    ],
+    "C-2": [
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
+        "line": 20
+      }
+    ],
+    "C-9": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 419
+      }
+    ],
+    "D-04": [
+      {
+        "file": "src/ReTAC.Domain/Formatting/NameFormats.cs",
+        "line": 5
+      }
+    ],
+    "D-08": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1520
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1556
+      }
+    ],
+    "F-01": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 80
+      },
+      {
+        "file": "src/ReTAC.App/KeyAssignDialog.cs",
+        "line": 95
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1323
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1350
+      },
+      {
+        "file": "src/ReTAC.Domain/Commands/CommandId.cs",
+        "line": 60
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+        "line": 39
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/KeyMap.cs",
+        "line": 30
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
+        "line": 4
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
+        "line": 26
+      }
+    ],
+    "F-02": [
+      {
+        "file": "src/ReTAC.Domain/Tools/ArgumentExpander.cs",
+        "line": 16
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
+        "line": 35
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
+        "line": 13
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
+        "line": 35
+      }
+    ],
+    "F-03": [
+      {
+        "file": "src/ReTAC.App/ConfirmDialog.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.App/ConsoleHold.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 366
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 434
+      },
+      {
+        "file": "src/ReTAC.App/OwnerModal.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.App/Program.cs",
+        "line": 15
+      },
+      {
+        "file": "src/ReTAC.App/ToolLauncher.cs",
+        "line": 11
+      },
+      {
+        "file": "src/ReTAC.App/ToolLauncher.cs",
+        "line": 17
+      },
+      {
+        "file": "src/ReTAC.App/ToolProcess.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.App/ToolProcess.cs",
+        "line": 16
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
+        "line": 19
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
+        "line": 21
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
+        "line": 20
+      }
+    ],
+    "F-04": [
+      {
+        "file": "src/ReTAC.App/ExternalToolDialog.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/MacroReferenceDialog.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1313
+      },
+      {
+        "file": "src/ReTAC.App/OptionHelp.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
+        "line": 8
+      }
+    ],
+    "F-05": [
+      {
+        "file": "src/ReTAC.App/ExternalToolQueueForm.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 132
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 427
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1458
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 28
+      },
+      {
+        "file": "src/ReTAC.App/ToolQueueHost.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.Domain/Commands/CommandId.cs",
+        "line": 65
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
+        "line": 15
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
+        "line": 19
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
+        "line": 80
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
+        "line": 103
+      },
+      {
+        "file": "src/ReTAC.Shell/TaskbarProgress.cs",
+        "line": 6
+      }
+    ],
+    "F-06": [
+      {
+        "file": "src/ReTAC.App/CommandLabels.cs",
+        "line": 78
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 341
+      },
+      {
+        "file": "src/ReTAC.App/KeyAssignDialog.cs",
+        "line": 18
+      },
+      {
+        "file": "src/ReTAC.App/KeySlots.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 246
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 276
+      },
+      {
+        "file": "src/ReTAC.Domain/Commands/CommandTarget.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+        "line": 37
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/KeyMap.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/KeyMap.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/KeySlotList.cs",
+        "line": 4
+      }
+    ],
+    "F-07": [
+      {
+        "file": "src/ReTAC.App/MenuBar.cs",
+        "line": 20
+      },
+      {
+        "file": "src/ReTAC.App/MenuBar.cs",
+        "line": 126
+      }
+    ],
+    "F-08": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1432
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1446
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
+        "line": 17
+      }
+    ],
+    "F-09": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 75
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolDialog.cs",
+        "line": 46
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
+        "line": 20
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
+        "line": 29
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
+        "line": 39
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchTargets.cs",
+        "line": 9
+      }
+    ],
+    "H-14": [
+      {
+        "file": "src/ReTAC.App/AboutDialog.cs",
+        "line": 22
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 62
+      }
+    ],
+    "I-1": [
+      {
+        "file": "src/ReTAC.App/AboutDialog.cs",
+        "line": 46
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 48
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 29
+      }
+    ],
+    "I-2": [
+      {
+        "file": "src/ReTAC.App/ConsoleHold.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.App/ToolProcess.cs",
+        "line": 25
+      }
+    ],
+    "I-3": [
+      {
+        "file": "src/ReTAC.Shell/Executables.cs",
+        "line": 79
+      }
+    ],
+    "K-2": [
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
+        "line": 68
+      }
+    ],
+    "K-3": [
+      {
+        "file": "src/ReTAC.App/ToolQueueHost.cs",
+        "line": 29
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
+        "line": 160
+      }
+    ],
+    "K-4": [
+      {
+        "file": "src/ReTAC.App/ToolQueueHost.cs",
+        "line": 8
+      }
+    ],
+    "K-5": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 168
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1071
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
+        "line": 39
+      }
+    ],
+    "M-1": [
+      {
+        "file": "src/ReTAC.App/ExternalToolDialog.cs",
+        "line": 37
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolDialog.cs",
+        "line": 59
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
+        "line": 63
+      }
+    ],
+    "M-2": [
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchTargets.cs",
+        "line": 15
+      }
+    ],
+    "M-3": [
+      {
+        "file": "src/ReTAC.App/ToolQueueHost.cs",
+        "line": 86
+      }
+    ],
+    "M-4": [
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 157
+      }
+    ],
+    "N-01": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 33
+      }
+    ],
+    "N-02": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 92
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 513
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 859
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1760
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 14
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/FolderHistory.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/FolderHistory.cs",
+        "line": 39
+      }
+    ],
+    "N-03": [
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchTargets.cs",
+        "line": 20
+      }
+    ],
+    "N-04-3": [
+      {
+        "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
+        "line": 5
+      }
+    ],
+    "N-04-4": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 248
+      }
+    ],
+    "N-05": [
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 122
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 128
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 153
+      },
+      {
+        "file": "src/ReTAC.App/DriveVisibilityDialog.cs",
+        "line": 29
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolDialog.cs",
+        "line": 220
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1714
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 89
+      },
+      {
+        "file": "src/ReTAC.App/ToolLauncher.cs",
+        "line": 18
+      },
+      {
+        "file": "src/ReTAC.App/ToolLauncher.cs",
+        "line": 25
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFileType.cs",
+        "line": 18
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellIcons.cs",
+        "line": 36
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellIcons.cs",
+        "line": 45
+      }
+    ],
+    "N-06": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 92
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 341
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1569
+      },
+      {
+        "file": "src/ReTAC.App/NumberedPopup.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/FolderHistory.cs",
+        "line": 16
+      }
+    ],
+    "N-07": [
+      {
+        "file": "src/ReTAC.App/FolderBrowser.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1520
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 13
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 123
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 40
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 93
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 178
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
+        "line": 59
+      }
+    ],
+    "P-02": [
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 16
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 128
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 361
+      }
+    ],
+    "P-14": [
+      {
+        "file": "src/ReTAC.Shell/ShellFileOperation.cs",
+        "line": 96
+      }
+    ],
+    "R-01": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 226
+      }
+    ],
+    "R-01-2": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 14
+      }
+    ],
+    "R-01-3": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 156
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
+        "line": 4
+      }
+    ],
+    "R-01-4": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 227
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 272
+      }
+    ],
+    "R-01-5": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 320
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListState.cs",
+        "line": 38
+      }
+    ],
+    "R-01-6": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 276
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
+        "line": 4
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
+        "line": 15
+      }
+    ],
+    "R-04": [
+      {
+        "file": "src/ReTAC.Domain/Entries/Entry.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Entries/Entry.cs",
+        "line": 32
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileTypeFilter.cs",
+        "line": 37
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FolderListing.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FolderListing.cs",
+        "line": 14
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListState.cs",
+        "line": 139
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListSummary.cs",
+        "line": 39
+      }
+    ],
+    "R-05": [
+      {
+        "file": "src/ReTAC.Domain/Listing/FolderListing.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FolderListing.cs",
+        "line": 18
+      }
+    ],
+    "R-05-2": [
+      {
+        "file": "src/ReTAC.App/SortDialog.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FolderListing.cs",
+        "line": 37
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FolderListing.cs",
+        "line": 43
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/NameComparers.cs",
+        "line": 14
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/SortOrder.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/SortOrder.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/SortOrder.cs",
+        "line": 13
+      }
+    ],
+    "R-05-3": [
+      {
+        "file": "src/ReTAC.Domain/Listing/NameComparers.cs",
+        "line": 5
+      }
+    ],
+    "R-05-4": [
+      {
+        "file": "src/ReTAC.Domain/Listing/FolderListing.cs",
+        "line": 18
+      }
+    ],
+    "R-06": [
+      {
+        "file": "src/ReTAC.Domain/Entries/AttributeColorRule.cs",
+        "line": 16
+      },
+      {
+        "file": "src/ReTAC.Domain/Entries/AttributeColorRule.cs",
+        "line": 24
+      }
+    ],
+    "R-07": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 276
+      },
+      {
+        "file": "src/ReTAC.Domain/Entries/Entry.cs",
+        "line": 24
+      },
+      {
+        "file": "src/ReTAC.Domain/Entries/Entry.cs",
+        "line": 51
+      }
+    ],
+    "R-09": [
+      {
+        "file": "src/ReTAC.Domain/Entries/Entry.cs",
+        "line": 21
+      },
+      {
+        "file": "src/ReTAC.Domain/Entries/Entry.cs",
+        "line": 75
+      }
+    ],
+    "R-10": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 107
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 456
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1242
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListState.cs",
+        "line": 110
+      }
+    ],
+    "R-11": [
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 177
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 354
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 366
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 385
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 400
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1490
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListState.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListState.cs",
+        "line": 27
+      }
+    ],
+    "R-11-2": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 376
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 383
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 394
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListState.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListState.cs",
+        "line": 99
+      }
+    ],
+    "R-11-3": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 334
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 384
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListState.cs",
+        "line": 48
+      }
+    ],
+    "R-11-4": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1783
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListState.cs",
+        "line": 107
+      }
+    ],
+    "R-11-5": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 266
+      },
+      {
+        "file": "src/ReTAC.App/Rendering/MarkStar.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.App/Rendering/Theme.cs",
+        "line": 24
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 195
+      }
+    ],
+    "R-11-6": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 255
+      }
+    ],
+    "R-12": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 70
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 339
+      },
+      {
+        "file": "src/ReTAC.App/KeyAssignDialog.cs",
+        "line": 11
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 216
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 265
+      },
+      {
+        "file": "src/ReTAC.App/MenuBar.cs",
+        "line": 14
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/KeyMap.cs",
+        "line": 11
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellIcons.cs",
+        "line": 50
+      }
+    ],
+    "R-13": [
+      {
+        "file": "src/ReTAC.Domain/Commands/CommandId.cs",
+        "line": 4
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellContextMenu.cs",
+        "line": 33
+      }
+    ],
+    "R-14": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 196
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 95
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+        "line": 33
+      }
+    ],
+    "R-15": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 313
+      }
+    ],
+    "R-18": [
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 53
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolQueueForm.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 85
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+        "line": 81
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/KeySlotList.cs",
+        "line": 6
+      }
+    ],
+    "R-19": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 676
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFileOperation.cs",
+        "line": 28
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFileOperation.cs",
+        "line": 46
+      }
+    ],
+    "R-20": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 12
+      }
+    ],
+    "R-20-2": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 13
+      },
+      {
+        "file": "src/ReTAC.App/Rendering/Theme.cs",
+        "line": 6
+      }
+    ],
+    "R-20-3": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 92
+      }
+    ],
+    "R-22": [
+      {
+        "file": "src/ReTAC.Domain/Listing/Wildcard.cs",
+        "line": 6
+      }
+    ],
+    "R-23": [
+      {
+        "file": "src/ReTAC.App/ExternalToolQueueForm.cs",
+        "line": 129
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 106
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1711
+      },
+      {
+        "file": "src/ReTAC.App/OwnerModal.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.App/ToolLauncher.cs",
+        "line": 18
+      },
+      {
+        "file": "src/ReTAC.App/ToolLauncher.cs",
+        "line": 25
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
+        "line": 22
+      }
+    ],
+    "R-25": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 202
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 239
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/KeyMap.cs",
+        "line": 41
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/KeySlotList.cs",
+        "line": 7
+      }
+    ],
+    "R-26": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 20
+      },
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 23
+      },
+      {
+        "file": "src/ReTAC.App/Program.cs",
+        "line": 50
+      }
+    ],
+    "R-31": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 289
+      },
+      {
+        "file": "src/ReTAC.App/Rendering/Theme.cs",
+        "line": 31
+      }
+    ],
+    "R-32": [
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 223
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1703
+      }
+    ],
+    "R-32-2": [
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 134
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1034
+      }
+    ],
+    "R-33": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1693
+      }
+    ],
+    "R-33-2": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 190
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1771
+      }
+    ],
+    "R-34": [
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 13
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 29
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 78
+      },
+      {
+        "file": "src/ReTAC.Domain/Formatting/Display.cs",
+        "line": 34
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListSummary.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFileType.cs",
+        "line": 7
+      }
+    ],
+    "R-34-2": [
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 14
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListSummary.cs",
+        "line": 6
+      }
+    ],
+    "R-34-3": [
+      {
+        "file": "src/ReTAC.App/Rendering/MarkStar.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 14
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 144
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 195
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListSummary.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListSummary.cs",
+        "line": 9
+      }
+    ],
+    "R-35": [
+      {
+        "file": "src/ReTAC.App/ConcatDialog.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.App/ConcatDialog.cs",
+        "line": 51
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 977
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/FileConcat.cs",
+        "line": 7
+      }
+    ],
+    "R-35-2": [
+      {
+        "file": "src/ReTAC.App/ConcatDialog.cs",
+        "line": 11
+      },
+      {
+        "file": "src/ReTAC.App/ConcatDialog.cs",
+        "line": 22
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/FileConcat.cs",
+        "line": 8
+      }
+    ],
+    "R-36": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1088
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1321
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1342
+      }
+    ],
+    "R-37-3": [
+      {
+        "file": "src/ReTAC.App/ToolLauncher.cs",
+        "line": 12
+      },
+      {
+        "file": "src/ReTAC.App/ToolProcess.cs",
+        "line": 30
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
+        "line": 7
+      }
+    ],
+    "R-38": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1421
+      }
+    ],
+    "R-39": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 67
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1687
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FolderEnumerator.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FolderEnumerator.cs",
+        "line": 16
+      }
+    ],
+    "R-39-3": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 92
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 190
+      }
+    ],
+    "R-39-4": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1651
+      }
+    ],
+    "R-40": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 26
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 44
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 152
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1049
+      }
+    ],
+    "R-40-2": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1050
+      },
+      {
+        "file": "src/ReTAC.App/Program.cs",
+        "line": 20
+      }
+    ],
+    "R-40-4": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1058
+      }
+    ],
+    "R-40-5": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 164
+      }
+    ],
+    "R-40-6": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 28
+      },
+      {
+        "file": "src/ReTAC.App/Program.cs",
+        "line": 36
+      }
+    ],
+    "R-40-7": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 156
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1064
+      }
+    ],
+    "R-41": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 452
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFileOperation.cs",
+        "line": 7
+      }
+    ],
+    "R-41-2": [
+      {
+        "file": "src/ReTAC.Shell/ShellFileOperation.cs",
+        "line": 9
+      }
+    ],
+    "R-41-3": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 797
+      }
+    ],
+    "R-41-4": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 574
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 591
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 624
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 702
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1171
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1212
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/CopyPlan.cs",
+        "line": 22
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/CopyPolicy.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/CopyPolicy.cs",
+        "line": 18
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFileOperation.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFileOperation.cs",
+        "line": 19
+      }
+    ],
+    "R-41-5": [
+      {
+        "file": "src/ReTAC.App/ConflictDialog.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 600
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/CopyPlan.cs",
+        "line": 36
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/CopyPolicy.cs",
+        "line": 3
+      }
+    ],
+    "R-41-6": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 469
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 25
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 75
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/CopyPlan.cs",
+        "line": 23
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/CopyPlan.cs",
+        "line": 31
+      }
+    ],
+    "R-42": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 520
+      }
+    ],
+    "R-44": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 676
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFileOperation.cs",
+        "line": 46
+      }
+    ],
+    "R-45": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 725
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 755
+      }
+    ],
+    "R-46": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 549
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 97
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 172
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 54
+      },
+      {
+        "file": "src/ReTAC.App/RunDialog.cs",
+        "line": 48
+      },
+      {
+        "file": "src/ReTAC.App/TextInputDialog.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.App/TextInputDialog.cs",
+        "line": 68
+      }
+    ],
+    "R-46-2": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 726
+      },
+      {
+        "file": "src/ReTAC.App/TextInputDialog.cs",
+        "line": 10
+      }
+    ],
+    "R-46-3": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 836
+      }
+    ],
+    "R-46-4": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 465
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1277
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.App/RunDialog.cs",
+        "line": 9
+      }
+    ],
+    "R-47": [
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 40
+      }
+    ],
+    "R-48": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 836
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1546
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 11
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 60
+      },
+      {
+        "file": "src/ReTAC.App/TextInputDialog.cs",
+        "line": 11
+      },
+      {
+        "file": "src/ReTAC.App/TextInputDialog.cs",
+        "line": 56
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/FileNameRules.cs",
+        "line": 4
+      }
+    ],
+    "R-49": [
+      {
+        "file": "src/ReTAC.App/AttributeDialog.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/AttributeDialog.cs",
+        "line": 27
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 769
+      }
+    ],
+    "R-49-2": [
+      {
+        "file": "src/ReTAC.App/AttributeDialog.cs",
+        "line": 11
+      },
+      {
+        "file": "src/ReTAC.App/AttributeDialog.cs",
+        "line": 69
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 831
+      }
+    ],
+    "R-50": [
+      {
+        "file": "src/ReTAC.App/AttributeDialog.cs",
+        "line": 12
+      },
+      {
+        "file": "src/ReTAC.App/ConflictDialog.cs",
+        "line": 11
+      },
+      {
+        "file": "src/ReTAC.App/ConflictDialog.cs",
+        "line": 64
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 600
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 769
+      },
+      {
+        "file": "src/ReTAC.App/TextInputDialog.cs",
+        "line": 46
+      }
+    ],
+    "R-51": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 470
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 592
+      }
+    ],
+    "R-52": [
+      {
+        "file": "src/ReTAC.App/FolderBrowser.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
+        "line": 54
+      }
+    ],
+    "R-52-2": [
+      {
+        "file": "src/ReTAC.App/FolderBrowser.cs",
+        "line": 11
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
+        "line": 18
+      }
+    ],
+    "R-52-3": [
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 189
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 86
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
+        "line": 47
+      }
+    ],
+    "R-52-4": [
+      {
+        "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
+        "line": 45
+      }
+    ],
+    "R-52-5": [
+      {
+        "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
+        "line": 201
+      }
+    ],
+    "R-53": [
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 141
+      }
+    ],
+    "R-54": [
+      {
+        "file": "src/ReTAC.App/RunDialog.cs",
+        "line": 10
+      }
+    ],
+    "R-54-2": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 205
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1274
+      },
+      {
+        "file": "src/ReTAC.App/RunDialog.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.App/ToolLauncher.cs",
+        "line": 12
+      }
+    ],
+    "R-55": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 11
+      },
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 99
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolDialog.cs",
+        "line": 50
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 397
+      }
+    ],
+    "R-55-3": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 104
+      },
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 133
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1134
+      }
+    ],
+    "R-56": [
+      {
+        "file": "src/ReTAC.Shell/ShellObjects.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellObjects.cs",
+        "line": 8
+      }
+    ],
+    "R-56-2": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 959
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchTargets.cs",
+        "line": 7
+      }
+    ],
+    "R-56-3": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 434
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1305
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
+        "line": 25
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchTargets.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchTargets.cs",
+        "line": 14
+      }
+    ],
+    "R-57": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 902
+      },
+      {
+        "file": "src/ReTAC.App/NumberedPopup.cs",
+        "line": 7
+      }
+    ],
+    "R-57-2": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 952
+      },
+      {
+        "file": "src/ReTAC.Domain/Formatting/NameFormats.cs",
+        "line": 18
+      }
+    ],
+    "R-58": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 871
+      },
+      {
+        "file": "src/ReTAC.App/ShortcutDialog.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.App/ShortcutDialog.cs",
+        "line": 54
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellObjects.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellObjects.cs",
+        "line": 25
+      }
+    ],
+    "R-59": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 367
+      }
+    ],
+    "R-60": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1088
+      }
+    ],
+    "R-60-3": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1098
+      }
+    ],
+    "R-61": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 486
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1542
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 105
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
+        "line": 5
+      }
+    ],
+    "R-61-3": [
+      {
+        "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
+        "line": 12
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
+        "line": 60
+      }
+    ],
+    "R-62": [
+      {
+        "file": "src/ReTAC.App/ChoiceDialog.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 495
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 530
+      }
+    ],
+    "R-63": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 477
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 549
+      },
+      {
+        "file": "src/ReTAC.App/TextInputDialog.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/FileNameRules.cs",
+        "line": 5
+      }
+    ],
+    "R-63-2": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 477
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 531
+      }
+    ],
+    "R-65": [
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 44
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 32
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 405
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 102
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/DropRules.cs",
+        "line": 9
+      }
+    ],
+    "R-65-2": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 420
+      }
+    ],
+    "R-66": [
+      {
+        "file": "src/ReTAC.App/AboutDialog.cs",
+        "line": 66
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 387
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 496
+      },
+      {
+        "file": "src/ReTAC.App/KeyAssignDialog.cs",
+        "line": 65
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessDialog.cs",
+        "line": 38
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 70
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 203
+      }
+    ],
+    "R-66-2": [
+      {
+        "file": "src/ReTAC.Shell/ShellIcons.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellIcons.cs",
+        "line": 83
+      }
+    ],
+    "R-66-3": [
+      {
+        "file": "src/ReTAC.App/ColorFontDialog.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 501
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1376
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
+        "line": 6
+      }
+    ],
+    "R-66-4": [
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 11
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 16
+      }
+    ],
+    "R-67": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 33
+      }
+    ],
+    "R-68": [
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchTargets.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/LaunchTargets.cs",
+        "line": 21
+      }
+    ],
+    "R-69": [
+      {
+        "file": "src/ReTAC.Domain/Formatting/Display.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Formatting/Display.cs",
+        "line": 11
+      }
+    ],
+    "R-7": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1675
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1705
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1732
+      }
+    ],
+    "R-70": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1737
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/CursorRestore.cs",
+        "line": 6
+      }
+    ],
+    "R-71": [
+      {
+        "file": "src/ReTAC.Domain/Tools/ArgumentExpander.cs",
+        "line": 16
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
+        "line": 35
+      }
+    ],
+    "R-72": [
+      {
+        "file": "src/ReTAC.Domain/Tools/ArgumentExpander.cs",
+        "line": 16
+      }
+    ],
+    "R-73": [
+      {
+        "file": "src/ReTAC.App/KeySlots.cs",
+        "line": 30
+      },
+      {
+        "file": "src/ReTAC.App/MenuBar.cs",
+        "line": 150
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+        "line": 38
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+        "line": 87
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/KeySlotList.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/KeySlotList.cs",
+        "line": 34
+      }
+    ],
+    "R-74": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 46
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 128
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 265
+      },
+      {
+        "file": "src/ReTAC.App/MouseButtonFilter.cs",
+        "line": 7
+      }
+    ],
+    "R-75": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 266
+      }
+    ],
+    "R-8": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 116
+      }
+    ],
+    "S-07": [
+      {
+        "file": "src/ReTAC.App/ExternalToolQueueForm.cs",
+        "line": 71
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1465
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
+        "line": 31
+      }
+    ],
+    "S-12": [
+      {
+        "file": "src/ReTAC.Domain/Commands/CommandTarget.cs",
+        "line": 14
+      }
+    ],
+    "S-14": [
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
+        "line": 5
+      }
+    ],
+    "S-19": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1422
+      }
+    ],
+    "V-01": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 828
+      }
+    ],
+    "V-02": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 700
+      }
+    ],
+    "V-03": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 377
+      },
+      {
+        "file": "src/ReTAC.App/Program.cs",
+        "line": 23
+      },
+      {
+        "file": "src/ReTAC.App/ToolLauncher.cs",
+        "line": 19
+      },
+      {
+        "file": "src/ReTAC.App/ToolQueueHost.cs",
+        "line": 29
+      },
+      {
+        "file": "src/ReTAC.Shell/Executables.cs",
+        "line": 68
+      }
+    ],
+    "V-04": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1259
+      }
+    ],
+    "V-05": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 583
+      }
+    ],
+    "V-06": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1749
+      }
+    ],
+    "V-07": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 156
+      }
+    ],
+    "V-08": [
+      {
+        "file": "src/ReTAC.App/ToolLauncher.cs",
+        "line": 46
+      }
+    ],
+    "V-09": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 463
+      }
+    ],
+    "V-10": [
+      {
+        "file": "src/ReTAC.App/TextInputDialog.cs",
+        "line": 49
+      }
+    ],
+    "V-11": [
+      {
+        "file": "src/ReTAC.Domain/Listing/Wildcard.cs",
+        "line": 12
+      }
+    ],
+    "V-12": [
+      {
+        "file": "src/ReTAC.App/Rendering/MarkStar.cs",
+        "line": 12
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 196
+      }
+    ],
+    "V-13": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 361
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1328
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1416
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1606
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1631
+      }
+    ],
+    "V-14": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 311
+      }
+    ],
+    "V-15": [
+      {
+        "file": "src/ReTAC.App/KeySlots.cs",
+        "line": 49
+      },
+      {
+        "file": "src/ReTAC.Domain/Commands/CommandTarget.cs",
+        "line": 25
+      }
+    ],
+    "V-16": [
+      {
+        "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
+        "line": 14
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
+        "line": 57
+      }
+    ],
+    "X-01": [
+      {
+        "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+        "line": 35
+      }
+    ],
+    "X-02": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1764
+      }
+    ],
+    "X-03": [
+      {
+        "file": "src/ReTAC.App/KeySlots.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+        "line": 35
+      }
+    ]
+  }
+}

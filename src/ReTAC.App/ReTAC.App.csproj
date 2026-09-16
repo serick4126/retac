@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <EmbeddedResource Include="retac.ico" />
+    <ProjectReference Include="..\ReTAC.Domain\ReTAC.Domain.csproj" />
+    <ProjectReference Include="..\ReTAC.Shell\ReTAC.Shell.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- 配布する実行ファイル名は ReTAC.exe。既定だとプロジェクト名の ReTAC.App.exe になる。
+         RootNamespace も明示して固定する。AssemblyName だけ変えると埋め込みリソースの
+         論理名が変わり、MainForm が ReTAC.App.retac.ico で引いているアイコンを失う（H-14） -->
+    <AssemblyName>ReTAC</AssemblyName>
+    <RootNamespace>ReTAC.App</RootNamespace>
+    <!-- 既定でも 1.0.0 が入るが、名乗る値は明示しておく。
+         ここから AssemblyVersion / FileVersion / InformationalVersion が導かれ、
+         エクスプローラーのプロパティ→詳細に出る -->
+    <Version>2.1.0</Version>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <!-- Phase 5: スキーマ・マニフェストが XML コメントを取り込むため -->
+    <GenerateDocumentationFile Condition="'$(Configuration)' == 'Debug'">true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- A-04 / R-66: Per-Monitor DPI Awareness V2 -->
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <!-- H-2: 260 文字を超えるパスをシェル API へ渡すために longPathAware を宣言する -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- H-14: アプリアイコン -->
+    <ApplicationIcon>retac.ico</ApplicationIcon>
+  </PropertyGroup>
+
+</Project>

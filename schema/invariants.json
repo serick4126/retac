@@ -1,0 +1,171 @@
+{
+  "$schemaVersion": 1,
+  "$note": "手書き。manifest.json（自動生成）と違い、ここは人が書く『あるべき姿』の層。実装を写しただけでは実装漏れを検出できないため、制約の宣言をここに置き、lint が実装と突き合わせる。",
+
+  "settingsOwners": {
+    "$note": "設定項目を誰が編集するか。dialog:<画面> / runtime:<自動更新する場所> / manual:<手編集>。UNKNOWN は L5 で失敗する",
+
+    "KeepLastFolder": "dialog:EnvironmentDialog",
+    "LastFolder": "runtime:MainForm",
+    "StartFolder": "manual:settings-file",
+    "Resident": "dialog:EnvironmentDialog",
+    "StartMinimized": "dialog:EnvironmentDialog",
+
+    "WindowX": "runtime:MainForm",
+    "WindowY": "runtime:MainForm",
+    "WindowWidth": "runtime:MainForm",
+    "WindowHeight": "runtime:MainForm",
+
+    "SortKey": "dialog:SortDialog",
+    "SortDirection": "dialog:SortDialog",
+    "SortMode": "dialog:SortDialog",
+
+    "ShowFolders": "dialog:FileTypeDialog",
+    "ShowPrograms": "dialog:FileTypeDialog",
+    "ShowAssociated": "dialog:FileTypeDialog",
+    "ShowArchives": "dialog:FileTypeDialog",
+    "ShowOthers": "dialog:FileTypeDialog",
+    "ShowSystemFiles": "dialog:FileTypeDialog",
+    "ShowHiddenFiles": "dialog:FileTypeDialog",
+
+    "HiddenDrives": "dialog:DriveVisibilityDialog",
+    "DriveFolders": "runtime:DriveBar",
+    "ShowDesktopButton": "dialog:DriveVisibilityDialog",
+
+    "Colors": "dialog:ColorFontDialog",
+    "FontFamily": "dialog:ColorFontDialog",
+    "FontSize": "dialog:ColorFontDialog",
+
+    "KeyBindings": "dialog:KeyAssignDialog",
+    "SuppressMultipleToolLaunch": "dialog:EnvironmentDialog",
+
+    "ExternalTools": "dialog:ExternalToolDialog",
+    "NextExternalToolId": "dialog:ExternalToolDialog",
+
+    "QuickAccess": "dialog:QuickAccessDialog",
+    "QuickAccessShowTitles": "dialog:QuickAccessDialog",
+    "QuickAccessFixMissing": "dialog:QuickAccessDialog",
+
+    "FolderHistory": "runtime:MainForm"
+  },
+
+  "invariants": [
+    {
+      "id": "INV-QUICKACCESS-UNIQUE-PATH",
+      "status": "enforced",
+      "specIds": [],
+      "applies": [
+        "type:ReTAC.Domain.Navigation.QuickAccessList",
+        "unique:ReTAC.Domain.Navigation.QuickAccessList#_items",
+        "unique:ReTAC.App.AppSettings#QuickAccess",
+        "settings:QuickAccess"
+      ],
+      "rule": "同じフォルダを二重に登録しない。末尾の区切りを除いた大文字小文字無視で比較する。設定ファイルを手で書いて重複させた場合は読み込み時に落ちる。",
+      "enforcedBy": "domain:QuickAccessList.Add / QuickAccessList.Replace（IndexOfPath で弾く）",
+      "testedBy": "tests/ReTAC.Domain.Tests/QuickAccessTests.cs"
+    },
+    {
+      "id": "INV-TOOLTARGET-FK",
+      "status": "enforced",
+      "specIds": ["R-25", "F-01"],
+      "applies": [
+        "fk:ReTAC.Domain.Commands.ToolTarget#ToolId",
+        "type:ReTAC.Domain.Commands.ToolTarget",
+        "settings:KeyBindings"
+      ],
+      "rule": "ToolTarget.ToolId は存在する ExternalTool.Id を必ず指す。存在しないツールを指す割り当ては読み込み時に落とす。既定のキー（Tool:1〜3）も例外にしない。",
+      "enforcedBy": "domain:KeyMap.DropUnknownTools（AppSettings.ToKeyMap が読み込み時に通す）",
+      "testedBy": "tests/ReTAC.Domain.Tests/KeyMapToolRefTests.cs"
+    },
+    {
+      "id": "INV-STARTFOLDER-MODE",
+      "status": "deferred",
+      "specIds": [],
+      "applies": ["settings:StartFolder"],
+      "rule": "開始フォルダは「前回終了時のフォルダ」と「手動指定の固定パス」から選べる。",
+      "reason": "最小構成で動くところまでを目指した段階的縮小であり、実装漏れではない。現在は前回終了時のフォルダのみを実装している。",
+      "plannedShape": {
+        "StartFolderMode": "enum LastFolder|Fixed（既定 LastFolder）",
+        "StartFolder": "string?（Fixed のときだけ使う）",
+        "editedBy": "dialog:EnvironmentDialog",
+        "note": "既定が現在の挙動なので、古い設定ファイルはそのまま読める。移行コードは要らない。"
+      },
+      "enforcedBy": null
+    },
+    {
+      "id": "INV-NO-SETTINGS-MIGRATION",
+      "status": "enforced",
+      "specIds": ["R-20"],
+      "applies": ["settings:*"],
+      "rule": "旧バージョンの設定ファイルからの移行コード・互換コードを書かない。AppSettings にバージョン欄を足さない。欠けたキーは既定値で埋まればよい。",
+      "enforcedBy": "policy:AppSettings にバージョン欄が無いこと（L9 が既定値の存在を保証する）",
+      "note": "一般リリース前のため。別セッションの AI が親切心で移行処理を足すのを防ぐために明文化している。"
+    },
+    {
+      "id": "INV-NO-PREFERENCE-DEFAULTS",
+      "status": "enforced",
+      "specIds": ["B-05"],
+      "applies": ["settings:ExternalTools", "settings:QuickAccess", "settings:KeyBindings"],
+      "rule": "既定値に誰かの好みを埋めない。特定の製品をインストールした環境でしか通らないパスを既定に置かない。運用想定外の選択肢は設定画面に置かず、コードに固定する。クイックアクセスの初期登録は 0 件。",
+      "exception": "設定ファイルが無い環境でも最低限動くことは別の要件である。どの Windows にも必ずあるもの（notepad.exe / cmd.exe）に限り、外部ツールの既定パスとして置いてよい。好みの道具に替えたい利用者は外部ツールの設定で変えられる。マウスボタン4/5 の既定を「戻る」「進む」にするのも同じ例外に当たる。エクスプローラー・ブラウザを含め Windows 全体で標準の挙動であり、特定の製品を入れた環境でしか意味を持たない値でもないため。",
+      "enforcedBy": "domain:DefaultExternalTools.Create（OS 標準の実行ファイルだけ。製品固有のパスは入れない）",
+      "note": "2.0.1 まではパスを空にしていたが、初回起動の利用者が E を押しても何も起きなかった。2.0.2 で OS 標準のものに限って埋める方針へ変えた。ここを見て『好みを埋めない』を根拠に空へ戻さないこと。逆に、VS Code のような製品固有のパスを足すのは元の方針どおり禁止。2.1.0 でマウスボタン4/5 の既定（B-17）を足した。ホイール押し込み（ボタン3）は標準の挙動がアプリごとに違うので空のままにしてある。ここを「便利だから」で埋めないこと。"
+    },
+    {
+      "id": "INV-ABOUT-NOT-ASSIGNABLE",
+      "status": "accepted",
+      "specIds": ["R-13"],
+      "applies": ["command:About"],
+      "rule": "About（0xE140）はキー割り当ての対象にしない。",
+      "reason": "卓駆と同じ ID を持つがヘルプメニュー専用で、キーに割り当てる意味が無いため CommandLabels に載せていない。"
+    },
+    {
+      "id": "INV-EXTERNALTOOL-ID-UNIQUE",
+      "status": "accepted",
+      "specIds": ["F-04"],
+      "applies": ["unique:ReTAC.App.AppSettings#ExternalTools"],
+      "rule": "ExternalTool.Id は一覧の中で一意であることが望ましい。",
+      "reason": "NextExternalToolId が単調増加し削除した番号を使い回さないため、画面からの操作では重複しない。設定ファイルを手で書いて重複させた場合は先頭が勝つ。実害が起動先の取り違えに留まるため、読み込み時の強制はしていない。",
+      "enforcedBy": null
+    },
+    {
+      "id": "INV-NEXTTOOLID-IS-COUNTER",
+      "status": "accepted",
+      "specIds": ["F-04"],
+      "applies": ["fk:ReTAC.App.AppSettings#NextExternalToolId"],
+      "rule": "NextExternalToolId は参照ではない。次に振る番号を覚えておくカウンタである。",
+      "reason": "名前が Id で終わるため参照の候補として挙がるが、既存のツールを指すものではない。削除した番号を使い回さないための単調増加の値であり、参照整合性の対象にならない。",
+      "enforcedBy": null
+    },
+    {
+      "id": "INV-ORDERED-COLLECTIONS",
+      "status": "accepted",
+      "applies": [
+        "unique:ReTAC.Domain.Selection.ListState#_entries",
+        "unique:ReTAC.Domain.Tools.MacroContext#Targets",
+        "unique:ReTAC.Domain.Tools.ArgumentTemplate#Arguments",
+        "unique:ReTAC.Domain.Tools.ArgumentTemplate#Prompts",
+        "unique:ReTAC.Domain.Tools.ArgumentTemplate#Errors",
+        "unique:ReTAC.Domain.FileOps.CopyPlan#Items",
+        "unique:ReTAC.Domain.Tools.TemplateArgument#Parts",
+        "unique:ReTAC.Domain.Tools.ExternalToolQueue#_entries"
+      ],
+      "rule": "並び順そのものに意味がある列であり、重複禁止を掛けない。",
+      "reason": "ファイル一覧は列挙結果の順序が表示順であり、同名は OS 側で作れない。引数・プロンプト・エラーは書かれた順に対応し、同じ内容が二度現れるのは正常。コピー計画とツールキューは同じ対象を複数回積めることが仕様。一意性を掛けると意味が壊れる。"
+    },
+    {
+      "id": "INV-SINGLE-CLICK-MODE",
+      "status": "deferred",
+      "specIds": ["R-11"],
+      "applies": ["settings:*"],
+      "rule": "ファイル一覧のクリックの扱いは、ダブルクリックで開く現行モードと、ホバーで選択しシングルクリックで開く Windows 準拠モードから選べる。",
+      "reason": "2.1.0（Phase6）でマウスボタンへのコマンド割り当てを入れた際に、左ボタンは固定として対象から外した。左シングルクリックはカーソル移動・行頭アイコンのマーク・Shift 範囲マーク・ドラッグ開始の 4 つを同時に担っており、1 つのコマンドに畳めないため。シングルクリック運用の手当ては入力モデルの切り替えとして別に行う。割り当ての枠に押し込まないこと。",
+      "plannedShape": {
+        "ClickMode": "enum DoubleClick|SingleClick（既定 DoubleClick）",
+        "editedBy": "dialog:EnvironmentDialog",
+        "note": "SingleClick ではホバーでカーソルが移動し、左シングルクリックで開く。行頭アイコンのクリックは両モードともマークのトグル（R-11-2 / B-07）。ダブルクリックで開く経路は SingleClick では使わない。既定が現在の挙動なので移行コードは要らない。"
+      },
+      "enforcedBy": null
+    }
+  ]
+}

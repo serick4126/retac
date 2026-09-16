@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ReTAC.App/ReTAC.App.csproj" />
+    <Project Path="src/ReTAC.Domain/ReTAC.Domain.csproj" />
+    <Project Path="src/ReTAC.Shell/ReTAC.Shell.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ReTAC.Domain.Tests/ReTAC.Domain.Tests.csproj" />
+  </Folder>
+</Solution>
