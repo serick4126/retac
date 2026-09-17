@@ -1228,7 +1228,8 @@ public sealed class MainForm : Form
         // 項目の上でない（親フォルダ項目・余白）ときだけ ReTAC のコマンド一覧を出す
         if (click.Index < 0 || state.Entries[click.Index].IsParent)
         {
-            ShowCommandPopup();
+            // R-79: マウスで開いたので、右クリックした位置に出す
+            ShowCommandPopup(_list.PointToClient(click.ScreenPoint));
             return;
         }
 
@@ -1422,15 +1423,21 @@ public sealed class MainForm : Form
     /// 書庫 2 項目・同じ拡張子で絞込み（S-19）・ファイル情報（スコープ外）を除く。
     /// よく使う設定はここからも開けるようにする（メニューバーの「設定(&amp;O)」が正規の入口）。
     /// </summary>
-    private bool ShowCommandPopup()
+    /// <param name="anchor">
+    /// R-79: 出す位置（リストのクライアント座標）。右クリックで開いたときはその位置、
+    /// 省略したら（キー・メニューバー・マウスボタンの割り当て）カーソル行の直下（N-06）
+    /// </param>
+    private bool ShowCommandPopup(Point? anchor = null)
     {
+        var at = anchor ?? _list.PopupAnchor();
         List<(string, Action)> items =
         [
             ("全選択＆選択解除", () => { _list.State.ToggleAllMarks(); _list.Invalidate(); RefreshStatus(); }),
             ("同じ拡張子を選択", () => { _list.State.MarkBySameExtension(); _list.Invalidate(); RefreshStatus(); }),
             ("", () => { }),
             // F-08: 固定の項目の番号がツールの数でずれないよう、ツールはサブメニューにまとめる
-            ("外部ツール ▶", () => BeginInvoke((Action)ShowToolPopup)),
+            // R-79: 2 段目も 1 段目と同じ位置に出す。後から開くので、位置は引数で引き継ぐ
+            ("外部ツール ▶", () => BeginInvoke(() => ShowToolPopup(at))),
             ("", () => { }),
             ("ファイルの連結...", () => ConcatFiles()),
             ("", () => { }),
@@ -1438,7 +1445,7 @@ public sealed class MainForm : Form
             ("表示するファイルタイプの設定...", () => ShowFileTypeSettings()),
             ("外部ツールの設定...", () => ShowExternalToolSettings()),
         ];
-        NumberedPopup.Show(_list, _list.PopupAnchor(), items);
+        NumberedPopup.Show(_list, at, items);
         return true;
     }
 
@@ -1446,13 +1453,13 @@ public sealed class MainForm : Form
     /// F-08: `G` の「外部ツール ▶」。「ポップアップに表示する」が ON のツールを登録順に、1〜9 の番号付きで並べる。
     /// 呼び出し元のポップアップが閉じ切ってから開くので BeginInvoke で呼ぶ。
     /// </summary>
-    private void ShowToolPopup()
+    private void ShowToolPopup(Point at)
     {
         var items = _settings.ExternalTools
             .Where(t => t.ShowInPopup)
             .Select(t => (t.Name, (Action)(() => LaunchTool(t.Id))))
             .ToList();
-        NumberedPopup.Show(_list, _list.PopupAnchor(), items);
+        NumberedPopup.Show(_list, at, items);
     }
 
     /// <summary>F-05: 外部ツールキューの進行状況のウィンドウ（確実な入口）。</summary>
