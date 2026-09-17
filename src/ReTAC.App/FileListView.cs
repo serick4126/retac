@@ -26,6 +26,8 @@ public sealed class FileListView : Control
     private ColumnLayout _layout = ColumnLayout.Empty;
     /// <summary>スクロール位置は列単位で持つ。実機は常に列単位でスクロールし、左端が見切れることがない。</summary>
     private int _scrollColumn;
+    /// <summary>R-76: ホイールの端数。フォルダを開き直したら捨てる。</summary>
+    private readonly WheelAccumulator _wheel = new();
 
     public FileListView()
     {
@@ -112,6 +114,7 @@ public sealed class FileListView : Control
         _state = new ListState(entries);
         _state.MoveCursor(cursorIndex);
         _scrollColumn = keepScroll ? scroll : 0;
+        if (!keepScroll) _wheel.Reset();
         RecomputeLayout();
         _scrollColumn = Math.Clamp(_scrollColumn, 0, MaxScrollColumn);   // 件数が減って列が消えた場合
         // 見えている位置ならこの中で何も起きない。カーソルが画面外のときだけ動く
@@ -474,9 +477,10 @@ public sealed class FileListView : Control
     protected override void OnMouseWheel(MouseEventArgs e)
     {
         base.OnMouseWheel(e);
-        if (!_scrollBar.Visible) return;
-        // 1 ノッチ = 1 列。左端は常に列の境界に揃う
-        _scrollColumn -= e.Delta / SystemInformation.MouseWheelScrollDelta;
+        // スクロールできない間にたまった分が、後でまとめて効かないようにする
+        if (!_scrollBar.Visible) { _wheel.Reset(); return; }
+        // R-76: 1 ノッチ = 1 列。左端は常に列の境界に揃う
+        _scrollColumn -= _wheel.Add(e.Delta, SystemInformation.MouseWheelScrollDelta);
         SyncScrollBar();
         Invalidate();
     }
