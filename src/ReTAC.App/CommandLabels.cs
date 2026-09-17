@@ -38,6 +38,7 @@ public static class CommandLabels
         ("ナビゲーション", CommandId.SelectDrive, "ドライブの選択"),
         ("ナビゲーション", CommandId.DriveByNumberKey, "数字キーのドライブ移動"),
         ("ナビゲーション", CommandId.GoDesktop, "デスクトップへ移動"),
+        ("ナビゲーション", CommandId.IncrementalSearch, "インクリメンタルサーチ"),
 
         ("表示", CommandId.Refresh, "最新の情報に更新"),
         ("表示", CommandId.ToggleDriveBar, "ドライブバーの表示切り替え"),

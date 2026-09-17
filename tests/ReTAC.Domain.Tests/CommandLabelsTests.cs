@@ -24,7 +24,15 @@ public class CommandLabelsTests
     public void 分類名に移動は無くナビゲーションになっている()
     {
         Assert.DoesNotContain(CommandLabels.Grouped, row => row.Category == "移動");
-        Assert.Equal(11, CommandLabels.Grouped.Count(row => row.Category == "ナビゲーション"));
+        // 11 件＋インクリメンタルサーチ（R-80）
+        Assert.Equal(12, CommandLabels.Grouped.Count(row => row.Category == "ナビゲーション"));
+    }
+
+    [Fact]
+    public void インクリメンタルサーチはナビゲーションの末尾にある()
+    {
+        var navigation = CommandLabels.Grouped.Where(r => r.Category == "ナビゲーション").ToList();
+        Assert.Equal((CommandId.IncrementalSearch, "インクリメンタルサーチ"), (navigation[^1].Command, navigation[^1].Label));
     }
 
     [Theory]

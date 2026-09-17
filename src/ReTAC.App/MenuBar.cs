@@ -61,7 +61,9 @@ public static class MenuBar
                 Item("同じ拡張子を選択(&D)", CommandId.MarkBySameExtension),
                 // 既定のキー割り当てが無く `G` のポップアップにも無いので、
                 // ここに置かないと自分で割り当てない限り実行できない
-                Item("ワイルドカードで選択(&W)...", CommandId.MarkByWildcard)),
+                Item("ワイルドカードで選択(&W)...", CommandId.MarkByWildcard),
+                Separator(),
+                Item("インクリメンタルサーチ(&F)", CommandId.IncrementalSearch)),
 
             Top("フォルダ(&D)",
                 Item("フォルダ作成(&M)...", CommandId.CreateFolder),

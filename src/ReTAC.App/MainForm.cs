@@ -52,6 +52,8 @@ public sealed class MainForm : Form
     private bool _fullExit;
     /// <summary>R-74: マウスボタン3/4/5 を窓全体で受ける。解除は FormClosed で行う。</summary>
     private readonly MouseButtonFilter _mouseButtons;
+    /// <summary>R-80: ステータスバーの一段上。検索中だけ出す。</summary>
+    private readonly IncrementalSearchBar _search;
 
     /// <summary>通常表示だったときのクライアント領域。最小化中に保存しても潰れないようにするため。</summary>
     private Size _normalClientSize;
@@ -59,6 +61,7 @@ public sealed class MainForm : Form
     public MainForm(Size? clientSize = null, AppSettings? settings = null)
     {
         _settings = settings ?? new AppSettings();
+        _search = new IncrementalSearchBar(_list);
         _keyMap = _settings.ToKeyMap();
         _history = _settings.ToFolderHistory();
         _quickAccess = _settings.ToQuickAccess();
@@ -78,8 +81,10 @@ public sealed class MainForm : Form
             StartPosition = FormStartPosition.Manual;
             Location = new Point(_settings.WindowX, _settings.WindowY);
         }
-        // Fill を先に足す（後から足した Dock の方が先に領域を取る）
+        // Fill を先に足す（後から足した Dock の方が先に領域を取る）。
+        // ステータスバーが一番下、検索バーはその一段上に来るよう、検索バーを先に足す
         Controls.Add(_list);
+        Controls.Add(_search);
         Controls.Add(_driveBar);
         Controls.Add(_statusBar);
         _statusBar.QueueClicked += (_, _) => ShowToolQueue();
@@ -341,6 +346,7 @@ public sealed class MainForm : Form
         CommandId.QuickAccessAdd => AddCurrentToQuickAccess(),
         CommandId.GoBack => GoHistory(_history.Back(_currentFolder), record: false),
         CommandId.GoForward => GoHistory(_history.Forward(_currentFolder), record: false),
+        CommandId.IncrementalSearch => _search.Open(),
         _ => false,
     };
 
@@ -1828,7 +1834,11 @@ public sealed class MainForm : Form
         }
 
         _list.DropFolder = folder;   // R-78: ドロップの説明に使う
-        _list.SetEntries(entries, cursor, keepScroll: PathEquals(previous, folder));
+        var sameFolder = PathEquals(previous, folder);
+        _list.SetEntries(entries, cursor, keepScroll: sameFolder);
+        // R-80: 検索中の再表示は一致を求め直す。別のフォルダへ移ったら、元の位置は意味を失うので確定として閉じる
+        if (sameFolder) _search.Rematch();
+        else _search.Close(restore: false);
         WatchCurrentFolder();
 
         // 再表示ではマークを名前で戻す（R-11-4 の「フォルダ移動で解除」とは別）
