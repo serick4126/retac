@@ -41,6 +41,13 @@ public sealed class MainForm : Form
     private readonly System.Windows.Forms.Timer _autoRefresh = new() { Interval = 300 };
     private SortOrder _sortOrder;
     private string _currentFolder = "";
+    /// <summary>
+    /// R-77: このウィンドウでドライブバーを出しているか。_driveBar.Visible は親のフォームが
+    /// 表示されていないと false を返すので、状態の判断には使わない。
+    /// </summary>
+    private bool _driveBarShown;
+    // RebuildMenu（キー割り当ての変更）がメニュー全体を作り直すたびに差し替える。readonly にはできない
+    private ToolStripMenuItem _driveBarMenuItem;
     /// <summary>R-40: 常駐中は終了操作で最小化するだけにする。完全終了だけがプロセスを終わらせる。</summary>
     private bool _fullExit;
     /// <summary>R-74: マウスボタン3/4/5 を窓全体で受ける。解除は FormClosed で行う。</summary>
@@ -77,9 +84,12 @@ public sealed class MainForm : Form
         Controls.Add(_statusBar);
         _statusBar.QueueClicked += (_, _) => ShowToolQueue();
         // Dock.Top は後から足した方が上に来る。メニューはドライブバーより上
-        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools);
+        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools, out _driveBarMenuItem);
         Controls.Add(_menu);
         MainMenuStrip = _menu;
+        _driveBarShown = _settings.ShowDriveBar;
+        _driveBar.Visible = _driveBarShown;
+        _driveBarMenuItem.Checked = _driveBarShown;
 
         _list.EntryActivated += (_, entry) => OnActivated(entry);
         _list.ParentRequested += (_, _) => GoParent();
@@ -90,12 +100,7 @@ public sealed class MainForm : Form
         _list.CommandKey += (_, e) => OnCommandKey(e);
         _list.RightClicked += (_, click) => OnRightClick(click);
         // R-39-3 の「明示的なドライブ変更」。相対移動とは別経路
-        _driveBar.PathSelected += (_, path) =>
-        {
-            _list.Focus();
-            // ドライブのボタンはルートを指す。数字キーと同じく、前にいた場所へ戻す
-            _ = OpenFolderAsync(FolderEnumerator.IsDriveRoot(path) ? LastFolderOn(path) : path);
-        };
+        _driveBar.PathSelected += (_, path) => OnDriveChosen(path);
         _driveBar.Cancelled += (_, _) => _list.Focus();
         // ドライブのボタンの右クリックはリストの項目と同じ扱い。移動はしない
         _driveBar.RightClicked += (_, click) => ShowShellContextMenu([click.Path], click.ScreenPoint);
@@ -286,8 +291,9 @@ public sealed class MainForm : Form
         CommandId.GoRoot => GoRoot(),
         // 数字キー 1〜9 が A: 〜 I:（0x831F）
         CommandId.DriveByNumberKey => GoDrive(key - Keys.D0),
-        // ドライブの選択（0x82F3）。ドライブバーにフォーカスを移し、←→ と Enter で選ばせる
-        CommandId.SelectDrive => _driveBar.EnterKeyboardSelection(_currentFolder),
+        // ドライブの選択（0x82F3）。表示中はバーにフォーカスを移し、非表示ならモーダルで選ばせる（R-77）
+        CommandId.SelectDrive => _driveBarShown ? _driveBar.EnterKeyboardSelection(_currentFolder) : SelectDriveInModal(),
+        CommandId.ToggleDriveBar => ToggleDriveBar(),
         CommandId.FolderHistory => ShowFolderHistory(),
         CommandId.QuickAccess => ShowQuickAccess(),
         CommandId.DirectJump => DirectJump(),
@@ -1143,6 +1149,38 @@ public sealed class MainForm : Form
         }
     }
 
+    /// <summary>R-39-3 の「明示的なドライブ変更」。ドライブバーと、非表示時のモーダル（R-77）の共通の出口。</summary>
+    private void OnDriveChosen(string path)
+    {
+        _list.Focus();
+        // ドライブのボタンはルートを指す。数字キーと同じく、前にいた場所へ戻す
+        _ = OpenFolderAsync(FolderEnumerator.IsDriveRoot(path) ? LastFolderOn(path) : path);
+    }
+
+    /// <summary>
+    /// R-77: ドライブバーの表示切り替え。効くのはこのウィンドウだけ（NewWindow のウィンドウは設定を共有するが、
+    /// 表示するドライブの設定と同じく、ほかのウィンドウには及ぼさない）。
+    /// 設定の値ではなく、このウィンドウの表示を反転する。設定を反転すると、ウィンドウごとの表示と
+    /// 食い違ったときに押しても表示が変わらない。
+    /// </summary>
+    private bool ToggleDriveBar()
+    {
+        _driveBarShown = !_driveBarShown;
+        _driveBar.Visible = _driveBarShown;
+        _driveBarMenuItem.Checked = _driveBarShown;
+        _settings.ShowDriveBar = _driveBarShown;
+        SaveSettings();   // V-13
+        return true;
+    }
+
+    private bool SelectDriveInModal()
+    {
+        var path = DriveSelectForm.Pick(this, _list, _settings.ToHiddenDrives(), _settings.ShowDesktopButton, _currentFolder);
+        _list.Focus();
+        if (path is not null) OnDriveChosen(path);
+        return true;
+    }
+
     /// <summary>
     /// ドロップされたファイルをフォルダへ入れる（T8-2 / T8-3）。
     /// コピーか移動かは Windows の作法に合わせて <see cref="DropRules"/> が決める。
@@ -1363,7 +1401,8 @@ public sealed class MainForm : Form
     {
         Controls.Remove(_menu);
         _menu.Dispose();
-        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools);
+        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools, out _driveBarMenuItem);
+        _driveBarMenuItem.Checked = _driveBarShown;
         Controls.Add(_menu);
         MainMenuStrip = _menu;
     }

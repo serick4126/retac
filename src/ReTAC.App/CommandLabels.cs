@@ -40,6 +40,7 @@ public static class CommandLabels
         ("ナビゲーション", CommandId.GoDesktop, "デスクトップへ移動"),
 
         ("表示", CommandId.Refresh, "最新の情報に更新"),
+        ("表示", CommandId.ToggleDriveBar, "ドライブバーの表示切り替え"),
         ("表示", CommandId.ShowPopupMenu, "ポップアップメニューの表示"),
         ("表示", CommandId.ShowContextMenu, "コンテキストメニューの表示"),
         ("表示", CommandId.NewWindow, "新しいウィンドウ"),

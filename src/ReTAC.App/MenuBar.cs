@@ -18,10 +18,14 @@ public static class MenuBar
     /// <param name="dispatch">コマンドの実行。MainForm の Execute に繋ぐ</param>
     /// <param name="keyMap">項目の右側に割り当てキーを出すために引く</param>
     /// <param name="tools">F-07: 「ツール」メニューの先頭に登録順で並べる（「ポップアップに表示する」は効かない）</param>
-    public static MenuStrip Create(Action<CommandTarget> dispatch, KeyMap keyMap, IReadOnlyList<ExternalTool> tools)
+    /// <param name="driveBarItem">R-77: 「表示 ＞ ドライブバー」。チェックの付け外しは呼び出し側が行う</param>
+    public static MenuStrip Create(Action<CommandTarget> dispatch, KeyMap keyMap, IReadOnlyList<ExternalTool> tools,
+                                   out ToolStripMenuItem driveBarItem)
     {
         var keys = KeyLabels(keyMap);
         var menu = new MenuStrip();
+        // ラムダ（ローカル関数）の中で out 引数を使えないので、いったん変数に受ける
+        var driveBar = Item("ドライブバー(&D)", CommandId.ToggleDriveBar);
 
         menu.Items.AddRange(
         [
@@ -78,6 +82,8 @@ public static class MenuBar
             Top("表示(&V)",
                 Item("最新の情報に更新(&R)", CommandId.Refresh),
                 Separator(),
+                driveBar,
+                Separator(),
                 Item("ソートの設定(&S)...", CommandId.SortSettings),
                 Item("表示するファイルタイプ(&T)...", CommandId.FileTypeSettings)),
 
@@ -97,6 +103,7 @@ public static class MenuBar
                 Item("バージョン情報(&A)...", CommandId.About)),
         ]);
 
+        driveBarItem = driveBar;
         return menu;
 
         ToolStripItem[] ToolsMenu()

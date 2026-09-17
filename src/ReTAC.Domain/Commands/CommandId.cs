@@ -64,6 +64,8 @@ public enum CommandId
     ShowContextMenu = 0x8328,
     /// <summary>F-05: 外部ツールキューの進行状況のウィンドウを開く。確実な入口（ステータスバーは表示できれば便利な入口）。</summary>
     ExternalToolQueue = 0x9002,
+    /// <summary>R-77: ドライブバーの表示・非表示。メニューの項目もコマンドの経路を通す（R-12）。</summary>
+    ToggleDriveBar = 0x9005,
 
     // --- 設定・ウィンドウ ---
     ColorAndFontSettings = 0x8151,

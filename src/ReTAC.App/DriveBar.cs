@@ -104,6 +104,9 @@ public sealed class DriveBar : Control
     private int Scaled(int logical) => logical * DeviceDpi / 96;
     private int IconSize => Scaled(16);
 
+    /// <summary>ボタンを並べるのに要る幅。枠なしのモーダル（R-77）の大きさを決めるのに使う。</summary>
+    public int PreferredWidth => _buttons.Count == 0 ? 0 : _buttons[^1].Bounds.Right + Scaled(2);
+
     private void Rebuild()
     {
         var iconSize = IconSize;

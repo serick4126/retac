@@ -57,6 +57,12 @@ public sealed class AppSettings
     public Dictionary<string, string> DriveFolders { get; set; } = [];
     public bool ShowDesktopButton { get; set; } = true;
 
+    /// <summary>
+    /// R-77: ドライブバーを出すか。非表示のときの `L` はモーダルで選ぶ。
+    /// 型を変えない（変えると読み込みに失敗し、設定全体が既定値に戻る）。
+    /// </summary>
+    public bool ShowDriveBar { get; set; } = true;
+
     // --- 配色とフォント（5-1 節） ------------------------------------------
     /// <summary>既定から変えた色だけを持つ。キーは <see cref="ThemeSlots"/> の Key。</summary>
     public Dictionary<string, string> Colors { get; set; } = [];
