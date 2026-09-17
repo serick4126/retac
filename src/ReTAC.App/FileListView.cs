@@ -76,7 +76,11 @@ public sealed class FileListView : Control
     public event EventHandler<RightClick>? RightClicked;
 
     /// <param name="Index">押された行。行の外なら -1</param>
-    public readonly record struct RightClick(int Index, Point ScreenPoint);
+    /// <param name="Shift">
+    /// R-81: 押した時点で Shift が押されていたか。MainForm が後から ModifierKeys を見ると、
+    /// Shift を先に離したときに取り違える
+    /// </param>
+    public readonly record struct RightClick(int Index, Point ScreenPoint, bool Shift);
 
     /// <summary>R-78: 今いるフォルダ。ドロップの説明に使う。MainForm がフォルダを開くたびに設定する。</summary>
     [System.ComponentModel.Browsable(false)]
@@ -372,7 +376,7 @@ public sealed class FileListView : Control
         {
             // 項目の上ならシェルのメニュー、余白なら `G` のポップアップ。振り分けは呼び出し側。
             // 右クリックではマークを変えない（R-11 の「クリックはカーソル移動のみ」より更に静か）
-            RightClicked?.Invoke(this, new RightClick(index, PointToScreen(e.Location)));
+            RightClicked?.Invoke(this, new RightClick(index, PointToScreen(e.Location), ModifierKeys.HasFlag(Keys.Shift)));
             return;
         }
         if (e.Button != MouseButtons.Left || index < 0) return;

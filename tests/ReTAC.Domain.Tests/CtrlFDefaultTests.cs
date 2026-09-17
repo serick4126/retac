@@ -46,6 +46,7 @@ public class CtrlFDefaultTests
 
     [Theory]
     [InlineData(CommandId.ToggleDriveBar)]
+    [InlineData(CommandId.ShowFolderBackgroundMenu)]
     public void 背景メニューとドライブバーの切り替えには既定のキーが無い(CommandId id)
     {
         Assert.DoesNotContain(new BuiltinTarget(id), DefaultKeyMap.Create().Bindings.Values);

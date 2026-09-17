@@ -341,6 +341,7 @@ public sealed class MainForm : Form
         CommandId.QuitAll => QuitAllCommand(),
         CommandId.NewWindow => NewWindowCommand(),
         CommandId.ShowContextMenu => ShowShellContextMenu(_list.PointToScreen(_list.PopupAnchor())),
+        CommandId.ShowFolderBackgroundMenu => ShowFolderBackgroundMenu(_list.PointToScreen(_list.PopupAnchor())),
         CommandId.Refresh => Reload(),
         CommandId.QuickAccessSettings => ShowQuickAccessSettings(),
         CommandId.QuickAccessAdd => AddCurrentToQuickAccess(),
@@ -1277,7 +1278,9 @@ public sealed class MainForm : Form
         if (click.Index < 0 || state.Entries[click.Index].IsParent)
         {
             // R-79: マウスで開いたので、右クリックした位置に出す
-            ShowCommandPopup(_list.PointToClient(click.ScreenPoint));
+            // R-81: Shift 付きならエクスプローラーの背景のメニュー（「新規作成」を含む）
+            if (click.Shift) ShowFolderBackgroundMenu(click.ScreenPoint);
+            else ShowCommandPopup(_list.PointToClient(click.ScreenPoint));
             return;
         }
 
@@ -1318,6 +1321,53 @@ public sealed class MainForm : Form
         // メニューから削除・改名が行われることがあるので開き直す（自動更新でも拾えるが確実に）
         Reload();
         return true;
+    }
+
+    /// <summary>
+    /// R-81: 今いるフォルダの背景のメニュー。作成で項目がちょうど 1 つ増えたら、そこにカーソルを合わせる。
+    /// 名前の変更は開かない（作った直後は OS の既定の名前。変えたいときは N）。
+    /// マークは名前で引き継ぐ（OpenFolderAsync に名前だけを渡すとマークが消える）。
+    /// </summary>
+    private bool ShowFolderBackgroundMenu(Point screenPoint)
+    {
+        if (_currentFolder.Length == 0) return false;
+        var folder = _currentFolder;
+        var before = NamesIn(folder);
+        var marks = _list.State.Marks
+            .Select(i => _list.State.Entries[i].Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            // シェル拡張が ReTAC のプロセス内で走る。投げてきたものを落ちる理由にしない（V-04）
+            ShellContextMenu.ShowFolderBackground(Handle, folder, screenPoint.X, screenPoint.Y);
+        }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException
+                                      or IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        // 作成が非同期で、まだ項目ができていなければ増えた名前は見つからない。
+        // そのときは自動更新（R-23）で後から現れるので、カーソルは合わせない
+        var after = before is null || !PathEquals(folder, _currentFolder) ? null : NamesIn(folder);
+        List<string> added = after is null ? [] : [.. after.Except(before!, StringComparer.OrdinalIgnoreCase)];
+        return added.Count == 1 ? Reload(added[0], marks) : Reload();
+    }
+
+    /// <summary>フォルダ直下の名前（隠し・システム属性を含む）。読めなければ null。</summary>
+    private static HashSet<string>? NamesIn(string folder)
+    {
+        try
+        {
+            return Directory.EnumerateFileSystemEntries(folder)
+                .Select(path => Path.GetFileName(path))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     /// <summary>名前を指定し実行（`X` / 0x82E9）。作業ディレクトリはカレントフォルダ（R-54-2）。</summary>

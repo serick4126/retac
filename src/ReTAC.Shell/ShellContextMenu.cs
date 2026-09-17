@@ -18,7 +18,6 @@ public static class ShellContextMenu
         var pidls = new List<IntPtr>();
         var childPidls = new List<IntPtr>();
         IShellFolder? parent = null;
-        var menu = IntPtr.Zero;
         object? contextMenu = null;
 
         try
@@ -46,12 +45,70 @@ public static class ShellContextMenu
             Marshal.Release(unknown);
             if (contextMenu is not IContextMenu shellMenu) return;
 
-            menu = CreatePopupMenu();
+            TrackAndInvoke(ownerHandle, contextMenu, shellMenu, screenX, screenY, directory: null);
+        }
+        finally
+        {
+            if (contextMenu is not null) Marshal.ReleaseComObject(contextMenu);
+            if (parent is not null) Marshal.ReleaseComObject(parent);
+            // childPidls は親 pidl の内部を指すだけなので解放しない
+            foreach (var pidl in pidls) Marshal.FreeCoTaskMem(pidl);
+        }
+    }
+
+    /// <summary>
+    /// R-81: フォルダの背景のメニュー（「新規作成」「貼り付け」「プロパティ」など）。
+    /// IShellFolder.CreateViewObject が返すメニューなので、エクスプローラーの画面（DefView）が足す
+    /// 「表示」「並べ替え」は出ない。ReTAC は並べ替えを自前で持つので足さない。
+    /// </summary>
+    public static void ShowFolderBackground(IntPtr ownerHandle, string folderPath, int screenX, int screenY)
+    {
+        var pidl = IntPtr.Zero;
+        IShellFolder? desktop = null;
+        IShellFolder? folder = null;
+        object? contextMenu = null;
+        try
+        {
+            if (SHParseDisplayName(folderPath, IntPtr.Zero, out pidl, 0, out _) != 0) return;
+            if (SHGetDesktopFolder(out desktop) != 0) return;
+
+            var folderGuid = IID_IShellFolder;
+            if (desktop.BindToObject(pidl, IntPtr.Zero, ref folderGuid, out var folderUnknown) != 0
+                || folderUnknown == IntPtr.Zero) return;
+            folder = (IShellFolder)Marshal.GetObjectForIUnknown(folderUnknown);
+            Marshal.Release(folderUnknown);
+
+            var contextGuid = IID_IContextMenu;
+            if (folder.CreateViewObject(ownerHandle, ref contextGuid, out var menuUnknown) != 0
+                || menuUnknown == IntPtr.Zero) return;
+            contextMenu = Marshal.GetObjectForIUnknown(menuUnknown);
+            Marshal.Release(menuUnknown);
+
+            if (contextMenu is IContextMenu shellMenu)
+                TrackAndInvoke(ownerHandle, contextMenu, shellMenu, screenX, screenY, folderPath);
+        }
+        finally
+        {
+            if (contextMenu is not null) Marshal.ReleaseComObject(contextMenu);
+            if (folder is not null) Marshal.ReleaseComObject(folder);
+            if (desktop is not null) Marshal.ReleaseComObject(desktop);
+            if (pidl != IntPtr.Zero) Marshal.FreeCoTaskMem(pidl);
+        }
+    }
+
+    /// <summary>メニューを出し、選ばれた項目を実行する。項目のメニューと背景のメニューで共通。</summary>
+    /// <param name="directory">作業フォルダを使う項目（「ターミナルで開く」など）に渡すフォルダ。項目のメニューでは null</param>
+    private static void TrackAndInvoke(IntPtr ownerHandle, object contextMenu, IContextMenu shellMenu,
+                                       int screenX, int screenY, string? directory)
+    {
+        var menu = CreatePopupMenu();
+        try
+        {
             // CMF_EXPLORE: エクスプローラーと同じ既定の並び。拡張（WinRAR など）もこの経路で入る
             if (shellMenu.QueryContextMenu(menu, 0, IdCmdFirst, IdCmdLast, CMF_NORMAL | CMF_EXPLORE) < 0) return;
 
             // 拡張の項目はオーナードローのことがあり、メニュー用のメッセージを
-            // IContextMenu2/3 へ転送しないと中身が出ない
+            // IContextMenu2/3 へ転送しないと中身が出ない（「新規作成」のサブメニューも同じ）
             using var hook = new MenuMessageHook(contextMenu);
             var command = TrackPopupMenuEx(menu, TPM_RETURNCMD | TPM_LEFTALIGN | TPM_RIGHTBUTTON,
                 screenX, screenY, hook.Handle, IntPtr.Zero);
@@ -64,19 +121,19 @@ public static class ShellContextMenu
                 hwnd = ownerHandle,
                 lpVerb = (IntPtr)(command - IdCmdFirst),
                 lpVerbW = (IntPtr)(command - IdCmdFirst),
+                lpDirectoryW = directory,
                 nShow = SW_SHOWNORMAL,
             };
             shellMenu.InvokeCommand(ref invoke);
         }
         finally
         {
-            if (menu != IntPtr.Zero) DestroyMenu(menu);
-            if (contextMenu is not null) Marshal.ReleaseComObject(contextMenu);
-            if (parent is not null) Marshal.ReleaseComObject(parent);
-            // childPidls は親 pidl の内部を指すだけなので解放しない
-            foreach (var pidl in pidls) Marshal.FreeCoTaskMem(pidl);
+            DestroyMenu(menu);
         }
     }
+
+    [DllImport("shell32.dll")]
+    private static extern int SHGetDesktopFolder([MarshalAs(UnmanagedType.Interface)] out IShellFolder folder);
 
     /// <summary>メニュー表示中のメッセージを IContextMenu2/3 へ渡すためだけの隠しウィンドウ。</summary>
     private sealed class MenuMessageHook : System.Windows.Forms.NativeWindow, IDisposable

@@ -45,6 +45,15 @@ public class CommandLabelsTests
     }
 
     [Fact]
+    public void 背景メニューはコンテキストメニューの直後にある()
+    {
+        var rows = CommandLabels.Grouped.ToList();
+        var context = rows.FindIndex(r => r.Command == CommandId.ShowContextMenu);
+        Assert.Equal((CommandId.ShowFolderBackgroundMenu, "表示", "フォルダの背景メニューの表示"),
+            (rows[context + 1].Command, rows[context + 1].Category, rows[context + 1].Label));
+    }
+
+    [Fact]
     public void コマンド名の移動は変えない()
     {
         // 説明として意味が通るので、機能名の規則の対象外

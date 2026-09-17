@@ -66,6 +66,8 @@ public enum CommandId
     ExternalToolQueue = 0x9002,
     /// <summary>R-80: インクリメンタルサーチ。既定は Ctrl+F（B-18）。</summary>
     IncrementalSearch = 0x9003,
+    /// <summary>R-81: 今いるフォルダの背景のシェルメニュー（「新規作成」を含む）。既定のキーは無い。</summary>
+    ShowFolderBackgroundMenu = 0x9004,
     /// <summary>R-77: ドライブバーの表示・非表示。メニューの項目もコマンドの経路を通す（R-12）。</summary>
     ToggleDriveBar = 0x9005,
 
