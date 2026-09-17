@@ -3,7 +3,7 @@
   "$note": "手書き。manifest.json（自動生成）と違い、ここは人が書く『あるべき姿』の層。実装を写しただけでは実装漏れを検出できないため、制約の宣言をここに置き、lint が実装と突き合わせる。",
 
   "settingsOwners": {
-    "$note": "設定項目を誰が編集するか。dialog:<画面> / runtime:<自動更新する場所> / manual:<手編集>。UNKNOWN は L5 で失敗する",
+    "$note": "設定項目を誰が編集するか。dialog:<画面> / menu:<メニューのトグルを持つ場所> / runtime:<自動更新する場所> / manual:<手編集>。UNKNOWN は L5 で失敗する",
 
     "KeepLastFolder": "dialog:EnvironmentDialog",
     "LastFolder": "runtime:MainForm",
@@ -31,6 +31,7 @@
     "HiddenDrives": "dialog:DriveVisibilityDialog",
     "DriveFolders": "runtime:DriveBar",
     "ShowDesktopButton": "dialog:DriveVisibilityDialog",
+    "ShowDriveBar": "menu:MainForm",
 
     "Colors": "dialog:ColorFontDialog",
     "FontFamily": "dialog:ColorFontDialog",
@@ -104,12 +105,12 @@
     {
       "id": "INV-NO-PREFERENCE-DEFAULTS",
       "status": "enforced",
-      "specIds": ["B-05"],
+      "specIds": ["B-05", "B-17", "B-18"],
       "applies": ["settings:ExternalTools", "settings:QuickAccess", "settings:KeyBindings"],
       "rule": "既定値に誰かの好みを埋めない。特定の製品をインストールした環境でしか通らないパスを既定に置かない。運用想定外の選択肢は設定画面に置かず、コードに固定する。クイックアクセスの初期登録は 0 件。",
-      "exception": "設定ファイルが無い環境でも最低限動くことは別の要件である。どの Windows にも必ずあるもの（notepad.exe / cmd.exe）に限り、外部ツールの既定パスとして置いてよい。好みの道具に替えたい利用者は外部ツールの設定で変えられる。マウスボタン4/5 の既定を「戻る」「進む」にするのも同じ例外に当たる。エクスプローラー・ブラウザを含め Windows 全体で標準の挙動であり、特定の製品を入れた環境でしか意味を持たない値でもないため。",
+      "exception": "設定ファイルが無い環境でも最低限動くことは別の要件である。どの Windows にも必ずあるもの（notepad.exe / cmd.exe）に限り、外部ツールの既定パスとして置いてよい。好みの道具に替えたい利用者は外部ツールの設定で変えられる。マウスボタン4/5 の既定を「戻る」「進む」にするのも同じ例外に当たる。エクスプローラー・ブラウザを含め Windows 全体で標準の挙動であり、特定の製品を入れた環境でしか意味を持たない値でもないため。キーボードの `Ctrl`+`F` を「インクリメンタルサーチ」の既定にするのも同じ例外に当たる（B-18）。Windows 全体で「検索」の標準キーだからである。キーの既定をこの例外で足してよいのは、Windows 全体で標準の意味を持つキーに限る。",
       "enforcedBy": "domain:DefaultExternalTools.Create（OS 標準の実行ファイルだけ。製品固有のパスは入れない）",
-      "note": "2.0.1 まではパスを空にしていたが、初回起動の利用者が E を押しても何も起きなかった。2.0.2 で OS 標準のものに限って埋める方針へ変えた。ここを見て『好みを埋めない』を根拠に空へ戻さないこと。逆に、VS Code のような製品固有のパスを足すのは元の方針どおり禁止。2.1.0 でマウスボタン4/5 の既定（B-17）を足した。ホイール押し込み（ボタン3）は標準の挙動がアプリごとに違うので空のままにしてある。ここを「便利だから」で埋めないこと。"
+      "note": "2.0.1 まではパスを空にしていたが、初回起動の利用者が E を押しても何も起きなかった。2.0.2 で OS 標準のものに限って埋める方針へ変えた。ここを見て『好みを埋めない』を根拠に空へ戻さないこと。逆に、VS Code のような製品固有のパスを足すのは元の方針どおり禁止。2.1.0 でマウスボタン4/5 の既定（B-17）を足した。ホイール押し込み（ボタン3）は標準の挙動がアプリごとに違うので空のままにしてある。ここを「便利だから」で埋めないこと。2.2.0 で `Ctrl`+`F`（B-18）を足した。`Ctrl` の枠で既定を持つのはこれだけ。便利だからという理由で `Ctrl` の枠に既定を足さないこと。"
     },
     {
       "id": "INV-ABOUT-NOT-ASSIGNABLE",
@@ -166,6 +167,25 @@
         "note": "SingleClick ではホバーでカーソルが移動し、左シングルクリックで開く。行頭アイコンのクリックは両モードともマークのトグル（R-11-2 / B-07）。ダブルクリックで開く経路は SingleClick では使わない。既定が現在の挙動なので移行コードは要らない。"
       },
       "enforcedBy": null
+    },
+    {
+      "id": "INV-MARKS-EXPLICIT-ONLY",
+      "status": "enforced",
+      "specIds": ["R-11", "R-80"],
+      "applies": ["type:ReTAC.Domain.Selection.ListState"],
+      "rule": "マークは、マークの操作（Space、行頭アイコンのクリック、Shift+クリック、マーク系のコマンド）でだけ変わる。カーソルの移動・検索・ドラッグ・ドロップ・再表示・メニューの表示ではマークを変えない。移動が完了したときの解除は、移動したものが一覧から消えるための後始末であり、例外とする。",
+      "enforcedBy": "domain:ListState（マークを変えるのは ToggleMark* / ToggleAllMarks / InvertMarks / Mark* / ClearMarks だけ）",
+      "testedBy": "tests/ReTAC.Domain.Tests/ListStateTests.cs",
+      "note": "ReTAC で最も重要な規則。Windows の標準（クリックで選択が置き換わる）に合わせて、クリックや検索でマークを外す実装を足さないこと。"
+    },
+    {
+      "id": "INV-POPUP-POSITION",
+      "status": "enforced",
+      "specIds": ["R-79", "N-06"],
+      "applies": ["command:ShowPopupMenu", "command:ShowContextMenu", "command:ShowFolderBackgroundMenu"],
+      "rule": "マウスで開いたメニューはマウスの位置に、キーボード・メニューバー・マウスボタンの割り当てから開いたメニューはカーソル行の直下に出す。",
+      "enforcedBy": "app:MainForm.OnRightClick（右クリックの位置を渡す）。それ以外の経路は FileListView.PopupAnchor",
+      "note": "同じメニューを出す経路が複数ある。片方だけ直すと再発する（2.1.0 まで、空いた所の右クリックでもカーソル行の直下に出ていた）。"
     }
   ]
 }
