@@ -54,7 +54,7 @@ public sealed class DriveBar : Control
     public event EventHandler? Cancelled;
 
     /// <summary>ドライブのボタンにファイルが落とされた（T8-3）。転送は呼び出し側が行う。</summary>
-    public event EventHandler<(string Path, string[] Files)>? FilesDropped;
+    public event EventHandler<(string Path, string[] Files, DragDropEffects Allowed)>? FilesDropped;
 
     /// <summary>
     /// ドライブのボタンが右クリックされた。エクスプローラーと同じく Windows 標準のメニューを出す。
@@ -256,21 +256,31 @@ public sealed class DriveBar : Control
         }
     }
 
+    // R-78: DragEnter でも同じ設定をしないと、入った直後の説明とカーソルが出ない
+    protected override void OnDragEnter(DragEventArgs e)
+    {
+        base.OnDragEnter(e);
+        SetDropEffect(e);
+    }
+
     protected override void OnDragOver(DragEventArgs e)
     {
         base.OnDragOver(e);
+        SetDropEffect(e);
+    }
+
+    private void SetDropEffect(DragEventArgs e)
+    {
         var point = PointToClient(new Point(e.X, e.Y));
         var index = _buttons.FindIndex(b => b.Bounds.Contains(point));
 
         // 落とせるボタンの上にいることを、ホバーと同じ見た目で示す
         if (index != _hoverIndex) { _hoverIndex = index; Invalidate(); }
 
-        const int ctrl = 8, shift = 4;
-        e.Effect = index < 0 || e.Data?.GetDataPresent(DataFormats.FileDrop) != true
-            ? DragDropEffects.None
-            : (e.KeyState & ctrl) != 0 ? DragDropEffects.Copy
-            : (e.KeyState & shift) != 0 ? DragDropEffects.Move
-            : DragDropEffects.Copy | DragDropEffects.Move;
+        if (index < 0) { DropFeedback.Apply(e, null, ""); return; }
+        var button = _buttons[index];
+        DropFeedback.Apply(e, button.Path,
+            button.DriveLetter is { } letter ? $"{char.ToUpperInvariant(letter)}:" : DesktopLabel);
     }
 
     protected override void OnDragLeave(EventArgs e)
@@ -289,7 +299,7 @@ public sealed class DriveBar : Control
         var point = PointToClient(new Point(e.X, e.Y));
         if (_buttons.FirstOrDefault(b => b.Bounds.Contains(point)) is not { } button) return;
         if (e.Data?.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0)
-            FilesDropped?.Invoke(this, (button.Path, files));
+            FilesDropped?.Invoke(this, (button.Path, files, e.AllowedEffect));
     }
 
     protected override bool IsInputKey(Keys keyData) => (keyData & Keys.KeyCode) switch

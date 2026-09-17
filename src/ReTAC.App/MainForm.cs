@@ -105,8 +105,8 @@ public sealed class MainForm : Form
         // ドライブのボタンの右クリックはリストの項目と同じ扱い。移動はしない
         _driveBar.RightClicked += (_, click) => ShowShellContextMenu([click.Path], click.ScreenPoint);
         // R-65 ②③: 落とされたファイルの転送はどちらも同じ経路を通す
-        _list.FilesDropped += (_, files) => DropInto(_currentFolder, files);
-        _driveBar.FilesDropped += (_, drop) => DropInto(drop.Path, drop.Files);
+        _list.FilesDropped += (_, drop) => DropInto(_currentFolder, drop.Files, drop.Allowed);
+        _driveBar.FilesDropped += (_, drop) => DropInto(drop.Path, drop.Files, drop.Allowed);
 
         _watcher.SynchronizingObject = this;   // R-23: 通知を UI スレッドで受ける
         _watcher.Created += (_, _) => ScheduleAutoRefresh();
@@ -1185,7 +1185,7 @@ public sealed class MainForm : Form
     /// ドロップされたファイルをフォルダへ入れる（T8-2 / T8-3）。
     /// コピーか移動かは Windows の作法に合わせて <see cref="DropRules"/> が決める。
     /// </summary>
-    private void DropInto(string destinationFolder, string[] files)
+    private void DropInto(string destinationFolder, string[] files, DragDropEffects allowed)
     {
         // 衝突すると確認ダイアログを出す。ドロップ元（エクスプローラー）が前面のままだと
         // ダイアログがその後ろに隠れて、固まったように見える
@@ -1198,7 +1198,11 @@ public sealed class MainForm : Form
         var moves = new List<string>();
         foreach (var file in files)
         {
-            switch (DropRules.Decide(file, destinationFolder, ctrl, shift))
+            // R-78: 表示（DropFeedback）と同じく、ドラッグ元が許す効果に合わせる
+            var action = DropRules.Allow(DropRules.Decide(file, destinationFolder, ctrl, shift),
+                copyAllowed: allowed.HasFlag(DragDropEffects.Copy),
+                moveAllowed: allowed.HasFlag(DragDropEffects.Move));
+            switch (action)
             {
                 case DropAction.Copy: copies.Add(file); break;
                 case DropAction.Move: moves.Add(file); break;
@@ -1823,6 +1827,7 @@ public sealed class MainForm : Form
             if (found >= 0) cursor = found;
         }
 
+        _list.DropFolder = folder;   // R-78: ドロップの説明に使う
         _list.SetEntries(entries, cursor, keepScroll: PathEquals(previous, folder));
         WatchCurrentFolder();
 

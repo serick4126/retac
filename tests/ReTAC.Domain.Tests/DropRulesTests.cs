@@ -38,4 +38,16 @@ public class DropRulesTests
     {
         Assert.Equal(DropAction.Move, DropRules.Decide(@"C:\work", @"C:\work2", false, false));
     }
+
+    [Theory]
+    [InlineData(DropAction.Move, true, true, DropAction.Move)]
+    [InlineData(DropAction.Move, true, false, DropAction.Copy)]    // 移動を許さないドラッグ元ならコピーに落とす
+    [InlineData(DropAction.Move, false, false, DropAction.None)]
+    [InlineData(DropAction.Copy, true, false, DropAction.Copy)]
+    [InlineData(DropAction.Copy, false, true, DropAction.None)]    // コピーを許さないなら移動にはしない
+    [InlineData(DropAction.None, true, true, DropAction.None)]
+    public void ドラッグ元が許す効果に合わせる(DropAction action, bool copy, bool move, DropAction expected)
+    {
+        Assert.Equal(expected, DropRules.Allow(action, copy, move));
+    }
 }

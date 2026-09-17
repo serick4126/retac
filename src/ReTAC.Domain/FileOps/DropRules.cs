@@ -30,6 +30,18 @@ public static class DropRules
         return SameDrive(sourcePath, destinationFolder) ? DropAction.Move : DropAction.Copy;
     }
 
+    /// <summary>
+    /// R-78: ドラッグ元が許す効果に合わせる。移動を許さないドラッグ元（コピーしか渡さないアプリ）から
+    /// 同じドライブへ落とされたとき、規則どおり移動すると、ドラッグ元が想定しない形で元のファイルが消える。
+    /// コピーを移動に格上げすることはしない。
+    /// </summary>
+    public static DropAction Allow(DropAction action, bool copyAllowed, bool moveAllowed) => action switch
+    {
+        DropAction.Move when moveAllowed => DropAction.Move,
+        DropAction.Move or DropAction.Copy when copyAllowed => DropAction.Copy,
+        _ => DropAction.None,
+    };
+
     private static bool SameDrive(string a, string b) =>
         PathEquals(Path.GetPathRoot(a), Path.GetPathRoot(b));
 

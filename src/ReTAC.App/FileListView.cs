@@ -78,8 +78,13 @@ public sealed class FileListView : Control
     /// <param name="Index">押された行。行の外なら -1</param>
     public readonly record struct RightClick(int Index, Point ScreenPoint);
 
+    /// <summary>R-78: 今いるフォルダ。ドロップの説明に使う。MainForm がフォルダを開くたびに設定する。</summary>
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public string DropFolder { get; set; } = "";
+
     /// <summary>他アプリからファイルが落とされた（T8-2）。転送は呼び出し側が行う。</summary>
-    public event EventHandler<string[]>? FilesDropped;
+    public event EventHandler<(string[] Files, DragDropEffects Allowed)>? FilesDropped;
 
     public ListState State => _state;
 
@@ -432,30 +437,44 @@ public sealed class FileListView : Control
         data.SetFileDropList(paths);
 
         // A-01: ドラッグしてもマークは変わらない
-        DoDragDrop(data, DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link);
+        // R-78: 画像付きで始める。画像の無いドラッグには、落とす先が説明（「◯◯へ移動」）を出せない
+        using var image = DragImage(targets);
+        DoDragDrop(data, DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link,
+            image, new Point(Scaled(8), Scaled(8)), useDefaultDragImage: false);
+    }
+
+    /// <summary>R-78: ドラッグ中にカーソルに付ける画像。先頭の項目のアイコンと名前、複数なら件数。</summary>
+    private Bitmap DragImage(IReadOnlyList<Entry> targets)
+    {
+        var first = targets[0];
+        var text = targets.Count == 1 ? first.Name : $"{first.Name} ほか {targets.Count - 1} 件";
+        var textSize = TextRenderer.MeasureText(text, _font, Size.Empty, TextMeasure.Flags);
+        var width = _icons.Size + Gap + textSize.Width + Gap;
+        var height = Math.Max(_icons.Size, textSize.Height);
+
+        var bitmap = new Bitmap(width, height);
+        using var g = Graphics.FromImage(bitmap);
+        g.Clear(_theme.Background);
+        var icon = first.Kind == EntryKind.File ? _icons.ForFile(first.FullPath) : _icons.ForFolder();
+        if (icon is not null) g.DrawImage(icon, new Rectangle(0, (height - _icons.Size) / 2, _icons.Size, _icons.Size));
+        TextRenderer.DrawText(g, text, _font, new Point(_icons.Size + Gap, (height - textSize.Height) / 2),
+            _theme.Foreground, TextMeasure.Flags);
+        return bitmap;
     }
 
     protected override void OnDragEnter(DragEventArgs e) => SetDropEffect(e);
 
     protected override void OnDragOver(DragEventArgs e) => SetDropEffect(e);
 
-    private static void SetDropEffect(DragEventArgs e)
-    {
-        if (e.Data?.GetDataPresent(DataFormats.FileDrop) != true) { e.Effect = DragDropEffects.None; return; }
-
-        // 実際にコピーか移動かは受け取った側（MainForm）が DropRules で決める。
-        // ここでは「受け取れる」ことだけを示す
-        const int ctrl = 8, shift = 4;
-        e.Effect = (e.KeyState & ctrl) != 0 ? DragDropEffects.Copy
-                 : (e.KeyState & shift) != 0 ? DragDropEffects.Move
-                 : DragDropEffects.Copy | DragDropEffects.Move;
-    }
+    // R-78: 自分のフォルダへのドロップは DropRules が None を返すので「不可」の表示になる
+    private void SetDropEffect(DragEventArgs e) =>
+        DropFeedback.Apply(e, DropFolder, DropFeedback.FolderLabel(DropFolder));
 
     protected override void OnDragDrop(DragEventArgs e)
     {
         base.OnDragDrop(e);
         if (e.Data?.GetData(DataFormats.FileDrop) is string[] paths && paths.Length > 0)
-            FilesDropped?.Invoke(this, paths);
+            FilesDropped?.Invoke(this, (paths, e.AllowedEffect));
     }
 
     protected override void OnMouseDoubleClick(MouseEventArgs e)
