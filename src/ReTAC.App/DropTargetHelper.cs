@@ -27,22 +27,33 @@ internal static class DropTargetHelper
     {
         if (e.Data is not ComDataObject data) return;
         var point = new Point(e.X, e.Y);
-        Helper?.DragEnter(target.Handle, data, ref point, (int)e.Effect);
+        Try(h => h.DragEnter(target.Handle, data, ref point, (int)e.Effect));
     }
 
     public static void Over(DragEventArgs e)
     {
         var point = new Point(e.X, e.Y);
-        Helper?.DragOver(ref point, (int)e.Effect);
+        Try(h => h.DragOver(ref point, (int)e.Effect));
     }
 
-    public static void Leave() => Helper?.DragLeave();
+    public static void Leave() => Try(h => h.DragLeave());
 
     public static void Drop(DragEventArgs e)
     {
         if (e.Data is not ComDataObject data) { Leave(); return; }
         var point = new Point(e.X, e.Y);
-        Helper?.Drop(data, ref point, (int)e.Effect);
+        Try(h => h.Drop(data, ref point, (int)e.Effect));
+    }
+
+    /// <summary>
+    /// 失敗しても投げない。画像の付いていないドラッグ（アドレスバーのアイコンなど）では失敗を返すことがあり、
+    /// 例外がドロップの受け口から漏れると、OS はドロップ自体を断る（禁止のカーソルになる。実機指摘）。
+    /// </summary>
+    private static void Try(Action<IDropTargetHelper> call)
+    {
+        if (Helper is not { } helper) return;
+        try { call(helper); }
+        catch (Exception ex) when (ex is COMException or InvalidCastException or ArgumentException) { }
     }
 
     [ComImport, Guid("4657278A-411B-11D2-839A-00C04FD918D0")]
