@@ -49,15 +49,18 @@ internal sealed class DriveSelectForm : Form
     }
 
     /// <returns>選ばれたパス。取り消されたら null</returns>
+    /// <param name="below">マウスで「»」から開いたときの、その直下の位置（スクリーン座標）。キー（L）で開くときは null で、center の中央に出す</param>
     public static string? Pick(IWin32Window owner, Control center, IReadOnlySet<char> hiddenDrives,
-                               bool showDesktop, string currentFolder)
+                               bool showDesktop, string currentFolder, Point? below = null)
     {
         using var form = new DriveSelectForm(hiddenDrives, showDesktop, currentFolder);
         var area = center.RectangleToScreen(center.ClientRectangle);
-        var bounds = new Rectangle(
-            area.X + (area.Width - form.Width) / 2,
-            area.Y + (area.Height - form.Height) / 2,
-            form.Width, form.Height);
+        var bounds = below is { } at
+            ? new Rectangle(at.X, at.Y, form.Width, form.Height)
+            : new Rectangle(
+                area.X + (area.Width - form.Width) / 2,
+                area.Y + (area.Height - form.Height) / 2,
+                form.Width, form.Height);
         var screen = Screen.FromControl(center).WorkingArea;
         bounds.X = Math.Clamp(bounds.X, screen.Left, Math.Max(screen.Left, screen.Right - bounds.Width));
         bounds.Y = Math.Clamp(bounds.Y, screen.Top, Math.Max(screen.Top, screen.Bottom - bounds.Height));

@@ -136,7 +136,8 @@ public sealed class DriveBar : Control
     /// 与えられた幅にボタンが入りきらないときの右端の「»」が押された。呼び出し側は、ドライブを選ぶモーダル（R-77）を出す。
     /// マウスで押すものなので、ここからキーボードの選択には入らない。
     /// </summary>
-    public event EventHandler? OverflowClicked;
+    /// <remarks>引数は「»」の左下のスクリーン座標（モーダルをその直下に出すため）。</remarks>
+    public event EventHandler<Point>? OverflowClicked;
 
     /// <summary>入りきらないか（上部の行が、アドレスバーの最小幅を残すために幅を詰めたとき）。</summary>
     private bool Clipped => _buttons.Count > 0 && Width < PreferredWidth;
@@ -321,7 +322,8 @@ public sealed class DriveBar : Control
         if (Clipped)
         {
             // 入りきらないボタンは「»」から選ばせる（ToolStrip の「»」と同じ役割）
-            TextRenderer.DrawText(e.Graphics, "»", Font, OverflowBounds, ForeColor,
+            using var big = new Font(Font.FontFamily, Font.Size * 1.4f);   // ToolStrip の「»」（ToolStripExtras）と同じ大きさ
+            TextRenderer.DrawText(e.Graphics, "»", big, OverflowBounds, ForeColor,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
         }
     }
@@ -459,7 +461,7 @@ public sealed class DriveBar : Control
         base.OnMouseClick(e);
         if (Clipped && OverflowBounds.Contains(e.Location))
         {
-            if (e.Button == MouseButtons.Left) OverflowClicked?.Invoke(this, EventArgs.Empty);
+            if (e.Button == MouseButtons.Left) OverflowClicked?.Invoke(this, PointToScreen(new Point(OverflowBounds.Left, OverflowBounds.Bottom)));
             return;
         }
         var button = _buttons.FirstOrDefault(b => b.Bounds.Contains(e.Location) && IsShown(b));

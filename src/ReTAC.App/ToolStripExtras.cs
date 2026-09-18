@@ -6,25 +6,52 @@ namespace ReTAC.App;
 /// <summary>ToolStrip の標準の動きで足りないところを補う（実機指摘）。</summary>
 public static class ToolStripExtras
 {
+    /// <summary>「»」のボタンの左右の余白（96 dpi）。標準の 16px に足して幅 28px にする。</summary>
+    private const int OverflowSide = 6;
+
     /// <summary>「»」のボタンの幅（96 dpi）。ドライブバーの「»」もこの幅にそろえる。</summary>
-    public const int OverflowWidth = 24;
+    public const int OverflowWidth = 16 + OverflowSide * 2;
+
+    /// <summary>帯の右端の余白（96 dpi）。「»」が窓の角丸に掛かって押しにくく見にくくならないようにする。</summary>
+    private const int RightMargin = 6;
 
     /// <summary>
-    /// 入りきらない項目を回す「»」のボタンは標準では幅が数 px しかなく押しにくい。
-    /// Padding では広がらない（幅を自分で決める）ので、大きさを固定する。高さは帯に合わせ続ける。
+    /// 入りきらない項目を回す「»」のボタンは、標準では幅 16px で右端に小さな矢印を描くだけで、押しにくく見にくい（実機指摘）。
+    /// 左右に余白を足して広げ、窓の角丸に掛からないよう右に間を取り、中央に大きめの「»」を描く。
+    /// 余白は DPI に合わせて項目を拡大し直すときに既定へ戻されるので、並べ直すたびに掛け直す。
     /// </summary>
     public static void WidenOverflow(ToolStrip strip)
     {
-        var button = strip.OverflowButton;
-        button.AutoSize = false;
-        void Fit()
+        strip.Renderer = new OverflowRenderer();
+        strip.Layout += (_, _) =>
         {
-            var size = new System.Drawing.Size(strip.LogicalToDeviceUnits(OverflowWidth), strip.DisplayRectangle.Height);
-            if (button.Size != size) button.Size = size;
+            var button = strip.OverflowButton;
+            var side = strip.LogicalToDeviceUnits(OverflowSide);
+            var padding = new Padding(side, 0, side, 0);
+            if (button.Padding != padding) button.Padding = padding;
+            var margin = button.Margin with { Right = strip.LogicalToDeviceUnits(RightMargin) };
+            if (button.Margin != margin) button.Margin = margin;
+        };
+    }
+
+    /// <summary>標準の描き方のまま、「»」のボタンだけを描き替える。</summary>
+    private sealed class OverflowRenderer : ToolStripProfessionalRenderer
+    {
+        /// <summary>帯の枠は描かない（既定の描き方でも見えていなかった。差し替えると角丸の枠が出る）。</summary>
+        protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e) { }
+
+        protected override void OnRenderOverflowButtonBackground(ToolStripItemRenderEventArgs e)
+        {
+            var bounds = new System.Drawing.Rectangle(System.Drawing.Point.Empty, e.Item.Size);
+            if (e.Item.Pressed || e.Item.Selected)
+            {
+                e.Graphics.FillRectangle(System.Drawing.SystemBrushes.ControlLight, bounds);
+                e.Graphics.DrawRectangle(System.Drawing.SystemPens.ControlDark, bounds with { Width = bounds.Width - 1, Height = bounds.Height - 1 });
+            }
+            using var font = new System.Drawing.Font(e.ToolStrip!.Font.FontFamily, e.ToolStrip.Font.Size * 1.4f);
+            TextRenderer.DrawText(e.Graphics, "»", font, bounds, System.Drawing.SystemColors.ControlText,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         }
-        Fit();
-        strip.SizeChanged += (_, _) => Fit();
-        strip.DpiChangedAfterParent += (_, _) => Fit();
     }
 
     // ponytail: ToolStripDropDownMenu は、上下の ▲▼ で 1 段ずつ送る処理を持っているが公開していない。
