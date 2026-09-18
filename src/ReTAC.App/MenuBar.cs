@@ -165,6 +165,9 @@ public static class MenuBar
     {
         var item = new ToolStripMenuItem(text);
         item.DropDownItems.AddRange(children);
+        // R-88: 開くたびに掛ける（DPI の違うモニターへ移しても追従させるため）。
+        // 「編集」の「元に戻す」の文言を変える処理（R-84）とは独立に働き、文言とキーの表示には触れない
+        item.DropDownOpening += (_, _) => MenuSpacing.Apply(item.DropDownItems, item.Owner?.DeviceDpi ?? 96);
         return item;
     }
 

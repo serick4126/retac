@@ -56,6 +56,7 @@ public static class NumberedPopup
         }
 
         menu.Closed += (_, _) => menu.BeginInvoke(menu.Dispose);
+        MenuSpacing.Apply(menu.Items, owner.DeviceDpi);   // R-88
         menu.Show(owner, anchor);
 
         // B-06: 既定では何も選ばずに開く。↓ で先頭が選ばれるのは ToolStripDropDown の既定のまま。
