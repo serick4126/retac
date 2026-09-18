@@ -27,21 +27,14 @@ public static class FolderExpansion
         {
             var mine = ++generation;
             BookmarkItems.Clear(item.DropDownItems);
-            if (!Directory.Exists(folder))
-            {
-                item.DropDownItems.Add(BookmarkItems.Placeholder("見つかりません"));
-                // 開く処理の途中でメッセージを出すとメニューの状態が乱れる。後に回す
-                items.Invoker.BeginInvoke(onMissing);
-                return;
-            }
-
+            // 存在の確認も裏で行う。止まった HDD や届かないネットワークでは、確認だけで UI が止まる（R-91）
             var jump = new ToolStripMenuItem("このフォルダへジャンプ(&J)");
             jump.Click += (_, _) => host.JumpTo(folder);
             var loading = BookmarkItems.Placeholder("読み込み中…");
             item.DropDownItems.AddRange([jump, new ToolStripSeparator(), loading]);
             MenuSpacing.Apply(item.DropDownItems, items.Invoker.DeviceDpi);   // R-88
 
-            var enumeration = Task.Run(() => host.Enumerate(folder));
+            var enumeration = Task.Run(() => List(folder, host));
             Task.WhenAny(enumeration, Task.Delay(MainForm.EnumerationTimeout)).ContinueWith(done =>
             {
                 // 結果は窓（フォーム）経由で UI スレッドへ戻す。閉じたドロップダウンは窓を持たないことがある
@@ -56,10 +49,18 @@ public static class FolderExpansion
 
                     if (done.Result != enumeration || !enumeration.IsCompletedSuccessfully)
                     {
+                        // 読めなかっただけでは消えたと見なさない。ブックマークは残す
                         item.DropDownItems.Insert(index, BookmarkItems.Placeholder("読み込めませんでした"));
                         return;
                     }
-                    items.LoadIcons(Fill(item, index, enumeration.Result, folder, items));
+                    if (enumeration.Result is not { } entries)
+                    {
+                        item.DropDownItems.Insert(index, BookmarkItems.Placeholder("見つかりません"));
+                        // 開いているメニューの処理中にメッセージを出すとメニューの状態が乱れる。後に回す
+                        owner.BeginInvoke(onMissing);
+                        return;
+                    }
+                    items.LoadIcons(Fill(item, index, entries, folder, items));
                 });
             });
         };
@@ -74,6 +75,15 @@ public static class FolderExpansion
                 item.DropDownItems.Add(BookmarkItems.Placeholder("読み込み中…"));
             });
         };
+    }
+
+    /// <returns>中身。フォルダが消えていれば null。届かない・読めないときは例外（消えたとは見なさない）</returns>
+    private static IReadOnlyList<Entry>? List(string folder, IBookmarkHost host)
+    {
+        if (Directory.Exists(folder)) return host.Enumerate(folder);
+        // 届かないネットワークや外したドライブでも Exists は false を返す。ルートが見えるときだけ「消えた」とする
+        if (Path.GetPathRoot(folder) is { Length: > 0 } root && Directory.Exists(root)) return null;
+        throw new DirectoryNotFoundException(folder);
     }
 
     private static List<ToolStripItem> Fill(ToolStripDropDownItem parent, int index, IReadOnlyList<Entry> entries,
