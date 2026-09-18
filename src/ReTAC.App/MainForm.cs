@@ -48,6 +48,12 @@ public sealed class MainForm : Form
     private bool _driveBarShown;
     // RebuildMenu（キー割り当ての変更）がメニュー全体を作り直すたびに差し替える。readonly にはできない
     private ToolStripMenuItem _driveBarMenuItem;
+    /// <summary>R-86: このウィンドウでアドレスバーを出しているか（_driveBarShown と同じ理由でフィールドで持つ）。</summary>
+    private bool _addressBarShown;
+    private ToolStripMenuItem _addressBarMenuItem;
+    private readonly AddressBar _addressBar;
+    /// <summary>R-86: ドライブバーとアドレスバーの 1 行。</summary>
+    private readonly TopRow _topRow;
     /// <summary>R-40: 常駐中は終了操作で最小化するだけにする。完全終了だけがプロセスを終わらせる。</summary>
     private bool _fullExit;
     /// <summary>R-84: 実行中のコマンドの記録。コマンドの外（元に戻す処理を含む）では null で、何も集めない。</summary>
@@ -67,6 +73,8 @@ public sealed class MainForm : Form
         _keyMap = _settings.ToKeyMap();
         _history = _settings.ToFolderHistory();
         _quickAccess = _settings.ToQuickAccess();
+        _addressBar = new AddressBar(_history, _quickAccess);
+        _topRow = new TopRow(_driveBar, _addressBar);
         _fileTypes = _settings.ToFileTypeFilter();
         _sortOrder = _settings.ToSortOrder();
 
@@ -87,16 +95,18 @@ public sealed class MainForm : Form
         // ステータスバーが一番下、検索バーはその一段上に来るよう、検索バーを先に足す
         Controls.Add(_list);
         Controls.Add(_search);
-        Controls.Add(_driveBar);
+        Controls.Add(_topRow);
         Controls.Add(_statusBar);
         _statusBar.QueueClicked += (_, _) => ShowToolQueue();
         // Dock.Top は後から足した方が上に来る。メニューはドライブバーより上
-        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools, out _driveBarMenuItem, UndoDescription);
+        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools, out _driveBarMenuItem, out _addressBarMenuItem, UndoDescription);
         Controls.Add(_menu);
         MainMenuStrip = _menu;
         _driveBarShown = _settings.ShowDriveBar;
-        _driveBar.Visible = _driveBarShown;
+        _addressBarShown = _settings.ShowAddressBar;
         _driveBarMenuItem.Checked = _driveBarShown;
+        _addressBarMenuItem.Checked = _addressBarShown;
+        ApplyTopRow();   // ArrangeDocks が _menu を並べるので、メニューを足した後
 
         _list.EntryActivated += (_, entry) => OnActivated(entry);
         _list.ParentRequested += (_, _) => GoParent();
@@ -109,6 +119,8 @@ public sealed class MainForm : Form
         // R-39-3 の「明示的なドライブ変更」。相対移動とは別経路
         _driveBar.PathSelected += (_, path) => OnDriveChosen(path);
         _driveBar.Cancelled += (_, _) => _list.Focus();
+        _addressBar.JumpRequested += (_, e) => OnAddressJump(e.Text, e.Explorer);
+        _addressBar.Cancelled += (_, _) => _list.Focus();
         // ドライブのボタンの右クリックはリストの項目と同じ扱い。移動はしない
         _driveBar.RightClicked += (_, click) => ShowShellContextMenu([click.Path], click.ScreenPoint);
         // R-65 ②③: 落とされたファイルの転送はどちらも同じ経路を通す
@@ -415,9 +427,11 @@ public sealed class MainForm : Form
         // ドライブの選択（0x82F3）。表示中はバーにフォーカスを移し、非表示ならモーダルで選ばせる（R-77）
         CommandId.SelectDrive => _driveBarShown ? _driveBar.EnterKeyboardSelection(_currentFolder) : SelectDriveInModal(),
         CommandId.ToggleDriveBar => ToggleDriveBar(),
+        CommandId.ToggleAddressBar => ToggleAddressBar(),
         CommandId.FolderHistory => ShowFolderHistory(),
         CommandId.QuickAccess => ShowQuickAccess(),
-        CommandId.DirectJump => DirectJumpInDialog(),
+        // R-87: 表示中はアドレスバーで編集を始め、非表示ならダイアログ（ドライブバーの R-77 と同じ考え方）
+        CommandId.DirectJump => _addressBarShown ? _addressBar.BeginEdit() : DirectJumpInDialog(),
         CommandId.SortSettings => ShowSortSettings(),
         CommandId.FileTypeSettings => ShowFileTypeSettings(),
         CommandId.ShowPopupMenu => ShowCommandPopup(),
@@ -468,16 +482,24 @@ public sealed class MainForm : Form
         _ => false,
     };
 
-    /// <summary>
-    /// R-80: 検索バーを出す。Dock の外側・内側は追加した順ではなく、その時点の子の添字で決まる
-    /// （添字が大きいほど外側）。検索バーは隠したまま作るので、WinForms が表示のときに並びを詰め替えて
-    /// ステータスバーより外側へ移し、検索バーが最下段に出ていた。出す直前にステータスバーを末尾へ戻す
-    /// </summary>
+    /// <summary>R-80: 検索バーを出す。</summary>
     private bool OpenIncrementalSearch()
     {
         var opened = _search.Open();
-        Controls.SetChildIndex(_statusBar, Controls.Count - 1);
+        ArrangeDocks();
         return opened;
+    }
+
+    /// <summary>
+    /// R-80 / R-86: Dock の外側・内側は追加した順ではなく、その時点の子の添字で決まる（添字が大きいほど外側）。
+    /// 隠したまま作った部品は、表示のときに WinForms が並びを詰め替えることがある（検索バーが
+    /// ステータスバーより外側へ移り、最下段に出ていた）。部品を出すたびにここで並びを決め直す。
+    /// 上から メニュー → 上部の行 → リスト → 検索バー → ステータスバー。
+    /// </summary>
+    private void ArrangeDocks()
+    {
+        Control[] order = [_list, _search, _topRow, _menu, _statusBar];
+        for (var i = 0; i < order.Length; i++) Controls.SetChildIndex(order[i], i);
     }
 
     /// <summary>`H`（0x82FD）。過去 16 回分をカーソル位置のポップアップに出す（N-06）。</summary>
@@ -1328,11 +1350,44 @@ public sealed class MainForm : Form
     private bool ToggleDriveBar()
     {
         _driveBarShown = !_driveBarShown;
-        _driveBar.Visible = _driveBarShown;
         _driveBarMenuItem.Checked = _driveBarShown;
         _settings.ShowDriveBar = _driveBarShown;
+        ApplyTopRow();
         SaveSettings();   // V-13
         return true;
+    }
+
+    /// <summary>R-86: アドレスバーの表示切り替え。ドライブバー（R-77）と同じく、このウィンドウの表示を反転する。</summary>
+    private bool ToggleAddressBar()
+    {
+        _addressBarShown = !_addressBarShown;
+        _addressBarMenuItem.Checked = _addressBarShown;
+        _settings.ShowAddressBar = _addressBarShown;
+        ApplyTopRow();
+        SaveSettings();   // V-13
+        return true;
+    }
+
+    private void ApplyTopRow()
+    {
+        _topRow.SetParts(_driveBarShown, _addressBarShown);
+        ArrangeDocks();
+    }
+
+    /// <summary>R-87: アドレスバーの Enter / Ctrl+Enter。見つからなければダイアログのように出し直さず、入力を残す。</summary>
+    private void OnAddressJump(string text, bool explorer)
+    {
+        if (JumpInput.Decide(_currentFolder, text, Directory.Exists, File.Exists) is not { } target)
+        {
+            _addressBar.ShowNotFound();
+            _statusBar.ShowMessage($"{text} は見つかりません");
+            return;
+        }
+        _addressBar.EndEdit();
+        JumpTo(target, explorer);
+        // エクスプローラーで開いたときは OpenFolderAsync を通らないので、ここでリストへ戻す。
+        // フォルダへ移ったときは OpenFolderAsync の末尾がリストへ戻す
+        if (explorer) _list.Focus();
     }
 
     private bool SelectDriveInModal()
@@ -1617,10 +1672,12 @@ public sealed class MainForm : Form
     {
         Controls.Remove(_menu);
         _menu.Dispose();
-        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools, out _driveBarMenuItem, UndoDescription);
+        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools, out _driveBarMenuItem, out _addressBarMenuItem, UndoDescription);
         _driveBarMenuItem.Checked = _driveBarShown;
+        _addressBarMenuItem.Checked = _addressBarShown;
         Controls.Add(_menu);
         MainMenuStrip = _menu;
+        ArrangeDocks();
     }
 
     /// <summary>R-82: 「編集」メニューの「元に戻す」に出す、最新の記録の説明。無ければ null</summary>
@@ -2031,6 +2088,7 @@ public sealed class MainForm : Form
         if (record) _history.Visit(_currentFolder.Length > 0 ? _currentFolder : null, folder);
         _currentFolder = folder;
         Text = $"{folder} - ReTAC";   // X-02: 表示ワイルドカードは持たない
+        _addressBar.ShowFolder(folder);
 
         // そのドライブへ戻ってきたときの着地点として覚えておく
         if (Path.GetPathRoot(folder) is { Length: > 0 } root) _settings.DriveFolders[root] = folder;

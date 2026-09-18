@@ -74,8 +74,9 @@ public sealed class IncrementalSearchBar : FlowLayoutPanel
         _open = false;
         if (restore) RestoreOrigin();
         Visible = false;
-        // 隠した入力欄が ActiveControl に残ると、ウィンドウに戻ってきたときキーがどこにも届かない
-        if (FindForm() is { } form) form.ActiveControl = _list;
+        // 隠した入力欄が ActiveControl に残ると、ウィンドウに戻ってきたときキーがどこにも届かない。
+        // ただし、ほかの入力欄（アドレスバー）をクリックして閉じたときは、そちらのフォーカスを奪わない（R-87）
+        if (FindForm() is { } form && (form.ActiveControl == _input || form.ActiveControl is null)) form.ActiveControl = _list;
     }
 
     private void OnTextChanged()
