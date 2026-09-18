@@ -54,10 +54,9 @@ public sealed class PathInputDialog : Form
         _input.Text = preset;
 
         // マウスだけでも履歴とクイックアクセスへ行けるようにする（実機指摘）。
-        // 卓駆は入力欄の右端の ▲▼ に割り当てていたが、押しにくいので 1 つのボタンにまとめ、
         // 一覧の中で区切り線で分ける。キーボードの ↑ ↓ は従来どおり別々に開く
         var recall = new Button { Text = "履歴 ▼(&H)", Bounds = new Rectangle(320, y - 1, 110, 26) };
-        recall.Click += (_, _) => ShowRecallPopup();
+        recall.Click += (_, _) => PathRecall.ShowBoth(_input, _history, _quickAccess);
 
         var browse = new Button { Text = "参照(&B)...", Bounds = new Rectangle(438, y - 1, 86, 26) };
         browse.Click += (_, _) => Browse();
@@ -132,48 +131,7 @@ public sealed class PathInputDialog : Form
 
     private void OnInputKeyDown(object? sender, KeyEventArgs e)
     {
-        switch (e.KeyCode)
-        {
-            case Keys.Up:
-                ShowPathPopup(_history.Recent, "（履歴がありません）");
-                break;
-            case Keys.Down:
-                // R-53: クイックアクセスはフルパスで示す。宛先として使うため別名では困る
-                ShowPathPopup(_quickAccess?.Items.Select(q => q.Path).ToList() ?? [], "（登録がありません）");
-                break;
-            default:
-                return;
-        }
-        e.Handled = e.SuppressKeyPress = true;
-    }
-
-    /// <summary>マウス用。履歴とクイックアクセスを区切り線で分けて 1 つの一覧に出す。</summary>
-    private void ShowRecallPopup()
-    {
-        var quick = _quickAccess?.Items.Select(q => q.Path).ToList() ?? [];
-        List<string> paths = [.. _history.Recent];
-
-        if (paths.Count > 0 && quick.Count > 0) paths.Add("");   // 空ラベルは区切り線になる
-        paths.AddRange(quick);
-
-        ShowPathPopup(paths, "（履歴もクイックアクセスもありません）");
-    }
-
-    private void ShowPathPopup(IReadOnlyList<string> paths, string emptyLabel)
-    {
-        var items = paths.Select(path => (path, (Action)(() =>
-        {
-            if (path.Length == 0) return;   // 区切り線
-            _input.Text = path;
-            _input.SelectAll();
-            _input.Focus();
-        }))).ToList();
-
-        // R-46 の全選択と揃える: BackSpace は一覧を閉じて入力欄を空にする。
-        // ポップアップに任せると「1 つ上を選ぶ」になってしまう（実機指摘）
-        NumberedPopup.Show(_input, new Point(0, _input.Height), items, emptyLabel,
-            onBackSpace: () => { _input.Text = ""; _input.Focus(); },
-            selectFirst: true);
+        if (PathRecall.HandleKey(_input, e.KeyCode, _history, _quickAccess)) e.Handled = e.SuppressKeyPress = true;
     }
 
     private void Finish(bool secondaryChosen)

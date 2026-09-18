@@ -417,7 +417,7 @@ public sealed class MainForm : Form
         CommandId.ToggleDriveBar => ToggleDriveBar(),
         CommandId.FolderHistory => ShowFolderHistory(),
         CommandId.QuickAccess => ShowQuickAccess(),
-        CommandId.DirectJump => DirectJump(),
+        CommandId.DirectJump => DirectJumpInDialog(),
         CommandId.SortSettings => ShowSortSettings(),
         CommandId.FileTypeSettings => ShowFileTypeSettings(),
         CommandId.ShowPopupMenu => ShowCommandPopup(),
@@ -1784,7 +1784,7 @@ public sealed class MainForm : Form
     /// ダイレクトジャンプ（`T` / 0x8327）。16.3 節のダイアログ。
     /// `Shift+Enter` でフォルダ参照（N-07）、`Ctrl+Enter`（「開く」）はエクスプローラーで開く（D-08）。
     /// </summary>
-    private bool DirectJump()
+    private bool DirectJumpInDialog()
     {
         using var dialog = new PathInputDialog(
             "ダイレクトジャンプ",
@@ -1804,18 +1804,22 @@ public sealed class MainForm : Form
 
         if (dialog.ShowDialog(this) != DialogResult.OK) return true;
 
-        // R-61: 相対パスはカレントフォルダ基準で解決する
-        var target = PathResolver.Resolve(_currentFolder, dialog.Path);
-        if (target is null || !Directory.Exists(target))
+        // R-61 / R-87: 相対パスはカレントフォルダ基準。ファイルのパスはそのフォルダへ移ってカーソルを合わせる
+        if (JumpInput.Decide(_currentFolder, dialog.Path, Directory.Exists, File.Exists) is not { } target)
         {
             // R-48: 誤りでも操作は中止せず、入力しなおせるように出し直す
             MessageBox.Show(this, $"{dialog.Path} は見つかりません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return DirectJump();
+            return DirectJumpInDialog();
         }
-
-        if (dialog.SecondaryChosen) OpenInExplorer(target);
-        else _ = OpenFolderAsync(target);
+        JumpTo(target, explorer: dialog.SecondaryChosen);
         return true;
+    }
+
+    /// <summary>R-87: ダイアログとアドレスバーで共通の移動。「開く」（D-08）はフォルダをエクスプローラーで開く。</summary>
+    private void JumpTo(JumpTarget target, bool explorer)
+    {
+        if (explorer) OpenInExplorer(target.Folder);
+        else _ = OpenFolderAsync(target.Folder, target.SelectName);
     }
 
     /// <summary>D-08:「開く」＝ 指定フォルダをエクスプローラーで開く。</summary>
