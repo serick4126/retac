@@ -27,8 +27,9 @@ public sealed class DriveBar : Control
     private List<Button> _buttons = [];
     /// <summary>ボタンのパス → アイコン。ドライブもデスクトップも同じ経路で取る。</summary>
     private Dictionary<string, Bitmap>? _icons;
-    /// <summary>デスクトップのアイコンが取れなかった。文字のボタンに戻す（B-15）。</summary>
-    private bool _desktopIconMissing;
+    /// <summary>アイコンが取れなかったボタンのパス。文字なしにせず文字を出す（B-15。押せないボタンにしない）。</summary>
+    private readonly HashSet<string> _iconMissing = new(StringComparer.OrdinalIgnoreCase);
+    private bool _compact;
     private readonly ToolTip _tooltip = new() { InitialDelay = TooltipDelay };
     private int _hoverIndex = -1;
     private int _focusIndex = -1;
@@ -107,6 +108,32 @@ public sealed class DriveBar : Control
     /// <summary>ボタンを並べるのに要る幅。枠なしのモーダル（R-77）の大きさを決めるのに使う。</summary>
     public int PreferredWidth => _buttons.Count == 0 ? 0 : _buttons[^1].Bounds.Right + Scaled(2);
 
+    /// <summary>
+    /// ドライブのボタンにも文字を出したときの幅。<see cref="Compact"/> に関係なく同じ値。
+    /// 縮めるかどうかはこの幅で決める（縮めた後の幅で決めると、縮める・戻すを繰り返す）。
+    /// </summary>
+    public int FullWidth { get; private set; }
+
+    /// <summary>
+    /// Q9: ドライブのボタンを文字なし（アイコンだけ）で描く。ドライブ名はツールチップに出る。
+    /// アイコンが取れないドライブは文字を出す（B-15）。
+    /// </summary>
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool Compact
+    {
+        get => _compact;
+        set
+        {
+            if (_compact == value) return;
+            _compact = value;
+            Rebuild();
+        }
+    }
+
+    /// <summary>ボタンの並びが変わった。幅だけ変わって高さが変わらないと、親は SizeChanged では気付けない。</summary>
+    public event EventHandler? LayoutNeeded;
+
     private void Rebuild()
     {
         var iconSize = IconSize;
@@ -120,6 +147,7 @@ public sealed class DriveBar : Control
 
         var buttons = new List<Button>();
         var x = gap;
+        var fullRight = 0;
 
         // DriveInfo.GetDrives 自体は接続を確認しないので UI スレッドから呼んでよい。
         // IsReady や容量の取得は応答しないドライブで待たされるため、ここでは触らない（N-05）
@@ -127,9 +155,12 @@ public sealed class DriveBar : Control
         {
             var letter = drive.Name[0];
             if (_hiddenDrives.Contains(char.ToUpperInvariant(letter))) continue;
-            var width = iconSize + gap + TextRenderer.MeasureText(measure, letter + ":", Font).Width + padding;
+            var fullWidth = iconSize + gap + TextRenderer.MeasureText(measure, letter + ":", Font).Width + padding;
+            fullRight += fullWidth + gap;
+            var iconOnly = _compact && !_iconMissing.Contains(drive.Name);
+            var width = iconOnly ? iconSize + padding : fullWidth;
             // P-02: 文言はドライブ名だけで組む。ボリュームラベルは応答しないドライブで待たされる（N-05）
-            buttons.Add(new Button(letter + ":", drive.Name, new Rectangle(x, gap, width, buttonHeight), letter,
+            buttons.Add(new Button(iconOnly ? "" : letter + ":", drive.Name, new Rectangle(x, gap, width, buttonHeight), letter,
                 $"{char.ToUpperInvariant(letter)}: ドライブへ移動"));
             x += width + gap;
         }
@@ -139,18 +170,23 @@ public sealed class DriveBar : Control
         {
             var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
             // B-15: アイコンだけで示す。取れなかったときだけ従来の文字に戻す（押せないボタンにしない）
-            var label = _desktopIconMissing ? DesktopLabel : "";
-            var desktopWidth = _desktopIconMissing
+            var missing = _iconMissing.Contains(desktop);
+            var label = missing ? DesktopLabel : "";
+            var desktopWidth = missing
                 ? iconSize + gap + TextRenderer.MeasureText(measure, DesktopLabel, Font).Width + padding
                 : iconSize + padding;
             buttons.Add(new Button(label, desktop, new Rectangle(x + gap * 2, gap, desktopWidth, buttonHeight), null,
                 "デスクトップフォルダへ移動"));
+            fullRight += gap * 2 + desktopWidth + gap;
         }
+        // PreferredWidth と同じ数え方（最後のボタンの右端 ＋ 2）。先頭の gap の分は末尾に足した gap で数えている
+        FullWidth = buttons.Count == 0 ? 0 : fullRight + Scaled(2);
 
         _buttons = buttons;
         _currentIndex = -1;   // 添字が変わるので付け直しを待つ
         LoadIconsInBackground();
         Invalidate();
+        LayoutNeeded?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>応答しないドライブでも UI を固まらせないため、アイコンは背景で取る（N-05）。</summary>
@@ -181,13 +217,12 @@ public sealed class DriveBar : Control
                 // 変えるたびに読み直すので、捨てないと積み上がる
                 DisposeAll(previous);
 
-                // B-15: デスクトップのアイコンが取れなければ、文字の幅で組み直す。
-                // 組み直しでもう一度読むが、_desktopIconMissing が立っているので繰り返さない
-                if (!_desktopIconMissing
-                    && _buttons.FirstOrDefault(b => b.DriveLetter is null) is { } desktop
-                    && !_icons.ContainsKey(desktop.Path))
+                // B-15: 文字の無いボタンのアイコンが取れなければ、文字の幅で組み直す。
+                // 組み直しでもう一度読むが、そのボタンには文字が付くので繰り返さない
+                var missing = _buttons.Where(b => b.Label.Length == 0 && !_icons.ContainsKey(b.Path)).Select(b => b.Path).ToList();
+                if (missing.Count > 0)
                 {
-                    _desktopIconMissing = true;
+                    _iconMissing.UnionWith(missing);
                     Rebuild();
                     return;
                 }
