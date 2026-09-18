@@ -114,7 +114,7 @@ public static class MenuBar
             if (items.Count > 0) items.Add(Separator());
             items.Add(Item("プロパティ(&R)", CommandId.ShowProperties));
             items.Add(Item("コンテキストメニュー(&C)", CommandId.ShowContextMenu));
-            items.Add(Item("フォルダの背景メニュー(&B)", CommandId.ShowFolderBackgroundMenu));
+            items.Add(Item("フォルダのコンテキストメニュー(&B)", CommandId.ShowFolderBackgroundMenu));
             items.Add(Item("ポップアップメニュー(&P)", CommandId.ShowPopupMenu));
             items.Add(Separator());
             items.Add(Item("外部ツールキュー(&Q)...", CommandId.ExternalToolQueue));

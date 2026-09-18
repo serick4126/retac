@@ -44,7 +44,7 @@ public static class CommandLabels
         ("表示", CommandId.ToggleDriveBar, "ドライブバーの表示切り替え"),
         ("表示", CommandId.ShowPopupMenu, "ポップアップメニューの表示"),
         ("表示", CommandId.ShowContextMenu, "コンテキストメニューの表示"),
-        ("表示", CommandId.ShowFolderBackgroundMenu, "フォルダの背景メニューの表示"),
+        ("表示", CommandId.ShowFolderBackgroundMenu, "フォルダのコンテキストメニューの表示"),
         ("表示", CommandId.NewWindow, "新しいウィンドウ"),
         ("表示", CommandId.Quit, "ReTAC の終了"),
         ("表示", CommandId.QuitAll, "ReTAC を完全に終了"),
