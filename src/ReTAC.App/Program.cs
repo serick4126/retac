@@ -31,6 +31,7 @@ internal static class Program
         if (args is ["--bench", var benchPath, ..]) return Bench(benchPath);
 
         var settings = AppSettings.Load();
+        settings.Normalize();   // Q10
         var form = new MainForm(settings: settings);
 
         // R-40-6: 起動時はウィンドウを表示しない設定

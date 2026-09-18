@@ -41,9 +41,14 @@ public static class CommandLabels
         ("ナビゲーション", CommandId.GoDesktop, "デスクトップへ移動"),
         ("ナビゲーション", CommandId.IncrementalSearch, "インクリメンタルサーチ"),
 
+        ("ブックマーク", CommandId.BookmarkManage, "ブックマークの管理"),
+        ("ブックマーク", CommandId.BookmarkAddCurrentFolder, "現在のフォルダをブックマークに追加"),
+        ("ブックマーク", CommandId.BookmarkAddCursorItem, "カーソル位置の項目をブックマークに追加"),
+
         ("表示", CommandId.Refresh, "最新の情報に更新"),
         ("表示", CommandId.ToggleDriveBar, "ドライブバーの表示切り替え"),
         ("表示", CommandId.ToggleAddressBar, "アドレスバーの表示切り替え"),
+        ("表示", CommandId.ToggleBookmarkBar, "ブックマークバーの表示切り替え"),
         ("表示", CommandId.ShowPopupMenu, "ポップアップメニューの表示"),
         ("表示", CommandId.ShowContextMenu, "コンテキストメニューの表示"),
         ("表示", CommandId.ShowFolderBackgroundMenu, "フォルダのコンテキストメニューの表示"),

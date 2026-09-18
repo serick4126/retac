@@ -74,6 +74,14 @@ public enum CommandId
     Undo = 0x9006,
     /// <summary>R-86: アドレスバーの表示・非表示。ドライブバーと同じくウィンドウごと。</summary>
     ToggleAddressBar = 0x9007,
+    /// <summary>R-89: ブックマークバーの表示・非表示。ウィンドウごと。</summary>
+    ToggleBookmarkBar = 0x9008,
+    /// <summary>R-89: ブックマークの管理ダイアログ。</summary>
+    BookmarkManage = 0x9009,
+    /// <summary>R-89: 今のフォルダをブックマークバーの末尾に足す。</summary>
+    BookmarkAddCurrentFolder = 0x900A,
+    /// <summary>R-89: カーソル位置の項目（親フォルダ項目なら今のフォルダ）をブックマークバーの末尾に足す。</summary>
+    BookmarkAddCursorItem = 0x900B,
 
     // --- 設定・ウィンドウ ---
     ColorAndFontSettings = 0x8151,

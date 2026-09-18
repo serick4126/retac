@@ -66,6 +66,15 @@ public sealed class AppSettings
     /// <summary>R-86: アドレスバーを出すか。初回は出す。</summary>
     public bool ShowAddressBar { get; set; } = true;
 
+    /// <summary>R-89: ブックマークバーを出すか。初回は出す（空の案内を出す）。</summary>
+    public bool ShowBookmarkBar { get; set; } = true;
+
+    /// <summary>R-89: ブックマーク。初期登録は 0 件（B-05）。置き場は「バー」と「その他」の 2 つで固定。</summary>
+    public BookmarkSet Bookmarks { get; set; } = new();
+
+    /// <summary>R-89: ブックマークバーの表示の形。</summary>
+    public BookmarkBarStyle BookmarkBarStyle { get; set; } = BookmarkBarStyle.IconAndText;
+
     // --- 配色とフォント（5-1 節） ------------------------------------------
     /// <summary>既定から変えた色だけを持つ。キーは <see cref="ThemeSlots"/> の Key。</summary>
     public Dictionary<string, string> Colors { get; set; } = [];
@@ -245,6 +254,21 @@ public sealed class AppSettings
     /// B-05: 既定の登録は持たない。何をよく開くかは人によるので、初期値に誰かの好みを埋めない
     /// （`J` は登録 0 件でも「設定...」「このフォルダを追加」が出るので空でも操作できる）。
     /// </summary>
+    /// <summary>
+    /// Q4 / Q10: 読み込みの直後に、消した外部ツール・読めないコマンド・クイックアクセスの Group を取り除く。
+    /// その場で書き換えるだけで保存はしない（次の通常の保存で書く）。外部ツールの番号は使い回さないので、
+    /// ファイルに古い参照がしばらく残っても別のツールに化けることはない（キー割り当てと同じ作り）。
+    /// </summary>
+    public void Normalize()
+    {
+        var ids = ExternalTools.Select(t => t.Id).ToList();
+        var list = new QuickAccessList();
+        foreach (var entry in QuickAccess) list.Add(entry);
+        // 一時の一覧を整理しただけでは QuickAccess は変わらない。書き戻さないと、後で共有の一覧を作るときに整理前の値から作ってしまう
+        if (list.DropUnknownTools(ids)) QuickAccess = [.. list.Items];
+        BookmarkRules.DropUnknownTools(Bookmarks, ids);
+    }
+
     public QuickAccessList ToQuickAccess()
     {
         var list = new QuickAccessList { ShowTitles = QuickAccessShowTitles, FixMissingAutomatically = QuickAccessFixMissing };

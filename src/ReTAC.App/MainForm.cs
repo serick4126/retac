@@ -72,7 +72,7 @@ public sealed class MainForm : Form
         _search = new IncrementalSearchBar(_list);
         _keyMap = _settings.ToKeyMap();
         _history = _settings.ToFolderHistory();
-        _quickAccess = _settings.ToQuickAccess();
+        _quickAccess = QuickAccessHost.For(_settings);   // Q12: 全ウィンドウで 1 つ
         _addressBar = new AddressBar(_history, _quickAccess);
         _topRow = new TopRow(_driveBar, _addressBar);
         _fileTypes = _settings.ToFileTypeFilter();
@@ -1634,6 +1634,10 @@ public sealed class MainForm : Form
         var map = _settings.ToKeyMap();
         foreach (var id in dialog.RemovedToolIds) map.ReleaseTool(id);
         _settings.FromKeyMap(map);
+        // Q4: 消したツールを指すクイックアクセスとブックマークも外す（キー割り当てと同じ扱い）
+        var ids = _settings.ExternalTools.Select(t => t.Id).ToList();
+        _quickAccess.DropUnknownTools(ids);
+        BookmarkRules.DropUnknownTools(_settings.Bookmarks, ids);
 
         SaveSettings();   // V-13
         RebuildMenus();
