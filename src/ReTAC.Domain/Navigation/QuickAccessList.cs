@@ -1,7 +1,11 @@
 namespace ReTAC.Domain.Navigation;
 
-/// <summary>クイックアクセスの登録項目。タイトル（フォルダの別名）＋ フォルダパスの対（16.2 節）。</summary>
-public sealed record QuickAccessEntry(string Title, string Path);
+/// <summary>
+/// クイックアクセスの登録項目。タイトル（フォルダの別名）＋ 登録先（16.2 節）。
+/// R-92: Kind を足した。Kind の無い古い項目は Folder として読む（既定値）。Path は Folder / File ならパス、
+/// Command なら CommandTarget.Serialize() の文字列（キー割り当ての保存と同じ形）。Group は使わない（読み込み時に落とす）。
+/// </summary>
+public sealed record QuickAccessEntry(string Title, string Path, BookmarkKind Kind = BookmarkKind.Folder);
 
 /// <summary>
 /// クイックアクセス（0x82FC）の登録リストと実行時オプション。
@@ -19,10 +23,10 @@ public sealed class QuickAccessList
     /// <summary>実行時オプション「フォルダが存在しない時は自動でリストを修正する」。現行設定は OFF。</summary>
     public bool FixMissingAutomatically { get; set; }
 
-    /// <summary>同じフォルダを二重に登録しない。登録できたら true。</summary>
+    /// <summary>同じ登録先を二重に登録しない（種類ごと。R-92）。登録できたら true。</summary>
     public bool Add(QuickAccessEntry entry)
     {
-        if (IndexOfPath(entry.Path) >= 0) return false;
+        if (IndexOf(entry) >= 0) return false;
         _items.Add(entry);
         return true;
     }
@@ -31,14 +35,31 @@ public sealed class QuickAccessList
     public bool Replace(int index, QuickAccessEntry entry)
     {
         if (!IsValid(index)) return false;
-        var found = IndexOfPath(entry.Path);
+        var found = IndexOf(entry);
         if (found >= 0 && found != index) return false;
         _items[index] = entry;
         return true;
     }
 
     /// <summary>同じフォルダを指す項目の位置。無ければ -1。</summary>
-    public int IndexOfPath(string path) => _items.FindIndex(e => PathEquals(e.Path, path));
+    public int IndexOfPath(string path) => IndexOf(new QuickAccessEntry("", path));
+
+    /// <summary>
+    /// R-92: 同じ登録先を指す項目の位置。種類が同じもの同士だけ比べる（同じパスのフォルダとファイルは別物）。
+    /// フォルダ・ファイルは末尾の \ と大文字小文字を無視し、コマンドは文字列が同じなら同じ。無ければ -1。
+    /// </summary>
+    public int IndexOf(QuickAccessEntry entry) => _items.FindIndex(e => e.Kind == entry.Kind
+        && (entry.Kind == BookmarkKind.Command ? e.Path == entry.Path : PathEquals(e.Path, entry.Path)));
+
+    /// <summary>
+    /// Q4 / Q10: Group の項目と、消した外部ツール・読めないコマンドを指す項目を落とす。変わったら true。
+    /// </summary>
+    public bool DropUnknownTools(IEnumerable<int> existingToolIds)
+    {
+        var ids = existingToolIds.ToHashSet();
+        return _items.RemoveAll(e => e.Kind == BookmarkKind.Group
+            || (e.Kind == BookmarkKind.Command && !BookmarkRules.IsKnown(e.Path, ids))) > 0;
+    }
 
     public void RemoveAt(int index)
     {

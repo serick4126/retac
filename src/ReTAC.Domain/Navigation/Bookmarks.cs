@@ -1,0 +1,70 @@
+using System.IO;
+using ReTAC.Domain.Commands;
+
+namespace ReTAC.Domain.Navigation;
+
+/// <summary>R-89 / R-92: 登録先の種類。値の名前は設定ファイルに載るので変えない。</summary>
+public enum BookmarkKind { Folder, File, Command, Group }
+
+/// <summary>R-89: バーの表示の形。値の名前は設定ファイルに載るので変えない。</summary>
+public enum BookmarkBarStyle { IconAndText, IconOnly, TextOnly }
+
+/// <summary>
+/// R-89: ブックマーク 1 件。Target は Folder / File ならパス、Command なら CommandTarget.Serialize() の文字列。
+/// Group のときだけ Children を使う（段数の制限は無い）。重複は許す（Q5）。
+/// </summary>
+public sealed record Bookmark(string Title, BookmarkKind Kind, string Target = "", List<Bookmark>? Children = null);
+
+/// <summary>R-89: 置き場は 2 つで固定（INV-BOOKMARK-FIXED-ROOTS）。固定の欄で持つので、削除・改名・移動できない。</summary>
+public sealed class BookmarkSet
+{
+    public List<Bookmark> Bar { get; set; } = [];
+    public List<Bookmark> Other { get; set; } = [];
+}
+
+public static class BookmarkRules
+{
+    /// <returns>誤りの説明。正しければ null</returns>
+    public static string? Validate(Bookmark b) => b.Kind switch
+    {
+        BookmarkKind.Group when string.IsNullOrWhiteSpace(b.Title) => "グループの名前を入れてください。",
+        BookmarkKind.Group => null,
+        _ when string.IsNullOrWhiteSpace(b.Target) => "登録先を入れてください。",
+        BookmarkKind.Command when string.IsNullOrWhiteSpace(b.Title) => "名前を入れてください。",
+        BookmarkKind.Command when CommandTarget.Parse(b.Target) is null => "コマンドを読み取れません。",
+        _ => null,
+    };
+
+    /// <summary>
+    /// Q4 / Q10: 消した外部ツールを指す項目と、読めないコマンドを落とす。入れ子の中も落とす。
+    /// コピーを返さずその場で書き換え、変わったら true（KeyMap.DropUnknownTools と同じ形）。
+    /// </summary>
+    public static bool DropUnknownTools(BookmarkSet set, IEnumerable<int> existingToolIds)
+    {
+        var ids = existingToolIds.ToHashSet();
+        return Drop(set.Bar, ids) | Drop(set.Other, ids);   // | は両方を必ず走らせる
+    }
+
+    private static bool Drop(List<Bookmark> items, HashSet<int> ids)
+    {
+        var changed = items.RemoveAll(b => b.Kind == BookmarkKind.Command && !IsKnown(b.Target, ids)) > 0;
+        foreach (var group in items.Where(b => b.Children is not null)) changed |= Drop(group.Children!, ids);
+        return changed;
+    }
+
+    /// <summary>コマンドの文字列が読めて、外部ツールなら今もある。</summary>
+    internal static bool IsKnown(string target, HashSet<int> ids) => CommandTarget.Parse(target) switch
+    {
+        ToolTarget tool => ids.Contains(tool.ToolId),
+        null => false,
+        _ => true,
+    };
+
+    /// <summary>表示名。題名が空の Folder / File はパスの末尾の名前（ルートはパスそのもの）。</summary>
+    public static string DisplayName(Bookmark b, Func<CommandTarget, string> commandLabel) => b switch
+    {
+        _ when !string.IsNullOrWhiteSpace(b.Title) => b.Title,
+        { Kind: BookmarkKind.Command } when CommandTarget.Parse(b.Target) is { } target => commandLabel(target),
+        _ => Path.GetFileName(b.Target.TrimEnd('\\')) is { Length: > 0 } name ? name : b.Target,
+    };
+}
