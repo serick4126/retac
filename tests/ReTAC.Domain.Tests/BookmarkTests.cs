@@ -91,6 +91,19 @@ public class BookmarkTests
         Assert.Empty(set.Other);
     }
 
+    [Fact]
+    public void 取り除くのは参照が同じ項目だけ()
+    {
+        var first = new Bookmark("", BookmarkKind.Folder, @"C:\a");
+        var second = new Bookmark("", BookmarkKind.Folder, @"C:\a");   // 値は同じ（重複を許す）
+        var set = new BookmarkSet { Bar = [first], Other = [new("g", BookmarkKind.Group, Children: [second])] };
+
+        Assert.True(BookmarkRules.Remove(set, second));
+        Assert.Same(first, Assert.Single(set.Bar));
+        Assert.Empty(set.Other[0].Children!);
+        Assert.False(BookmarkRules.Remove(set, second));
+    }
+
     [Theory]
     [InlineData("", @"C:\Work\Docs\", "Docs")]
     [InlineData("", @"C:\", @"C:\")]

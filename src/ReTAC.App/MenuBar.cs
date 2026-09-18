@@ -20,9 +20,10 @@ public static class MenuBar
     /// <param name="tools">F-07: 「ツール」メニューの先頭に登録順で並べる（「ポップアップに表示する」は効かない）</param>
     /// <param name="driveBarItem">R-77: 「表示 ＞ ドライブバー」。チェックの付け外しは呼び出し側が行う</param>
     /// <param name="addressBarItem">R-86: 「表示 ＞ アドレスバー」。チェックの付け外しは呼び出し側が行う</param>
+    /// <param name="bookmarkBarItem">R-89: 「表示 ＞ ブックマークバー」。チェックの付け外しは呼び出し側が行う</param>
     /// <param name="undoDescription">R-82: 最新の記録の説明。無ければ null</param>
     public static MenuStrip Create(Action<CommandTarget> dispatch, KeyMap keyMap, IReadOnlyList<ExternalTool> tools,
-                                   out ToolStripMenuItem driveBarItem, out ToolStripMenuItem addressBarItem,
+                                   out ToolStripMenuItem driveBarItem, out ToolStripMenuItem addressBarItem, out ToolStripMenuItem bookmarkBarItem,
                                    Func<string?> undoDescription)
     {
         var keys = KeyLabels(keyMap);
@@ -30,6 +31,7 @@ public static class MenuBar
         // ラムダ（ローカル関数）の中で out 引数を使えないので、いったん変数に受ける
         var driveBar = Item("ドライブバー(&D)", CommandId.ToggleDriveBar);
         var addressBar = Item("アドレスバー(&A)", CommandId.ToggleAddressBar);
+        var bookmarkBar = Item("ブックマークバー(&B)", CommandId.ToggleBookmarkBar);
         // R-82 / R-83: Ctrl+Z は固定のキーなので、キーマップの逆引きでは出ない。表示を直接与える
         var undo = Item("元に戻す(&U)", CommandId.Undo);
         undo.ShortcutKeyDisplayString = "Ctrl+Z";
@@ -103,6 +105,7 @@ public static class MenuBar
                 Separator(),
                 driveBar,
                 addressBar,
+                bookmarkBar,
                 Separator(),
                 Item("ソートの設定(&S)...", CommandId.SortSettings),
                 Item("表示するファイルタイプ(&T)...", CommandId.FileTypeSettings)),
@@ -125,6 +128,7 @@ public static class MenuBar
 
         driveBarItem = driveBar;
         addressBarItem = addressBar;
+        bookmarkBarItem = bookmarkBar;
         return menu;
 
         ToolStripItem[] ToolsMenu()

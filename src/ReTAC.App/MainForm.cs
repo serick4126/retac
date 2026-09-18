@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Windows.Forms;
 using ReTAC.Domain.Commands;
@@ -17,7 +18,7 @@ using Keys = System.Windows.Forms.Keys;
 
 namespace ReTAC.App;
 
-public sealed class MainForm : Form
+public sealed class MainForm : Form, IBookmarkHost
 {
     private readonly FileListView _list = new() { Dock = DockStyle.Fill };
     private readonly DriveBar _driveBar = new();
@@ -48,6 +49,12 @@ public sealed class MainForm : Form
     private bool _driveBarShown;
     // RebuildMenu（キー割り当ての変更）がメニュー全体を作り直すたびに差し替える。readonly にはできない
     private ToolStripMenuItem _driveBarMenuItem;
+    /// <summary>R-89: このウィンドウでブックマークバーを出しているか（_driveBarShown と同じ理由でフィールドで持つ）。</summary>
+    private bool _bookmarkBarShown;
+    private ToolStripMenuItem _bookmarkBarMenuItem;
+    private readonly BookmarkBar _bookmarkBar = new();
+    /// <summary>R-89 / R-90 / R-91: バー・ブックマークメニュー・展開表示で共通の項目の組み立て。</summary>
+    private readonly BookmarkItems _bookmarkItems;
     /// <summary>R-86: このウィンドウでアドレスバーを出しているか（_driveBarShown と同じ理由でフィールドで持つ）。</summary>
     private bool _addressBarShown;
     private ToolStripMenuItem _addressBarMenuItem;
@@ -75,6 +82,7 @@ public sealed class MainForm : Form
         _quickAccess = QuickAccessHost.For(_settings);   // Q12: 全ウィンドウで 1 つ
         _addressBar = new AddressBar(_history, _quickAccess);
         _topRow = new TopRow(_driveBar, _addressBar);
+        _bookmarkItems = new BookmarkItems(this, this);
         _fileTypes = _settings.ToFileTypeFilter();
         _sortOrder = _settings.ToSortOrder();
 
@@ -96,16 +104,16 @@ public sealed class MainForm : Form
         Controls.Add(_list);
         Controls.Add(_search);
         Controls.Add(_topRow);
+        Controls.Add(_bookmarkBar);
         Controls.Add(_statusBar);
         _statusBar.QueueClicked += (_, _) => ShowToolQueue();
         // Dock.Top は後から足した方が上に来る。メニューはドライブバーより上
-        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools, out _driveBarMenuItem, out _addressBarMenuItem, UndoDescription);
-        Controls.Add(_menu);
-        MainMenuStrip = _menu;
         _driveBarShown = _settings.ShowDriveBar;
         _addressBarShown = _settings.ShowAddressBar;
-        _driveBarMenuItem.Checked = _driveBarShown;
-        _addressBarMenuItem.Checked = _addressBarShown;
+        _bookmarkBarShown = _settings.ShowBookmarkBar;
+        CreateMenu();
+        RebuildBookmarkBar();
+        _bookmarkBar.Visible = _bookmarkBarShown;
         ApplyTopRow();   // ArrangeDocks が _menu を並べるので、メニューを足した後
 
         _list.EntryActivated += (_, entry) => OnActivated(entry);
@@ -431,6 +439,9 @@ public sealed class MainForm : Form
         CommandId.SelectDrive => _driveBarShown ? _driveBar.EnterKeyboardSelection(_currentFolder) : SelectDriveInModal(),
         CommandId.ToggleDriveBar => ToggleDriveBar(),
         CommandId.ToggleAddressBar => ToggleAddressBar(),
+        CommandId.ToggleBookmarkBar => ToggleBookmarkBar(),
+        CommandId.BookmarkAddCurrentFolder => AddBookmark(new Bookmark("", BookmarkKind.Folder, _currentFolder)),
+        CommandId.BookmarkAddCursorItem => AddBookmark(CursorBookmark()),
         CommandId.FolderHistory => ShowFolderHistory(),
         CommandId.QuickAccess => ShowQuickAccess(),
         // R-87: 表示中はアドレスバーで編集を始め、非表示ならダイアログ（ドライブバーの R-77 と同じ考え方）
@@ -497,11 +508,11 @@ public sealed class MainForm : Form
     /// R-80 / R-86: Dock の外側・内側は追加した順ではなく、その時点の子の添字で決まる（添字が大きいほど外側）。
     /// 隠したまま作った部品は、表示のときに WinForms が並びを詰め替えることがある（検索バーが
     /// ステータスバーより外側へ移り、最下段に出ていた）。部品を出すたびにここで並びを決め直す。
-    /// 上から メニュー → 上部の行 → リスト → 検索バー → ステータスバー。
+    /// 上から メニュー → 上部の行 → ブックマークバー → リスト → 検索バー → ステータスバー。
     /// </summary>
     private void ArrangeDocks()
     {
-        Control[] order = [_list, _search, _topRow, _menu, _statusBar];
+        Control[] order = [_list, _search, _bookmarkBar, _topRow, _menu, _statusBar];
         for (var i = 0; i < order.Length; i++) Controls.SetChildIndex(order[i], i);
     }
 
@@ -1371,6 +1382,105 @@ public sealed class MainForm : Form
         return true;
     }
 
+    /// <summary>R-89: ブックマークバーの表示切り替え。ドライブバー（R-77）と同じく、このウィンドウの表示を反転する。</summary>
+    private bool ToggleBookmarkBar()
+    {
+        _bookmarkBarShown = !_bookmarkBarShown;
+        _bookmarkBarMenuItem.Checked = _bookmarkBarShown;
+        _settings.ShowBookmarkBar = _bookmarkBarShown;
+        _bookmarkBar.Visible = _bookmarkBarShown;
+        ArrangeDocks();
+        SaveSettings();   // V-13
+        return true;
+    }
+
+    /// <summary>R-89: カーソル位置の 1 件。親フォルダ項目（とカーソルが無いとき）は今のフォルダ。</summary>
+    private Bookmark CursorBookmark() => _list.State.Cursor is { IsParent: false } entry
+        ? new Bookmark("", entry.Kind == EntryKind.Folder ? BookmarkKind.Folder : BookmarkKind.File, entry.FullPath)
+        : new Bookmark("", BookmarkKind.Folder, _currentFolder);
+
+    /// <summary>R-89: バーの末尾に足す。設定の変更なので「元に戻す」の記録には入れない。</summary>
+    private bool AddBookmark(Bookmark bookmark)
+    {
+        _settings.Bookmarks.Bar.Add(bookmark);
+        SaveSettings();   // V-13
+        RebuildBookmarkBars();
+        return true;
+    }
+
+    private void RebuildBookmarkBar() => _bookmarkBar.Rebuild(_settings.Bookmarks.Bar, _settings.BookmarkBarStyle, _bookmarkItems);
+
+    /// <summary>Q12: ブックマークは全ウィンドウで共有しているので、変えたら全ウィンドウのバーを作り直す。</summary>
+    private static void RebuildBookmarkBars()
+    {
+        foreach (var window in Application.OpenForms.OfType<MainForm>().ToList()) window.RebuildBookmarkBar();
+    }
+
+    /// <summary>R-90: 「ブックマーク」メニュー。開くたびに組み直す。バーを隠していても、ここからすべてのブックマークに届く。</summary>
+    private ToolStripMenuItem BookmarkMenu()
+    {
+        var menu = new ToolStripMenuItem("ブックマーク(&B)");
+        menu.DropDownItems.Add(BookmarkItems.Placeholder(""));   // 項目が無いと開けない
+        menu.DropDownOpening += (_, _) =>
+        {
+            BookmarkItems.Clear(menu.DropDownItems);
+            var manage = new ToolStripMenuItem("ブックマークを管理(&M)...");
+            manage.Click += (_, _) => Execute(new BuiltinTarget(CommandId.BookmarkManage), Keys.None);
+            var add = new ToolStripMenuItem("現在のフォルダを追加(&A)");
+            add.Click += (_, _) => Execute(new BuiltinTarget(CommandId.BookmarkAddCurrentFolder), Keys.None);
+            var bar = new ToolStripMenuItem("ブックマークバー");
+            bar.DropDownItems.AddRange(_settings.Bookmarks.Bar.Count == 0
+                ? [BookmarkItems.Placeholder("（空）")]
+                : _bookmarkItems.MenuItems(_settings.Bookmarks.Bar));
+            menu.DropDownItems.AddRange([manage, add, new ToolStripSeparator(), bar]);
+            if (_settings.Bookmarks.Other.Count > 0)
+            {
+                menu.DropDownItems.Add(new ToolStripSeparator());
+                menu.DropDownItems.AddRange(_bookmarkItems.MenuItems(_settings.Bookmarks.Other));
+            }
+            MenuSpacing.Apply(menu.DropDownItems, DeviceDpi);   // R-88
+        };
+        return menu;
+    }
+
+    // ---- IBookmarkHost（R-89 / R-91）: バー・メニュー・展開表示の項目を押したとき -----------
+
+    void IBookmarkHost.JumpTo(string folder) => _ = OpenFolderAsync(folder);
+
+    void IBookmarkHost.OpenFile(string path) => OpenWithAssociation(path);
+
+    void IBookmarkHost.Execute(CommandTarget target) => Execute(target, Keys.None);
+
+    void IBookmarkHost.BookmarkMissing(Bookmark bookmark)
+    {
+        // R-89: クイックアクセスと同じ「消えた項目を自動で取り除く」に従う
+        if (_quickAccess.FixMissingAutomatically && BookmarkRules.Remove(_settings.Bookmarks, bookmark))
+        {
+            SaveSettings();
+            RebuildBookmarkBars();
+            return;
+        }
+        MessageBox.Show(this, $"{bookmark.Target} は見つかりません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+    }
+
+    void IBookmarkHost.PathMissing(string path) =>
+        MessageBox.Show(this, $"{path} は見つかりません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+    string IBookmarkHost.LabelOf(CommandTarget target) => CommandLabels.Of(target, _settings.ExternalTools);
+
+    string IBookmarkHost.KeyOf(CommandTarget target) =>
+        _keyMap.Bindings
+            // R-73: マウスのボタンは設定ファイル用の表記（XButton1）になり、利用者には読めないので出さない
+            .Where(b => Equals(b.Value, target) && b.Key.VirtualKey is not (Vk.MButton or Vk.XButton1 or Vk.XButton2))
+            .Select(b => KeySlots.Label(b.Key))
+            .OrderBy(label => label.Length)
+            .FirstOrDefault() ?? "";
+
+    string? IBookmarkHost.IconPathOf(CommandTarget target) =>
+        target is ToolTarget tool ? _settings.ExternalTools.FirstOrDefault(t => t.Id == tool.ToolId)?.Path : null;
+
+    IReadOnlyList<Entry> IBookmarkHost.Enumerate(string folder) => FolderEnumerator.Enumerate(folder, _sortOrder, Include);
+
     private void ApplyTopRow()
     {
         _topRow.SetParts(_driveBarShown, _addressBarShown);
@@ -1672,6 +1782,7 @@ public sealed class MainForm : Form
         {
             window._keyMap = window._settings.ToKeyMap();
             window.RebuildMenu();
+            window.RebuildBookmarkBar();   // ツールチップのキー・ツールの名前
         }
     }
 
@@ -1679,12 +1790,24 @@ public sealed class MainForm : Form
     {
         Controls.Remove(_menu);
         _menu.Dispose();
-        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools, out _driveBarMenuItem, out _addressBarMenuItem, UndoDescription);
+        CreateMenu();
+        ArrangeDocks();
+    }
+
+    /// <summary>メニューを作る 1 か所（コンストラクタとキー割り当て・外部ツールの変更後）。</summary>
+    [MemberNotNull(nameof(_menu), nameof(_driveBarMenuItem), nameof(_addressBarMenuItem), nameof(_bookmarkBarMenuItem))]
+    private void CreateMenu()
+    {
+        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools,
+            out _driveBarMenuItem, out _addressBarMenuItem, out _bookmarkBarMenuItem, UndoDescription);
         _driveBarMenuItem.Checked = _driveBarShown;
         _addressBarMenuItem.Checked = _addressBarShown;
+        _bookmarkBarMenuItem.Checked = _bookmarkBarShown;
+        // R-90: 「ツール」の前に「ブックマーク」。中身は MainForm の状態（ブックマーク・今のフォルダ）に依るのでここで足す
+        var tools = _menu.Items.Cast<ToolStripItem>().First(item => item.Text == "ツール(&T)");
+        _menu.Items.Insert(_menu.Items.IndexOf(tools), BookmarkMenu());
         Controls.Add(_menu);
         MainMenuStrip = _menu;
-        ArrangeDocks();
     }
 
     /// <summary>R-82: 「編集」メニューの「元に戻す」に出す、最新の記録の説明。無ければ null</summary>
