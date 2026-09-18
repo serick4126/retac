@@ -1,4 +1,6 @@
 using System.Drawing;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows.Forms;
 using ReTAC.Domain.Navigation;
 
@@ -64,6 +66,7 @@ public sealed class AddressBar : Control
             _input.SelectAll();
         };
         _input.KeyDown += OnInputKeyDown;
+        _input.RecallKey = key => PathRecall.HandleKey(_input, key, _history, _quickAccess);
         // フォーカスの移り変わりの途中で表示を書き換えない。後に回す
         _input.LostFocus += (_, _) => { if (_editing && !_holding) BeginInvoke(CancelUnlessRefocused); };
         _input.TextChanged += (_, _) =>
@@ -74,8 +77,8 @@ public sealed class AddressBar : Control
         };
     }
 
-    /// <summary>TopRow が行の高さを決めるのに使う。</summary>
-    public int BarHeight => _input.PreferredHeight + LogicalToDeviceUnits(6);
+    /// <summary>TopRow が行の高さを決めるのに使う。文字の上下にも余白を取る（ブラウザのアドレスバーと同じ。詰まって見えるという実機指摘）。</summary>
+    public int BarHeight => _input.PreferredHeight + LogicalToDeviceUnits(12);
 
     /// <summary>今いるフォルダが変わった。編集中は入力を上書きしない（自動更新でも呼ばれる）。</summary>
     public void ShowFolder(string folder)
@@ -123,8 +126,7 @@ public sealed class AddressBar : Control
                 Cancelled?.Invoke(this, EventArgs.Empty);
                 break;
             default:
-                if (e.Modifiers != Keys.None || !PathRecall.HandleKey(_input, e.KeyCode, _history, _quickAccess)) return;
-                break;
+                return;   // ↑ ↓ は AddressBox.ProcessCmdKey が受け持つ
         }
         e.Handled = e.SuppressKeyPress = true;
     }
@@ -177,7 +179,7 @@ public sealed class AddressBar : Control
     protected override void OnLayout(LayoutEventArgs e)
     {
         base.OnLayout(e);
-        var padding = LogicalToDeviceUnits(4);
+        var padding = LogicalToDeviceUnits(8);
         var height = _input.PreferredHeight;
         _input.SetBounds(padding, (Height - height) / 2, Math.Max(0, Width - padding * 2), height);
     }
@@ -197,10 +199,52 @@ public sealed class AddressBar : Control
     /// <summary>↑↓・Enter・Esc を、フォームのフォーカス移動に取られずに KeyDown まで届ける。</summary>
     private sealed class AddressBox : TextBox
     {
+        /// <summary>↑ ↓ で履歴・クイックアクセスの一覧を開く。開いたら true。</summary>
+        public Func<Keys, bool>? RecallKey;
+
         protected override bool IsInputKey(Keys keyData) => (keyData & Keys.KeyCode) switch
         {
             Keys.Up or Keys.Down or Keys.Enter or Keys.Escape => true,
             _ => base.IsInputKey(keyData),
         };
+
+        /// <summary>
+        /// R-87: ↑ ↓ は、補完の候補が出ていなければ履歴・クイックアクセスの一覧にする（利用者の決定）。
+        /// 補完は入力欄の窓をサブクラス化して KeyDown より先にキーを取り、候補が出ていなくても ↓ で候補を開いてしまう
+        /// （c:\dev\cc で ↓ が cc_web になった）。ここはメッセージを配る前に呼ばれるので、補完より先に判定できる
+        /// </summary>
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData is Keys.Up or Keys.Down && !IsSuggestionOpen() && RecallKey?.Invoke(keyData) == true) return true;
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        /// <summary>補完の候補の窓（自分のスレッドの "Auto-Suggest Dropdown"）が見えているか（試作で確認した判定）。</summary>
+        private static bool IsSuggestionOpen()
+        {
+            var open = false;
+            EnumThreadWindows(GetCurrentThreadId(), (window, _) =>
+            {
+                var name = new StringBuilder(32);
+                GetClassName(window, name, name.Capacity);
+                if (name.ToString() == "Auto-Suggest Dropdown" && IsWindowVisible(window)) open = true;
+                return !open;
+            }, IntPtr.Zero);
+            return open;
+        }
+
+        private delegate bool EnumWindowsProc(IntPtr window, IntPtr param);
+
+        [DllImport("user32.dll")]
+        private static extern bool EnumThreadWindows(uint threadId, EnumWindowsProc callback, IntPtr param);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetClassName(IntPtr window, StringBuilder name, int capacity);
+
+        [DllImport("user32.dll")]
+        private static extern bool IsWindowVisible(IntPtr window);
+
+        [DllImport("kernel32.dll")]
+        private static extern uint GetCurrentThreadId();
     }
 }

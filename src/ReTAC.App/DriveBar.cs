@@ -14,7 +14,8 @@ public sealed class DriveBar : Control
 {
     /// <param name="Label">ボタンに描く文字。空ならアイコンだけ（B-15）</param>
     /// <param name="Tooltip">マウスを置いたときの説明（B-15 / P-02）</param>
-    private sealed record Button(string Label, string Path, Rectangle Bounds, char? DriveLetter, string Tooltip);
+    /// <param name="ShowIcon">false なら文字だけを中央に描く（Q9 の縮めた表示）</param>
+    private sealed record Button(string Label, string Path, Rectangle Bounds, char? DriveLetter, string Tooltip, bool ShowIcon = true);
 
     private const string DesktopLabel = "デスクトップ";
 
@@ -115,8 +116,8 @@ public sealed class DriveBar : Control
     public int FullWidth { get; private set; }
 
     /// <summary>
-    /// Q9: ドライブのボタンを文字なし（アイコンだけ）で描く。ドライブ名はツールチップに出る。
-    /// アイコンが取れないドライブは文字を出す（B-15）。
+    /// Q9: ドライブのボタンをアイコンなし（文字だけ）で描く。アイコンだけにすると、どのドライブか見分けが付かない
+    /// （実機指摘）。デスクトップのボタンはアイコンで見分けられるので、そのまま残す。
     /// </summary>
     [System.ComponentModel.Browsable(false)]
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
@@ -157,11 +158,10 @@ public sealed class DriveBar : Control
             if (_hiddenDrives.Contains(char.ToUpperInvariant(letter))) continue;
             var fullWidth = iconSize + gap + TextRenderer.MeasureText(measure, letter + ":", Font).Width + padding;
             fullRight += fullWidth + gap;
-            var iconOnly = _compact && !_iconMissing.Contains(drive.Name);
-            var width = iconOnly ? iconSize + padding : fullWidth;
+            var width = _compact ? TextRenderer.MeasureText(measure, letter + ":", Font).Width + padding : fullWidth;
             // P-02: 文言はドライブ名だけで組む。ボリュームラベルは応答しないドライブで待たされる（N-05）
-            buttons.Add(new Button(iconOnly ? "" : letter + ":", drive.Name, new Rectangle(x, gap, width, buttonHeight), letter,
-                $"{char.ToUpperInvariant(letter)}: ドライブへ移動"));
+            buttons.Add(new Button(letter + ":", drive.Name, new Rectangle(x, gap, width, buttonHeight), letter,
+                $"{char.ToUpperInvariant(letter)}: ドライブへ移動", ShowIcon: !_compact));
             x += width + gap;
         }
 
@@ -280,6 +280,12 @@ public sealed class DriveBar : Control
                 : button.Bounds.X + gap;
             var iconRect = new Rectangle(iconX, button.Bounds.Y + (button.Bounds.Height - iconSize) / 2, iconSize, iconSize);
 
+            if (!button.ShowIcon)
+            {
+                TextRenderer.DrawText(e.Graphics, button.Label, Font, button.Bounds, ForeColor,
+                    TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
+                continue;
+            }
             if (_icons?.TryGetValue(button.Path, out var icon) == true) e.Graphics.DrawImage(icon, iconRect);
 
             if (button.Label.Length == 0) continue;

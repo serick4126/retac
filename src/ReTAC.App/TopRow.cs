@@ -62,24 +62,28 @@ public sealed class TopRow : Control
         try
         {
             var min = LogicalToDeviceUnits(TopRowLayout.MinAddressWidth);
+            // アドレスバーの外側の余白。入力欄を行の端や上下に詰めない（実機指摘）
+            var margin = LogicalToDeviceUnits(6);
+            var vmargin = LogicalToDeviceUnits(4);
             // 縮めた後の幅ではなく、文字ありの幅で決める（縮める・戻すを繰り返さないため）
-            _drive.Compact = _showDrive && _showAddress && TopRowLayout.ShouldCompact(ClientSize.Width, _drive.FullWidth, min);
+            _drive.Compact = _showDrive && _showAddress
+                && TopRowLayout.ShouldCompact(ClientSize.Width - margin * 2, _drive.FullWidth, min);
 
-            var height = Math.Max(_showDrive ? _drive.Height : 0, _showAddress ? _address.BarHeight : 0);
+            var height = Math.Max(_showDrive ? _drive.Height : 0, _showAddress ? _address.BarHeight + vmargin * 2 : 0);
             if (Height != height) Height = height;
 
             if (!_showDrive)
             {
                 // 一方だけ表示なら、その部品が行の幅を使う（R-86）
-                _address.SetBounds(0, (height - _address.BarHeight) / 2, ClientSize.Width, _address.BarHeight);
+                _address.SetBounds(margin, (height - _address.BarHeight) / 2, ClientSize.Width - margin * 2, _address.BarHeight);
                 return;
             }
 
             var driveWidth = _drive.PreferredWidth;
             _drive.SetBounds(0, (height - _drive.Height) / 2, driveWidth, _drive.Height);
-            var x = driveWidth + LogicalToDeviceUnits(4);
+            var x = driveWidth + margin;
             // Q9: それでも足りなければ最小幅のまま右端で切る
-            _address.SetBounds(x, (height - _address.BarHeight) / 2, Math.Max(ClientSize.Width - x, min), _address.BarHeight);
+            _address.SetBounds(x, (height - _address.BarHeight) / 2, Math.Max(ClientSize.Width - x - margin, min), _address.BarHeight);
         }
         finally
         {
