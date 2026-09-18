@@ -91,7 +91,7 @@ public sealed class MainForm : Form
         Controls.Add(_statusBar);
         _statusBar.QueueClicked += (_, _) => ShowToolQueue();
         // Dock.Top は後から足した方が上に来る。メニューはドライブバーより上
-        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools, out _driveBarMenuItem);
+        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools, out _driveBarMenuItem, UndoDescription);
         Controls.Add(_menu);
         MainMenuStrip = _menu;
         _driveBarShown = _settings.ShowDriveBar;
@@ -254,6 +254,8 @@ public sealed class MainForm : Form
                 case Keys.C: e.Handled = ClipboardPut(cut: false); return;
                 case Keys.X: e.Handled = ClipboardPut(cut: true); return;
                 case Keys.V: e.Handled = Recording(ClipboardPaste); return;
+                // R-83: Ctrl+Z は元に戻す。Windows 全体で標準の編集キーなので割り当てでは変えられない
+                case Keys.Z: e.Handled = UndoLast(); return;
             }
             // Ctrl+Shift・Ctrl+Alt の枠は無い（F-06）
             if (e.Shift || e.Alt) return;
@@ -295,6 +297,105 @@ public sealed class MainForm : Form
         {
             _recorder.Commit(UndoHost.History);
             _recorder = null;
+        }
+    }
+
+    /// <summary>
+    /// R-82: 最新の記録を戻す。R-85: 変わった項目は戻さない。
+    /// INV-UNDO-NO-DATA-LOSS: 消す方向はごみ箱へ送る。例外は空のフォルダの削除だけ。
+    /// </summary>
+    private bool UndoLast()
+    {
+        var history = UndoHost.History;
+        if (history.Peek() is not { } record)
+        {
+            MessageBox.Show(this, "元に戻せる操作はありません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return true;
+        }
+
+        var checkedItems = record.Items
+            .Select(item => (Item: item, Problem: UndoCheck.Check(record.Kind, item, UndoRecorder.Stamp, UndoRecorder.IsEmptyFolder)))
+            .ToList();
+        var ok = checkedItems.Where(c => c.Problem == UndoProblem.None).Select(c => c.Item).ToList();
+        var bad = checkedItems.Where(c => c.Problem != UndoProblem.None).ToList();
+        var title = UndoText.Describe(record);
+
+        if (record.Items.Count > 0 && ok.Count == 0)
+        {
+            MessageBox.Show(this, $"{title}は、変わっているため元に戻せません。\n\n{Problems(bad)}",
+                "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            history.Pop();   // 何度押しても戻せないので除く
+            return true;
+        }
+
+        var text = $"{title}を元に戻しますか。\n\n{Plan(record.Kind, ok)}";
+        if (bad.Count > 0)
+            text += $"\n\n次の項目は変わっているため戻しません。\n{Problems(bad)}\n\n変わっていない {ok.Count} 件だけ戻しますか。";
+        if (record.Kind == UndoKind.Move && ok.Any(i => i.Overwrote))
+            text += "\n\n移動で上書きされた宛先のファイルは戻りません。";
+
+        var answer = MessageBox.Show(this, text, "元に戻す",
+            bad.Count > 0 ? MessageBoxButtons.YesNo : MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+        if (answer is not (DialogResult.OK or DialogResult.Yes)) return true;
+
+        // 実行の結果にかかわらず除く。失敗は OS のダイアログで知らされている
+        history.Pop();
+
+        foreach (var folder in record.RemovedFolders)
+        {
+            try { Directory.CreateDirectory(folder); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+
+        // _recorder は null のまま（戻す処理は記録しない）
+        RunOperation(silentOverwrite: false, operation =>
+        {
+            foreach (var item in ok)
+            {
+                switch (record.Kind)
+                {
+                    case UndoKind.Rename:
+                        operation.Rename(item.After, Path.GetFileName(item.Before!));
+                        break;
+                    case UndoKind.Move:
+                        var parent = Path.GetDirectoryName(item.Before!)!;
+                        Directory.CreateDirectory(parent);
+                        var name = Path.GetFileName(item.Before!);
+                        operation.Move(item.After, parent,
+                            string.Equals(name, Path.GetFileName(item.After), StringComparison.Ordinal) ? null : name);
+                        break;
+                    default:
+                        operation.Delete(item.After);   // コピー・作成はごみ箱へ
+                        break;
+                }
+            }
+        });
+
+        // 作ったフォルダは、空になったものだけを深い順に消す
+        foreach (var folder in record.CreatedFolders.Reverse())
+        {
+            try { if (UndoRecorder.IsEmptyFolder(folder)) Directory.Delete(folder); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+
+        // マークは名前で引き継ぐ（既存の再表示の規則）。カーソルは動かさない
+        Reload();
+        return true;
+
+        static string Problems(IEnumerable<(UndoItem Item, UndoProblem Problem)> items) =>
+            Lines(items.Select(c => $"{Path.GetFileName(c.Item.After)}（{UndoText.Reason(c.Problem)}）"));
+
+        static string Plan(UndoKind kind, IReadOnlyList<UndoItem> items) => kind switch
+        {
+            UndoKind.Rename or UndoKind.Move => Lines(items.Select(i => $"{i.After} → {i.Before}")),
+            _ => "ごみ箱へ送る項目:\n" + Lines(items.Select(i => i.After)),
+        };
+
+        static string Lines(IEnumerable<string> lines)
+        {
+            var list = lines.ToList();
+            var shown = string.Join("\n", list.Take(5));
+            return list.Count > 5 ? $"{shown}\nほか {list.Count - 5} 件" : shown;
         }
     }
 
@@ -363,6 +464,7 @@ public sealed class MainForm : Form
         CommandId.GoBack => GoHistory(_history.Back(_currentFolder), record: false),
         CommandId.GoForward => GoHistory(_history.Forward(_currentFolder), record: false),
         CommandId.IncrementalSearch => OpenIncrementalSearch(),
+        CommandId.Undo => UndoLast(),
         _ => false,
     };
 
@@ -1515,11 +1617,14 @@ public sealed class MainForm : Form
     {
         Controls.Remove(_menu);
         _menu.Dispose();
-        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools, out _driveBarMenuItem);
+        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools, out _driveBarMenuItem, UndoDescription);
         _driveBarMenuItem.Checked = _driveBarShown;
         Controls.Add(_menu);
         MainMenuStrip = _menu;
     }
+
+    /// <summary>R-82: 「編集」メニューの「元に戻す」に出す、最新の記録の説明。無ければ null</summary>
+    private static string? UndoDescription() => UndoHost.History.Peek() is { } record ? UndoText.Describe(record) : null;
 
     /// <summary>配色・フォントの設定（0x8151）。5-1 節。</summary>
     private bool ShowColorFontSettings()

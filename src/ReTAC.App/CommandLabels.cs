@@ -11,6 +11,7 @@ public static class CommandLabels
 {
     private static readonly (string Category, CommandId Command, string Label)[] Table =
     [
+        ("ファイル操作", CommandId.Undo, "元に戻す"),
         ("ファイル操作", CommandId.OpenFile, "開く"),
         ("ファイル操作", CommandId.CopyToFolder, "フォルダへコピー"),
         ("ファイル操作", CommandId.MoveToFolder, "フォルダへ移動"),

@@ -7,6 +7,13 @@ namespace ReTAC.Domain.Tests;
 public class CommandLabelsTests
 {
     [Fact]
+    public void 元に戻すはファイル操作の先頭にある()
+    {
+        var first = CommandLabels.Grouped.First();
+        Assert.Equal((CommandId.Undo, "ファイル操作", "元に戻す"), (first.Command, first.Category, first.Label));
+    }
+
+    [Fact]
     public void ドライブバーの表示切り替えは表示の分類にある()
     {
         var row = CommandLabels.Grouped.Single(r => r.Command == CommandId.ToggleDriveBar);

@@ -70,6 +70,8 @@ public enum CommandId
     ShowFolderBackgroundMenu = 0x9004,
     /// <summary>R-77: ドライブバーの表示・非表示。メニューの項目もコマンドの経路を通す（R-12）。</summary>
     ToggleDriveBar = 0x9005,
+    /// <summary>R-82: 元に戻す。Ctrl+Z は固定のキーとして別に効く（R-83）。</summary>
+    Undo = 0x9006,
 
     // --- 設定・ウィンドウ ---
     ColorAndFontSettings = 0x8151,
