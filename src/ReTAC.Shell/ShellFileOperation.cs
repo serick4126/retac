@@ -12,7 +12,12 @@ namespace ReTAC.Shell;
 public sealed class ShellFileOperation : IDisposable
 {
     private readonly IFileOperation _operation;
+    private readonly FileOperationSink _sink = new();
+    private readonly uint _cookie;
     private bool _hasWork;
+
+    /// <summary>R-84: 成功して項目ができた操作。Execute の後に読む。中止しても成功した分は残る。</summary>
+    public IReadOnlyList<OperationResult> Results => _sink.Results;
 
     /// <param name="owner">進捗・確認ダイアログの親</param>
     /// <param name="silentOverwrite">
@@ -28,6 +33,7 @@ public sealed class ShellFileOperation : IDisposable
         var flags = FOF_ALLOWUNDO;                       // R-19: 削除はごみ箱経由
         if (silentOverwrite) flags |= FOF_NOCONFIRMATION;
         Check(_operation.SetOperationFlags(flags));
+        Check(_operation.Advise(_sink, out _cookie));
     }
 
     /// <param name="newName">別名で複写する場合の名前。元の名前のままなら null</param>
@@ -88,7 +94,11 @@ public sealed class ShellFileOperation : IDisposable
         throw new IOException(reason ?? $"ファイル操作に失敗しました。(0x{hr:X8})", hr);
     }
 
-    public void Dispose() => Marshal.ReleaseComObject(_operation);
+    public void Dispose()
+    {
+        _operation.Unadvise(_cookie);
+        Marshal.ReleaseComObject(_operation);
+    }
 
     private static IShellItem Item(string path)
     {
@@ -133,7 +143,7 @@ public sealed class ShellFileOperation : IDisposable
      InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     private interface IFileOperation
     {
-        [PreserveSig] int Advise(IntPtr sink, out uint cookie);
+        [PreserveSig] int Advise(IFileOperationProgressSink sink, out uint cookie);
         [PreserveSig] int Unadvise(uint cookie);
         [PreserveSig] int SetOperationFlags(uint flags);
         [PreserveSig] int SetProgressMessage([MarshalAs(UnmanagedType.LPWStr)] string message);
