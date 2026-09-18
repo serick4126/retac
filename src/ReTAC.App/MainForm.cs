@@ -1517,8 +1517,8 @@ public sealed class MainForm : Form, IBookmarkHost
         {
             case Bookmark b:
                 if (b.Kind == BookmarkKind.Folder) rows.Add(("このフォルダへジャンプ(&J)", () => _ = OpenFolderAsync(b.Target)));
-                rows.Add(("編集(&E)...", () => EditBookmark(b)));
-                rows.Add(("削除(&D)", () => { if (BookmarkRules.Remove(_settings.Bookmarks, b)) BookmarkChanged(); }));
+                rows.Add(("ブックマークを編集(&E)...", () => EditBookmark(b)));
+                rows.Add(("ブックマークを削除(&X)", () => { if (BookmarkRules.Remove(_settings.Bookmarks, b)) BookmarkChanged(); }));
                 if (b.Kind != BookmarkKind.Group) rows.Add(("クイックアクセスにも追加(&Q)", () => AddToQuickAccess(b)));
                 if (b.Kind is BookmarkKind.Folder or BookmarkKind.File) shellPaths = [b.Target];
                 break;

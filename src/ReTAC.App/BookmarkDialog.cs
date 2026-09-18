@@ -35,7 +35,7 @@ public sealed class BookmarkDialog : Form
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = MaximizeBox = false;
-        ClientSize = new Size(600, 482);
+        ClientSize = new Size(640, 482);
 
         _tree.SetBounds(12, 12, 440, 372);
         _tree.DoubleClick += (_, _) => Edit();
@@ -63,8 +63,8 @@ public sealed class BookmarkDialog : Form
             ("ファイルを追加(&I)...", AddFile),
             ("コマンドを追加(&O)...", AddCommand),
             ("グループを追加(&G)...", AddGroup),
-            ("編集(&E)...", Edit),
-            ("削除(&D)", Remove),
+            ("ブックマークを編集(&E)...", Edit),
+            ("ブックマークを削除(&X)", Remove),
             ("↑(&U)", () => MoveSelected(-1)),
             ("↓(&W)", () => MoveSelected(1)),
             ("クイックアクセスにも追加(&Q)", AddToQuickAccess),
@@ -72,7 +72,7 @@ public sealed class BookmarkDialog : Form
         var y = 12;
         foreach (var (text, action) in buttons)
         {
-            var button = new Button { Text = text, Bounds = new Rectangle(464, y, 124, 30) };
+            var button = new Button { Text = text, Bounds = new Rectangle(464, y, 164, 30) };
             button.Click += (_, _) => action();
             Controls.Add(button);
             y += 36;
@@ -84,7 +84,7 @@ public sealed class BookmarkDialog : Form
         _style.SelectedIndex = (int)settings.BookmarkBarStyle;
         _fixMissing.Location = new Point(16, 428);
         _fixMissing.Checked = quickAccess.FixMissingAutomatically;
-        var close = new Button { Text = "閉じる", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(464, 440, 124, 30) };
+        var close = new Button { Text = "閉じる", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(504, 440, 124, 30) };
         CancelButton = close;
         Controls.AddRange([_tree, styleLabel, _style, _fixMissing, close]);
         FormClosing += (_, _) =>
