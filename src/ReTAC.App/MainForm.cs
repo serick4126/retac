@@ -83,6 +83,8 @@ public sealed class MainForm : Form, IBookmarkHost
         _addressBar = new AddressBar(_history, _quickAccess);
         _topRow = new TopRow(_driveBar, _addressBar);
         _bookmarkItems = new BookmarkItems(this, this);
+        // 行の高さは DPI・フォントで変わる。上部の行が高さを決め直したら、ブックマークバーも揃える
+        _topRow.SizeChanged += (_, _) => _bookmarkBar.SetRowHeight(_topRow.RowHeight, _topRow.SideMargin);
         _fileTypes = _settings.ToFileTypeFilter();
         _sortOrder = _settings.ToSortOrder();
 
@@ -1484,6 +1486,7 @@ public sealed class MainForm : Form, IBookmarkHost
     private void ApplyTopRow()
     {
         _topRow.SetParts(_driveBarShown, _addressBarShown);
+        _bookmarkBar.SetRowHeight(_topRow.RowHeight, _topRow.SideMargin);   // 上部の行を隠しても揃える
         ArrangeDocks();
     }
 

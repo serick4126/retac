@@ -49,6 +49,15 @@ public sealed class TopRow : Control
         PerformLayout();
     }
 
+    /// <summary>
+    /// 上部のバーの 1 行の高さ。アドレスバーを隠していても、アドレスバーがあるときの高さを使う
+    /// （ドライブバーだけにしたときに行が低く戻らないように。実機指摘）。ブックマークバーもこの高さに揃える。
+    /// </summary>
+    public int RowHeight => Math.Max(_drive.Height, _address.BarHeight + LogicalToDeviceUnits(4) * 2);
+
+    /// <summary>アドレスバーの外側の左右の余白。ブックマークバーもこの余白に揃える。</summary>
+    public int SideMargin => LogicalToDeviceUnits(6);
+
     private void Relayout()
     {
         if (!_laying) PerformLayout();
@@ -63,13 +72,12 @@ public sealed class TopRow : Control
         {
             var min = LogicalToDeviceUnits(TopRowLayout.MinAddressWidth);
             // アドレスバーの外側の余白。入力欄を行の端や上下に詰めない（実機指摘）
-            var margin = LogicalToDeviceUnits(6);
-            var vmargin = LogicalToDeviceUnits(4);
+            var margin = SideMargin;
             // 縮めた後の幅ではなく、文字ありの幅で決める（縮める・戻すを繰り返さないため）
             _drive.Compact = _showDrive && _showAddress
                 && TopRowLayout.ShouldCompact(ClientSize.Width - margin * 2, _drive.FullWidth, min);
 
-            var height = Math.Max(_showDrive ? _drive.Height : 0, _showAddress ? _address.BarHeight + vmargin * 2 : 0);
+            var height = RowHeight;
             if (Height != height) Height = height;
 
             if (!_showDrive)

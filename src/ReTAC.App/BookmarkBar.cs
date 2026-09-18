@@ -17,6 +17,14 @@ public sealed class BookmarkBar : ToolStrip
         GripStyle = ToolStripGripStyle.Hidden;
         CanOverflow = true;
         ShowItemToolTips = true;
+        AutoSize = false;   // 高さはアドレスバーの行に揃える（SetRowHeight）
+    }
+
+    /// <summary>上部の行（ドライブバー・アドレスバー）と同じ高さ・左右の余白にする。項目は縦の中央に並ぶ。</summary>
+    public void SetRowHeight(int height, int sideMargin)
+    {
+        Height = height;
+        Padding = new Padding(sideMargin, 0, sideMargin, 0);
     }
 
     public void Rebuild(IReadOnlyList<Bookmark> bar, BookmarkBarStyle style, BookmarkItems items)
