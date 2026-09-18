@@ -1530,14 +1530,15 @@ public sealed class MainForm : Form, IBookmarkHost
         }
         if (item?.Tag is not Entry)
         {
-            // 足した項目は右クリックした項目の後ろへ（空いた所なら末尾）
+            // 足した項目は右クリックした項目の後ろへ（空いた所なら末尾）。
+            // アクセスキーはエクスプローラーのメニューでよく使われる字（O V F H W A S N T C D R P）を避ける（実機指摘）
             if (rows.Count > 0) rows.Add(("", null));
-            rows.Add(("現在のフォルダを追加(&A)", () => AddBookmark(new Bookmark("", BookmarkKind.Folder, _currentFolder), bookmark)));
-            rows.Add(("カーソル位置の項目を追加(&C)", () => AddBookmark(CursorBookmark(), bookmark)));
+            rows.Add(("現在のフォルダを追加(&K)", () => AddBookmark(new Bookmark("", BookmarkKind.Folder, _currentFolder), bookmark)));
+            rows.Add(("カーソル位置の項目を追加(&I)", () => AddBookmark(CursorBookmark(), bookmark)));
             rows.Add(("コマンドを追加(&M)...", () => AddCommandBookmark(bookmark)));
             rows.Add(("グループを追加(&G)...", () => AddGroupBookmark(bookmark)));
             rows.Add(("", null));
-            rows.Add(("ブックマークを管理(&O)...", () => Execute(new BuiltinTarget(CommandId.BookmarkManage), Keys.None)));
+            rows.Add(("ブックマークを管理(&B)...", () => Execute(new BuiltinTarget(CommandId.BookmarkManage), Keys.None)));
         }
 
         var texts = rows.Select(r => r.Text).ToList();
