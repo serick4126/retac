@@ -33,6 +33,9 @@
     "ShowDesktopButton": "dialog:DriveVisibilityDialog",
     "ShowDriveBar": "menu:MainForm",
     "ShowAddressBar": "menu:MainForm",
+    "ShowBookmarkBar": "menu:MainForm",
+    "Bookmarks": "dialog:BookmarkDialog",
+    "BookmarkBarStyle": "dialog:BookmarkDialog",
 
     "Colors": "dialog:ColorFontDialog",
     "FontFamily": "dialog:ColorFontDialog",
@@ -62,8 +65,8 @@
         "unique:ReTAC.App.AppSettings#QuickAccess",
         "settings:QuickAccess"
       ],
-      "rule": "同じフォルダを二重に登録しない。末尾の区切りを除いた大文字小文字無視で比較する。設定ファイルを手で書いて重複させた場合は読み込み時に落ちる。",
-      "enforcedBy": "domain:QuickAccessList.Add / QuickAccessList.Replace（IndexOfPath で弾く）",
+      "rule": "種類ごとに、同じ登録先を二重に登録しない（R-92）。フォルダとファイルはパスを末尾の区切りを除いた大文字小文字無視で比較し、コマンドは CommandTarget.Serialize() の文字列で比較する。設定ファイルを手で書いて重複させた場合は読み込み時に落ちる。",
+      "enforcedBy": "domain:QuickAccessList.Add / QuickAccessList.Replace（IndexOf で種類と登録先を比べて弾く）",
       "testedBy": "tests/ReTAC.Domain.Tests/QuickAccessTests.cs"
     },
     {
@@ -73,11 +76,40 @@
       "applies": [
         "fk:ReTAC.Domain.Commands.ToolTarget#ToolId",
         "type:ReTAC.Domain.Commands.ToolTarget",
-        "settings:KeyBindings"
+        "settings:KeyBindings",
+        "settings:QuickAccess",
+        "settings:Bookmarks"
       ],
-      "rule": "ToolTarget.ToolId は存在する ExternalTool.Id を必ず指す。存在しないツールを指す割り当ては読み込み時に落とす。既定のキー（Tool:1〜3）も例外にしない。",
-      "enforcedBy": "domain:KeyMap.DropUnknownTools（AppSettings.ToKeyMap が読み込み時に通す）",
-      "testedBy": "tests/ReTAC.Domain.Tests/KeyMapToolRefTests.cs"
+      "rule": "ToolTarget.ToolId は存在する ExternalTool.Id を必ず指す。存在しないツールを指す割り当て・クイックアクセス・ブックマーク（Kind が Command のもの）は、読み込み時とツールを削除したときに落とす。既定のキー（Tool:1〜3）も例外にしない。",
+      "enforcedBy": "domain:KeyMap.DropUnknownTools（AppSettings.ToKeyMap が読み込み時に通す）/ QuickAccessList.DropUnknownTools / BookmarkRules.DropUnknownTools（AppSettings.Normalize が読み込み時に通す。ツールの削除は MainForm.ShowExternalToolSettings）",
+      "testedBy": "tests/ReTAC.Domain.Tests/KeyMapToolRefTests.cs / tests/ReTAC.Domain.Tests/BookmarkTests.cs",
+      "note": "Q10: 読み込み時の正規化はメモリ上だけで行い、ファイルへは次の通常の保存で書く。起動直後に保存しない・通知しない。正規化の失敗で起動を止めない。"
+    },
+    {
+      "id": "INV-QUICKACCESS-SHARED",
+      "status": "enforced",
+      "specIds": ["R-36", "R-89"],
+      "applies": ["settings:QuickAccess", "settings:Bookmarks"],
+      "rule": "クイックアクセスとブックマークは、全ウィンドウで 1 つを共有する。ウィンドウごとにコピーを持たない。ブックマークを変えたら全ウィンドウのバーを作り直す。",
+      "enforcedBy": "app:QuickAccessHost.For（設定の実体ごとに 1 つ）/ MainForm.RebuildBookmarkBars（ブックマークは AppSettings.Bookmarks を直接使う）",
+      "note": "Q12: 2.3.0 までは窓ごとにコピーを持ち、保存のたびにその窓の中身で書き戻していたため、窓 A で足した項目が窓 B の保存で消えた。"
+    },
+    {
+      "id": "INV-BOOKMARK-DUPLICATES-ALLOWED",
+      "status": "accepted",
+      "specIds": ["R-89"],
+      "applies": ["settings:Bookmarks", "type:ReTAC.Domain.Navigation.Bookmark", "unique:ReTAC.Domain.Navigation.BookmarkSet#Bar", "unique:ReTAC.Domain.Navigation.BookmarkSet#Other"],
+      "rule": "ブックマークは重複を許す。",
+      "reason": "同じフォルダを別のグループに入れる使い方がある（ブラウザと同じ。Q5）。重複を許すので、項目は値ではなく参照で探す（BookmarkRules.Locate / Remove / Move）。record の IndexOf は値で比べ、重複した別の項目を指すので使わない。"
+    },
+    {
+      "id": "INV-BOOKMARK-FIXED-ROOTS",
+      "status": "enforced",
+      "specIds": ["R-89"],
+      "applies": ["type:ReTAC.Domain.Navigation.BookmarkSet"],
+      "rule": "「ブックマークバー」と「その他のブックマーク」の 2 つの置き場は、削除・改名・移動できない。グループは自分の中へは移せない（入れ子が輪になって消えるため）。",
+      "enforcedBy": "domain:BookmarkSet（Bar / Other の固定の欄で持つ）/ BookmarkRules.Move（自分の中への移動を断る）。管理ダイアログは最上位をドラッグの元・削除・編集の対象にしない",
+      "testedBy": "tests/ReTAC.Domain.Tests/BookmarkTests.cs"
     },
     {
       "id": "INV-STARTFOLDER-MODE",
