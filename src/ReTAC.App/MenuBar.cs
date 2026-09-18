@@ -27,7 +27,9 @@ public static class MenuBar
                                    Func<string?> undoDescription)
     {
         var keys = KeyLabels(keyMap);
-        var menu = new MenuStrip();
+        // 狭いウィンドウでも入りきらない項目を「»」に回す。既定（false）では項目が消え、メニューに届かなくなる（実機指摘）
+        var menu = new MenuStrip { CanOverflow = true };
+        ToolStripExtras.WidenOverflow(menu);
         // ラムダ（ローカル関数）の中で out 引数を使えないので、いったん変数に受ける
         var driveBar = Item("ドライブバー(&D)", CommandId.ToggleDriveBar);
         var addressBar = Item("アドレスバー(&A)", CommandId.ToggleAddressBar);

@@ -112,6 +112,7 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
     private void AttachGroup(ToolStripDropDownItem item, Bookmark group)
     {
         item.DropDownItems.Add(Placeholder("（空）"));   // 項目が無いと ▶ が出ず、開けない
+        ToolStripExtras.EnableWheel(item.DropDown);
         item.DropDownOpening += (_, _) =>
         {
             Clear(item.DropDownItems);

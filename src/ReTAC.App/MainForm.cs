@@ -1426,6 +1426,7 @@ public sealed class MainForm : Form, IBookmarkHost
     {
         var menu = new ToolStripMenuItem("ブックマーク(&B)");
         menu.DropDownItems.Add(BookmarkItems.Placeholder(""));   // 項目が無いと開けない
+        ToolStripExtras.EnableWheel(menu.DropDown);
         menu.DropDownOpening += (_, _) =>
         {
             BookmarkItems.Clear(menu.DropDownItems);
@@ -1812,6 +1813,8 @@ public sealed class MainForm : Form, IBookmarkHost
         // R-90: 「ツール」の前に「ブックマーク」。中身は MainForm の状態（ブックマーク・今のフォルダ）に依るのでここで足す
         var tools = _menu.Items.Cast<ToolStripItem>().First(item => item.Text == "ツール(&T)");
         _menu.Items.Insert(_menu.Items.IndexOf(tools), BookmarkMenu());
+        // メニューバーの項目は既定で「»」に回らない（Overflow.Never）。狭いウィンドウでも届くようにする（実機指摘）
+        foreach (ToolStripItem item in _menu.Items) item.Overflow = ToolStripItemOverflow.AsNeeded;
         Controls.Add(_menu);
         MainMenuStrip = _menu;
     }

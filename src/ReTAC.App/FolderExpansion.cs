@@ -21,6 +21,7 @@ public static class FolderExpansion
         // 開くたびに進める。裏の列挙の結果が、閉じた後や開き直した後に届いたら捨てる
         var generation = 0;
         item.DropDownItems.Add(BookmarkItems.Placeholder("読み込み中…"));   // 項目が無いと ▶ が出ず、開けない
+        ToolStripExtras.EnableWheel(item.DropDown);   // 数百件を ▲▼ だけで送らせない（実機指摘）
 
         item.DropDownOpening += (_, _) =>
         {
