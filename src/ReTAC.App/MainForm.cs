@@ -50,6 +50,8 @@ public sealed class MainForm : Form
     private ToolStripMenuItem _driveBarMenuItem;
     /// <summary>R-40: 常駐中は終了操作で最小化するだけにする。完全終了だけがプロセスを終わらせる。</summary>
     private bool _fullExit;
+    /// <summary>R-84: 実行中のコマンドの記録。コマンドの外（元に戻す処理を含む）では null で、何も集めない。</summary>
+    private UndoRecorder? _recorder;
     /// <summary>R-74: マウスボタン3/4/5 を窓全体で受ける。解除は FormClosed で行う。</summary>
     private readonly MouseButtonFilter _mouseButtons;
     /// <summary>R-80: ステータスバーの一段上。検索中だけ出す。</summary>
@@ -251,7 +253,7 @@ public sealed class MainForm : Form
             {
                 case Keys.C: e.Handled = ClipboardPut(cut: false); return;
                 case Keys.X: e.Handled = ClipboardPut(cut: true); return;
-                case Keys.V: e.Handled = ClipboardPaste(); return;
+                case Keys.V: e.Handled = Recording(ClipboardPaste); return;
             }
             // Ctrl+Shift・Ctrl+Alt の枠は無い（F-06）
             if (e.Shift || e.Alt) return;
@@ -281,6 +283,19 @@ public sealed class MainForm : Form
     {
         if (_keyMap.Resolve(new KeyBinding(virtualKey)) is not { } target) return false;
         return Execute(target, (Keys)virtualKey);
+    }
+
+    /// <summary>R-82: 1 回のコマンドを 1 件の記録にする。入れ子になったら外側だけが積む。</summary>
+    private bool Recording(Func<bool> command)
+    {
+        if (_recorder is not null) return command();
+        _recorder = new UndoRecorder();
+        try { return command(); }
+        finally
+        {
+            _recorder.Commit(UndoHost.History);
+            _recorder = null;
+        }
     }
 
     /// <summary>F-06: キーやメニューが指す先を実行する。種類を足したらここに 1 行足す。</summary>
@@ -313,13 +328,13 @@ public sealed class MainForm : Form
         CommandId.KeyAssignSettings => ShowKeyAssignSettings(),
         CommandId.VisibleDriveSettings => ShowDriveVisibilitySettings(),
         CommandId.RunCommandLine => RunCommandLine(),
-        CommandId.CopyToFolder => Transfer(moving: false),
-        CommandId.MoveToFolder => Transfer(moving: true),
+        CommandId.CopyToFolder => Recording(() => Transfer(moving: false)),
+        CommandId.MoveToFolder => Recording(() => Transfer(moving: true)),
         CommandId.Delete => DeleteTargets(),
-        CommandId.Rename => RenameTargets(),
+        CommandId.Rename => Recording(RenameTargets),
         CommandId.ChangeAttributes => ChangeAttributes(),
-        CommandId.CreateFolder => CreateFolder(),
-        CommandId.CreateShortcut => CreateShortcuts(),
+        CommandId.CreateFolder => Recording(CreateFolder),
+        CommandId.CreateShortcut => Recording(CreateShortcuts),
         CommandId.CopyFileName => ShowNameFormatPopup(),
         // R-15: ポップアップを経由せず 1 形式だけをキーに割り当てるための 3 つ
         CommandId.CopyFileNameWithPath => CopyNamesCommand(NameFormat.PathAndName),
@@ -327,10 +342,10 @@ public sealed class MainForm : Form
         CommandId.CopyFileNameWithPathSlash => CopyNamesCommand(NameFormat.SlashPath),
         CommandId.MarkByWildcard => MarkByWildcard(),
         CommandId.ShowProperties => ShowProperties(),
-        CommandId.ConcatFiles => ConcatFiles(),
+        CommandId.ConcatFiles => Recording(ConcatFiles),
         CommandId.ClipboardCopy => ClipboardPut(cut: false),
         CommandId.ClipboardCut => ClipboardPut(cut: true),
-        CommandId.ClipboardPaste => ClipboardPaste(),
+        CommandId.ClipboardPaste => Recording(ClipboardPaste),
         CommandId.ToggleAllMarks => MarkCommand(state => state.ToggleAllMarks()),
         CommandId.InvertMarks => MarkCommand(state => state.InvertMarks()),
         CommandId.MarkBySameExtension => MarkCommand(state => state.MarkBySameExtension()),
@@ -521,12 +536,14 @@ public sealed class MainForm : Form
             switch (AskMissingDestination(destination, moving))
             {
                 case MissingDestination.CreateFolder:
+                    var missing = UndoRecorder.MissingLevels(destination);
                     try { Directory.CreateDirectory(destination); }
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                     {
                         MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return true;
                     }
+                    foreach (var level in missing) _recorder?.AddCreatedFolder(level);
                     break;
                 case MissingDestination.RenameCopy:
                     return RenameCopy(targets, Path.GetFileName(destination));
@@ -655,9 +672,15 @@ public sealed class MainForm : Form
                 return;
             }
 
-            foreach (var folder in plan.Folders) Directory.CreateDirectory(folder);
+            foreach (var folder in plan.Folders)
+            {
+                if (!Directory.Exists(folder)) _recorder?.AddCreatedFolder(folder);
+                Directory.CreateDirectory(folder);
+            }
             foreach (var item in plan.Items)
             {
+                var target = Path.Combine(item.DestinationFolder, item.NewName ?? Path.GetFileName(item.Source));
+                if (Path.Exists(target)) _recorder?.MarkOverwrite(target);
                 if (moving) operation.Move(item.Source, item.DestinationFolder, item.NewName);
                 else operation.Copy(item.Source, item.DestinationFolder, item.NewName);
             }
@@ -665,7 +688,7 @@ public sealed class MainForm : Form
 
         // ファイル単位で動かしたときだけ、空になった転送元のフォルダが残る。
         // フォルダごと渡したときは元ごと消えているので触らない
-        if (moving && !wholesale) RemoveEmptySourceFolders(sources);
+        if (moving && !wholesale) RemoveEmptySourceFolders(sources, f => _recorder?.AddRemovedFolder(f));
 
         return completed;
     }
@@ -674,7 +697,7 @@ public sealed class MainForm : Form
     /// 差分移動のあと片付け。<b>中身が残っているフォルダには触らない。</b>
     /// 転送元として指定されたフォルダとその配下だけを見る。
     /// </summary>
-    private static void RemoveEmptySourceFolders(IEnumerable<string> sources)
+    private static void RemoveEmptySourceFolders(IEnumerable<string> sources, Action<string> removed)
     {
         foreach (var source in sources.Where(Directory.Exists))
         {
@@ -685,11 +708,15 @@ public sealed class MainForm : Form
             TryRemoveEmpty(source);
         }
 
-        static void TryRemoveEmpty(string folder)
+        void TryRemoveEmpty(string folder)
         {
             try
             {
-                if (!Directory.EnumerateFileSystemEntries(folder).Any()) Directory.Delete(folder);
+                if (!Directory.EnumerateFileSystemEntries(folder).Any())
+                {
+                    Directory.Delete(folder);
+                    removed(folder);
+                }
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -731,19 +758,25 @@ public sealed class MainForm : Form
     {
         // 転送中に自動更新が何度も走らないよう、終わってから 1 回だけ開き直す
         _watcher.EnableRaisingEvents = false;
+        // R-84: Execute が例外を投げても、それまでに成功した分は _recorder に集める。
+        // try の外で宣言し、catch でも同じインスタンスを参照できるようにする
+        ShellFileOperation? operation = null;
         try
         {
-            using var operation = new ShellFileOperation(Handle, silentOverwrite);
+            operation = new ShellFileOperation(Handle, silentOverwrite);
             build(operation);
-            return operation.Execute();
+            var completed = operation.Execute();
+            _recorder?.AddResults(operation.Results);
+            return completed;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
+            if (operation is not null) _recorder?.AddResults(operation.Results);
             // 6 章: エラーを提示し、ReTAC 本体は継続動作する
             MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
         }
-        finally { WatchCurrentFolder(); }
+        finally { operation?.Dispose(); WatchCurrentFolder(); }
     }
 
     /// <summary>
@@ -877,12 +910,16 @@ public sealed class MainForm : Form
         if (dialog.ShowDialog(this) != DialogResult.OK) return true;
 
         var created = Path.Combine(_currentFolder, dialog.Value);
+        var missing = UndoRecorder.MissingLevels(created);
         try
         {
             Directory.CreateDirectory(created);
             // 作ったフォルダを履歴に入れる（卓駆と同じ）。作った直後は
             // そこへ移るかコピー先に指定することが多く、N-02 で履歴は宛先欄と共通
             _history.Remember(created);
+            // R-84: K で作ったフォルダは「作成」。a\b と打って a も無かった場合は a だけを記録する。
+            // 段ごとに記録すると、a をごみ箱へ送った後に a\b が見つからず、戻す処理がエラーになる
+            if (missing.Count > 0) _recorder?.AddCreated(missing[0]);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -908,10 +945,12 @@ public sealed class MainForm : Form
 
         foreach (var target in targets)
         {
+            var path = Path.Combine(folder, dialog.NameFor(target.Name));
+            var existed = File.Exists(path);
             try
             {
-                ShellObjects.CreateShortcut(
-                    Path.Combine(folder, dialog.NameFor(target.Name)), target.FullPath, _currentFolder);
+                ShellObjects.CreateShortcut(path, target.FullPath, _currentFolder);
+                if (!existed) _recorder?.AddCreated(path);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -1018,11 +1057,13 @@ public sealed class MainForm : Form
             return ConcatFiles();
         }
 
+        var existed = File.Exists(destination);
         try
         {
             FileConcat.Concat([.. dialog.Sources.Select(e => e.FullPath)], destination,
                 dialog.CutEof, dialog.AppendNewLine);
             _history.Remember(Path.GetDirectoryName(destination) ?? _currentFolder);
+            if (!existed) _recorder?.AddCreated(destination);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -1204,7 +1245,7 @@ public sealed class MainForm : Form
     /// ドロップされたファイルをフォルダへ入れる（T8-2 / T8-3）。
     /// コピーか移動かは Windows の作法に合わせて <see cref="DropRules"/> が決める。
     /// </summary>
-    private void DropInto(string destinationFolder, string[] files, DragDropEffects allowed)
+    private void DropInto(string destinationFolder, string[] files, DragDropEffects allowed) => _ = Recording(() =>
     {
         // 衝突すると確認ダイアログを出す。ドロップ元（エクスプローラー）が前面のままだと
         // ダイアログがその後ろに隠れて、固まったように見える
@@ -1227,7 +1268,7 @@ public sealed class MainForm : Form
                 case DropAction.Move: moves.Add(file); break;
             }
         }
-        if (copies.Count == 0 && moves.Count == 0) return;
+        if (copies.Count == 0 && moves.Count == 0) return true;
 
         // 衝突の扱いは C / M と同じにする（R-41-4）。ドロップだからと OS の
         // 置換確認に落ちると、同じ「移動」なのに経路で挙動が変わってしまう。
@@ -1236,7 +1277,8 @@ public sealed class MainForm : Form
         if (moves.Count > 0) ExecuteTransfer(moves, destinationFolder, moving: true, differentialOnly: false);
 
         Reload();
-    }
+        return true;
+    });
 
     /// <summary>
     /// クリップボードへ（`Ctrl+C` / `Ctrl+X`・0xE122 / 0xE123）。
@@ -1550,7 +1592,7 @@ public sealed class MainForm : Form
             // R-79: 2 段目も 1 段目と同じ位置に出す。後から開くので、位置は引数で引き継ぐ
             ("外部ツール ▶", () => BeginInvoke(() => ShowToolPopup(at))),
             ("", () => { }),
-            ("ファイルの連結...", () => ConcatFiles()),
+            ("ファイルの連結...", () => Recording(ConcatFiles)),
             ("", () => { }),
             ("ソートの設定...", () => ShowSortSettings()),
             ("表示するファイルタイプの設定...", () => ShowFileTypeSettings()),
