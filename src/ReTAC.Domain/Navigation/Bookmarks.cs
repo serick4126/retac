@@ -64,6 +64,22 @@ public static class BookmarkRules
     }
 
     /// <summary>
+    /// 項目を dest の index の前へ移す（並べ替え・グループへの出し入れ）。移せたら true。
+    /// グループを自分の中へは移せない（入れ子が輪になって消える）。index は移す前の並びで数える。
+    /// </summary>
+    public static bool Move(BookmarkSet set, Bookmark item, List<Bookmark> dest, int index)
+    {
+        if (Owns(item, dest) || Locate(set, item) is not var (source, from)) return false;
+        source.RemoveAt(from);
+        if (ReferenceEquals(source, dest) && from < index) index--;
+        dest.Insert(Math.Clamp(index, 0, dest.Count), item);
+        return true;
+    }
+
+    private static bool Owns(Bookmark group, List<Bookmark> list) =>
+        group.Children is { } children && (ReferenceEquals(children, list) || children.Any(b => Owns(b, list)));
+
+    /// <summary>
     /// その項目（参照が同じもの）が入っている並びと位置。入れ子の中まで探す。無ければ null。
     /// 後ろへの追加・差し替えの起点（record なので IndexOf は値で比べてしまい、重複した別の項目を指す）。
     /// </summary>

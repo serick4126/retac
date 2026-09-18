@@ -29,6 +29,26 @@ public sealed class BookmarkBar : ToolStrip
     }
 
     private BookmarkItems? _items;
+    /// <summary>左ボタンを押した位置。ここから動かしたらバーの項目のドラッグを始める。</summary>
+    private Point? _dragOrigin;
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        _dragOrigin = e.Button == MouseButtons.Left ? e.Location : null;
+        base.OnMouseDown(e);
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        if (e.Button != MouseButtons.Left || _dragOrigin is not { } origin) return;
+        if (Math.Abs(e.X - origin.X) < SystemInformation.DragSize.Width
+            && Math.Abs(e.Y - origin.Y) < SystemInformation.DragSize.Height) return;
+        _dragOrigin = null;
+        if (GetItemAt(origin) is not { Tag: Bookmark bookmark } item) return;
+        (item as BarDropDownButton)?.CancelOpen();
+        BookmarkDropZone.DragFrom(this, bookmark);
+    }
 
     /// <summary>R-89: 項目の無い所の右クリック。項目の上は項目の MouseUp が受ける。</summary>
     protected override void OnMouseUp(MouseEventArgs e)
@@ -39,6 +59,8 @@ public sealed class BookmarkBar : ToolStrip
 
     public void Rebuild(IReadOnlyList<Bookmark> bar, BookmarkBarStyle style, BookmarkItems items)
     {
+        // ドロップの受け口は 1 度だけ付ける（作り直しのたびに付けると、1 回のドロップで何件も入る）
+        if (_items is null) BookmarkDropZone.Attach(this, items.Host.Bookmarks.Bar, items.Host, vertical: false);
         _items = items;
         SuspendLayout();
         BookmarkItems.Clear(Items);

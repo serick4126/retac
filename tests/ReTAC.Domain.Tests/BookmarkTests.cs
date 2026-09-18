@@ -119,6 +119,45 @@ public class BookmarkTests
     }
 
     [Theory]
+    [InlineData(0, 0, false)]    // 先頭より手前
+    [InlineData(10, 0, false)]   // 1 つめの前半
+    [InlineData(25, 1, false)]   // 1 つめの後半
+    [InlineData(32, 1, false)]   // グループの左の 1/3
+    [InlineData(45, 1, true)]    // グループの中央の 1/3
+    [InlineData(58, 2, false)]   // グループの右の 1/3
+    [InlineData(99, 2, false)]   // 末尾より後ろ
+    public void 落とす位置(int x, int index, bool onto)
+    {
+        (int, int, bool)[] slots = [(0, 30, false), (30, 60, true)];
+        Assert.Equal(new DropSpot(index, onto), BookmarkDrop.Hit(slots, x));
+    }
+
+    [Fact]
+    public void 同じ並びの中で後ろへ移すと位置は詰めて数える()
+    {
+        Bookmark a = new("a", BookmarkKind.Group, Children: []), b = new("b", BookmarkKind.Group), c = new("c", BookmarkKind.Group);
+        var set = new BookmarkSet { Bar = [a, b, c] };
+
+        Assert.True(BookmarkRules.Move(set, a, set.Bar, 2));   // b と c の間へ
+        Assert.Equal([b, a, c], set.Bar);
+        Assert.True(BookmarkRules.Move(set, c, a.Children!, 0));   // グループの中へ
+        Assert.Equal([b, a], set.Bar);
+        Assert.Same(c, Assert.Single(a.Children!));
+    }
+
+    [Fact]
+    public void グループを自分の中へは移せない()
+    {
+        var inner = new Bookmark("inner", BookmarkKind.Group, Children: []);
+        var outer = new Bookmark("outer", BookmarkKind.Group, Children: [inner]);
+        var set = new BookmarkSet { Bar = [outer] };
+
+        Assert.False(BookmarkRules.Move(set, outer, outer.Children!, 0));
+        Assert.False(BookmarkRules.Move(set, outer, inner.Children!, 0));
+        Assert.Same(outer, Assert.Single(set.Bar));
+    }
+
+    [Theory]
     [InlineData("", @"C:\Work\Docs\", "Docs")]
     [InlineData("", @"C:\", @"C:\")]
     [InlineData("書類", @"C:\Work\Docs", "書類")]

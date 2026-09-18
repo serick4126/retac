@@ -1543,6 +1543,13 @@ public sealed class MainForm : Form, IBookmarkHost
         if (result.Outcome == ContextMenuOutcome.AppItem) rows[result.AppItem].Run?.Invoke();
     }
 
+    BookmarkSet IBookmarkHost.Bookmarks => _settings.Bookmarks;
+
+    // ドロップを受けたメニューもバーの作り直しで捨てるので、ドロップの処理を抜けてから作り直す
+    void IBookmarkHost.BookmarksChanged() => BeginInvoke(BookmarkChanged);
+
+    void IBookmarkHost.ShowStatus(string text) => _statusBar.ShowMessage(text);
+
     private void EditBookmark(Bookmark bookmark)
     {
         using var dialog = new BookmarkEntryDialog(bookmark, _currentFolder, _settings.ExternalTools, ((IBookmarkHost)this).LabelOf);

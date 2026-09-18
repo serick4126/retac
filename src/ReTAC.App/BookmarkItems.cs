@@ -33,6 +33,12 @@ public interface IBookmarkHost
     IReadOnlyList<Entry> Enumerate(string folder);
     /// <summary>R-89: 右クリック。item の Tag が Bookmark か Entry。それ以外（null・空の案内）はバーの空いた所。</summary>
     void ShowContextMenu(ToolStripItem? item, Point screen);
+    /// <summary>R-89 §6.10: ドラッグで並べ替え・追加する先。全ウィンドウで共有している 1 つ（Q12）。</summary>
+    BookmarkSet Bookmarks { get; }
+    /// <summary>Bookmarks を書き換えた。保存して全ウィンドウのバーを作り直す（ドロップの処理が終わってから）。</summary>
+    void BookmarksChanged();
+    /// <summary>ドラッグ中の説明（「ブックマークに追加」「並べ替え」）。"" で消す。</summary>
+    void ShowStatus(string text);
 }
 
 /// <summary>R-89 / R-90 / R-91: ブックマークを ToolStripItem にする。バーのボタンとメニューの項目で同じ規則を使う。</summary>
@@ -56,7 +62,7 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
     {
         var items = bookmarks.Select(b =>
         {
-            ToolStripItem item = b.Kind is BookmarkKind.Folder or BookmarkKind.Group ? new ToolStripDropDownButton() : new ToolStripButton();
+            ToolStripItem item = b.Kind is BookmarkKind.Folder or BookmarkKind.Group ? new BarDropDownButton() : new ToolStripButton();
             item.DisplayStyle = style switch
             {
                 BookmarkBarStyle.TextOnly => ToolStripItemDisplayStyle.Text,
@@ -124,6 +130,7 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
     {
         item.DropDownItems.Add(Placeholder("（空）"));   // 項目が無いと ▶ が出ず、開けない
         ToolStripExtras.EnableWheel(item.DropDown);
+        if (group.Children is { } list) BookmarkDropZone.Attach(item.DropDown, list, host, vertical: true);   // R-89 §6.10
         item.DropDownOpening += (_, _) =>
         {
             Clear(item.DropDownItems);
