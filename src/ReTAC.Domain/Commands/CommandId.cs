@@ -72,6 +72,8 @@ public enum CommandId
     ToggleDriveBar = 0x9005,
     /// <summary>R-82: 元に戻す。Ctrl+Z は固定のキーとして別に効く（R-83）。</summary>
     Undo = 0x9006,
+    /// <summary>R-86: アドレスバーの表示・非表示。ドライブバーと同じくウィンドウごと。</summary>
+    ToggleAddressBar = 0x9007,
 
     // --- 設定・ウィンドウ ---
     ColorAndFontSettings = 0x8151,

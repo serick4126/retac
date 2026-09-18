@@ -28,6 +28,20 @@ public class CommandLabelsTests
     }
 
     [Fact]
+    public void アドレスバーの表示切り替えは表示の分類にある()
+    {
+        var row = CommandLabels.Grouped.Single(r => r.Command == CommandId.ToggleAddressBar);
+        Assert.Equal(("表示", "アドレスバーの表示切り替え"), (row.Category, row.Label));
+    }
+
+    [Fact]
+    public void アドレスバーの表示は既定で有効でキーが無い設定ファイルでも有効()
+    {
+        Assert.True(new AppSettings().ShowAddressBar);
+        Assert.True(System.Text.Json.JsonSerializer.Deserialize<AppSettings>("{}")!.ShowAddressBar);
+    }
+
+    [Fact]
     public void 分類名に移動は無くナビゲーションになっている()
     {
         Assert.DoesNotContain(CommandLabels.Grouped, row => row.Category == "移動");

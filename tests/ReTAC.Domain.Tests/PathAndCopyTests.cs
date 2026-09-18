@@ -190,12 +190,14 @@ public class KeyMapTests
     }
 
     [Fact]
-    public void 有効な割り当ては42件でCtrlはCtrlFだけ()
+    public void 有効な割り当ては43件でCtrlはFとL()
     {
         // 卓駆の 65 枠のうち、元から未割り当て 20 枠 ＋ スコープ外 6 枠を除いた 39 枠
-        // ＋ マウスボタンの既定 2 枠（B-17）＋ Ctrl+F（B-18）
-        Assert.Equal(42, Map.Bindings.Count);
-        Assert.Equal([new KeyBinding(Vk.Letter('F'), Ctrl: true)], Map.Bindings.Keys.Where(key => key.Ctrl));
+        // ＋ マウスボタンの既定 2 枠（B-17）＋ Ctrl+F（B-18）＋ Ctrl+L（B-19）
+        Assert.Equal(43, Map.Bindings.Count);
+        Assert.Equal(
+            [new KeyBinding(Vk.Letter('F'), Ctrl: true), new KeyBinding(Vk.Letter('L'), Ctrl: true)],
+            Map.Bindings.Keys.Where(key => key.Ctrl).OrderBy(key => key.VirtualKey));
     }
 
     [Fact]

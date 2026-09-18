@@ -43,6 +43,7 @@ public static class CommandLabels
 
         ("表示", CommandId.Refresh, "最新の情報に更新"),
         ("表示", CommandId.ToggleDriveBar, "ドライブバーの表示切り替え"),
+        ("表示", CommandId.ToggleAddressBar, "アドレスバーの表示切り替え"),
         ("表示", CommandId.ShowPopupMenu, "ポップアップメニューの表示"),
         ("表示", CommandId.ShowContextMenu, "コンテキストメニューの表示"),
         ("表示", CommandId.ShowFolderBackgroundMenu, "フォルダのコンテキストメニューの表示"),

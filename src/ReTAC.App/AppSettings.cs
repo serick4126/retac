@@ -63,6 +63,9 @@ public sealed class AppSettings
     /// </summary>
     public bool ShowDriveBar { get; set; } = true;
 
+    /// <summary>R-86: アドレスバーを出すか。初回は出す。</summary>
+    public bool ShowAddressBar { get; set; } = true;
+
     // --- 配色とフォント（5-1 節） ------------------------------------------
     /// <summary>既定から変えた色だけを持つ。キーは <see cref="ThemeSlots"/> の Key。</summary>
     public Dictionary<string, string> Colors { get; set; } = [];
