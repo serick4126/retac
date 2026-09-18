@@ -67,7 +67,7 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
             {
                 BookmarkBarStyle.TextOnly => ToolStripItemDisplayStyle.Text,
                 // アイコンの無い項目（組み込みコマンドなど）は、空のボタンにしないよう名前を出す
-                BookmarkBarStyle.IconOnly when IconPath(b) is null => ToolStripItemDisplayStyle.Text,
+                BookmarkBarStyle.IconOnly when IconPath(b) is null && !HasGlyph(b) => ToolStripItemDisplayStyle.Text,
                 BookmarkBarStyle.IconOnly => ToolStripItemDisplayStyle.Image,
                 _ => ToolStripItemDisplayStyle.ImageAndText,
             };
@@ -85,6 +85,7 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
         item.Text = name.Replace("&", "&&");
         item.Tag = b;
         item.ToolTipText = Tooltip(b, name);
+        item.Image = Glyph(b);   // シェルのアイコンが無いもの（グループ・組み込みコマンド）は記号フォントで描く（§6.6）
         AttachContextMenu(item);
         switch (b.Kind)
         {
@@ -194,6 +195,22 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
                 foreach (var owner in owners) owner.ResumeLayout();
             });
         });
+    }
+
+    /// <summary>グループと組み込みコマンドの絵。外部ツール・フォルダ・ファイルはシェルのアイコン（LoadIcons）なので null。</summary>
+    private static bool HasGlyph(Bookmark b) => CommandGlyphs.FontName is not null
+        && (b.Kind == BookmarkKind.Group || b.Kind == BookmarkKind.Command && CommandTarget.Parse(b.Target) is BuiltinTarget);
+
+    private Bitmap? Glyph(Bookmark b)
+    {
+        var size = 16 * invoker.DeviceDpi / 96;
+        return b switch
+        {
+            { Kind: BookmarkKind.Group } => CommandGlyphs.Group(size, SystemColors.ControlText),
+            { Kind: BookmarkKind.Command } when CommandTarget.Parse(b.Target) is BuiltinTarget builtin =>
+                CommandGlyphs.For(builtin.Command, size, SystemColors.ControlText),
+            _ => null,
+        };
     }
 
     private string? IconPath(object? tag) => tag switch
