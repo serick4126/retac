@@ -1,5 +1,4 @@
 using System.Drawing;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
@@ -199,11 +198,15 @@ public sealed class AddressBar : Control
             && Math.Abs(e.Y - origin.Y) < SystemInformation.DragSize.Height) return;
         _iconPress = null;
         if (_folder.Length == 0) return;
-        var data = new DataObject();
-        data.SetFileDropList([_folder]);
-        // リンクだけを許す。ファイルリストやエクスプローラーへ落としても、フォルダをコピー・移動させない。
-        // エクスプローラーは既定の効果（コピー・移動）が許されていないと断るので、リンクを既定として伝える
-        data.SetData("Preferred DropEffect", new MemoryStream(BitConverter.GetBytes((int)DragDropEffects.Link)));
+        // シェルのデータで渡す（FileDrop も入っている）。FileDrop だけではエクスプローラーがショートカットを作らない。
+        // リンクだけを許す。ファイルリストやエクスプローラーへ落としても、フォルダをコピー・移動させない
+        object? data = ShellDataObject.For(_folder);
+        if (data is null)
+        {
+            var files = new DataObject();
+            files.SetFileDropList([_folder]);
+            data = files;
+        }
         DoDragDrop(data, DragDropEffects.Link);
     }
 
