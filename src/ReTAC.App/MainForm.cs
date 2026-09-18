@@ -1951,7 +1951,7 @@ public sealed class MainForm : Form
     /// <summary>クイックアクセスの設定・編集（0x82FA）。</summary>
     private bool ShowQuickAccessSettings()
     {
-        using var dialog = new QuickAccessDialog(_quickAccess, _currentFolder);
+        using var dialog = new QuickAccessDialog(_quickAccess, _currentFolder, _settings.ExternalTools);
         var result = dialog.ShowDialog(this);
 
         // V-13: このダイアログはキャンセルを持たない。追加・変更・削除・並べ替えはその場で
@@ -1960,7 +1960,7 @@ public sealed class MainForm : Form
         SaveSettings();
         if (result != DialogResult.OK) return true;
 
-        if (dialog.ChosenPath is { } path) _ = OpenFolderAsync(path);
+        if (dialog.Chosen is { } entry) GoQuickAccess(entry);
         return true;
     }
 

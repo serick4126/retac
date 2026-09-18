@@ -19,8 +19,6 @@ namespace ReTAC.App;
 /// </summary>
 public sealed class KeyAssignDialog : Form
 {
-    private const string ToolCategory = "登録した外部ツール";
-
     private readonly ListView _slots = new()
     {
         View = View.Details,
@@ -120,46 +118,7 @@ public sealed class KeyAssignDialog : Form
     /// <summary>絞り込みの語で一覧を作り直す。分類名でも名前でも当たる。</summary>
     private void BuildCommandList()
     {
-        var filter = _filter.Text.Trim();
-        bool Matches(string category, string label) =>
-            filter.Length == 0
-            || label.Contains(filter, StringComparison.OrdinalIgnoreCase)
-            || category.Contains(filter, StringComparison.OrdinalIgnoreCase);
-
-        _commands.BeginUpdate();
-        _commands.Items.Clear();
-        _commands.Groups.Clear();
-
-        // 先頭に解除用の 1 行。グループ名を付けないと Windows が「既定」の見出しでまとめてしまう
-        var none = new ListViewGroup("解除");
-        _commands.Groups.Add(none);
-        _commands.Items.Add(new ListViewItem([CommandLabels.Unassigned, ""]) { Group = none, Tag = null });
-
-        ListViewGroup? group = null;
-        foreach (var (category, command, label) in CommandLabels.Grouped)
-        {
-            if (!Matches(category, label)) continue;
-            if (group?.Header != category)
-            {
-                group = new ListViewGroup(category);
-                _commands.Groups.Add(group);
-            }
-            _commands.Items.Add(new ListViewItem([label, ""]) { Group = group, Tag = new BuiltinTarget(command) });
-        }
-
-        ListViewGroup? tools = null;
-        foreach (var tool in _tools)
-        {
-            if (!Matches(ToolCategory, tool.Name)) continue;
-            if (tools is null)
-            {
-                tools = new ListViewGroup(ToolCategory);
-                _commands.Groups.Add(tools);
-            }
-            _commands.Items.Add(new ListViewItem([tool.Name, ""]) { Group = tools, Tag = new ToolTarget(tool.Id) });
-        }
-
-        _commands.EndUpdate();
+        CommandCatalog.Fill(_commands, _filter.Text, _tools, includeUnassigned: true);
         RefreshAssignedKeys();
         SyncSelection();
     }

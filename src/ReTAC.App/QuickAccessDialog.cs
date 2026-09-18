@@ -1,6 +1,9 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
+using System.IO;
+using ReTAC.Domain.Commands;
 using ReTAC.Domain.Navigation;
+using ReTAC.Domain.Tools;
 
 namespace ReTAC.App;
 
@@ -22,9 +25,12 @@ public sealed class QuickAccessDialog : Form
     private readonly CheckBox _showTitles = new() { Text = "タイトル（フォルダの別名）を表示する(&T)", AutoSize = true };
     private readonly CheckBox _fixMissing = new() { Text = "フォルダが存在しない時は、自動でリストを修正する(&C)", AutoSize = true };
 
-    public QuickAccessDialog(QuickAccessList list, string currentFolder)
+    private readonly IReadOnlyList<ExternalTool> _tools;
+
+    public QuickAccessDialog(QuickAccessList list, string currentFolder, IReadOnlyList<ExternalTool> tools)
     {
         _list = list;
+        _tools = tools;
         _currentFolder = currentFolder;
 
         Text = "クイックアクセスの設定";
@@ -32,19 +38,22 @@ public sealed class QuickAccessDialog : Form
         ShowInTaskbar = false;   // ダイアログはタスクバーに出さない（既定は true）
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = MaximizeBox = false;
-        ClientSize = new Size(600, 380);
+        ClientSize = new Size(600, 452);
 
-        _view.SetBounds(12, 32, 440, 240);
+        _view.SetBounds(12, 32, 440, 312);
         // 列幅は AutoScaleMode.Dpi の対象外なので自分で追従させる（R-66）
-        _view.Columns.Add("タイトル", 130 * DeviceDpi / 96);
-        _view.Columns.Add("フォルダパス", 290 * DeviceDpi / 96);
+        _view.Columns.Add("タイトル", 120 * DeviceDpi / 96);
+        _view.Columns.Add("登録先", 240 * DeviceDpi / 96);
+        _view.Columns.Add("種類", 60 * DeviceDpi / 96);   // R-92
         _view.DoubleClick += (_, _) => Edit();
 
         var listLabel = new Label { Text = "アクセスリスト(&L):", AutoSize = true, Location = new Point(12, 12) };
 
         var buttons = new (string Text, Action Do)[]
         {
-            ("追加(&A)", Add),
+            ("フォルダを追加(&A)...", Add),
+            ("ファイルを追加(&I)...", AddFile),     // R-92
+            ("コマンドを追加(&O)...", AddCommand),  // R-92
             ("変更(&M)", Edit),
             ("削除(&D)", Remove),
             ("フォルダ参照(&F)", BrowseSelected),
@@ -60,15 +69,15 @@ public sealed class QuickAccessDialog : Form
             y += 36;
         }
 
-        _showTitles.Location = new Point(16, 288);
-        _fixMissing.Location = new Point(16, 312);
+        _showTitles.Location = new Point(16, 360);
+        _fixMissing.Location = new Point(16, 384);
         _showTitles.Checked = _list.ShowTitles;
         _fixMissing.Checked = _list.FixMissingAutomatically;
 
         // 「アクセス」は選んだフォルダへそのまま移動する（卓駆の同ダイアログと同じ）
-        var access = new Button { Text = "アクセス(&S)", DialogResult = DialogResult.OK, Bounds = new Rectangle(340, 340, 118, 30) };
-        access.Click += (_, _) => ChosenPath = Selected >= 0 ? _list.Items[Selected].Path : null;
-        var close = new Button { Text = "閉じる(&C)", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(470, 340, 118, 30) };
+        var access = new Button { Text = "アクセス(&S)", DialogResult = DialogResult.OK, Bounds = new Rectangle(340, 412, 118, 30) };
+        access.Click += (_, _) => Chosen = Selected >= 0 ? _list.Items[Selected] : null;
+        var close = new Button { Text = "閉じる(&C)", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(470, 412, 118, 30) };
         AcceptButton = access;
         CancelButton = close;
 
@@ -87,8 +96,8 @@ public sealed class QuickAccessDialog : Form
         AutoScaleMode = AutoScaleMode.Dpi;
     }
 
-    /// <summary>「アクセス」で選ばれたフォルダ。閉じただけなら null。</summary>
-    public string? ChosenPath { get; private set; }
+    /// <summary>「アクセス」で選ばれた項目（R-92: フォルダならジャンプ、ファイルは開く、コマンドは実行）。閉じただけなら null。</summary>
+    public QuickAccessEntry? Chosen { get; private set; }
 
     private int Selected => _view.SelectedIndices.Count > 0 ? _view.SelectedIndices[0] : -1;
 
@@ -97,7 +106,7 @@ public sealed class QuickAccessDialog : Form
         _view.BeginUpdate();
         _view.Items.Clear();
         foreach (var entry in _list.Items)
-            _view.Items.Add(new ListViewItem([entry.Title, entry.Path]));
+            _view.Items.Add(new ListViewItem([entry.Title, TargetText(entry), KindText(entry.Kind)]));
         _view.EndUpdate();
 
         if (_view.Items.Count == 0) return;
@@ -120,9 +129,51 @@ public sealed class QuickAccessDialog : Form
         Reload(_list.Items.Count - 1);
     }
 
+    /// <summary>コマンドは保存の形（"Refresh" や "tool:3"）ではなく名前で出す。</summary>
+    private string TargetText(QuickAccessEntry entry) =>
+        entry.Kind == BookmarkKind.Command ? CommandLabels.Of(CommandTarget.Parse(entry.Path), _tools) : entry.Path;
+
+    private static string KindText(BookmarkKind kind) => kind switch
+    {
+        BookmarkKind.File => "ファイル",
+        BookmarkKind.Command => "コマンド",
+        _ => "フォルダ",
+    };
+
+    /// <summary>R-92: ファイルを登録する。題名はファイル名。</summary>
+    private void AddFile()
+    {
+        using var open = new OpenFileDialog { InitialDirectory = _currentFolder, CheckFileExists = true };
+        if (open.ShowDialog(this) != DialogResult.OK) return;
+        AddEntry(new QuickAccessEntry(Path.GetFileName(open.FileName), open.FileName, BookmarkKind.File));
+    }
+
+    /// <summary>R-92: 組み込みコマンド・外部ツールを登録する。題名は空（表示はコマンドの名前）。</summary>
+    private void AddCommand()
+    {
+        if (CommandPickerDialog.Pick(this, _tools) is not { } target) return;
+        AddEntry(new QuickAccessEntry("", target.Serialize(), BookmarkKind.Command));
+    }
+
+    private void AddEntry(QuickAccessEntry entry)
+    {
+        if (!_list.Add(entry))
+        {
+            Reload(_list.IndexOf(entry));
+            MessageBox.Show(this, "登録済みです。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        Reload(_list.Items.Count - 1);
+    }
+
     private void Edit()
     {
         if (Selected < 0) return;
+        if (_list.Items[Selected].Kind != BookmarkKind.Folder)
+        {
+            EditTitle();
+            return;
+        }
         using var dialog = new QuickAccessEntryDialog(_list.Items[Selected], _currentFolder, isEdit: true);
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         var index = Selected;
@@ -132,6 +183,17 @@ public sealed class QuickAccessDialog : Form
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
+        Reload(index);
+    }
+
+    /// <summary>ファイル・コマンドは題名だけを変える（登録先はフォルダの編集ダイアログの対象外）。</summary>
+    private void EditTitle()
+    {
+        var index = Selected;
+        var entry = _list.Items[index];
+        using var dialog = new TextInputDialog("タイトルの変更", "タイトル（空なら登録先の名前を出す）:", entry.Title);
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        _list.Replace(index, entry with { Title = dialog.Value });
         Reload(index);
     }
 
@@ -149,6 +211,7 @@ public sealed class QuickAccessDialog : Form
         if (Selected < 0) return;
         var index = Selected;
         var entry = _list.Items[index];
+        if (entry.Kind != BookmarkKind.Folder) return;   // R-92: フォルダの項目だけ
         if (FolderBrowser.Select(this, entry.Path, _currentFolder) is not { } selected) return;
         if (!_list.Replace(index, entry with { Path = selected }))
         {
