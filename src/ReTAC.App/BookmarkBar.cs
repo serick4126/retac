@@ -28,8 +28,18 @@ public sealed class BookmarkBar : ToolStrip
         Padding = new Padding(sideMargin, 0, sideMargin, 0);
     }
 
+    private BookmarkItems? _items;
+
+    /// <summary>R-89: 項目の無い所の右クリック。項目の上は項目の MouseUp が受ける。</summary>
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        base.OnMouseUp(e);
+        if (e.Button == MouseButtons.Right && GetItemAt(e.Location) is null) _items?.Host.ShowContextMenu(null, PointToScreen(e.Location));
+    }
+
     public void Rebuild(IReadOnlyList<Bookmark> bar, BookmarkBarStyle style, BookmarkItems items)
     {
+        _items = items;
         SuspendLayout();
         BookmarkItems.Clear(Items);
         var size = 16 * DeviceDpi / 96;
@@ -37,7 +47,9 @@ public sealed class BookmarkBar : ToolStrip
         if (bar.Count == 0)
         {
             // R-89: 空のときの案内。押しても何も起きない
-            Items.Add(new ToolStripLabel("フォルダやファイルをここへドラッグして追加") { ForeColor = SystemColors.GrayText });
+            var hint = new ToolStripLabel("フォルダやファイルをここへドラッグして追加") { ForeColor = SystemColors.GrayText };
+            items.AttachContextMenu(hint);   // Tag が無いので空いた所と同じメニュー
+            Items.Add(hint);
         }
         else
         {

@@ -27,7 +27,8 @@ public static class ShellContextMenu
     /// R-89: シェルのメニューの先頭に ReTAC の項目を差し込んで出す。ReTAC の項目はシェルへ渡さず、選ばれた添字を返す。
     /// Shell の項目は今までどおりここで実行する。
     /// </summary>
-    /// <param name="items">先頭に並べる ReTAC の項目の文言。空なら今までの Show と同じ</param>
+    /// <param name="items">先頭に並べる ReTAC の項目の文言（"" は区切り線）。空なら今までの Show と同じ。
+    /// パスをシェルが扱えない（消えた・届かない）ときは、ReTAC の項目だけで出す</param>
     public static ContextMenuResult ShowWithItems(IntPtr ownerHandle, IReadOnlyList<string> paths, int screenX, int screenY,
                                                  IReadOnlyList<string> items)
     {
@@ -52,12 +53,12 @@ public static class ShellContextMenu
                 else if (!ReferenceEquals(parent, folder)) Marshal.ReleaseComObject(folder);
                 childPidls.Add(child);
             }
-            if (parent is null || childPidls.Count == 0) return ContextMenuResult.Cancelled;
+            if (parent is null || childPidls.Count == 0) return ShowItems(ownerHandle, screenX, screenY, items);
 
             var contextGuid = IID_IContextMenu;
             var children = childPidls.ToArray();
             var uiHr = parent.GetUIObjectOf(ownerHandle, (uint)children.Length, children, ref contextGuid, IntPtr.Zero, out var unknown);
-            if (uiHr != 0 || unknown == IntPtr.Zero) return ContextMenuResult.Cancelled;
+            if (uiHr != 0 || unknown == IntPtr.Zero) return ShowItems(ownerHandle, screenX, screenY, items);
 
             contextMenu = Marshal.GetObjectForIUnknown(unknown);
             Marshal.Release(unknown);
@@ -71,6 +72,34 @@ public static class ShellContextMenu
             if (parent is not null) Marshal.ReleaseComObject(parent);
             // childPidls は親 pidl の内部を指すだけなので解放しない
             foreach (var pidl in pidls) Marshal.FreeCoTaskMem(pidl);
+        }
+    }
+
+    /// <summary>R-89: ReTAC の項目だけのメニュー（コマンド・グループのブックマーク、バーの空いた所）。選ばれた添字を返す。</summary>
+    /// <param name="items">項目の文言（"" は区切り線）</param>
+    public static ContextMenuResult ShowItems(IntPtr ownerHandle, int screenX, int screenY, IReadOnlyList<string> items)
+    {
+        if (items.Count == 0) return ContextMenuResult.Cancelled;
+        var menu = CreatePopupMenu();
+        try
+        {
+            InsertItems(menu, items);
+            var command = TrackPopupMenuEx(menu, TPM_RETURNCMD | TPM_LEFTALIGN | TPM_RIGHTBUTTON, screenX, screenY, ownerHandle, IntPtr.Zero);
+            return command >= AppIdFirst ? new ContextMenuResult(ContextMenuOutcome.AppItem, (int)(command - AppIdFirst)) : ContextMenuResult.Cancelled;
+        }
+        finally
+        {
+            DestroyMenu(menu);
+        }
+    }
+
+    /// <summary>ReTAC の項目を先頭に差し込む。番号は Shell に渡す範囲（IdCmdFirst〜IdCmdLast）の外。</summary>
+    private static void InsertItems(IntPtr menu, IReadOnlyList<string> items)
+    {
+        for (var i = items.Count - 1; i >= 0; i--)
+        {
+            if (items[i].Length == 0) InsertMenu(menu, 0, MF_BYPOSITION | MF_SEPARATOR, UIntPtr.Zero, null);
+            else InsertMenu(menu, 0, MF_BYPOSITION | MF_STRING, (UIntPtr)(AppIdFirst + (uint)i), items[i]);
         }
     }
 
@@ -125,9 +154,8 @@ public static class ShellContextMenu
             // CMF_EXPLORE: エクスプローラーと同じ既定の並び。拡張（WinRAR など）もこの経路で入る
             if (shellMenu.QueryContextMenu(menu, 0, IdCmdFirst, IdCmdLast, CMF_NORMAL | CMF_EXPLORE) < 0) return ContextMenuResult.Cancelled;
 
-            // R-89: ReTAC の項目は Shell に渡した番号の範囲（IdCmdFirst〜IdCmdLast）の外に置き、先頭に並べる
-            for (var i = items.Count - 1; i >= 0; i--)
-                InsertMenu(menu, 0, MF_BYPOSITION | MF_STRING, (UIntPtr)(AppIdFirst + (uint)i), items[i]);
+            // R-89: ReTAC の項目は Shell の項目の前に並べる
+            InsertItems(menu, items);
             if (items.Count > 0) InsertMenu(menu, (uint)items.Count, MF_BYPOSITION | MF_SEPARATOR, UIntPtr.Zero, null);
 
             // 拡張の項目はオーナードローのことがあり、メニュー用のメッセージを

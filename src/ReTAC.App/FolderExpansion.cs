@@ -95,14 +95,16 @@ public static class FolderExpansion
         foreach (var entry in shown.Take(MaxItems))
         {
             var menu = new ToolStripMenuItem(entry.Name.Replace("&", "&&")) { Tag = entry };
+            items.AttachContextMenu(menu);
             if (entry.Kind == EntryKind.Folder)
             {
                 Attach(menu, entry.FullPath, items, onMissing: () => host.PathMissing(entry.FullPath));
             }
             else
             {
-                menu.Click += (_, _) =>
+                menu.Click += (_, e) =>
                 {
+                    if (BookmarkItems.IsRightClick(e)) return;
                     if (File.Exists(entry.FullPath)) host.OpenFile(entry.FullPath);
                     else host.PathMissing(entry.FullPath);
                 };

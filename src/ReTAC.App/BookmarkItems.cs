@@ -31,6 +31,8 @@ public interface IBookmarkHost
     /// 裏のスレッドで呼ぶこと・待つ時間の上限・古い結果を捨てることは FolderExpansion が受け持つ。
     /// </summary>
     IReadOnlyList<Entry> Enumerate(string folder);
+    /// <summary>R-89: 右クリック。item の Tag が Bookmark か Entry。それ以外（null・空の案内）はバーの空いた所。</summary>
+    void ShowContextMenu(ToolStripItem? item, Point screen);
 }
 
 /// <summary>R-89 / R-90 / R-91: ブックマークを ToolStripItem にする。バーのボタンとメニューの項目で同じ規則を使う。</summary>
@@ -77,6 +79,7 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
         item.Text = name.Replace("&", "&&");
         item.Tag = b;
         item.ToolTipText = Tooltip(b, name);
+        AttachContextMenu(item);
         switch (b.Kind)
         {
             case BookmarkKind.Folder:
@@ -86,18 +89,26 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
                 AttachGroup((ToolStripDropDownItem)item, b);
                 break;
             case BookmarkKind.File:
-                item.Click += (_, _) =>
+                item.Click += (_, e) =>
                 {
+                    if (IsRightClick(e)) return;
                     if (File.Exists(b.Target)) host.OpenFile(b.Target);
                     else host.BookmarkMissing(b);
                 };
                 break;
             case BookmarkKind.Command:
-                item.Click += (_, _) => { if (CommandTarget.Parse(b.Target) is { } target) host.Execute(target); };
+                item.Click += (_, e) => { if (!IsRightClick(e) && CommandTarget.Parse(b.Target) is { } target) host.Execute(target); };
                 break;
         }
         return item;
     }
+
+    /// <summary>R-89: 右ボタンを離したところで出す（押したところで出すと、離したときにメニューの項目が選ばれる）。</summary>
+    internal void AttachContextMenu(ToolStripItem item) =>
+        item.MouseUp += (_, e) => { if (e.Button == MouseButtons.Right) host.ShowContextMenu(item, Cursor.Position); };
+
+    /// <summary>右ボタンでも Click が来ることがある。右クリックでファイルを開いたりコマンドを実行したりしない。</summary>
+    internal static bool IsRightClick(EventArgs e) => e is MouseEventArgs { Button: MouseButtons.Right };
 
     /// <summary>R-89: 名前と、その登録先に割り当て済みのキー（キーボード操作への導線）。フォルダ・ファイルはパスも出す。</summary>
     private string Tooltip(Bookmark b, string name)

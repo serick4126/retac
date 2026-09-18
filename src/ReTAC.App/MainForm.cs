@@ -1406,13 +1406,19 @@ public sealed class MainForm : Form, IBookmarkHost
         ? new Bookmark("", entry.Kind == EntryKind.Folder ? BookmarkKind.Folder : BookmarkKind.File, entry.FullPath)
         : new Bookmark("", BookmarkKind.Folder, _currentFolder);
 
-    /// <summary>R-89: バーの末尾に足す。設定の変更なので「元に戻す」の記録には入れない。</summary>
-    private bool AddBookmark(Bookmark bookmark)
+    /// <summary>R-89: バーの末尾（after を渡せばその後ろ）に足す。設定の変更なので「元に戻す」の記録には入れない。</summary>
+    private bool AddBookmark(Bookmark bookmark, Bookmark? after = null)
     {
-        _settings.Bookmarks.Bar.Add(bookmark);
+        if (after is not null && BookmarkRules.Locate(_settings.Bookmarks, after) is var (list, index)) list.Insert(index + 1, bookmark);
+        else _settings.Bookmarks.Bar.Add(bookmark);
+        BookmarkChanged();
+        return true;
+    }
+
+    private void BookmarkChanged()
+    {
         SaveSettings();   // V-13
         RebuildBookmarkBars();
-        return true;
     }
 
     private void RebuildBookmarkBar() => _bookmarkBar.Rebuild(_settings.Bookmarks.Bar, _settings.BookmarkBarStyle, _bookmarkItems);
@@ -1464,8 +1470,7 @@ public sealed class MainForm : Form, IBookmarkHost
         // R-89: クイックアクセスと同じ「消えた項目を自動で取り除く」に従う
         if (_quickAccess.FixMissingAutomatically && BookmarkRules.Remove(_settings.Bookmarks, bookmark))
         {
-            SaveSettings();
-            RebuildBookmarkBars();
+            BookmarkChanged();
             return;
         }
         MessageBox.Show(this, $"{bookmark.Target} は見つかりません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -1488,6 +1493,89 @@ public sealed class MainForm : Form, IBookmarkHost
         target is ToolTarget tool ? _settings.ExternalTools.FirstOrDefault(t => t.Id == tool.ToolId)?.Path : null;
 
     IReadOnlyList<Entry> IBookmarkHost.Enumerate(string folder) => FolderEnumerator.Enumerate(folder, _sortOrder, Include);
+
+    /// <summary>
+    /// R-89: バー・ブックマークメニュー・展開表示の右クリック。開いているメニューを閉じずに出す（WinForms の ContextMenuStrip は閉じてしまう）。
+    /// フォルダ・ファイルはエクスプローラーのメニューの先頭に ReTAC の項目を差し込み、それ以外は ReTAC の項目だけで出す。
+    /// </summary>
+    void IBookmarkHost.ShowContextMenu(ToolStripItem? item, Point screen)
+    {
+        var rows = new List<(string Text, Action? Run)>();
+        var bookmark = item?.Tag as Bookmark;
+        string[] shellPaths = [];
+        switch (item?.Tag)
+        {
+            case Bookmark b:
+                if (b.Kind == BookmarkKind.Folder) rows.Add(("このフォルダへジャンプ(&J)", () => _ = OpenFolderAsync(b.Target)));
+                rows.Add(("編集(&E)...", () => EditBookmark(b)));
+                rows.Add(("削除(&D)", () => { if (BookmarkRules.Remove(_settings.Bookmarks, b)) BookmarkChanged(); }));
+                if (b.Kind != BookmarkKind.Group) rows.Add(("クイックアクセスにも追加(&Q)", () => AddToQuickAccess(b)));
+                if (b.Kind is BookmarkKind.Folder or BookmarkKind.File) shellPaths = [b.Target];
+                break;
+            case Entry entry:
+                // 展開表示の中身はブックマークではないので、ジャンプとエクスプローラーのメニューだけ
+                if (entry.Kind == EntryKind.Folder) rows.Add(("このフォルダへジャンプ(&J)", () => _ = OpenFolderAsync(entry.FullPath)));
+                shellPaths = [entry.FullPath];
+                break;
+        }
+        if (item?.Tag is not Entry)
+        {
+            // 足した項目は右クリックした項目の後ろへ（空いた所なら末尾）
+            if (rows.Count > 0) rows.Add(("", null));
+            rows.Add(("現在のフォルダを追加(&A)", () => AddBookmark(new Bookmark("", BookmarkKind.Folder, _currentFolder), bookmark)));
+            rows.Add(("カーソル位置の項目を追加(&C)", () => AddBookmark(CursorBookmark(), bookmark)));
+            rows.Add(("コマンドを追加(&M)...", () => AddCommandBookmark(bookmark)));
+            rows.Add(("グループを追加(&G)...", () => AddGroupBookmark(bookmark)));
+            rows.Add(("", null));
+            rows.Add(("ブックマークを管理(&O)...", () => Execute(new BuiltinTarget(CommandId.BookmarkManage), Keys.None)));
+        }
+
+        var texts = rows.Select(r => r.Text).ToList();
+        var result = shellPaths.Length > 0
+            ? ShellContextMenu.ShowWithItems(Handle, shellPaths, screen.X, screen.Y, texts)
+            : ShellContextMenu.ShowItems(Handle, screen.X, screen.Y, texts);
+        if (result.Outcome == ContextMenuOutcome.Cancelled) return;   // 取り消しなら元のメニューは開いたまま
+
+        // 選んだ後は開いているメニューを親まで閉じる。ダイアログを出す前・バーを作り直す前に閉じておく
+        var top = item;
+        while (top?.Owner is ToolStripDropDown { OwnerItem: { } parent }) top = parent;
+        (top as ToolStripDropDownItem)?.HideDropDown();
+        if (result.Outcome == ContextMenuOutcome.AppItem) rows[result.AppItem].Run?.Invoke();
+    }
+
+    private void EditBookmark(Bookmark bookmark)
+    {
+        using var dialog = new BookmarkEntryDialog(bookmark, _currentFolder, _settings.ExternalTools, ((IBookmarkHost)this).LabelOf);
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        // 開いている間に別の窓で消されていたら何もしない
+        if (BookmarkRules.Locate(_settings.Bookmarks, bookmark) is not var (list, index)) return;
+        list[index] = dialog.Bookmark;
+        BookmarkChanged();
+    }
+
+    private void AddCommandBookmark(Bookmark? after)
+    {
+        if (CommandPickerDialog.Pick(this, _settings.ExternalTools) is not { } target) return;
+        // 名前はコマンドの名前で埋める（コマンドのブックマークは名前が要る。BookmarkRules.Validate）
+        AddBookmark(new Bookmark(CommandLabels.Of(target, _settings.ExternalTools), BookmarkKind.Command, target.Serialize()), after);
+    }
+
+    private void AddGroupBookmark(Bookmark? after)
+    {
+        using var dialog = new BookmarkEntryDialog(new Bookmark("", BookmarkKind.Group, Children: []), _currentFolder,
+                                                   _settings.ExternalTools, ((IBookmarkHost)this).LabelOf, isEdit: false);
+        if (dialog.ShowDialog(this) == DialogResult.OK) AddBookmark(dialog.Bookmark, after);
+    }
+
+    private void AddToQuickAccess(Bookmark bookmark)
+    {
+        if (!_quickAccess.Add(new QuickAccessEntry(bookmark.Title, bookmark.Target, bookmark.Kind)))
+        {
+            MessageBox.Show(this, "クイックアクセスに登録済みです。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        SaveSettings();   // V-13
+    }
 
     private void ApplyTopRow()
     {

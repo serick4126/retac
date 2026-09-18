@@ -56,13 +56,27 @@ public static class BookmarkRules
     /// その項目（参照が同じもの）を、入れ子の中まで探して取り除く。取り除けたら true。
     /// 重複を許すので、値が同じ別の項目を消さないよう参照で比べる。
     /// </summary>
-    public static bool Remove(BookmarkSet set, Bookmark target) => Remove(set.Bar, target) || Remove(set.Other, target);
+    public static bool Remove(BookmarkSet set, Bookmark target)
+    {
+        if (Locate(set, target) is not var (list, index)) return false;
+        list.RemoveAt(index);
+        return true;
+    }
 
-    private static bool Remove(List<Bookmark> items, Bookmark target)
+    /// <summary>
+    /// その項目（参照が同じもの）が入っている並びと位置。入れ子の中まで探す。無ければ null。
+    /// 後ろへの追加・差し替えの起点（record なので IndexOf は値で比べてしまい、重複した別の項目を指す）。
+    /// </summary>
+    public static (List<Bookmark> List, int Index)? Locate(BookmarkSet set, Bookmark target) =>
+        Locate(set.Bar, target) ?? Locate(set.Other, target);
+
+    private static (List<Bookmark>, int)? Locate(List<Bookmark> items, Bookmark target)
     {
         var index = items.FindIndex(b => ReferenceEquals(b, target));
-        if (index >= 0) { items.RemoveAt(index); return true; }
-        return items.Any(b => b.Children is { } children && Remove(children, target));
+        if (index >= 0) return (items, index);
+        foreach (var group in items.Where(b => b.Children is not null))
+            if (Locate(group.Children!, target) is { } found) return found;
+        return null;
     }
 
     /// <summary>コマンドの文字列が読めて、外部ツールなら今もある。</summary>

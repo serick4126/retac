@@ -104,6 +104,20 @@ public class BookmarkTests
         Assert.False(BookmarkRules.Remove(set, second));
     }
 
+    [Fact]
+    public void 位置は入れ子の中まで参照で探す()
+    {
+        var first = new Bookmark("", BookmarkKind.Folder, @"C:\a");
+        var second = new Bookmark("", BookmarkKind.Folder, @"C:\a");   // 値は同じ（重複を許す）
+        var group = new Bookmark("g", BookmarkKind.Group, Children: [new("", BookmarkKind.File, @"C:\x"), second]);
+        var set = new BookmarkSet { Bar = [first], Other = [group] };
+
+        var (list, index) = BookmarkRules.Locate(set, second)!.Value;
+        Assert.Same(group.Children, list);
+        Assert.Equal(1, index);
+        Assert.Null(BookmarkRules.Locate(set, new Bookmark("", BookmarkKind.Folder, @"C:\a")));
+    }
+
     [Theory]
     [InlineData("", @"C:\Work\Docs\", "Docs")]
     [InlineData("", @"C:\", @"C:\")]
