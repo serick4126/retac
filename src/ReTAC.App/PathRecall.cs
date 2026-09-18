@@ -40,8 +40,9 @@ public static class PathRecall
         Show(input, paths, "（履歴もクイックアクセスもありません）");
     }
 
+    /// <summary>R-92: 宛先・ジャンプ先に使うので、フォルダの項目だけを出す（ファイル・コマンドは出さない）。</summary>
     private static List<string> QuickPaths(QuickAccessList? quickAccess) =>
-        quickAccess?.Items.Select(q => q.Path).ToList() ?? [];
+        quickAccess?.Items.Where(q => q.Kind == BookmarkKind.Folder).Select(q => q.Path).ToList() ?? [];
 
     private static void Show(TextBox input, IReadOnlyList<string> paths, string emptyLabel)
     {

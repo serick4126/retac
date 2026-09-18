@@ -218,12 +218,15 @@ public sealed class MainForm : Form
     }
 
     /// <summary>ファイルを開く（0x82DC）。シェルの関連付けに委ねる。</summary>
-    private void OpenWithAssociation(Entry entry)
+    private void OpenWithAssociation(Entry entry) => OpenWithAssociation(entry.FullPath);
+
+    /// <summary>R-92: クイックアクセス・ブックマークのファイルも同じ経路で開く。</summary>
+    private void OpenWithAssociation(string path)
     {
         try
         {
             // 秀丸などは 260 超のパスを開けない。8.3 名に落として渡す
-            Process.Start(new ProcessStartInfo(ToolLauncher.TargetPath(entry.FullPath))
+            Process.Start(new ProcessStartInfo(ToolLauncher.TargetPath(path))
             {
                 UseShellExecute = true,
                 // R-54-2: 常にカレントフォルダ。260 超では 8.3 名に落ちる（ToolLauncher の注記）
@@ -1900,7 +1903,7 @@ public sealed class MainForm : Form
     private bool ShowQuickAccess()
     {
         var items = _quickAccess.Items
-            .Select(entry => (_quickAccess.LabelOf(entry), (Action)(() => GoQuickAccess(entry))))
+            .Select(entry => (QuickAccessLabel(entry), (Action)(() => GoQuickAccess(entry))))
             .ToList();
 
         // 設定・追加はキーに割り当てがなく、ReTAC はメニューバーを持たないのでここを入口にする。
@@ -1914,9 +1917,27 @@ public sealed class MainForm : Form
         return true;
     }
 
+    /// <summary>R-92: 題名の無いコマンドは、コマンドの名前（外部ツールはツールの名前）で出す。</summary>
+    private string QuickAccessLabel(QuickAccessEntry entry) =>
+        entry.Kind == BookmarkKind.Command && (!_quickAccess.ShowTitles || string.IsNullOrWhiteSpace(entry.Title))
+            ? CommandLabels.Of(CommandTarget.Parse(entry.Path), _settings.ExternalTools)
+            : _quickAccess.LabelOf(entry);
+
     private void GoQuickAccess(QuickAccessEntry entry)
     {
-        if (Directory.Exists(entry.Path)) { _ = OpenFolderAsync(entry.Path); return; }
+        // R-92: 種類ごとの動作。ファイルは関連付けで開き、コマンドは実行する
+        switch (entry.Kind)
+        {
+            case BookmarkKind.Command:
+                if (CommandTarget.Parse(entry.Path) is { } target) Execute(target, Keys.None);
+                return;
+            case BookmarkKind.File when File.Exists(entry.Path):
+                OpenWithAssociation(entry.Path);
+                return;
+            case BookmarkKind.Folder when Directory.Exists(entry.Path):
+                _ = OpenFolderAsync(entry.Path);
+                return;
+        }
 
         // 16.2 節の実行時オプション。既定は OFF なので黙って消さずに知らせる
         if (_quickAccess.FixMissingAutomatically)
