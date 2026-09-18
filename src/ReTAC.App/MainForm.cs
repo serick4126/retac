@@ -133,6 +133,7 @@ public sealed class MainForm : Form, IBookmarkHost
         _driveBar.OverflowClicked += (_, at) => SelectDriveInModal(at);
         _addressBar.JumpRequested += (_, e) => OnAddressJump(e.Text, e.Explorer);
         _addressBar.Cancelled += (_, _) => _list.Focus();
+        _addressBar.IconClicked += (_, _) => OpenInExplorer(_currentFolder);
         // ドライブのボタンの右クリックはリストの項目と同じ扱い。移動はしない
         _driveBar.RightClicked += (_, click) => ShowShellContextMenu([click.Path], click.ScreenPoint);
         // R-65 ②③: 落とされたファイルの転送はどちらも同じ経路を通す

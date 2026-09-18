@@ -146,12 +146,15 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
     /// </summary>
     internal static void Clear(ToolStripItemCollection items)
     {
-        foreach (var item in items.Cast<ToolStripItem>().ToList())
+        // 先にまとめて外してから捨てる。1 件ずつ Dispose すると、そのたびに親から外れて並べ直すので、
+        // 数百件のフォルダを閉じた後に数秒固まる（実機指摘）
+        var removed = items.Cast<ToolStripItem>().ToList();
+        items.Clear();
+        foreach (var item in removed)
         {
             item.Image?.Dispose();
-            item.Dispose();   // 親のコレクションからも外れる
+            item.Dispose();
         }
-        items.Clear();
     }
 
     internal static ToolStripMenuItem Placeholder(string text) => new(text) { Enabled = false };

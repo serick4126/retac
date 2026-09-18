@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using ReTAC.Domain.Navigation;
+using ReTAC.Shell;
 
 namespace ReTAC.App;
 
@@ -42,6 +43,15 @@ public sealed class AddressBar : Control
     /// <summary>Esc で取り消した。呼び出し側がファイルリストへフォーカスを返す。</summary>
     public event EventHandler? Cancelled;
 
+    /// <summary>先頭のアイコンを左クリックした。今のフォルダをエクスプローラーで開く（ブラウザのアドレスバーの鍵の位置）。</summary>
+    public event EventHandler? IconClicked;
+
+    /// <summary>先頭のフォルダのアイコン。中身を読まない汎用の絵（応答しないドライブで待たない。N-05）。</summary>
+    private Bitmap? _icon;
+    private readonly ToolTip _tip = new();
+    /// <summary>アイコンの上で左ボタンを押した位置。ここから動かしたらドラッグ、動かさずに離したらクリック。</summary>
+    private Point? _iconPress;
+
     public AddressBar(FolderHistory history, QuickAccessList quickAccess)
     {
         _history = history;
@@ -65,6 +75,7 @@ public sealed class AddressBar : Control
             _selectAllOnMouseUp = false;
             _input.SelectAll();
         };
+        _tip.SetToolTip(this, "ドラッグしてブックマークに追加・クリックでエクスプローラーで開く・右クリックでメニュー");
         _input.KeyDown += OnInputKeyDown;
         _input.RecallKey = key => PathRecall.HandleKey(_input, key, _history, _quickAccess);
         // フォーカスの移り変わりの途中で表示を書き換えない。後に回す
@@ -169,9 +180,45 @@ public sealed class AddressBar : Control
         _input.ScrollToCaret();
     }
 
+    private int IconSize => LogicalToDeviceUnits(16);
+    private Rectangle IconBounds => new(LogicalToDeviceUnits(6), (Height - IconSize) / 2, IconSize, IconSize);
+    private bool OnIcon(Point p) => p.X < IconBounds.Right + LogicalToDeviceUnits(2);
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        _iconPress = e.Button == MouseButtons.Left && OnIcon(e.Location) ? e.Location : null;
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        if (_iconPress is not { } origin || e.Button != MouseButtons.Left) return;
+        if (Math.Abs(e.X - origin.X) < SystemInformation.DragSize.Width
+            && Math.Abs(e.Y - origin.Y) < SystemInformation.DragSize.Height) return;
+        _iconPress = null;
+        if (_folder.Length == 0) return;
+        var data = new DataObject();
+        data.SetFileDropList([_folder]);
+        // リンクだけを許す。ファイルリストやエクスプローラーへ落としても、フォルダをコピー・移動させない
+        DoDragDrop(data, DragDropEffects.Link);
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        base.OnMouseUp(e);
+        var pressed = _iconPress is not null;
+        _iconPress = null;
+        if (!OnIcon(e.Location) || _folder.Length == 0) return;
+        if (e.Button == MouseButtons.Left && pressed) IconClicked?.Invoke(this, EventArgs.Empty);
+        else if (e.Button == MouseButtons.Right) ShellContextMenu.Show(Handle, [_folder], Cursor.Position.X, Cursor.Position.Y);
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         e.Graphics.Clear(SystemColors.Window);
+        _icon ??= LoadIcon();
+        if (_icon is not null) e.Graphics.DrawImage(_icon, IconBounds);
         // 赤は設定にしない（見つからないことを知らせる固定の表示）
         ControlPaint.DrawBorder(e.Graphics, ClientRectangle, _notFound ? Color.Red : SystemColors.ControlDark, ButtonBorderStyle.Solid);
     }
@@ -181,7 +228,8 @@ public sealed class AddressBar : Control
         base.OnLayout(e);
         var padding = LogicalToDeviceUnits(8);
         var height = _input.PreferredHeight;
-        _input.SetBounds(padding, (Height - height) / 2, Math.Max(0, Width - padding * 2), height);
+        var left = IconBounds.Right + LogicalToDeviceUnits(6);
+        _input.SetBounds(left, (Height - height) / 2, Math.Max(0, Width - left - padding), height);
     }
 
     protected override void OnFontChanged(EventArgs e)
@@ -190,9 +238,23 @@ public sealed class AddressBar : Control
         Height = BarHeight;
     }
 
+    private Bitmap? LoadIcon()
+    {
+        using var icons = new ShellIcons(IconSize);
+        return icons.ForFolder() is { } b ? new Bitmap(b) : null;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) { _icon?.Dispose(); _tip.Dispose(); }
+        base.Dispose(disposing);
+    }
+
     protected override void OnDpiChangedAfterParent(EventArgs e)
     {
         base.OnDpiChangedAfterParent(e);
+        _icon?.Dispose();
+        _icon = null;   // 次の描画で大きさを合わせて取り直す
         Height = BarHeight;
     }
 

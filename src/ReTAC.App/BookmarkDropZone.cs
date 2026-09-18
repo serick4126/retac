@@ -41,10 +41,11 @@ internal sealed class BookmarkDropZone
     {
         var zone = new BookmarkDropZone(strip, list, host, vertical);
         strip.AllowDrop = true;
-        strip.DragEnter += zone.OnDragOver;
-        strip.DragOver += zone.OnDragOver;
-        strip.DragLeave += (_, _) => zone.Reset();
-        strip.DragDrop += zone.OnDragDrop;
+        // 効果を決めてからドラッグ画像の後始末へ知らせる（DropTargetHelper）
+        strip.DragEnter += (s, e) => { zone.OnDragOver(s, e); DropTargetHelper.Enter(strip, e); };
+        strip.DragOver += (s, e) => { zone.OnDragOver(s, e); DropTargetHelper.Over(e); };
+        strip.DragLeave += (_, _) => { zone.Reset(); DropTargetHelper.Leave(); };
+        strip.DragDrop += (s, e) => { DropTargetHelper.Drop(e); zone.OnDragDrop(s, e); };
         strip.Paint += zone.OnPaint;
         zone._hold.Tick += (_, _) =>
         {
