@@ -87,8 +87,12 @@ public sealed class TopRow : Control
                 return;
             }
 
-            var driveWidth = _drive.PreferredWidth;
+            // 入りきらないときは、アドレスバーを最小幅のまま残し、ドライブバーを詰める（右端の「»」でモーダル）。
+            // アドレスバーを隠しているときは、ドライブバーが行の幅を使う
+            var room = _showAddress ? ClientSize.Width - margin * 2 - min : ClientSize.Width;
+            var driveWidth = Math.Min(_drive.PreferredWidth, Math.Max(room, LogicalToDeviceUnits(ToolStripExtras.OverflowWidth * 2)));
             _drive.SetBounds(0, (height - _drive.Height) / 2, driveWidth, _drive.Height);
+            _drive.Invalidate();   // 幅だけ変わったときも「»」を描き直す
             var x = driveWidth + margin;
             // Q9: それでも足りなければ最小幅のまま右端で切る
             _address.SetBounds(x, (height - _address.BarHeight) / 2, Math.Max(ClientSize.Width - x - margin, min), _address.BarHeight);

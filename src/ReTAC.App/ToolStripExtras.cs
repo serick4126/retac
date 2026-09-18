@@ -6,13 +6,25 @@ namespace ReTAC.App;
 /// <summary>ToolStrip の標準の動きで足りないところを補う（実機指摘）。</summary>
 public static class ToolStripExtras
 {
+    /// <summary>「»」のボタンの幅（96 dpi）。ドライブバーの「»」もこの幅にそろえる。</summary>
+    public const int OverflowWidth = 24;
+
     /// <summary>
-    /// 入りきらない項目を回す「»」のボタンは標準では幅が数 px しかなく押しにくい。左右に余白を足して広げる。
+    /// 入りきらない項目を回す「»」のボタンは標準では幅が数 px しかなく押しにくい。
+    /// Padding では広がらない（幅を自分で決める）ので、大きさを固定する。高さは帯に合わせ続ける。
     /// </summary>
     public static void WidenOverflow(ToolStrip strip)
     {
-        var side = strip.LogicalToDeviceUnits(8);
-        strip.OverflowButton.Padding = new Padding(side, 0, side, 0);
+        var button = strip.OverflowButton;
+        button.AutoSize = false;
+        void Fit()
+        {
+            var size = new System.Drawing.Size(strip.LogicalToDeviceUnits(OverflowWidth), strip.DisplayRectangle.Height);
+            if (button.Size != size) button.Size = size;
+        }
+        Fit();
+        strip.SizeChanged += (_, _) => Fit();
+        strip.DpiChangedAfterParent += (_, _) => Fit();
     }
 
     // ponytail: ToolStripDropDownMenu は、上下の ▲▼ で 1 段ずつ送る処理を持っているが公開していない。

@@ -129,6 +129,7 @@ public sealed class MainForm : Form, IBookmarkHost
         // R-39-3 の「明示的なドライブ変更」。相対移動とは別経路
         _driveBar.PathSelected += (_, path) => OnDriveChosen(path);
         _driveBar.Cancelled += (_, _) => _list.Focus();
+        _driveBar.OverflowClicked += (_, _) => SelectDriveInModal();   // 入りきらないドライブは既存のモーダルから選ぶ
         _addressBar.JumpRequested += (_, e) => OnAddressJump(e.Text, e.Explorer);
         _addressBar.Cancelled += (_, _) => _list.Focus();
         // ドライブのボタンの右クリックはリストの項目と同じ扱い。移動はしない

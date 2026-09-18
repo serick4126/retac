@@ -132,6 +132,27 @@ public sealed class DriveBar : Control
         }
     }
 
+    /// <summary>
+    /// 与えられた幅にボタンが入りきらないときの右端の「»」が押された。呼び出し側は、ドライブを選ぶモーダル（R-77）を出す。
+    /// マウスで押すものなので、ここからキーボードの選択には入らない。
+    /// </summary>
+    public event EventHandler? OverflowClicked;
+
+    /// <summary>入りきらないか（上部の行が、アドレスバーの最小幅を残すために幅を詰めたとき）。</summary>
+    private bool Clipped => _buttons.Count > 0 && Width < PreferredWidth;
+
+    private Rectangle OverflowBounds
+    {
+        get
+        {
+            var width = Scaled(ToolStripExtras.OverflowWidth);
+            return new Rectangle(Width - width, 0, width, Height);
+        }
+    }
+
+    /// <summary>「»」に隠れず、押せるボタンか。</summary>
+    private bool IsShown(Button button) => !Clipped || button.Bounds.Right <= OverflowBounds.Left;
+
     /// <summary>ボタンの並びが変わった。幅だけ変わって高さが変わらないと、親は SizeChanged では気付けない。</summary>
     public event EventHandler? LayoutNeeded;
 
@@ -255,6 +276,7 @@ public sealed class DriveBar : Control
         for (var i = 0; i < _buttons.Count; i++)
         {
             var button = _buttons[i];
+            if (!IsShown(button)) continue;   // 「»」に隠れる
             if (i == _focusIndex && Focused)
             {
                 // フォーカスのあるドライブは卓駆と同じように凸型の枠で示す
@@ -295,6 +317,13 @@ public sealed class DriveBar : Control
             TextRenderer.DrawText(e.Graphics, button.Label, Font, textRect, ForeColor,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix);
         }
+
+        if (Clipped)
+        {
+            // 入りきらないボタンは「»」から選ばせる（ToolStrip の「»」と同じ役割）
+            TextRenderer.DrawText(e.Graphics, "»", Font, OverflowBounds, ForeColor,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
+        }
     }
 
     // R-78: DragEnter でも同じ設定をしないと、入った直後の説明とカーソルが出ない
@@ -313,7 +342,7 @@ public sealed class DriveBar : Control
     private void SetDropEffect(DragEventArgs e)
     {
         var point = PointToClient(new Point(e.X, e.Y));
-        var index = _buttons.FindIndex(b => b.Bounds.Contains(point));
+        var index = _buttons.FindIndex(b => b.Bounds.Contains(point) && IsShown(b));
 
         // 落とせるボタンの上にいることを、ホバーと同じ見た目で示す
         if (index != _hoverIndex) { _hoverIndex = index; Invalidate(); }
@@ -409,7 +438,7 @@ public sealed class DriveBar : Control
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
-        var index = _buttons.FindIndex(b => b.Bounds.Contains(e.Location));
+        var index = _buttons.FindIndex(b => b.Bounds.Contains(e.Location) && IsShown(b));
         if (index == _hoverIndex) return;
         _hoverIndex = index;
         // B-15 / P-02: DriveBar は 1 つのコントロールにボタンを描いているので、乗っているボタンで文言を差し替える
@@ -428,7 +457,12 @@ public sealed class DriveBar : Control
     protected override void OnMouseClick(MouseEventArgs e)
     {
         base.OnMouseClick(e);
-        var button = _buttons.FirstOrDefault(b => b.Bounds.Contains(e.Location));
+        if (Clipped && OverflowBounds.Contains(e.Location))
+        {
+            if (e.Button == MouseButtons.Left) OverflowClicked?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+        var button = _buttons.FirstOrDefault(b => b.Bounds.Contains(e.Location) && IsShown(b));
         if (button is null) return;
 
         if (e.Button == MouseButtons.Right) RightClicked?.Invoke(this, (button.Path, PointToScreen(e.Location)));
