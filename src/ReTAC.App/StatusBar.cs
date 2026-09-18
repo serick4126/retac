@@ -63,8 +63,18 @@ public sealed class StatusBar : Control
         Height = Math.Max(TextRenderer.MeasureText(g, "Mg", Font).Height, IconSize) + Scaled(6);
     }
 
+    /// <summary>④ の区画に代わりに出す知らせ。次の Update で消える（R-87 の「見つかりません」など）。</summary>
+    private string _message = "";
+
+    public void ShowMessage(string text)
+    {
+        _message = text;
+        Invalidate();
+    }
+
     public void Update(ListState state, string currentFolder)
     {
+        _message = "";
         _summary = ListSummary.Of(state);
         _cursorInfo = DescribeCursor(state.Cursor);
         Invalidate();
@@ -146,7 +156,7 @@ public sealed class StatusBar : Control
         x = DrawSection(e.Graphics, x, $"{_summary.FolderCount}個", Icon.Folder, _summary.FolderFromMarks);
         x = DrawSection(e.Graphics, x, $"{_summary.FileCount}個 {Display.Size(_summary.TotalSize)}",
             Icon.File, _summary.FileFromMarks);
-        DrawSection(e.Graphics, x, _cursorInfo, icon: null, marked: false);
+        DrawSection(e.Graphics, x, _message.Length > 0 ? _message : _cursorInfo, icon: null, marked: false);
         e.Graphics.ResetClip();
     }
 
