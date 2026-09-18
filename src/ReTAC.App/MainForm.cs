@@ -449,6 +449,7 @@ public sealed class MainForm : Form, IBookmarkHost
         CommandId.ToggleBookmarkBar => ToggleBookmarkBar(),
         CommandId.BookmarkAddCurrentFolder => AddBookmark(new Bookmark("", BookmarkKind.Folder, _currentFolder)),
         CommandId.BookmarkAddCursorItem => AddBookmark(CursorBookmark()),
+        CommandId.BookmarkManage => ShowBookmarkManager(),
         CommandId.FolderHistory => ShowFolderHistory(),
         CommandId.QuickAccess => ShowQuickAccess(),
         // R-87: 表示中はアドレスバーで編集を始め、非表示ならダイアログ（ドライブバーの R-77 と同じ考え方）
@@ -1411,6 +1412,14 @@ public sealed class MainForm : Form, IBookmarkHost
     {
         if (after is not null && BookmarkRules.Locate(_settings.Bookmarks, after) is var (list, index)) list.Insert(index + 1, bookmark);
         else _settings.Bookmarks.Bar.Add(bookmark);
+        BookmarkChanged();
+        return true;
+    }
+
+    /// <summary>R-89 §6.11: キャンセルを持たないので、閉じ方によらず保存して全ウィンドウのバーを作り直す（V-13）。</summary>
+    private bool ShowBookmarkManager()
+    {
+        using (var dialog = new BookmarkDialog(_settings, _quickAccess, _currentFolder)) dialog.ShowDialog(this);
         BookmarkChanged();
         return true;
     }
