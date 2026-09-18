@@ -58,9 +58,7 @@ public static class FolderExpansion
                         item.DropDownItems.Insert(index, BookmarkItems.Placeholder("読み込めませんでした"));
                         return;
                     }
-                    var added = Fill(item, index, enumeration.Result, folder, items);
-                    MenuSpacing.Apply(item.DropDownItems, owner.DeviceDpi);
-                    items.LoadIcons(added);
+                    items.LoadIcons(Fill(item, index, enumeration.Result, folder, items));
                 });
             });
         };
@@ -107,7 +105,8 @@ public static class FolderExpansion
             more.Click += (_, _) => host.JumpTo(folder);
             added.Add(more);
         }
-        // 開いているメニューに 1 件ずつ足すたびに並べ直さないよう、まとめて足す
+        // 開いているメニューに 1 件ずつ足すたびに並べ直さないよう、余白は入れる前に掛け、まとめて足す
+        MenuSpacing.Apply(added, items.Invoker.DeviceDpi);   // R-88
         parent.DropDown.SuspendLayout();
         for (var i = 0; i < added.Count; i++) parent.DropDownItems.Insert(index + i, added[i]);
         parent.DropDown.ResumeLayout();

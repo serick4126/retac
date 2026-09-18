@@ -63,6 +63,8 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
                 BookmarkBarStyle.IconOnly => ToolStripItemDisplayStyle.Image,
                 _ => ToolStripItemDisplayStyle.ImageAndText,
             };
+            // 隣のボタンとの間を左右 1px ずつ空ける（並ぶと 2px。詰まって見えるという実機指摘）
+            item.Margin = new Padding(item.Margin.Left + 1, item.Margin.Top, item.Margin.Right + 1, item.Margin.Bottom);
             return Configure(item, b);
         }).ToArray();
         LoadIcons(items);
@@ -158,12 +160,16 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
             if (!task.IsCompletedSuccessfully || invoker.IsDisposed) return;
             invoker.BeginInvoke(() =>
             {
+                // 1 件ずつ差し替えるたびにメニュー全体を並べ直すと、数百件で固まる。並べ直しを止めてまとめて入れる
+                var owners = task.Result.Select(r => r.item.Owner).OfType<ToolStrip>().Distinct().ToList();
+                foreach (var owner in owners) owner.SuspendLayout();
                 foreach (var (item, image) in task.Result)
                 {
                     if (image is null) continue;
                     if (item.IsDisposed) { image.Dispose(); continue; }
                     item.Image = image;
                 }
+                foreach (var owner in owners) owner.ResumeLayout();
             });
         });
     }
