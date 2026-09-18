@@ -51,4 +51,12 @@ public class CtrlFDefaultTests
     {
         Assert.DoesNotContain(new BuiltinTarget(id), DefaultKeyMap.Create().Bindings.Values);
     }
+
+    [Fact]
+    public void CtrlZへの割り当ては読み込み時に無視される()
+    {
+        // R-83: 2.2.0 までに Ctrl+Z を割り当てていた設定ファイル。移行はせず、枠に無いキーとして捨てる
+        var settings = new AppSettings { KeyBindings = new() { ["Ctrl+Z"] = new BuiltinTarget(CommandId.Refresh).Serialize() } };
+        Assert.Null(settings.ToKeyMap().Resolve(new KeyBinding(Vk.Letter('Z'), Ctrl: true)));
+    }
 }

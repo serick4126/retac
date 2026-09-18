@@ -205,7 +205,7 @@ public sealed class AppSettings
         var map = Domain.Keys.DefaultKeyMap.Create();
         foreach (var (label, command) in KeyBindings)
         {
-            // R-25: 枠に無いキー（Ctrl+C など）は、設定ファイルに書かれていても割り当てない
+            // R-25: 枠に無いキー（Ctrl+C など）・Ctrl+Z（R-83）は、設定ファイルに書かれていても割り当てない
             if (KeySlots.Parse(label) is not { } binding || !KeySlots.All.Contains(binding)) continue;
             map.Assign(binding, Domain.Commands.CommandTarget.Parse(command));
         }

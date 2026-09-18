@@ -7,11 +7,11 @@ namespace ReTAC.Domain.Tests;
 public class KeySlotListTests
 {
     [Fact]
-    public void 修飾なしとShiftの64枠とマウスの3枠にCtrlの48枠を足した115枠()
+    public void 修飾なしとShiftの64枠とマウスの3枠にCtrlの47枠を足した114枠()
     {
-        Assert.Equal(115, KeySlotList.All.Count);
+        Assert.Equal(114, KeySlotList.All.Count);
         Assert.Equal(67, KeySlotList.All.Count(s => !s.Ctrl));   // 従来の 64 ＋ マウス 3
-        Assert.Equal(48, KeySlotList.All.Count(s => s.Ctrl));
+        Assert.Equal(47, KeySlotList.All.Count(s => s.Ctrl));    // C / X / V / Z は固定のキー（R-25 / R-83）
         Assert.Equal(KeySlotList.All.Count, KeySlotList.All.Distinct().Count());
     }
 
@@ -33,9 +33,10 @@ public class KeySlotListTests
     [InlineData('C')]
     [InlineData('X')]
     [InlineData('V')]
-    public void CtrlのCとXとVは固定のキーなので枠に無い(char letter)
+    [InlineData('Z')]
+    public void CtrlのCとXとVとZは固定のキーなので枠に無い(char letter)
     {
-        // R-25
+        // R-25 / R-83
         Assert.DoesNotContain(new KeyBinding(Vk.Letter(letter), Ctrl: true), KeySlotList.All);
     }
 
