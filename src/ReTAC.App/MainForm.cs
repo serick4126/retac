@@ -212,8 +212,11 @@ public sealed class MainForm : Form, IBookmarkHost
         };
     }
 
-    /// <summary>6 章: 応答しないドライブを待つ上限。</summary>
-    public static TimeSpan EnumerationTimeout { get; set; } = TimeSpan.FromSeconds(5);
+    /// <summary>
+    /// 6 章: 応答しないドライブを待つ上限。止まっていた HDD は回り出すまで 10 秒前後かかることがあり、
+    /// 5 秒では開けるフォルダに「応答しません」を出していた（実機指摘）。
+    /// </summary>
+    public static TimeSpan EnumerationTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
     public FileListView List => _list;
     public DriveBar DriveBar => _driveBar;
