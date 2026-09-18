@@ -2,6 +2,15 @@
 
 namespace ReTAC.Shell;
 
+/// <summary>R-89: シェルのメニューで何が起きたか。Shell の項目を実行したのか、取り消したのかを呼び出し側が区別できるようにする。</summary>
+public enum ContextMenuOutcome { Cancelled, ShellInvoked, AppItem }
+
+/// <param name="AppItem">Outcome が AppItem のとき、選ばれた ReTAC の項目の添字。それ以外は -1</param>
+public readonly record struct ContextMenuResult(ContextMenuOutcome Outcome, int AppItem = -1)
+{
+    public static readonly ContextMenuResult Cancelled = new(ContextMenuOutcome.Cancelled);
+}
+
 /// <summary>
 /// シェルのコンテキストメニュー（0x8328）。
 /// 書庫機能をスコープ外にできている前提そのもの — 圧縮・解凍は WinRAR の項目へ委譲する。
@@ -11,9 +20,18 @@ public static class ShellContextMenu
     /// <param name="ownerHandle">メニューの所有者。実際の追跡はメッセージ転送用の隠しウィンドウで行う</param>
     /// <param name="paths">対象。同一フォルダ内の項目であること（シェルの仕様）</param>
     /// <param name="screenX">スクリーン座標</param>
-    public static void Show(IntPtr ownerHandle, IReadOnlyList<string> paths, int screenX, int screenY)
+    public static void Show(IntPtr ownerHandle, IReadOnlyList<string> paths, int screenX, int screenY) =>
+        ShowWithItems(ownerHandle, paths, screenX, screenY, []);
+
+    /// <summary>
+    /// R-89: シェルのメニューの先頭に ReTAC の項目を差し込んで出す。ReTAC の項目はシェルへ渡さず、選ばれた添字を返す。
+    /// Shell の項目は今までどおりここで実行する。
+    /// </summary>
+    /// <param name="items">先頭に並べる ReTAC の項目の文言。空なら今までの Show と同じ</param>
+    public static ContextMenuResult ShowWithItems(IntPtr ownerHandle, IReadOnlyList<string> paths, int screenX, int screenY,
+                                                 IReadOnlyList<string> items)
     {
-        if (paths.Count == 0) return;
+        if (paths.Count == 0) return ContextMenuResult.Cancelled;
 
         var pidls = new List<IntPtr>();
         var childPidls = new List<IntPtr>();
@@ -34,18 +52,18 @@ public static class ShellContextMenu
                 else if (!ReferenceEquals(parent, folder)) Marshal.ReleaseComObject(folder);
                 childPidls.Add(child);
             }
-            if (parent is null || childPidls.Count == 0) return;
+            if (parent is null || childPidls.Count == 0) return ContextMenuResult.Cancelled;
 
             var contextGuid = IID_IContextMenu;
             var children = childPidls.ToArray();
             var uiHr = parent.GetUIObjectOf(ownerHandle, (uint)children.Length, children, ref contextGuid, IntPtr.Zero, out var unknown);
-            if (uiHr != 0 || unknown == IntPtr.Zero) return;
+            if (uiHr != 0 || unknown == IntPtr.Zero) return ContextMenuResult.Cancelled;
 
             contextMenu = Marshal.GetObjectForIUnknown(unknown);
             Marshal.Release(unknown);
-            if (contextMenu is not IContextMenu shellMenu) return;
+            if (contextMenu is not IContextMenu shellMenu) return ContextMenuResult.Cancelled;
 
-            TrackAndInvoke(ownerHandle, contextMenu, shellMenu, screenX, screenY, directory: null);
+            return TrackAndInvoke(ownerHandle, contextMenu, shellMenu, screenX, screenY, directory: null, items);
         }
         finally
         {
@@ -85,7 +103,7 @@ public static class ShellContextMenu
             Marshal.Release(menuUnknown);
 
             if (contextMenu is IContextMenu shellMenu)
-                TrackAndInvoke(ownerHandle, contextMenu, shellMenu, screenX, screenY, folderPath);
+                TrackAndInvoke(ownerHandle, contextMenu, shellMenu, screenX, screenY, folderPath, []);
         }
         finally
         {
@@ -98,21 +116,27 @@ public static class ShellContextMenu
 
     /// <summary>メニューを出し、選ばれた項目を実行する。項目のメニューと背景のメニューで共通。</summary>
     /// <param name="directory">作業フォルダを使う項目（「ターミナルで開く」など）に渡すフォルダ。項目のメニューでは null</param>
-    private static void TrackAndInvoke(IntPtr ownerHandle, object contextMenu, IContextMenu shellMenu,
-                                       int screenX, int screenY, string? directory)
+    private static ContextMenuResult TrackAndInvoke(IntPtr ownerHandle, object contextMenu, IContextMenu shellMenu,
+                                                    int screenX, int screenY, string? directory, IReadOnlyList<string> items)
     {
         var menu = CreatePopupMenu();
         try
         {
             // CMF_EXPLORE: エクスプローラーと同じ既定の並び。拡張（WinRAR など）もこの経路で入る
-            if (shellMenu.QueryContextMenu(menu, 0, IdCmdFirst, IdCmdLast, CMF_NORMAL | CMF_EXPLORE) < 0) return;
+            if (shellMenu.QueryContextMenu(menu, 0, IdCmdFirst, IdCmdLast, CMF_NORMAL | CMF_EXPLORE) < 0) return ContextMenuResult.Cancelled;
+
+            // R-89: ReTAC の項目は Shell に渡した番号の範囲（IdCmdFirst〜IdCmdLast）の外に置き、先頭に並べる
+            for (var i = items.Count - 1; i >= 0; i--)
+                InsertMenu(menu, 0, MF_BYPOSITION | MF_STRING, (UIntPtr)(AppIdFirst + (uint)i), items[i]);
+            if (items.Count > 0) InsertMenu(menu, (uint)items.Count, MF_BYPOSITION | MF_SEPARATOR, UIntPtr.Zero, null);
 
             // 拡張の項目はオーナードローのことがあり、メニュー用のメッセージを
             // IContextMenu2/3 へ転送しないと中身が出ない（「新規作成」のサブメニューも同じ）
             using var hook = new MenuMessageHook(contextMenu);
             var command = TrackPopupMenuEx(menu, TPM_RETURNCMD | TPM_LEFTALIGN | TPM_RIGHTBUTTON,
                 screenX, screenY, hook.Handle, IntPtr.Zero);
-            if (command < IdCmdFirst) return;
+            if (command >= AppIdFirst) return new ContextMenuResult(ContextMenuOutcome.AppItem, (int)(command - AppIdFirst));
+            if (command < IdCmdFirst) return ContextMenuResult.Cancelled;
 
             var invoke = new CMINVOKECOMMANDINFOEX
             {
@@ -125,6 +149,7 @@ public static class ShellContextMenu
                 nShow = SW_SHOWNORMAL,
             };
             shellMenu.InvokeCommand(ref invoke);
+            return new ContextMenuResult(ContextMenuOutcome.ShellInvoked);
         }
         finally
         {
@@ -178,6 +203,11 @@ public static class ShellContextMenu
 
     private const uint IdCmdFirst = 1;
     private const uint IdCmdLast = 0x7FFF;
+    /// <summary>R-89: ReTAC の項目の番号の始まり。Shell に渡す範囲の外。</summary>
+    private const uint AppIdFirst = 0x8000;
+    private const uint MF_BYPOSITION = 0x0400;
+    private const uint MF_STRING = 0x0000;
+    private const uint MF_SEPARATOR = 0x0800;
     private const uint CMF_NORMAL = 0x00000000;
     private const uint CMF_EXPLORE = 0x00000004;
     private const uint TPM_LEFTALIGN = 0x0000;
@@ -199,6 +229,9 @@ public static class ShellContextMenu
 
     [DllImport("user32.dll")] private static extern IntPtr CreatePopupMenu();
     [DllImport("user32.dll")] private static extern bool DestroyMenu(IntPtr menu);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "InsertMenuW")]
+    private static extern bool InsertMenu(IntPtr menu, uint position, uint flags, UIntPtr id, string? text);
 
     [DllImport("user32.dll")]
     private static extern uint TrackPopupMenuEx(IntPtr menu, uint flags, int x, int y, IntPtr owner, IntPtr tpmParams);
