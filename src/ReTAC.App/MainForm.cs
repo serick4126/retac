@@ -347,9 +347,21 @@ public sealed class MainForm : Form
         CommandId.QuickAccessAdd => AddCurrentToQuickAccess(),
         CommandId.GoBack => GoHistory(_history.Back(_currentFolder), record: false),
         CommandId.GoForward => GoHistory(_history.Forward(_currentFolder), record: false),
-        CommandId.IncrementalSearch => _search.Open(),
+        CommandId.IncrementalSearch => OpenIncrementalSearch(),
         _ => false,
     };
+
+    /// <summary>
+    /// R-80: 検索バーを出す。Dock の外側・内側は追加した順ではなく、その時点の子の添字で決まる
+    /// （添字が大きいほど外側）。検索バーは隠したまま作るので、WinForms が表示のときに並びを詰め替えて
+    /// ステータスバーより外側へ移し、検索バーが最下段に出ていた。出す直前にステータスバーを末尾へ戻す
+    /// </summary>
+    private bool OpenIncrementalSearch()
+    {
+        var opened = _search.Open();
+        Controls.SetChildIndex(_statusBar, Controls.Count - 1);
+        return opened;
+    }
 
     /// <summary>`H`（0x82FD）。過去 16 回分をカーソル位置のポップアップに出す（N-06）。</summary>
     private bool ShowFolderHistory()
