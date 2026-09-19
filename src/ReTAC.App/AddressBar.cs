@@ -200,14 +200,21 @@ public sealed class AddressBar : Control
         if (_folder.Length == 0) return;
         // シェルのデータで渡す（FileDrop も入っている）。FileDrop だけではエクスプローラーがショートカットを作らない。
         // リンクだけを許す。ファイルリストやエクスプローラーへ落としても、フォルダをコピー・移動させない
-        object? data = ShellDataObject.For(_folder);
-        if (data is null)
+        var shell = ShellDataObject.For(_folder);
+        object data = shell ?? FileDrop(_folder);
+        try { DoDragDrop(data, DragDropEffects.Link); }
+        finally
         {
-            var files = new DataObject();
-            files.SetFileDropList([_folder]);
-            data = files;
+            // シェルの資源を GC まで握らない（繰り返しドラッグすると溜まる）。DoDragDrop は同期なので、戻れば使い終わっている
+            if (shell is not null && Marshal.IsComObject(shell)) Marshal.ReleaseComObject(shell);
         }
-        DoDragDrop(data, DragDropEffects.Link);
+    }
+
+    private static DataObject FileDrop(string path)
+    {
+        var files = new DataObject();
+        files.SetFileDropList([path]);
+        return files;
     }
 
     protected override void OnMouseUp(MouseEventArgs e)
