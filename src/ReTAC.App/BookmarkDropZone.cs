@@ -75,18 +75,19 @@ internal sealed class BookmarkDropZone
     /// <summary>
     /// バー・グループのメニューの項目を、左ボタンで押して動かしたらドラッグを始める。
     /// 並べ替え・グループへの出し入れの条件は、どこから始めても同じ（BookmarkRules.Move が決める）。
+    /// ToolStrip は項目の上のマウスを項目へ回し、自分の MouseDown / MouseMove イベントを出さないので、項目のイベントで拾う。
     /// </summary>
-    public static void EnableDrag(ToolStrip strip)
+    public static void EnableDrag(ToolStripItem item, Bookmark bookmark)
     {
         Point? origin = null;
-        strip.MouseDown += (_, e) => origin = e.Button == MouseButtons.Left ? e.Location : null;
-        strip.MouseMove += (_, e) =>
+        item.MouseDown += (_, e) => origin = e.Button == MouseButtons.Left ? e.Location : null;
+        item.MouseUp += (_, _) => origin = null;
+        item.MouseMove += (_, e) =>
         {
-            if (e.Button != MouseButtons.Left || origin is not { } o) return;
+            if (e.Button != MouseButtons.Left || origin is not { } o || item.Owner is not { } strip) return;
             if (Math.Abs(e.X - o.X) < SystemInformation.DragSize.Width
                 && Math.Abs(e.Y - o.Y) < SystemInformation.DragSize.Height) return;
             origin = null;
-            if (strip.GetItemAt(o) is not { Tag: Bookmark bookmark } item) return;
             (item as BarDropDownButton)?.CancelOpen();
             DragFrom(strip, bookmark);
         };

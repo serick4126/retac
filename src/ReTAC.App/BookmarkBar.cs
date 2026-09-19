@@ -19,7 +19,6 @@ public sealed class BookmarkBar : ToolStrip
         ShowItemToolTips = true;
         AutoSize = false;   // 高さはアドレスバーの行に揃える（SetRowHeight）
         ToolStripExtras.WidenOverflow(this);
-        BookmarkDropZone.EnableDrag(this);
     }
 
     /// <summary>上部の行（ドライブバー・アドレスバー）と同じ高さ・左右の余白にする。項目は縦の中央に並ぶ。</summary>

@@ -87,6 +87,7 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
         item.ToolTipText = Tooltip(b, name);
         item.Image = Glyph(b);   // シェルのアイコンが無いもの（グループ・組み込みコマンド）は記号フォントで描く（§6.6）
         AttachContextMenu(item);
+        BookmarkDropZone.EnableDrag(item, b);   // バーでもグループのメニューでも、同じ条件で掴んで動かせる
         switch (b.Kind)
         {
             case BookmarkKind.Folder:
@@ -131,7 +132,6 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
     {
         item.DropDownItems.Add(Placeholder("（空）"));   // 項目が無いと ▶ が出ず、開けない
         ToolStripExtras.EnableWheel(item.DropDown);
-        BookmarkDropZone.EnableDrag(item.DropDown);   // グループの中もバーと同じく掴んで動かせる
         if (group.Children is { } list) BookmarkDropZone.Attach(item.DropDown, list, host, vertical: true);   // R-89 §6.10
         item.DropDownOpening += (_, _) =>
         {
