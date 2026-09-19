@@ -42,10 +42,10 @@ internal sealed class BookmarkDropZone
         var zone = new BookmarkDropZone(strip, list, host, vertical);
         strip.AllowDrop = true;
         // 効果を決めてからドラッグ画像の後始末へ知らせる（DropTargetHelper）
-        strip.DragEnter += (s, e) => { zone.OnDragOver(s, e); DropTargetHelper.Enter(strip, e); };
-        strip.DragOver += (s, e) => { zone.OnDragOver(s, e); DropTargetHelper.Over(e); };
-        strip.DragLeave += (_, _) => { zone.Reset(); DropTargetHelper.Leave(); };
-        strip.DragDrop += (s, e) => { DropTargetHelper.Drop(e); zone.OnDragDrop(s, e); };
+        strip.DragEnter += (s, e) => zone.Guard(e, () => { zone.OnDragOver(s, e); DropTargetHelper.Enter(strip, e); });
+        strip.DragOver += (s, e) => zone.Guard(e, () => { zone.OnDragOver(s, e); DropTargetHelper.Over(e); });
+        strip.DragLeave += (_, _) => zone.Guard(null, () => { zone.Reset(); DropTargetHelper.Leave(); });
+        strip.DragDrop += (s, e) => zone.Guard(e, () => { DropTargetHelper.Drop(e); zone.OnDragDrop(s, e); });
         strip.Paint += zone.OnPaint;
         zone._hold.Tick += (_, _) =>
         {
@@ -53,6 +53,23 @@ internal sealed class BookmarkDropZone
             if (zone._holding is { IsDisposed: false } item) item.ShowDropDown();
         };
         strip.Disposed += (_, _) => zone._hold.Dispose();
+    }
+
+    /// <summary>
+    /// 受け口から例外を漏らさない。漏れると OS がドロップ自体を断り、禁止のカーソルになる。
+    /// 失敗したら、枠・線・ホールドのタイマー・ステータス・ドラッグ画像を片付けて、落とせない扱いにする。
+    /// </summary>
+    private void Guard(DragEventArgs? e, Action action)
+    {
+        try { action(); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex);
+            if (e is not null) e.Effect = DragDropEffects.None;
+            try { Reset(); }
+            catch (Exception inner) { System.Diagnostics.Debug.WriteLine(inner); }
+            DropTargetHelper.Leave();
+        }
     }
 
     /// <summary>バーの項目のドラッグを始める。終わるまで戻らない。</summary>
@@ -83,6 +100,7 @@ internal sealed class BookmarkDropZone
         // R3: 外からは FileDrop だけ。URL・テキスト・仮想ファイルは受けない
         var files = !reorder && e.Data?.GetDataPresent(DataFormats.FileDrop) == true;
 
+        var effect = Effect(reorder, e.AllowedEffect);
         string message;
         if (!reorder && !files || onto?.Tag is Bookmark { Kind: BookmarkKind.Folder })
         {
@@ -95,11 +113,14 @@ internal sealed class BookmarkDropZone
             e.Effect = DragDropEffects.None;
             message = "";
         }
+        else if (effect == DragDropEffects.None)
+        {
+            e.Effect = DragDropEffects.None;   // ドラッグ元が許していない効果は返さない
+            message = "";
+        }
         else
         {
-            // ファイルは Move にしない。移動と受け取った元（エクスプローラー）が、元のファイルを消すことがある
-            e.Effect = reorder ? DragDropEffects.Move
-                : e.AllowedEffect.HasFlag(DragDropEffects.Link) ? DragDropEffects.Link : DragDropEffects.Copy;
+            e.Effect = effect;
             var group = onto is null ? "" : $"「{onto.Text?.Replace("&&", "&")}」に";
             message = reorder ? (onto is null ? "並べ替え" : $"{group}移す") : $"{group}ブックマークに追加";
         }
@@ -118,6 +139,14 @@ internal sealed class BookmarkDropZone
             _strip.Invalidate();
         }
     }
+
+    /// <summary>
+    /// ドラッグ元が許す中から選ぶ。ファイルは Move にしない。移動と受け取った元（エクスプローラー）が、元のファイルを消すことがある。
+    /// </summary>
+    private static DragDropEffects Effect(bool reorder, DragDropEffects allowed) =>
+        reorder ? allowed & DragDropEffects.Move
+        : allowed.HasFlag(DragDropEffects.Link) ? DragDropEffects.Link
+        : allowed & DragDropEffects.Copy;
 
     private void OnDragDrop(object? sender, DragEventArgs e)
     {
