@@ -11,8 +11,38 @@ namespace ReTAC.App;
 /// </summary>
 public static class FolderExpansion
 {
-    /// <summary>表示の上限。超えた分は末尾の 1 項目でジャンプへ誘う。</summary>
-    private const int MaxItems = 500;
+    /// <summary>表示の上限。超えた分は末尾の 1 項目でジャンプへ誘う。パンくずの ▸ の一覧（R-94）も同じ。</summary>
+    internal const int MaxItems = 500;
+
+    internal enum LoadOutcome { Loaded, Missing, Failed }
+
+    /// <summary>
+    /// フォルダの中身を裏で読み、待つ上限までに読めた結果を UI スレッドで渡す。展開表示とパンくずの ▸ の一覧（R-94）で共通の<b>機構だけ</b>。
+    /// 何を出すか（ファイルも出すか、太字にするか）は呼び出し側が決める。
+    /// 上限を過ぎたら Failed を 1 回だけ渡し、後から読み終えた結果は捨てる（閉じたメニューを書き換えない）。
+    /// </summary>
+    /// <param name="stillWanted">UI スレッドで結果を渡す直前に確かめる。閉じた・開き直した・捨てられたなら false</param>
+    internal static void Load(Control invoker, string folder, Func<string, IReadOnlyList<Entry>> enumerate,
+                              Func<bool> stillWanted, Action<LoadOutcome, IReadOnlyList<Entry>> apply)
+    {
+        var enumeration = Task.Run(() => List(folder, enumerate));
+        Task.WhenAny(enumeration, Task.Delay(MainForm.EnumerationTimeout)).ContinueWith(done =>
+        {
+            // 結果は窓（フォーム）経由で UI スレッドへ戻す。閉じたドロップダウンは窓を持たないことがある
+            if (invoker.IsDisposed || !invoker.IsHandleCreated) return;
+            try
+            {
+                invoker.BeginInvoke(() =>
+                {
+                    if (!stillWanted()) return;
+                    if (done.Result != enumeration || !enumeration.IsCompletedSuccessfully) apply(LoadOutcome.Failed, []);
+                    else if (enumeration.Result is not { } entries) apply(LoadOutcome.Missing, []);
+                    else apply(LoadOutcome.Loaded, entries);
+                });
+            }
+            catch (InvalidOperationException) { }   // 確かめた直後に窓が閉じた
+        });
+    }
 
     /// <param name="onMissing">開こうとしたフォルダ自体が無いとき</param>
     public static void Attach(ToolStripDropDownItem item, string folder, BookmarkItems items, Action onMissing)
@@ -35,35 +65,30 @@ public static class FolderExpansion
             item.DropDownItems.AddRange([jump, new ToolStripSeparator(), loading]);
             MenuSpacing.Apply(item.DropDownItems, items.Invoker.DeviceDpi);   // R-88
 
-            var enumeration = Task.Run(() => List(folder, host));
-            Task.WhenAny(enumeration, Task.Delay(MainForm.EnumerationTimeout)).ContinueWith(done =>
-            {
-                // 結果は窓（フォーム）経由で UI スレッドへ戻す。閉じたドロップダウンは窓を持たないことがある
-                if (items.Invoker is not { IsDisposed: false } owner) return;
-                owner.BeginInvoke(() =>
+            Load(items.Invoker, folder, host.Enumerate,
+                // 古い結果で書き換えない（閉じた・開き直した・捨てられた）
+                stillWanted: () => mine == generation && !item.IsDisposed && item.DropDown.Visible,
+                apply: (outcome, entries) =>
                 {
-                    // 古い結果で書き換えない（閉じた・開き直した・捨てられた）
-                    if (mine != generation || item.IsDisposed || !item.DropDown.Visible) return;
                     var index = item.DropDownItems.IndexOf(loading);
                     if (index < 0) return;
                     loading.Dispose();
-
-                    if (done.Result != enumeration || !enumeration.IsCompletedSuccessfully)
+                    switch (outcome)
                     {
-                        // 読めなかっただけでは消えたと見なさない。ブックマークは残す
-                        item.DropDownItems.Insert(index, BookmarkItems.Placeholder("読み込めませんでした"));
-                        return;
+                        case LoadOutcome.Failed:
+                            // 読めなかっただけでは消えたと見なさない。ブックマークは残す
+                            item.DropDownItems.Insert(index, BookmarkItems.Placeholder("読み込めませんでした"));
+                            break;
+                        case LoadOutcome.Missing:
+                            item.DropDownItems.Insert(index, BookmarkItems.Placeholder("見つかりません"));
+                            // 開いているメニューの処理中にメッセージを出すとメニューの状態が乱れる。後に回す
+                            items.Invoker.BeginInvoke(onMissing);
+                            break;
+                        default:
+                            items.LoadIcons(Fill(item, index, entries, folder, items));
+                            break;
                     }
-                    if (enumeration.Result is not { } entries)
-                    {
-                        item.DropDownItems.Insert(index, BookmarkItems.Placeholder("見つかりません"));
-                        // 開いているメニューの処理中にメッセージを出すとメニューの状態が乱れる。後に回す
-                        owner.BeginInvoke(onMissing);
-                        return;
-                    }
-                    items.LoadIcons(Fill(item, index, entries, folder, items));
                 });
-            });
         };
         item.DropDownClosed += (_, _) =>
         {
@@ -79,9 +104,9 @@ public static class FolderExpansion
     }
 
     /// <returns>中身。フォルダが消えていれば null。届かない・読めないときは例外（消えたとは見なさない）</returns>
-    private static IReadOnlyList<Entry>? List(string folder, IBookmarkHost host)
+    private static IReadOnlyList<Entry>? List(string folder, Func<string, IReadOnlyList<Entry>> enumerate)
     {
-        if (Directory.Exists(folder)) return host.Enumerate(folder);
+        if (Directory.Exists(folder)) return enumerate(folder);
         // 届かないネットワークや外したドライブでも Exists は false を返す。ルートが見えるときだけ「消えた」とする
         if (Path.GetPathRoot(folder) is { Length: > 0 } root && Directory.Exists(root)) return null;
         throw new DirectoryNotFoundException(folder);

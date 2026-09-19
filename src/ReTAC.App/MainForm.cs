@@ -80,7 +80,7 @@ public sealed class MainForm : Form, IBookmarkHost
         _keyMap = _settings.ToKeyMap();
         _history = _settings.ToFolderHistory();
         _quickAccess = QuickAccessHost.For(_settings);   // Q12: 全ウィンドウで 1 つ
-        _addressBar = new AddressBar(_history, _quickAccess);
+        _addressBar = new AddressBar(_history, _quickAccess, ((IBookmarkHost)this).Enumerate);
         _topRow = new TopRow(_driveBar, _addressBar);
         _bookmarkItems = new BookmarkItems(this, this);
         // 行の高さは DPI・フォントで変わる。上部の行が高さを決め直したら、ブックマークバーも揃える

@@ -59,6 +59,18 @@ public static class ToolStripExtras
     private static readonly MethodInfo? ScrollOneRow = typeof(ToolStripDropDownMenu).GetMethod(
         "ScrollInternal", BindingFlags.Instance | BindingFlags.NonPublic, [typeof(bool)]);
 
+    /// <summary>開いたメニューを、その項目が見えるところまで下へ送る（パンくずの ▸ の一覧で今いる経路を見せる。R-94）。</summary>
+    public static void ScrollIntoView(ToolStripDropDownMenu menu, ToolStripItem item)
+    {
+        if (ScrollOneRow is null) return;
+        object[] down = [false];
+        while (item.Bounds.Bottom > menu.DisplayRectangle.Bottom && CanScroll(menu, up: false))
+        {
+            try { ScrollOneRow.Invoke(menu, down); }
+            catch (TargetInvocationException) { return; }
+        }
+    }
+
     /// <summary>その向きに、まだ隠れた項目があるか（▲▼ が押せるか）。</summary>
     private static bool CanScroll(ToolStripDropDownMenu menu, bool up)
     {

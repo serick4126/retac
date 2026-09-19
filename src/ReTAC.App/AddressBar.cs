@@ -2,13 +2,15 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
+using ReTAC.Domain.Entries;
 using ReTAC.Domain.Navigation;
 using ReTAC.Shell;
 
 namespace ReTAC.App;
 
 /// <summary>
-/// R-87: アドレスバー。今いるフォルダのフルパスを出し、クリック・`T`・`Ctrl+L` で編集を始める。
+/// R-87: アドレスバー。`T`・`Ctrl+L`・余白のクリックで編集を始める。
+/// R-94: 編集していないときはパンくず（段・`▸`・`…`）で出す。段のクリックでジャンプ、`▸` で子フォルダの一覧。フォーカスは取らない。
 /// 扱うのはファイルシステムのパスだけ（R-39-2）。キーはダイレクトジャンプのダイアログと同じ。
 /// 入力欄なので Ctrl+Z / C / X / V は入力欄の編集として働く（ファイル操作のキーはファイルリストだけが拾う）。
 /// </summary>
@@ -26,6 +28,8 @@ public sealed class AddressBar : Control
     };
     private readonly FolderHistory _history;
     private readonly QuickAccessList _quickAccess;
+    /// <summary>▸ の一覧の中身。展開表示と同じ規則（今のソート・表示するファイルタイプ。IBookmarkHost.Enumerate）。</summary>
+    private readonly Func<string, IReadOnlyList<Entry>> _enumerate;
     private string _folder = "";
     private bool _editing;
     private bool _notFound;
@@ -52,13 +56,17 @@ public sealed class AddressBar : Control
     /// <summary>アイコンの上で左ボタンを押した位置。ここから動かしたらドラッグ、動かさずに離したらクリック。</summary>
     private Point? _iconPress;
 
-    public AddressBar(FolderHistory history, QuickAccessList quickAccess)
+    public AddressBar(FolderHistory history, QuickAccessList quickAccess, Func<string, IReadOnlyList<Entry>> enumerate)
     {
         _history = history;
         _quickAccess = quickAccess;
+        _enumerate = enumerate;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer
                  | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+        // R-94: 段・▸・… のクリックでフォーカスを奪わない（ファイルリストのまま）。編集は入力欄がフォーカスを持つ
+        SetStyle(ControlStyles.Selectable, false);
         BackColor = SystemColors.Window;
+        _input.Visible = false;   // 編集中だけ出す
         Controls.Add(_input);
         Height = BarHeight;
 
@@ -95,14 +103,27 @@ public sealed class AddressBar : Control
     public void ShowFolder(string folder)
     {
         _folder = folder;
-        if (!_editing) ShowPath();
+        if (_editing) return;
+        ShowPath();
+        LayoutCrumbs();
     }
 
-    /// <summary>`T` / `Ctrl+L`。フォーカスを移して全体を選ぶ（R-46）。</summary>
+    /// <summary>
+    /// `T` / `Ctrl+L` / 余白のクリック。フォーカスを移して全体を選ぶ（R-46）。
+    /// 隠れた入力欄にはフォーカスが入らないので、先に出して並べ、今のパスを入れてから Focus する。
+    /// </summary>
     public bool BeginEdit()
     {
+        if (!_input.Visible)
+        {
+            ShowPath();
+            _input.Visible = true;
+            PerformLayout();
+        }
         _input.Focus();
         _input.SelectAll();
+        _selectAllOnMouseUp = false;   // 余白のクリックの MouseUp は入力欄に来ない。次のクリックで全選択し直さない
+        Invalidate();
         return true;
     }
 
@@ -169,6 +190,8 @@ public sealed class AddressBar : Control
         _editing = false;
         _notFound = false;
         ShowPath();
+        _input.Visible = false;   // パンくずに戻す
+        LayoutCrumbs();
         Invalidate();
     }
 
@@ -184,6 +207,202 @@ public sealed class AddressBar : Control
     private Rectangle IconBounds => new(LogicalToDeviceUnits(6), (Height - IconSize) / 2, IconSize, IconSize);
     private bool OnIcon(Point p) => p.X < IconBounds.Right + LogicalToDeviceUnits(2);
 
+    // ---- R-94: パンくず ------------------------------------------------------------
+
+    private enum PartKind { Segment, Arrow, Ellipsis }
+
+    /// <summary>描いた部品と当たり判定。Index は段の添字（… は畳んだ段の数）。</summary>
+    private readonly record struct Part(PartKind Kind, int Index, Rectangle Bounds);
+
+    private IReadOnlyList<BreadcrumbSegment> _segments = [];
+    private List<Part> _parts = [];
+    /// <summary>ホバーしている部品の添字（_parts）。先頭のアイコンなら IconHover、どちらでもなければ -1（余白）。</summary>
+    private int _hover = -1;
+    private const int IconHover = -2;
+
+    private const string ArrowText = "▸";
+    private const string EllipsisText = "…";
+    private const TextFormatFlags CrumbFlags = TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding;
+
+    private int CrumbPadding => LogicalToDeviceUnits(4);
+    /// <summary>パンくずの左端（アイコンの右）。</summary>
+    private int CrumbLeft => IconBounds.Right + LogicalToDeviceUnits(4);
+    /// <summary>余白として必ず残す幅。すべての段が入らないときでも、ここを押せば編集を始められる。</summary>
+    private int ReservedMargin => LogicalToDeviceUnits(24);
+
+    private int TextWidth(string text) => TextRenderer.MeasureText(text, Font, Size.Empty, CrumbFlags).Width + CrumbPadding * 2;
+
+    /// <summary>
+    /// 段・▸・… の矩形を計算し直す。Resize・Font・DPI・フォルダの変更のたびに呼ぶ。
+    /// 段の名前は 1 段あたりバーの幅の 1/3 までにし、末尾を … で省く（仕様書 §7.2）。
+    /// </summary>
+    private void LayoutCrumbs()
+    {
+        _segments = Breadcrumb.Split(_folder);
+        _parts = [];
+        _hover = -1;
+        if (_segments.Count == 0 || Width <= 0) { Invalidate(); return; }
+
+        var arrow = TextWidth(ArrowText);
+        var ellipsis = TextWidth(EllipsisText);
+        var cap = Math.Max(1, Width / 3);
+        var names = _segments.Select(s => Math.Min(TextWidth(s.Name), cap)).ToList();
+        // Breadcrumb.FirstShown の契約: 各幅は段の名前とその直後の ▸、available はパンくずに使える幅
+        var available = Width - CrumbLeft - LogicalToDeviceUnits(8) - ReservedMargin;
+        var first = Breadcrumb.FirstShown([.. names.Select(n => n + arrow)], ellipsis, available);
+
+        var x = CrumbLeft;
+        var top = LogicalToDeviceUnits(3);
+        var height = Math.Max(0, Height - top * 2);
+        if (first > 0)
+        {
+            _parts.Add(new Part(PartKind.Ellipsis, first, new Rectangle(x, top, ellipsis, height)));
+            x += ellipsis;
+        }
+        var right = Width - LogicalToDeviceUnits(8);
+        for (var i = first; i < _segments.Count; i++)
+        {
+            // 最後の段も入りきらないときは、残りの幅に切り詰める（矩形の幅を負にしない）
+            var name = Math.Max(0, Math.Min(names[i], right - arrow - x));
+            _parts.Add(new Part(PartKind.Segment, i, new Rectangle(x, top, name, height)));
+            x += name;
+            _parts.Add(new Part(PartKind.Arrow, i, new Rectangle(x, top, arrow, height)));
+            x += arrow;
+        }
+        Invalidate();
+    }
+
+    private int PartAt(Point p) => _input.Visible ? -1 : _parts.FindIndex(part => part.Bounds.Contains(p));
+
+    private string TooltipOf(int index) => index switch
+    {
+        IconHover => "ドラッグしてブックマークに追加・クリックでエクスプローラーで開く・右クリックでメニュー",
+        < 0 => "クリックでアドレスを編集",
+        _ => _parts[index] switch
+        {
+            { Kind: PartKind.Segment } part => _segments[part.Index].Path,
+            { Kind: PartKind.Arrow } part => $"{_segments[part.Index].Name} のサブフォルダ",
+            _ => "畳んだフォルダ",
+        },
+    };
+
+    private void DrawCrumbs(Graphics g)
+    {
+        for (var i = 0; i < _parts.Count; i++)
+        {
+            var part = _parts[i];
+            if (part.Bounds.Width <= 0) continue;
+            if (i == _hover && _hover >= 0)
+            {
+                using var brush = new SolidBrush(SystemColors.ControlLight);
+                g.FillRectangle(brush, part.Bounds);
+            }
+            var text = part.Kind switch
+            {
+                PartKind.Segment => _segments[part.Index].Name,
+                PartKind.Arrow => ArrowText,
+                _ => EllipsisText,
+            };
+            TextRenderer.DrawText(g, text, Font, part.Bounds, SystemColors.WindowText,
+                CrumbFlags | TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+        }
+    }
+
+    /// <summary>▸ の一覧。子フォルダだけを 1 段で並べ、クリックでジャンプ。次の段（今いる経路）は太字にし、そこが見えるように送る。</summary>
+    private void ShowChildren(int index, Rectangle below)
+    {
+        var folder = _segments[index].Path;
+        var next = index + 1 < _segments.Count ? _segments[index + 1].Path : null;
+        var menu = NewMenu();
+        var bold = new Font(menu.Font, FontStyle.Bold);
+        menu.Disposed += (_, _) => bold.Dispose();
+        var loading = BookmarkItems.Placeholder("読み込み中…");
+        menu.Items.Add(loading);
+        MenuSpacing.Apply(menu.Items, DeviceDpi);   // R-88
+
+        FolderExpansion.Load(this, folder, _enumerate,
+            // 閉じた後に届いた結果で書き換えない
+            stillWanted: () => !menu.IsDisposed && menu.Visible,
+            apply: (outcome, entries) =>
+            {
+                var folders = entries.Where(e => !e.IsParent && e.Kind == EntryKind.Folder).ToList();
+                var items = new List<ToolStripItem>();
+                ToolStripItem? current = null;
+                foreach (var entry in folders.Take(FolderExpansion.MaxItems))
+                {
+                    var item = JumpItem(entry.Name, entry.FullPath);
+                    if (next is not null && PathEquals(entry.FullPath, next))
+                    {
+                        item.Font = bold;
+                        current = item;
+                    }
+                    items.Add(item);
+                }
+                if (folders.Count > FolderExpansion.MaxItems)
+                    items.Add(JumpItem($"ほか {folders.Count - FolderExpansion.MaxItems} 件 — このフォルダへジャンプ", folder));
+                if (items.Count == 0)
+                    items.Add(BookmarkItems.Placeholder(outcome switch
+                    {
+                        FolderExpansion.LoadOutcome.Failed => "読み込めませんでした",
+                        FolderExpansion.LoadOutcome.Missing => "見つかりません",
+                        _ => "（サブフォルダなし）",
+                    }));
+                MenuSpacing.Apply(items, DeviceDpi);
+                menu.SuspendLayout();
+                try
+                {
+                    menu.Items.Remove(loading);
+                    loading.Dispose();
+                    menu.Items.AddRange([.. items]);
+                }
+                finally { menu.ResumeLayout(); }
+                if (current is not null) ToolStripExtras.ScrollIntoView(menu, current);
+            });
+        menu.Show(this, new Point(below.Left, below.Bottom));
+    }
+
+    /// <summary>… の一覧。畳んだ段を近い順に。選ぶとそこへジャンプ。</summary>
+    private void ShowCollapsed(int count, Rectangle below)
+    {
+        var menu = NewMenu();
+        for (var i = count - 1; i >= 0; i--) menu.Items.Add(JumpItem(_segments[i].Name, _segments[i].Path));
+        MenuSpacing.Apply(menu.Items, DeviceDpi);   // R-88
+        menu.Show(this, new Point(below.Left, below.Bottom));
+    }
+
+    /// <summary>一度だけ使うメニュー。閉じたら項目ごと捨てる（開くたびに作るので、捨てないと GDI ハンドルが積み上がる）。</summary>
+    private ContextMenuStrip NewMenu()
+    {
+        var menu = new ContextMenuStrip { ShowImageMargin = false };
+        ToolStripExtras.EnableWheel(menu);
+        menu.Closed += (_, _) => BeginInvoke(() =>
+        {
+            BookmarkItems.Clear(menu.Items);
+            menu.Dispose();
+        });
+        return menu;
+    }
+
+    private ToolStripMenuItem JumpItem(string text, string path)
+    {
+        var item = new ToolStripMenuItem(text.Replace("&", "&&"));
+        item.Click += (_, _) => JumpRequested?.Invoke(this, (path, false));
+        return item;
+    }
+
+    private static bool PathEquals(string a, string b) =>
+        string.Equals(Path.TrimEndingDirectorySeparator(a), Path.TrimEndingDirectorySeparator(b), StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        if (_hover == -1) return;
+        _hover = -1;
+        Invalidate();
+    }
+
+    // ---------------------------------------------------------------------------------
+
     protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
@@ -193,6 +412,13 @@ public sealed class AddressBar : Control
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
+        var hover = OnIcon(e.Location) ? IconHover : PartAt(e.Location);
+        if (hover != _hover)
+        {
+            _hover = hover;
+            _tip.SetToolTip(this, TooltipOf(hover));
+            Invalidate();
+        }
         if (_iconPress is not { } origin || e.Button != MouseButtons.Left) return;
         if (Math.Abs(e.X - origin.X) < SystemInformation.DragSize.Width
             && Math.Abs(e.Y - origin.Y) < SystemInformation.DragSize.Height) return;
@@ -222,9 +448,28 @@ public sealed class AddressBar : Control
         base.OnMouseUp(e);
         var pressed = _iconPress is not null;
         _iconPress = null;
-        if (!OnIcon(e.Location) || _folder.Length == 0) return;
-        if (e.Button == MouseButtons.Left && pressed) IconClicked?.Invoke(this, EventArgs.Empty);
-        else if (e.Button == MouseButtons.Right) ShellContextMenu.Show(Handle, [_folder], Cursor.Position.X, Cursor.Position.Y);
+        if (_folder.Length == 0) return;
+        // 先頭のアイコン（9.2）を先に見る。段の当たり判定と競合させない
+        if (OnIcon(e.Location))
+        {
+            if (e.Button == MouseButtons.Left && pressed) IconClicked?.Invoke(this, EventArgs.Empty);
+            else if (e.Button == MouseButtons.Right) ShellContextMenu.Show(Handle, [_folder], Cursor.Position.X, Cursor.Position.Y);
+            return;
+        }
+        if (e.Button != MouseButtons.Left || _input.Visible) return;
+        if (PartAt(e.Location) is var index and >= 0)
+        {
+            var part = _parts[index];
+            switch (part.Kind)
+            {
+                // 最後の段は今のフォルダの読み直しになる（JumpInput がそのまま開き直す）
+                case PartKind.Segment: JumpRequested?.Invoke(this, (_segments[part.Index].Path, false)); break;
+                case PartKind.Arrow: ShowChildren(part.Index, part.Bounds); break;
+                case PartKind.Ellipsis: ShowCollapsed(part.Index, part.Bounds); break;
+            }
+            return;
+        }
+        BeginEdit();   // 余白
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -232,6 +477,7 @@ public sealed class AddressBar : Control
         e.Graphics.Clear(SystemColors.Window);
         _icon ??= LoadIcon();
         if (_icon is not null) e.Graphics.DrawImage(_icon, IconBounds);
+        if (!_input.Visible) DrawCrumbs(e.Graphics);
         // 赤は設定にしない（見つからないことを知らせる固定の表示）
         ControlPaint.DrawBorder(e.Graphics, ClientRectangle, _notFound ? Color.Red : SystemColors.ControlDark, ButtonBorderStyle.Solid);
     }
@@ -243,12 +489,14 @@ public sealed class AddressBar : Control
         var height = _input.PreferredHeight;
         var left = IconBounds.Right + LogicalToDeviceUnits(6);
         _input.SetBounds(left, (Height - height) / 2, Math.Max(0, Width - left - padding), height);
+        LayoutCrumbs();
     }
 
     protected override void OnFontChanged(EventArgs e)
     {
         base.OnFontChanged(e);
         Height = BarHeight;
+        LayoutCrumbs();
     }
 
     private Bitmap? LoadIcon()
@@ -269,6 +517,7 @@ public sealed class AddressBar : Control
         _icon?.Dispose();
         _icon = null;   // 次の描画で大きさを合わせて取り直す
         Height = BarHeight;
+        LayoutCrumbs();
     }
 
     /// <summary>↑↓・Enter・Esc を、フォームのフォーカス移動に取られずに KeyDown まで届ける。</summary>
