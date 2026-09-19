@@ -443,8 +443,9 @@ public sealed class MainForm : Form, IBookmarkHost
         CommandId.GoRoot => GoRoot(),
         // 数字キー 1〜9 が A: 〜 I:（0x831F）
         CommandId.DriveByNumberKey => GoDrive(key - Keys.D0),
-        // ドライブの選択（0x82F3）。表示中はバーにフォーカスを移し、非表示ならモーダルで選ばせる（R-77）
-        CommandId.SelectDrive => _driveBarShown ? _driveBar.EnterKeyboardSelection(_currentFolder) : SelectDriveInModal(),
+        // ドライブの選択（0x82F3）。表示中はバーにフォーカスを移し、非表示ならモーダルで選ばせる（R-77）。
+        // 入りきらずに「»」があるときもモーダル。今のドライブが「»」の下に隠れていると、フォーカスが見えない
+        CommandId.SelectDrive => _driveBarShown && !_driveBar.Clipped ? _driveBar.EnterKeyboardSelection(_currentFolder) : SelectDriveInModal(),
         CommandId.ToggleDriveBar => ToggleDriveBar(),
         CommandId.ToggleAddressBar => ToggleAddressBar(),
         CommandId.ToggleBookmarkBar => ToggleBookmarkBar(),
@@ -1456,6 +1457,8 @@ public sealed class MainForm : Form, IBookmarkHost
             bar.DropDownItems.AddRange(_settings.Bookmarks.Bar.Count == 0
                 ? [BookmarkItems.Placeholder("（空）")]
                 : _bookmarkItems.MenuItems(_settings.Bookmarks.Bar));
+            MenuSpacing.Apply(bar.DropDownItems, DeviceDpi);   // グループのメニューと同じ行間・ホイールにそろえる
+            ToolStripExtras.EnableWheel(bar.DropDown);
             menu.DropDownItems.AddRange([manage, add, new ToolStripSeparator(), bar]);
             if (_settings.Bookmarks.Other.Count > 0)
             {

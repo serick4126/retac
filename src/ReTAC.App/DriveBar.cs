@@ -140,7 +140,7 @@ public sealed class DriveBar : Control
     public event EventHandler<Point>? OverflowClicked;
 
     /// <summary>入りきらないか（上部の行が、アドレスバーの最小幅を残すために幅を詰めたとき）。</summary>
-    private bool Clipped => _buttons.Count > 0 && Width < PreferredWidth;
+    public bool Clipped => _buttons.Count > 0 && Width < PreferredWidth;
 
     private Rectangle OverflowBounds
     {
@@ -153,6 +153,12 @@ public sealed class DriveBar : Control
 
     /// <summary>「»」に隠れず、押せるボタンか。</summary>
     private bool IsShown(Button button) => !Clipped || button.Bounds.Right <= OverflowBounds.Left;
+
+    /// <summary>
+    /// キーボードで選べる最後のボタン。「»」に隠れたボタンへフォーカスを移すと、フォーカスの表示が消える
+    /// （入りきらないときの `L` は呼び出し側がモーダルへ送るが、選択中に窓を縮めることがある）。
+    /// </summary>
+    private int LastShown => Math.Max(0, _buttons.FindLastIndex(b => IsShown(b)));
 
     /// <summary>ボタンの並びが変わった。幅だけ変わって高さが変わらないと、親は SizeChanged では気付けない。</summary>
     public event EventHandler? LayoutNeeded;
@@ -368,8 +374,10 @@ public sealed class DriveBar : Control
         _hoverIndex = -1;
         Invalidate();
 
+        // 表示中に None だった所（「»」の下に隠れたボタン）へ落ちても、別の宛先を拾わない
         var point = PointToClient(new Point(e.X, e.Y));
-        if (_buttons.FirstOrDefault(b => b.Bounds.Contains(point)) is not { } button) return;
+        if (e.Effect == DragDropEffects.None
+            || _buttons.FirstOrDefault(b => b.Bounds.Contains(point) && IsShown(b)) is not { } button) return;
         if (e.Data?.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0)
             FilesDropped?.Invoke(this, (button.Path, files, e.AllowedEffect));
     }
@@ -387,10 +395,10 @@ public sealed class DriveBar : Control
 
         switch (e.KeyCode)
         {
-            case Keys.Left: _focusIndex = Math.Max(0, _focusIndex - 1); break;
-            case Keys.Right: _focusIndex = Math.Min(_buttons.Count - 1, _focusIndex + 1); break;
+            case Keys.Left: _focusIndex = Math.Max(0, Math.Min(_focusIndex, LastShown + 1) - 1); break;
+            case Keys.Right: _focusIndex = Math.Min(LastShown, _focusIndex + 1); break;
             case Keys.Home: _focusIndex = 0; break;
-            case Keys.End: _focusIndex = _buttons.Count - 1; break;
+            case Keys.End: _focusIndex = LastShown; break;
 
             // フォーカスがある時は 1〜9 でも対応するドライブへ変更できる
             case >= Keys.D1 and <= Keys.D9:
@@ -413,7 +421,7 @@ public sealed class DriveBar : Control
                 return;
 
             case Keys.Enter:
-                PathSelected?.Invoke(this, _buttons[Math.Max(0, _focusIndex)].Path);
+                PathSelected?.Invoke(this, _buttons[Math.Clamp(_focusIndex, 0, LastShown)].Path);
                 e.Handled = true;
                 return;
 
