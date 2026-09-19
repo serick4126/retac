@@ -211,7 +211,7 @@
       "rule": "マークは、マークの操作（Space、行頭アイコンのクリック、Shift+クリック、マーク系のコマンド）でだけ変わる。カーソルの移動・検索・ドラッグ・ドロップ・再表示・メニューの表示ではマークを変えない。移動が完了したときの解除は、移動したものが一覧から消えるための後始末であり、例外とする。",
       "enforcedBy": "domain:ListState（マークを変えるのは ToggleMark* / ToggleAllMarks / InvertMarks / Mark* / ClearMarks だけ）",
       "testedBy": "tests/ReTAC.Domain.Tests/ListStateTests.cs",
-      "note": "ReTAC で最も重要な規則。Windows の標準（クリックで選択が置き換わる）に合わせて、クリックや検索でマークを外す実装を足さないこと。"
+      "note": "ReTAC で最も重要な規則。Windows の標準（クリックで選択が置き換わる）に合わせて、クリックや検索でマークを外す実装を足さないこと。今いるフォルダを開き直す操作も足さない（開き直すとカーソルが先頭に戻りマークも消える。R-40-2。9.3 でパンくずの最後の段のクリックを「何もしない」にした）。"
     },
     {
       "id": "INV-POPUP-POSITION",
@@ -238,6 +238,16 @@
       "applies": ["type:ReTAC.Domain.FileOps.UndoHistory"],
       "rule": "元に戻す履歴は設定ファイルに保存しない。",
       "reason": "再起動の後はファイルの状態が記録と一致している保証が無く、古い記録で戻すと誤操作の元になる。履歴は ReTAC を完全に終了するまで保持する。"
+    },
+    {
+      "id": "INV-UNDO-ONE-RECORD-PER-COMMAND",
+      "status": "enforced",
+      "specIds": ["R-82", "R-84", "R-93"],
+      "applies": ["type:ReTAC.Domain.FileOps.UndoRecord", "type:ReTAC.Domain.FileOps.UndoItem"],
+      "rule": "1 回のコマンド（ドロップを含む）で起きた転送は、1 回の「元に戻す」で戻る 1 件の記録にする。ドロップでコピーと移動が混ざっても 1 件にし、実行した順の逆（移動 → コピー）に戻す。BeginInvoke で後に回したドロップの処理は、その中身全体を 1 回の Recording で包む（後に回すと DropInto の包みの外になる）。",
+      "enforcedBy": "domain:UndoRecord.Transfer（コピーと移動を 1 件に。項目の種類は UndoItem.Kind / UndoRecord.KindOf）・UndoRecord.Steps（逆順）／app:MainForm.TransferDropped（BeginInvoke の中を Recording で包む）・UndoRecorder.Commit",
+      "testedBy": "tests/ReTAC.Domain.Tests/UndoTests.cs",
+      "note": "9.3 のレビューで、混ざったドロップが 2 件に分かれていた（Ctrl+Z 2 回）のを直した。記録を足すときは record.Kind ではなく KindOf(item) で項目の種類を見ること。"
     }
   ]
 }
