@@ -130,14 +130,14 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
     /// <summary>グループの中身は開くたびに組み直す（入れ子は何段でも）。</summary>
     private void AttachGroup(ToolStripDropDownItem item, Bookmark group)
     {
-        item.DropDownItems.Add(Placeholder("（空）"));   // 項目が無いと ▶ が出ず、開けない
+        item.DropDownItems.Add(EmptySlot());   // 項目が無いと ▶ が出ず、開けない
         ToolStripExtras.EnableWheel(item.DropDown);
         if (group.Children is { } list) BookmarkDropZone.Attach(item.DropDown, list, host, vertical: true);   // R-89 §6.10
         item.DropDownOpening += (_, _) =>
         {
             Clear(item.DropDownItems);
             var children = group.Children ?? [];
-            if (children.Count == 0) item.DropDownItems.Add(Placeholder("（空）"));
+            if (children.Count == 0) item.DropDownItems.Add(EmptySlot());
             else item.DropDownItems.AddRange(MenuItems(children));
             MenuSpacing.Apply(item.DropDownItems, invoker.DeviceDpi);   // R-88
         };
@@ -160,6 +160,9 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
     }
 
     internal static ToolStripMenuItem Placeholder(string text) => new(text) { Enabled = false };
+
+    /// <summary>空の並びの「（空）」。ここへ落とすと、その並びに入る（BookmarkDropZone.Accepts）。</summary>
+    internal static ToolStripMenuItem EmptySlot() => new("（空）") { Enabled = false, Tag = BookmarkDropZone.EmptySlot };
 
     /// <summary>アイコンは応答しないドライブで待たされるので裏で取る（N-05）。取れたら差し替える。</summary>
     internal void LoadIcons(IReadOnlyList<ToolStripItem> items)

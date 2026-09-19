@@ -81,6 +81,8 @@ internal sealed class BookmarkDropZone
     {
         Point? origin = null;
         item.MouseDown += (_, e) => origin = e.Button == MouseButtons.Left ? e.Location : null;
+        // 閉じたフォルダ・グループのボタンは、押しても開かないよう base.OnMouseDown を呼ばず、MouseDown イベントが出ない
+        if (item is BarDropDownButton button) button.LeftPressedClosed += (_, e) => origin = e.Location;
         item.MouseUp += (_, _) => origin = null;
         item.MouseMove += (_, e) =>
         {
@@ -124,20 +126,38 @@ internal sealed class BookmarkDropZone
             ? (i.Bounds.Top, i.Bounds.Bottom, IsContainer(i))
             : (i.Bounds.Left, i.Bounds.Right, IsContainer(i))).ToList(), _vertical ? client.Y : client.X);
 
+    /// <summary>空の並びの「（空）」の行。空のグループ・「ブックマークバー」サブメニューへは、この行の上に落とす。</summary>
+    public static readonly object EmptySlot = new();
+
+    /// <summary>
+    /// 縦のメニューでは、ブックマークの項目が並ぶ範囲（空なら「（空）」の行）だけを受け口にする。
+    /// ブックマークメニューには管理・追加などの操作の行や区切りも並ぶので、その上に落としても受けない。
+    /// バーは空いた所へ落としても末尾に足す（§6.10）。
+    /// </summary>
+    private bool Accepts(List<ToolStripItem> slots, Point client)
+    {
+        if (!_vertical) return true;
+        if (slots.Count == 0)
+            return _strip.Items.Cast<ToolStripItem>().Any(i => ReferenceEquals(i.Tag, EmptySlot) && i.Bounds.Contains(client));
+        return client.Y >= slots[0].Bounds.Top && client.Y < slots[^1].Bounds.Bottom;
+    }
+
     private static bool IsContainer(ToolStripItem item) => item.Tag is Bookmark { Kind: BookmarkKind.Folder or BookmarkKind.Group };
 
     private void OnDragOver(object? sender, DragEventArgs e)
     {
         var slots = Slots();
-        var spot = Hit(slots, _strip.PointToClient(new Point(e.X, e.Y)));
+        var client = _strip.PointToClient(new Point(e.X, e.Y));
+        var spot = Hit(slots, client);
         var onto = spot.Onto ? slots[spot.Index] : null;
+        var accepts = Accepts(slots, client);
         var reorder = s_dragging is not null && e.Data?.GetDataPresent(Format) == true;
         // R3: 外からは FileDrop だけ。URL・テキスト・仮想ファイルは受けない
         var files = !reorder && e.Data?.GetDataPresent(DataFormats.FileDrop) == true;
 
         var effect = Effect(reorder, e.AllowedEffect);
         string message;
-        if (!reorder && !files || onto?.Tag is Bookmark { Kind: BookmarkKind.Folder })
+        if (!accepts || !reorder && !files || onto?.Tag is Bookmark { Kind: BookmarkKind.Folder })
         {
             // フォルダの上は 9.2 では受けない（9.3 で転送にする）
             e.Effect = DragDropEffects.None;
@@ -258,9 +278,17 @@ internal sealed class BarDropDownButton : ToolStripDropDownButton
 {
     private bool _openOnUp;
 
+    /// <summary>閉じているときに左ボタンで押された。このときは MouseDown イベントが出ないので、ドラッグの始点はここで知らせる。</summary>
+    public event MouseEventHandler? LeftPressedClosed;
+
     protected override void OnMouseDown(MouseEventArgs e)
     {
-        if (e.Button == MouseButtons.Left && !DropDown.Visible) { _openOnUp = true; return; }
+        if (e.Button == MouseButtons.Left && !DropDown.Visible)
+        {
+            _openOnUp = true;
+            LeftPressedClosed?.Invoke(this, e);
+            return;
+        }
         base.OnMouseDown(e);
     }
 
