@@ -42,6 +42,27 @@ public static class DropRules
         _ => DropAction.None,
     };
 
+    /// <summary>
+    /// 落とされた項目を、コピーするものと移動するものに振り分ける（R-65 / R-78。ファイルリスト・ドライブバー・ブックマーク・パンくずで共通）。
+    /// 項目ごとに <see cref="Decide"/> → <see cref="Allow"/> を通し、どちらでもないものは落とす。並びはドロップ元の順。
+    /// 修飾キーはドロップの時点のものを渡すこと（後に回した処理の中で読むと、利用者はもうキーを離している）。
+    /// </summary>
+    public static (IReadOnlyList<string> Copies, IReadOnlyList<string> Moves) Split(
+        IReadOnlyList<string> files, string destination, bool ctrl, bool shift, bool copyAllowed, bool moveAllowed)
+    {
+        var copies = new List<string>();
+        var moves = new List<string>();
+        foreach (var file in files)
+        {
+            switch (Allow(Decide(file, destination, ctrl, shift), copyAllowed, moveAllowed))
+            {
+                case DropAction.Copy: copies.Add(file); break;
+                case DropAction.Move: moves.Add(file); break;
+            }
+        }
+        return (copies, moves);
+    }
+
     private static bool SameDrive(string a, string b) =>
         PathEquals(Path.GetPathRoot(a), Path.GetPathRoot(b));
 

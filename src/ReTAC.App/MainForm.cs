@@ -1647,23 +1647,11 @@ public sealed class MainForm : Form, IBookmarkHost
         // ダイアログがその後ろに隠れて、固まったように見える
         Activate();
 
-        var ctrl = ModifierKeys.HasFlag(Keys.Control);
-        var shift = ModifierKeys.HasFlag(Keys.Shift);
-
-        var copies = new List<string>();
-        var moves = new List<string>();
-        foreach (var file in files)
-        {
-            // R-78: 表示（DropFeedback）と同じく、ドラッグ元が許す効果に合わせる
-            var action = DropRules.Allow(DropRules.Decide(file, destinationFolder, ctrl, shift),
-                copyAllowed: allowed.HasFlag(DragDropEffects.Copy),
-                moveAllowed: allowed.HasFlag(DragDropEffects.Move));
-            switch (action)
-            {
-                case DropAction.Copy: copies.Add(file); break;
-                case DropAction.Move: moves.Add(file); break;
-            }
-        }
+        // R-78: 表示（DropFeedback）と同じく、ドラッグ元が許す効果に合わせる。
+        // ここは DragDrop のイベントの中から同期で呼ばれるので、ModifierKeys はドロップの時点の値
+        var (copies, moves) = DropRules.Split(files, destinationFolder,
+            ctrl: ModifierKeys.HasFlag(Keys.Control), shift: ModifierKeys.HasFlag(Keys.Shift),
+            copyAllowed: allowed.HasFlag(DragDropEffects.Copy), moveAllowed: allowed.HasFlag(DragDropEffects.Move));
         if (copies.Count == 0 && moves.Count == 0) return true;
 
         // 衝突の扱いは C / M と同じにする（R-41-4）。ドロップだからと OS の
