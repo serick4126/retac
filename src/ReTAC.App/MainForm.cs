@@ -1592,9 +1592,9 @@ public sealed class MainForm : Form, IBookmarkHost
         }
 
         var texts = rows.Select(r => r.Text).ToList();
-        var result = shellPaths.Length > 0
+        var result = SafeShellMenu.Run(this, () => shellPaths.Length > 0
             ? ShellContextMenu.ShowWithItems(Handle, shellPaths, screen.X, screen.Y, texts)
-            : ShellContextMenu.ShowItems(Handle, screen.X, screen.Y, texts);
+            : ShellContextMenu.ShowItems(Handle, screen.X, screen.Y, texts));
         if (result.Outcome == ContextMenuOutcome.Cancelled) return;   // 取り消しなら元のメニューは開いたまま
 
         // 選んだ後は開いているメニューを親まで閉じる。ダイアログを出す前・バーを作り直す前に閉じておく
@@ -1809,18 +1809,7 @@ public sealed class MainForm : Form, IBookmarkHost
     {
         if (targets.Count == 0) return false;
 
-        try
-        {
-            // ここはサードパーティのシェル拡張（WinRAR など）が ReTAC のプロセス内で走る
-            // 唯一の場所。拡張が投げてきたものを ReTAC の落ちる理由にはしない（V-04）
-            ShellContextMenu.Show(Handle, targets, screenPoint.X, screenPoint.Y);
-        }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException
-                                      or IOException or UnauthorizedAccessException)
-        {
-            // 6 章: エラーを提示し、ReTAC 本体は継続動作する
-            MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        }
+        SafeShellMenu.Run(this, () => ShellContextMenu.Show(Handle, targets, screenPoint.X, screenPoint.Y));   // V-04
 
         // メニューから削除・改名が行われることがあるので開き直す（自動更新でも拾えるが確実に）
         Reload();
@@ -1841,16 +1830,7 @@ public sealed class MainForm : Form, IBookmarkHost
             .Select(i => _list.State.Entries[i].Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        try
-        {
-            // シェル拡張が ReTAC のプロセス内で走る。投げてきたものを落ちる理由にしない（V-04）
-            ShellContextMenu.ShowFolderBackground(Handle, folder, screenPoint.X, screenPoint.Y);
-        }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException
-                                      or IOException or UnauthorizedAccessException)
-        {
-            MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        }
+        SafeShellMenu.Run(this, () => ShellContextMenu.ShowFolderBackground(Handle, folder, screenPoint.X, screenPoint.Y));   // V-04
 
         // 作成が非同期で、まだ項目ができていなければ増えた名前は見つからない。
         // そのときは自動更新（R-23）で後から現れるので、カーソルは合わせない

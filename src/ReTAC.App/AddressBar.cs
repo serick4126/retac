@@ -422,9 +422,9 @@ public sealed class AddressBar : Control
         var path = index >= 0 && _parts[index] is { Kind: PartKind.Segment } part ? _segments[part.Index].Path : null;
         string[] items = ["このパスをコピー(&Y)", "アドレスを編集(&E)"];
         var screen = PointToScreen(client);
-        var result = path is not null
+        var result = SafeShellMenu.Run(this, () => path is not null
             ? ShellContextMenu.ShowWithItems(Handle, [path], screen.X, screen.Y, items)   // 区切り線は ShowWithItems が入れる
-            : ShellContextMenu.ShowItems(Handle, screen.X, screen.Y, items);
+            : ShellContextMenu.ShowItems(Handle, screen.X, screen.Y, items));
         if (result.Outcome != ContextMenuOutcome.AppItem) return;
         if (result.AppItem == 0) CopyPathRequested?.Invoke(this, path ?? _folder);
         else if (result.AppItem == 1) BeginEdit();
@@ -556,7 +556,8 @@ public sealed class AddressBar : Control
         if (OnIcon(e.Location))
         {
             if (e.Button == MouseButtons.Left && pressed) IconClicked?.Invoke(this, EventArgs.Empty);
-            else if (e.Button == MouseButtons.Right) ShellContextMenu.Show(Handle, [_folder], Cursor.Position.X, Cursor.Position.Y);
+            else if (e.Button == MouseButtons.Right)
+                SafeShellMenu.Run(this, () => ShellContextMenu.Show(Handle, [_folder], Cursor.Position.X, Cursor.Position.Y));
             return;
         }
         if (_input.Visible) return;
