@@ -96,7 +96,11 @@ public sealed class MainForm : Form, IBookmarkHost
         }
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = clientSize ?? new Size(_settings.WindowWidth, _settings.WindowHeight);
-        if (clientSize is null && _settings.WindowX >= 0 && _settings.WindowY >= 0)
+        // R-60-3: 左や上に置いたモニターでは座標が負になるので、正負では判定しない。-1, -1 は未保存の印。
+        // 外したモニターの上だった場合は、どの画面にも掛からないので中央に出す
+        var saved = new Point(_settings.WindowX, _settings.WindowY);
+        if (clientSize is null && saved != new Point(-1, -1)
+            && Screen.AllScreens.Any(s => s.WorkingArea.IntersectsWith(new Rectangle(saved, ClientSize))))
         {
             StartPosition = FormStartPosition.Manual;
             Location = new Point(_settings.WindowX, _settings.WindowY);
