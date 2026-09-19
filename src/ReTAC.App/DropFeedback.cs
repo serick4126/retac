@@ -36,6 +36,13 @@ internal static class DropFeedback
         e.MessageReplacementToken = label;
     }
 
+    /// <summary>
+    /// ドロップの時点の修飾キー。ToolStrip の受け口でも使えるよう KeyState から読む。
+    /// 転送のダイアログは後に回すので、そのときの ModifierKeys では利用者がもうキーを離している。
+    /// </summary>
+    public static (bool Ctrl, bool Shift) Modifiers(DragEventArgs e) =>
+        ((e.KeyState & CtrlKey) != 0, (e.KeyState & ShiftKey) != 0);
+
     /// <summary>説明に出すフォルダの名前。ドライブのルートは「C:」。</summary>
     public static string FolderLabel(string folder) =>
         FolderEnumerator.IsDriveRoot(folder)

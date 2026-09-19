@@ -157,11 +157,23 @@ internal sealed class BookmarkDropZone
 
         var effect = Effect(reorder, e.AllowedEffect);
         string message;
-        if (!accepts || !reorder && !files || onto?.Tag is Bookmark { Kind: BookmarkKind.Folder })
+        if (!accepts || !reorder && !files)
         {
-            // フォルダの上は 9.2 では受けない（9.3 で転送にする）
             e.Effect = DragDropEffects.None;
             message = "";
+        }
+        else if (onto?.Tag is Bookmark { Kind: BookmarkKind.Folder } folder)
+        {
+            // R-93: フォルダの中央はそのフォルダへの転送（枠）。判定はファイルリストへのドロップと同じ（先頭の項目・修飾キー・元が許す効果）。
+            // 並べ替えは落とせない（ブックマークはファイルではない）。フォルダの有無はここで確かめない（R-91）
+            if (reorder) e.Effect = DragDropEffects.None;
+            else DropFeedback.Apply(e, folder.Target, DropFeedback.FolderLabel(folder.Target));
+            message = e.Effect switch
+            {
+                DragDropEffects.Copy => $"{DropFeedback.FolderLabel(folder.Target)} へコピー",
+                DragDropEffects.Move => $"{DropFeedback.FolderLabel(folder.Target)} へ移動",
+                _ => "",
+            };
         }
         else if (onto?.Tag is Bookmark { Children: null } || reorder && ReferenceEquals(onto?.Tag, s_dragging))
         {
@@ -185,7 +197,9 @@ internal sealed class BookmarkDropZone
         {
             _hold.Stop();
             _holding = onto as ToolStripDropDownItem;
-            if (_holding is { Tag: Bookmark { Kind: BookmarkKind.Group } }) _hold.Start();
+            // グループは中へ入れるため、フォルダはファイルを中のサブフォルダへ落とすため（R-93）に開く
+            if (_holding is { Tag: Bookmark { Kind: BookmarkKind.Group } } || files && _holding is { Tag: Bookmark { Kind: BookmarkKind.Folder } })
+                _hold.Start();
         }
         var shown = e.Effect == DragDropEffects.None ? (DropSpot?)null : spot;
         if (shown != _spot)
@@ -211,6 +225,18 @@ internal sealed class BookmarkDropZone
         if (spot is not { } s) return;
 
         var onto = s.Onto ? slots[s.Index].Tag as Bookmark : null;
+        if (onto is { Kind: BookmarkKind.Folder })
+        {
+            // R-93: 転送。_spot は効果が None でないときだけ立つので、表示が禁止だった所へは来ない
+            if (s_dragging is null && e.Data?.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } files)
+            {
+                var (ctrl, shift) = DropFeedback.Modifiers(e);   // 後に回すとキーは離されている
+                (slots[s.Index] as ToolStripDropDownItem)?.HideDropDown();   // ホールドで開いていたら閉じる
+                CloseMenus(_strip);
+                _host.TransferDropped(files, onto.Target, e.AllowedEffect, ctrl, shift);
+            }
+            return;
+        }
         var dest = onto?.Children ?? _list;
         var index = onto is null ? s.Index : dest.Count;   // グループの上なら、その末尾へ
         var changed = false;
