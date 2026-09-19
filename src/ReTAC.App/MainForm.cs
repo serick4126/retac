@@ -645,16 +645,31 @@ public sealed class MainForm : Form, IBookmarkHost
     /// </summary>
     private bool Transfer(bool moving)
     {
-        var targets = _list.State.EffectiveTarget();   // R-10
-        if (targets.Count == 0) return true;
+        TransferCore(moving);
+        return true;   // コマンドの戻り値は「キーを処理したか」。取り消しても処理はした
+    }
 
-        var what = targets.Count == 1 ? targets[0].Name : $"{targets.Count} 個の項目";
+    /// <summary>
+    /// 転送のダイアログの後を続けてよいか。コマンドの戻り値（キーを処理したか）とは別物なので分けて持つ。
+    /// ドロップでコピーと移動が混ざるとき、コピーを取り消したら移動のダイアログを出さない（仕様書 §7.1）。
+    /// </summary>
+    private enum TransferStep { Proceed, Cancelled }
+
+    /// <param name="sources">対象のパス。null ならファイルリストの対象（R-10）。ドロップ（R-93）では落とされた項目</param>
+    /// <param name="preset">宛先の初期値。R-46-4 の例外で、ドロップで宛先が決まっているときだけ入れる</param>
+    private TransferStep TransferCore(bool moving, IReadOnlyList<string>? sources = null, string preset = "")
+    {
+        var targets = sources is null ? _list.State.EffectiveTarget() : [];   // R-10
+        IReadOnlyList<string> paths = sources ?? [.. targets.Select(t => t.FullPath)];
+        if (paths.Count == 0) return TransferStep.Proceed;
+
+        var what = paths.Count == 1 ? DisplayName(paths[0]) : $"{paths.Count} 個の項目";
         var verb = moving ? "移動" : "コピー";
 
         using var dialog = new PathInputDialog(
             $"ファイルの{verb}",
             heading: $"{what} の{verb}先は？",
-            preset: "",                                  // R-46-4: 宛先はプリセットしない
+            preset: preset,                              // R-46-4: 宛先はプリセットしない（ドロップだけ例外。R-93）
             _history, _quickAccess, _currentFolder,
             acceptText: "OK",
             hints: ["Shift+Enter:フォルダ参照   ↑:フォルダ履歴   ↓:クイックアクセス"],
@@ -662,24 +677,25 @@ public sealed class MainForm : Form, IBookmarkHost
             // R-51: 移動のダイアログはコピーと同一仕様（文言だけが違う）
             optionText: "複写先にある同名の古いファイルのみ置き換える(&X)");
 
-        if (dialog.ShowDialog(this) != DialogResult.OK) return true;
+        if (dialog.ShowDialog(this) != DialogResult.OK) return TransferStep.Cancelled;
 
         if (dialog.Path.Length == 0)
         {
-            // R-63 / R-63-2: 空欄はコピーならリネームコピー、移動ならエラー
-            if (moving)
+            // R-63 / R-63-2: 空欄はコピーならリネームコピー、移動ならエラー。
+            // ドロップ（R-93）の空欄は宛先を消したということなので、コピーでも入力に戻す（仕様書 §7.1）
+            if (moving || sources is not null)
             {
-                MessageBox.Show(this, "移動先を指定してください。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return Transfer(moving);
+                MessageBox.Show(this, $"{verb}先を指定してください。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return TransferCore(moving, sources, preset);
             }
-            return RenameCopy(targets);
+            return RenameCopy(paths);
         }
 
         // R-61: 相対パスはカレントフォルダ基準で解決する
         if (PathResolver.Resolve(_currentFolder, dialog.Path) is not { } destination)
         {
             MessageBox.Show(this, $"{dialog.Path} は宛先として解決できません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return Transfer(moving);
+            return TransferCore(moving, sources, preset);
         }
 
         if (!Directory.Exists(destination))
@@ -693,14 +709,15 @@ public sealed class MainForm : Form, IBookmarkHost
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                     {
                         MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return true;
+                        return TransferStep.Cancelled;
                     }
                     foreach (var level in missing) _recorder?.AddCreatedFolder(level);
                     break;
                 case MissingDestination.RenameCopy:
-                    return RenameCopy(targets, Path.GetFileName(destination));
+                    // 外から落とした項目でも選択肢を減らさない（R-62）。複写先はその項目のあるフォルダ
+                    return RenameCopy(paths, Path.GetFileName(destination));
                 default:
-                    return true;
+                    return TransferStep.Cancelled;
             }
         }
 
@@ -708,15 +725,20 @@ public sealed class MainForm : Form, IBookmarkHost
         // 次に同じ宛先へ送るとき、↑ の先頭で拾えることに価値がある
         _history.Remember(destination);
 
-        var completed = ExecuteTransfer([.. targets.Select(t => t.FullPath)], destination,
-                                        moving, differentialOnly: dialog.OptionChecked);
+        var completed = ExecuteTransfer(paths, destination, moving, differentialOnly: dialog.OptionChecked);
 
         // R-42: コピーはマークを保持し、移動は元が消えるのでマークも消える。
-        // ただし中断・失敗したときは元が残っているので、やり直せるようマークも残す
-        if (moving && completed) { _list.State.ClearMarks(); RefreshStatus(); }
+        // ただし中断・失敗したときは元が残っているので、やり直せるようマークも残す。
+        // ドロップ（sources あり）ではマークを動かさない（A-01）
+        if (moving && completed && sources is null) { _list.State.ClearMarks(); RefreshStatus(); }
         Reload();
-        return true;
+        // 中断・失敗したら、ドロップの続き（移動のダイアログ）は出さない
+        return completed ? TransferStep.Proceed : TransferStep.Cancelled;
     }
+
+    /// <summary>ダイアログに出す名前。ドライブのルートは名前が無いのでパスそのもの。</summary>
+    private static string DisplayName(string path) =>
+        Path.GetFileName(Path.TrimEndingDirectorySeparator(path)) is { Length: > 0 } name ? name : path;
 
     private enum MissingDestination { CreateFolder, RenameCopy, Cancel }
 
@@ -740,28 +762,38 @@ public sealed class MainForm : Form, IBookmarkHost
             : dialog.SelectedIndex == 0 ? MissingDestination.CreateFolder : MissingDestination.RenameCopy;
     }
 
-    /// <summary>R-63: 同一フォルダ内での別名複製。元の名前をプリセットして全選択する（R-46）。</summary>
-    private bool RenameCopy(IReadOnlyList<Entry> targets, string? presetName = null)
+    /// <summary>
+    /// R-63: 同一フォルダ内での別名複製。元の名前をプリセットして全選択する（R-46）。
+    /// 複写先は項目ごとに<b>その項目があるフォルダ</b>。ファイルリストの項目なら今のフォルダ、
+    /// ドロップ（R-93）で外から来た項目なら元のフォルダになる。
+    /// </summary>
+    private TransferStep RenameCopy(IReadOnlyList<string> sources, string? presetName = null)
     {
-        foreach (var target in targets)
+        foreach (var source in sources)
         {
+            // ドライブのルートは親が無く、同じフォルダへ複写できない
+            if (Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(source)) is not { Length: > 0 } folder) continue;
+            var name = DisplayName(source);
             using var dialog = new TextInputDialog(
-                "名前を変えて複写", $"{target.Name} の新しい名前は？", presetName ?? target.Name,
+                "名前を変えて複写", $"{name} の新しい名前は？", presetName ?? name,
                 validate: value =>
                 {
                     if (FileNameRules.Validate(value) is { } invalid) return invalid;
-                    var candidate = Path.Combine(_currentFolder, value);
+                    var candidate = Path.Combine(folder, value);
                     return File.Exists(candidate) || Directory.Exists(candidate)
                         ? $"{value} は既に存在します。別の名前を入力してください。"
                         : null;
                 });
-            if (dialog.ShowDialog(this) != DialogResult.OK) return true;
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+            {
+                Reload();   // それまでに複写した分を見せる
+                return TransferStep.Cancelled;
+            }
 
-            RunOperation(silentOverwrite: false,
-                operation => operation.Copy(target.FullPath, _currentFolder, dialog.Value));
+            RunOperation(silentOverwrite: false, operation => operation.Copy(source, folder, dialog.Value));
         }
         Reload();
-        return true;
+        return TransferStep.Proceed;
     }
 
     /// <summary>
@@ -1571,6 +1603,31 @@ public sealed class MainForm : Form, IBookmarkHost
     void IBookmarkHost.BookmarksChanged() => BeginInvoke(BookmarkChanged);
 
     void IBookmarkHost.ShowStatus(string text) => _statusBar.ShowMessage(text);
+
+    void IBookmarkHost.TransferDropped(string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift) =>
+        TransferDropped(files, destination, allowed, ctrl, shift);
+
+    /// <summary>
+    /// R-93: ブックマークのフォルダ・パンくずの段へ落とされた。宛先を入れたコピー／移動のダイアログを、コピー → 移動の順に出す。
+    /// 振り分けは DragDrop のイベントの中（ここ）で済ませる。修飾キーは呼び出し側がドロップの時点で読んで渡す。
+    /// ダイアログは BeginInvoke で後に回す（ドロップ元のエクスプローラーを待たせない。メニューやバーの作り直しとも衝突しない）。
+    /// </summary>
+    private void TransferDropped(string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift)
+    {
+        var (copies, moves) = DropRules.Split(files, destination, ctrl, shift,
+            copyAllowed: allowed.HasFlag(DragDropEffects.Copy), moveAllowed: allowed.HasFlag(DragDropEffects.Move));
+        if (copies.Count == 0 && moves.Count == 0) return;
+
+        // R-84: 後に回した処理は DropInto の包みの外になるので、中身全体をここで 1 件の記録にする。
+        // コピーを終えた後で移動を取り消しても、コピーの分は同じ記録に残り Ctrl+Z 1 回で戻る
+        BeginInvoke(() => Recording(() =>
+        {
+            Activate();   // ダイアログがドロップ元の窓の後ろに隠れないように
+            if (copies.Count > 0 && TransferCore(moving: false, copies, destination) == TransferStep.Cancelled) return true;
+            if (moves.Count > 0) TransferCore(moving: true, moves, destination);
+            return true;
+        }));
+    }
 
     private void EditBookmark(Bookmark bookmark)
     {

@@ -39,6 +39,11 @@ public interface IBookmarkHost
     void BookmarksChanged();
     /// <summary>ドラッグ中の説明（「ブックマークに追加」「並べ替え」）。"" で消す。</summary>
     void ShowStatus(string text);
+    /// <summary>
+    /// R-93: フォルダへファイルが落とされた。宛先を入れたコピー／移動のダイアログを出す。
+    /// ctrl / shift はドロップの時点の値（DragDrop のイベントの中で読む）。
+    /// </summary>
+    void TransferDropped(string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift);
 }
 
 /// <summary>R-89 / R-90 / R-91: ブックマークを ToolStripItem にする。バーのボタンとメニューの項目で同じ規則を使う。</summary>
