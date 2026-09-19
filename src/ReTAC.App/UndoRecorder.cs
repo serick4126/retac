@@ -6,7 +6,7 @@ namespace ReTAC.App;
 
 /// <summary>
 /// R-84: 1 回のコマンドで起きた結果を集め、元に戻すの記録にする。
-/// 種類ごとに 1 件（ドロップでコピーと移動が混ざったら 2 件）。
+/// 種類ごとに 1 件。ただしコピーと移動は 1 件にまとめる（ドロップで混ざっても Ctrl+Z 1 回で戻る。UndoRecord.Transfer）。
 /// </summary>
 internal sealed class UndoRecorder
 {
@@ -49,15 +49,9 @@ internal sealed class UndoRecorder
         history.Push(new UndoRecord(UndoKind.Rename, _renames, [], []));
         history.Push(new UndoRecord(UndoKind.Create, _creates, [], []));
 
-        // 作ったフォルダと消したフォルダは転送の記録に付ける。コピーと移動が両方あるときは移動の方
-        var transfer = _moves.Count > 0 ? UndoKind.Move : UndoKind.Copy;
-        if (_moves.Count > 0 && _copies.Count > 0)
-            history.Push(new UndoRecord(UndoKind.Copy, _copies, [], []));
-
-        var items = transfer == UndoKind.Move ? _moves : _copies;
         // RemovedFolders は浅い順が約束（UndoLast が深い順に作り直す）
         var removed = _removedFolders.OrderBy(f => f.Length).ToList();
-        if (items.Count == 0 && _createdFolders.Count > 0)
+        if (_moves.Count == 0 && _copies.Count == 0 && _createdFolders.Count > 0)
         {
             // 転送は 0 件で宛先のフォルダだけを作った。作ったフォルダの「作成」として積む
             // 一番上の段だけを項目にする（下の段は上の段と一緒にごみ箱へ入る）
@@ -68,7 +62,7 @@ internal sealed class UndoRecorder
             history.Push(new UndoRecord(UndoKind.Create, folders, [], []));
             return;
         }
-        history.Push(new UndoRecord(transfer, items, [.. _createdFolders], removed));
+        history.Push(UndoRecord.Transfer(_copies, _moves, [.. _createdFolders], removed));
     }
 
     public static ItemStamp? Stamp(string path)

@@ -351,7 +351,7 @@ public sealed class MainForm : Form, IBookmarkHost
         }
 
         var checkedItems = record.Items
-            .Select(item => (Item: item, Problem: UndoCheck.Check(record.Kind, item, UndoRecorder.Stamp, UndoRecorder.IsEmptyFolder)))
+            .Select(item => (Item: item, Problem: UndoCheck.Check(record.KindOf(item), item, UndoRecorder.Stamp, UndoRecorder.IsEmptyFolder)))
             .ToList();
         var ok = checkedItems.Where(c => c.Problem == UndoProblem.None).Select(c => c.Item).ToList();
         var bad = checkedItems.Where(c => c.Problem != UndoProblem.None).ToList();
@@ -365,10 +365,10 @@ public sealed class MainForm : Form, IBookmarkHost
             return true;
         }
 
-        var text = $"{title}を元に戻しますか。\n\n{Plan(record.Kind, ok)}";
+        var text = $"{title}を元に戻しますか。\n\n{Plan(record, ok)}";
         if (bad.Count > 0)
             text += $"\n\n次の項目は変わっているため戻しません。\n{Problems(bad)}\n\n変わっていない {ok.Count} 件だけ戻しますか。";
-        if (record.Kind == UndoKind.Move && ok.Any(i => i.Overwrote))
+        if (ok.Any(i => record.KindOf(i) == UndoKind.Move && i.Overwrote))
             text += "\n\n移動で上書きされた宛先のファイルは戻りません。";
 
         var answer = MessageBox.Show(this, text, "元に戻す",
@@ -387,9 +387,10 @@ public sealed class MainForm : Form, IBookmarkHost
         // _recorder は null のまま（戻す処理は記録しない）
         RunOperation(silentOverwrite: false, operation =>
         {
-            foreach (var item in ok)
+            // 実行した順の逆に戻す（ドロップのコピー → 移動は、移動 → コピー）
+            foreach (var (kind, item) in record.Steps(ok))
             {
-                switch (record.Kind)
+                switch (kind)
                 {
                     case UndoKind.Rename:
                         operation.Rename(item.After, Path.GetFileName(item.Before!));
@@ -422,11 +423,15 @@ public sealed class MainForm : Form, IBookmarkHost
         static string Problems(IEnumerable<(UndoItem Item, UndoProblem Problem)> items) =>
             Lines(items.Select(c => $"{Path.GetFileName(c.Item.After)}（{UndoText.Reason(c.Problem)}）"));
 
-        static string Plan(UndoKind kind, IReadOnlyList<UndoItem> items) => kind switch
+        static string Plan(UndoRecord record, IReadOnlyList<UndoItem> items)
         {
-            UndoKind.Rename or UndoKind.Move => Lines(items.Select(i => $"{i.After} → {i.Before}")),
-            _ => "ごみ箱へ送る項目:\n" + Lines(items.Select(i => i.After)),
-        };
+            var back = items.Where(i => record.KindOf(i) is UndoKind.Rename or UndoKind.Move).ToList();
+            var trash = items.Except(back).ToList();
+            var parts = new List<string>();
+            if (back.Count > 0) parts.Add(Lines(back.Select(i => $"{i.After} → {i.Before}")));
+            if (trash.Count > 0) parts.Add("ごみ箱へ送る項目:\n" + Lines(trash.Select(i => i.After)));
+            return string.Join("\n\n", parts);
+        }
 
         static string Lines(IEnumerable<string> lines)
         {

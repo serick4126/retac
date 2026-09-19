@@ -57,6 +57,39 @@ public class UndoTests
         Assert.Equal(1, history.Count);
     }
 
+    // ---- ドロップのコピーと移動（R-84 / R-93） ----
+
+    private static readonly UndoItem Copied = new(@"D:\a\c.txt", @"C:\b\c.txt", FileStamp, false);
+    private static readonly UndoItem Moved = new(@"C:\a\m.txt", @"C:\b\m.txt", FileStamp, false);
+
+    [Fact]
+    public void コピーと移動が混ざっても履歴は1件だけ増える()
+    {
+        var history = new UndoHistory();
+        history.Push(UndoRecord.Transfer([Copied], [Moved], [@"C:\b"], []));
+        Assert.Equal(1, history.Count);
+        Assert.Equal("2 個の項目のコピーと移動", UndoText.Describe(history.Peek()!));
+    }
+
+    [Fact]
+    public void 一度で戻す手順は移動を先にしてからコピーを戻す()
+    {
+        var record = UndoRecord.Transfer([Copied], [Moved], [@"C:\b"], []);
+        Assert.Equal([(UndoKind.Move, Moved), (UndoKind.Copy, Copied with { Kind = UndoKind.Copy })],
+                     record.Steps(record.Items).ToList());
+        Assert.Equal([@"C:\b"], record.CreatedFolders);   // 作ったフォルダは記録全体に付く（戻した後、空なら消す）
+    }
+
+    [Fact]
+    public void コピーの後で移動を取り消したら完了したコピーだけが1件残る()
+    {
+        var history = new UndoHistory();
+        history.Push(UndoRecord.Transfer([Copied], [], [], []));
+        Assert.Equal(1, history.Count);
+        Assert.Equal(UndoKind.Copy, history.Peek()!.Kind);
+        Assert.Equal("『c.txt』のコピー", UndoText.Describe(history.Peek()!));
+    }
+
     // ---- 変化の検出 ----
 
     [Fact]
