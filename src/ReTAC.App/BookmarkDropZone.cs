@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
+using ReTAC.Domain.Entries;
 using ReTAC.Domain.Navigation;
 using Timer = System.Windows.Forms.Timer;
 
@@ -59,14 +60,17 @@ internal sealed class BookmarkDropZone
     /// 受け口から例外を漏らさない。漏れると OS がドロップ自体を断り、禁止のカーソルになる。
     /// 失敗したら、枠・線・ホールドのタイマー・ステータス・ドラッグ画像を片付けて、落とせない扱いにする。
     /// </summary>
-    private void Guard(DragEventArgs? e, Action action)
+    private void Guard(DragEventArgs? e, Action action) => Guarded(e, action, Reset);
+
+    /// <summary><see cref="Guard"/> の中身。展開したメニューの受け口（<see cref="ExpansionDropZone"/>）も同じ守り方をする。</summary>
+    internal static void Guarded(DragEventArgs? e, Action action, Action reset)
     {
         try { action(); }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine(ex);
             if (e is not null) e.Effect = DragDropEffects.None;
-            try { Reset(); }
+            try { reset(); }
             catch (Exception inner) { System.Diagnostics.Debug.WriteLine(inner); }
             DropTargetHelper.Leave();
         }
@@ -110,7 +114,7 @@ internal sealed class BookmarkDropZone
     /// 並びを変えたら、開いているメニューを閉じる。メニューは開くたびに組み直すので、開いたままだと古い並びが残る
     /// （バーから開いたメニューは、バーの作り直しで閉じる。ブックマークメニューから開いたものは閉じない）。
     /// </summary>
-    private static void CloseMenus(ToolStrip strip)
+    internal static void CloseMenus(ToolStrip strip)
     {
         if (strip is not ToolStripDropDown { IsDisposed: false } dropDown) return;
         while (dropDown.OwnerItem?.Owner is ToolStripDropDown parent) dropDown = parent;
@@ -293,6 +297,113 @@ internal sealed class BookmarkDropZone
             ? new Rectangle(4, edge - width / 2, _strip.ClientSize.Width - 8, width)
             : new Rectangle(edge - width / 2, 3, width, _strip.ClientSize.Height - 6);
         e.Graphics.FillRectangle(brush, line);
+    }
+}
+
+/// <summary>
+/// R-93: 展開したメニュー（ブックマークのフォルダの中身）の上のドロップ。ファイルを転送する。
+/// サブフォルダの項目の上ならそのサブフォルダへ（項目を枠で囲む。止めると開く）、それ以外ならそのメニューのフォルダへ（メニュー全体を枠で囲む）。
+/// 挿入線は無い（ここはブックマークの並びではなく、ファイルシステムの中身）。
+/// </summary>
+internal sealed class ExpansionDropZone
+{
+    private readonly ToolStripDropDown _menu;
+    private readonly string _folder;
+    private readonly IBookmarkHost _host;
+    private readonly Timer _hold = new() { Interval = 1000 };   // BookmarkDropZone と同じ「ホールドで展開」
+    private ToolStripDropDownItem? _holding;
+    /// <summary>枠で囲むもの。サブフォルダの項目か、メニュー全体（null の項目）。落とせないときは None。</summary>
+    private (bool Shown, ToolStripItem? Item) _frame;
+
+    private ExpansionDropZone(ToolStripDropDown menu, string folder, IBookmarkHost host)
+    {
+        _menu = menu;
+        _folder = folder;
+        _host = host;
+    }
+
+    public static void Attach(ToolStripDropDown menu, string folder, IBookmarkHost host)
+    {
+        var zone = new ExpansionDropZone(menu, folder, host);
+        menu.AllowDrop = true;
+        menu.DragEnter += (_, e) => zone.Guard(e, () => { zone.OnDragOver(e); DropTargetHelper.Enter(menu, e); });
+        menu.DragOver += (_, e) => zone.Guard(e, () => { zone.OnDragOver(e); DropTargetHelper.Over(e); });
+        menu.DragLeave += (_, _) => zone.Guard(null, () => { zone.Reset(); DropTargetHelper.Leave(); });
+        menu.DragDrop += (_, e) => zone.Guard(e, () => { DropTargetHelper.Drop(e); zone.OnDragDrop(e); });
+        menu.Paint += zone.OnPaint;
+        zone._hold.Tick += (_, _) =>
+        {
+            zone._hold.Stop();
+            if (zone._holding is { IsDisposed: false } item) item.ShowDropDown();
+        };
+        menu.Disposed += (_, _) => zone._hold.Dispose();
+    }
+
+    private void Guard(DragEventArgs? e, Action action) => BookmarkDropZone.Guarded(e, action, Reset);
+
+    /// <summary>落とす先のフォルダと、枠で囲む項目（null ならメニュー全体）。</summary>
+    private (string Folder, ToolStripItem? Item) Target(DragEventArgs e)
+    {
+        var item = _menu.GetItemAt(_menu.PointToClient(new Point(e.X, e.Y)));
+        // フォルダの有無はここで確かめない（R-91）。Entry は開いたときに読んだもの
+        return item?.Tag is Entry { Kind: EntryKind.Folder } sub ? (sub.FullPath, item) : (_folder, null);
+    }
+
+    private void OnDragOver(DragEventArgs e)
+    {
+        var (folder, item) = Target(e);
+        // 外からは FileDrop だけ（R3）。ブックマークの並べ替えは FileDrop を持たないので、ここで自然に None になる
+        DropFeedback.Apply(e, folder, DropFeedback.FolderLabel(folder));
+        var label = DropFeedback.FolderLabel(folder);
+        _host.ShowStatus(e.Effect switch
+        {
+            DragDropEffects.Copy => $"{label} へコピー",
+            DragDropEffects.Move => $"{label} へ移動",
+            _ => "",
+        });
+
+        if (!ReferenceEquals(item, _holding))
+        {
+            _hold.Stop();
+            _holding = item as ToolStripDropDownItem;
+            if (_holding is not null && e.Effect != DragDropEffects.None) _hold.Start();
+        }
+        var frame = (e.Effect != DragDropEffects.None, item);
+        if (frame != _frame)
+        {
+            _frame = frame;
+            _menu.Invalidate();
+        }
+    }
+
+    private void OnDragDrop(DragEventArgs e)
+    {
+        var (folder, _) = Target(e);
+        var shown = _frame.Shown;
+        Reset();
+        if (!shown || e.Data?.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files) return;
+        var (ctrl, shift) = DropFeedback.Modifiers(e);   // 後に回すとキーは離されている
+        BookmarkDropZone.CloseMenus(_menu);
+        _host.TransferDropped(files, folder, e.AllowedEffect, ctrl, shift);
+    }
+
+    private void Reset()
+    {
+        _hold.Stop();
+        _holding = null;
+        _host.ShowStatus("");
+        if (!_frame.Shown) return;
+        _frame = default;
+        _menu.Invalidate();
+    }
+
+    private void OnPaint(object? sender, PaintEventArgs e)
+    {
+        if (!_frame.Shown) return;
+        var width = Math.Max(2, 2 * _menu.DeviceDpi / 96);
+        using var pen = new Pen(SystemColors.Highlight, width);
+        var bounds = _frame.Item?.Bounds ?? _menu.ClientRectangle;
+        e.Graphics.DrawRectangle(pen, bounds.X + 1, bounds.Y + 1, bounds.Width - 2, bounds.Height - 2);
     }
 }
 

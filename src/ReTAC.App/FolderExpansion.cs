@@ -22,6 +22,7 @@ public static class FolderExpansion
         var generation = 0;
         item.DropDownItems.Add(BookmarkItems.Placeholder("読み込み中…"));   // 項目が無いと ▶ が出ず、開けない
         ToolStripExtras.EnableWheel(item.DropDown);   // 数百件を ▲▼ だけで送らせない（実機指摘）
+        ExpansionDropZone.Attach(item.DropDown, folder, host);   // R-93: 中へファイルを落として転送する
 
         item.DropDownOpening += (_, _) =>
         {
