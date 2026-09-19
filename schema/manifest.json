@@ -1230,6 +1230,34 @@
         }
       ]
     },
+    "ReTAC.Domain.Navigation.Breadcrumb": {
+      "id": "type:ReTAC.Domain.Navigation.Breadcrumb",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Navigation/Breadcrumb.cs",
+      "doc": "R-94: アドレスバーのパンくず表示の、段への分け方と、入りきらないときの畳み方。"
+    },
+    "ReTAC.Domain.Navigation.BreadcrumbSegment": {
+      "id": "type:ReTAC.Domain.Navigation.BreadcrumbSegment",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Navigation/Breadcrumb.cs",
+      "doc": "R-94: パンくずの 1 段。Name は表示の名前、Path はクリックでジャンプする先。",
+      "fields": [
+        {
+          "name": "Name",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Path",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
     "ReTAC.Domain.Navigation.DropSpot": {
       "id": "type:ReTAC.Domain.Navigation.DropSpot",
       "kind": "struct",
@@ -7360,6 +7388,16 @@
       {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 1611
+      }
+    ],
+    "R-94": [
+      {
+        "file": "src/ReTAC.Domain/Navigation/Breadcrumb.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/Breadcrumb.cs",
+        "line": 8
       }
     ],
     "S-07": [
