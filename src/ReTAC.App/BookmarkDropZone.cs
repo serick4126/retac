@@ -125,10 +125,11 @@ internal sealed class BookmarkDropZone
     private List<ToolStripItem> Slots() =>
         _strip.Items.Cast<ToolStripItem>().Where(i => i.Tag is Bookmark && i.Placement == ToolStripItemPlacement.Main).ToList();
 
+    // どの項目も中央 1/3 は「項目の上」。何が起こるかは BookmarkDrop.Onto が種類で決める（ファイル・コマンドの上は落とせない。§7.1）
     private DropSpot Hit(List<ToolStripItem> slots, Point client) =>
         BookmarkDrop.Hit(slots.Select(i => _vertical
-            ? (i.Bounds.Top, i.Bounds.Bottom, IsContainer(i))
-            : (i.Bounds.Left, i.Bounds.Right, IsContainer(i))).ToList(), _vertical ? client.Y : client.X);
+            ? (i.Bounds.Top, i.Bounds.Bottom, true)
+            : (i.Bounds.Left, i.Bounds.Right, true)).ToList(), _vertical ? client.Y : client.X);
 
     /// <summary>空の並びの「（空）」の行。空のグループ・「ブックマークバー」サブメニューへは、この行の上に落とす。</summary>
     public static readonly object EmptySlot = new();
@@ -145,8 +146,6 @@ internal sealed class BookmarkDropZone
             return _strip.Items.Cast<ToolStripItem>().Any(i => ReferenceEquals(i.Tag, EmptySlot) && i.Bounds.Contains(client));
         return client.Y >= slots[0].Bounds.Top && client.Y < slots[^1].Bounds.Bottom;
     }
-
-    private static bool IsContainer(ToolStripItem item) => item.Tag is Bookmark { Kind: BookmarkKind.Folder or BookmarkKind.Group };
 
     private void OnDragOver(object? sender, DragEventArgs e)
     {
@@ -179,7 +178,8 @@ internal sealed class BookmarkDropZone
                 _ => "",
             };
         }
-        else if (onto?.Tag is Bookmark { Children: null } || reorder && ReferenceEquals(onto?.Tag, s_dragging))
+        else if (onto?.Tag is Bookmark target && (BookmarkDrop.Onto(target.Kind, reorder) != OntoAction.IntoGroup || target.Children is null)
+                 || reorder && ReferenceEquals(onto?.Tag, s_dragging))
         {
             e.Effect = DragDropEffects.None;
             message = "";

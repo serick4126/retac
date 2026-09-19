@@ -132,6 +132,29 @@ public class BookmarkTests
         Assert.Equal(new DropSpot(index, onto), BookmarkDrop.Hit(slots, x));
     }
 
+    [Theory]
+    [InlineData(5, 0, false)]     // ファイルのボタンの左の 1/3 は前への挿入（登録）
+    [InlineData(15, 0, true)]     // ファイルのボタンの中央 1/3 は「項目の上」
+    [InlineData(25, 1, false)]    // 右の 1/3 は後ろへの挿入
+    public void どの種類も中央は項目の上で両端と間だけが挿入になる(int x, int index, bool onto)
+    {
+        (int, int, bool)[] slots = [(0, 30, true), (30, 60, true)];   // バーは全項目を HasCenter で渡す
+        Assert.Equal(new DropSpot(index, onto), BookmarkDrop.Hit(slots, x));
+    }
+
+    [Theory]
+    [InlineData(BookmarkKind.Group, false, OntoAction.IntoGroup)]
+    [InlineData(BookmarkKind.Group, true, OntoAction.IntoGroup)]
+    [InlineData(BookmarkKind.Folder, false, OntoAction.Transfer)]   // R-93
+    [InlineData(BookmarkKind.Folder, true, OntoAction.None)]        // 並べ替えはフォルダへ転送しない
+    [InlineData(BookmarkKind.File, false, OntoAction.None)]         // §7.1: ファイル・コマンドの上は落とせない
+    [InlineData(BookmarkKind.Command, false, OntoAction.None)]
+    [InlineData(BookmarkKind.File, true, OntoAction.None)]
+    public void 項目の上に落としたときに起こすこと(BookmarkKind kind, bool reorder, OntoAction expected)
+    {
+        Assert.Equal(expected, BookmarkDrop.Onto(kind, reorder));
+    }
+
     [Fact]
     public void 同じ並びの中で後ろへ移すと位置は詰めて数える()
     {
