@@ -47,7 +47,11 @@ public static class BookmarkRules
 
     private static bool Drop(List<Bookmark> items, HashSet<int> ids)
     {
-        var changed = items.RemoveAll(b => b.Kind == BookmarkKind.Command && !IsKnown(b.Target, ids)) > 0;
+        // 手で書いた JSON の null（System.Text.Json は非 nullable の欄にも入れる）も、ここで落とす・空にする
+        var changed = items.RemoveAll(b => b is null || (b.Kind == BookmarkKind.Command && !IsKnown(b.Target ?? "", ids))) > 0;
+        for (var i = 0; i < items.Count; i++)
+            if (items[i] is { Title: null } or { Target: null })
+                items[i] = items[i] with { Title = items[i].Title ?? "", Target = items[i].Target ?? "" };
         foreach (var group in items.Where(b => b.Children is not null)) changed |= Drop(group.Children!, ids);
         return changed;
     }

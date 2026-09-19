@@ -31,7 +31,9 @@ internal static class Program
         if (args is ["--bench", var benchPath, ..]) return Bench(benchPath);
 
         var settings = AppSettings.Load();
-        settings.Normalize();   // Q10
+        // Q10: 正規化の失敗で起動を止めない。null の補正は先に済むので、残るのは消えたツールの参照だけ
+        try { settings.Normalize(); }
+        catch (Exception ex) { Debug.WriteLine(ex); }
         var form = new MainForm(settings: settings);
 
         // R-40-6: 起動時はウィンドウを表示しない設定

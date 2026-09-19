@@ -261,6 +261,21 @@ public sealed class AppSettings
     /// </summary>
     public void Normalize()
     {
+        // 手で書いた JSON の null を既定値に戻す。System.Text.Json は非 nullable の欄にも明示された null を
+        // そのまま入れるので、型注釈だけでは防げず、ここで直さないと起動が NullReferenceException で止まる
+        HiddenDrives = [.. (HiddenDrives ?? []).OfType<string>()];
+        FolderHistory = [.. (FolderHistory ?? []).OfType<string>()];
+        DriveFolders = WithoutNulls(DriveFolders);
+        Colors = WithoutNulls(Colors);
+        KeyBindings = WithoutNulls(KeyBindings);
+        ExternalTools = [.. (ExternalTools ?? DefaultExternalTools.Create()).OfType<ExternalTool>()
+            .Select(t => t with { Name = t.Name ?? "", Path = t.Path ?? "", Arguments = t.Arguments ?? "" })];
+        QuickAccess = [.. (QuickAccess ?? []).OfType<QuickAccessEntry>()
+            .Select(e => e with { Title = e.Title ?? "", Path = e.Path ?? "" })];
+        Bookmarks ??= new();
+        Bookmarks.Bar ??= [];
+        Bookmarks.Other ??= [];
+
         var ids = ExternalTools.Select(t => t.Id).ToList();
         var list = new QuickAccessList();
         foreach (var entry in QuickAccess) list.Add(entry);
@@ -268,6 +283,9 @@ public sealed class AppSettings
         if (list.DropUnknownTools(ids)) QuickAccess = [.. list.Items];
         BookmarkRules.DropUnknownTools(Bookmarks, ids);
     }
+
+    private static Dictionary<string, string> WithoutNulls(Dictionary<string, string>? map) =>
+        (map ?? []).Where(p => p.Value is not null).ToDictionary();
 
     public QuickAccessList ToQuickAccess()
     {
