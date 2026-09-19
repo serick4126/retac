@@ -19,6 +19,7 @@ public sealed class BookmarkBar : ToolStrip
         ShowItemToolTips = true;
         AutoSize = false;   // 高さはアドレスバーの行に揃える（SetRowHeight）
         ToolStripExtras.WidenOverflow(this);
+        BookmarkDropZone.EnableDrag(this);
     }
 
     /// <summary>上部の行（ドライブバー・アドレスバー）と同じ高さ・左右の余白にする。項目は縦の中央に並ぶ。</summary>
@@ -29,27 +30,6 @@ public sealed class BookmarkBar : ToolStrip
     }
 
     private BookmarkItems? _items;
-    /// <summary>左ボタンを押した位置。ここから動かしたらバーの項目のドラッグを始める。</summary>
-    private Point? _dragOrigin;
-
-    protected override void OnMouseDown(MouseEventArgs e)
-    {
-        _dragOrigin = e.Button == MouseButtons.Left ? e.Location : null;
-        base.OnMouseDown(e);
-    }
-
-    protected override void OnMouseMove(MouseEventArgs e)
-    {
-        base.OnMouseMove(e);
-        if (e.Button != MouseButtons.Left || _dragOrigin is not { } origin) return;
-        if (Math.Abs(e.X - origin.X) < SystemInformation.DragSize.Width
-            && Math.Abs(e.Y - origin.Y) < SystemInformation.DragSize.Height) return;
-        _dragOrigin = null;
-        if (GetItemAt(origin) is not { Tag: Bookmark bookmark } item) return;
-        (item as BarDropDownButton)?.CancelOpen();
-        BookmarkDropZone.DragFrom(this, bookmark);
-    }
-
     /// <summary>R-89: 項目の無い所の右クリック。項目の上は項目の MouseUp が受ける。</summary>
     protected override void OnMouseUp(MouseEventArgs e)
     {

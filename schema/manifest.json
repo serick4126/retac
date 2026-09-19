@@ -4773,7 +4773,7 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
-        "line": 163
+        "line": 164
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
@@ -6957,7 +6957,7 @@
     "R-88": [
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
-        "line": 141
+        "line": 142
       },
       {
         "file": "src/ReTAC.App/FolderExpansion.cs",
@@ -7003,11 +7003,11 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkBar.cs",
-        "line": 53
+        "line": 33
       },
       {
         "file": "src/ReTAC.App/BookmarkBar.cs",
-        "line": 71
+        "line": 51
       },
       {
         "file": "src/ReTAC.App/BookmarkDialog.cs",
@@ -7047,7 +7047,7 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
-        "line": 134
+        "line": 135
       },
       {
         "file": "src/ReTAC.App/CommandCatalog.cs",

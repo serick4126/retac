@@ -72,12 +72,46 @@ internal sealed class BookmarkDropZone
         }
     }
 
-    /// <summary>バーの項目のドラッグを始める。終わるまで戻らない。</summary>
-    public static void DragFrom(ToolStrip strip, Bookmark bookmark)
+    /// <summary>
+    /// バー・グループのメニューの項目を、左ボタンで押して動かしたらドラッグを始める。
+    /// 並べ替え・グループへの出し入れの条件は、どこから始めても同じ（BookmarkRules.Move が決める）。
+    /// </summary>
+    public static void EnableDrag(ToolStrip strip)
+    {
+        Point? origin = null;
+        strip.MouseDown += (_, e) => origin = e.Button == MouseButtons.Left ? e.Location : null;
+        strip.MouseMove += (_, e) =>
+        {
+            if (e.Button != MouseButtons.Left || origin is not { } o) return;
+            if (Math.Abs(e.X - o.X) < SystemInformation.DragSize.Width
+                && Math.Abs(e.Y - o.Y) < SystemInformation.DragSize.Height) return;
+            origin = null;
+            if (strip.GetItemAt(o) is not { Tag: Bookmark bookmark } item) return;
+            (item as BarDropDownButton)?.CancelOpen();
+            DragFrom(strip, bookmark);
+        };
+    }
+
+    /// <summary>ブックマークの項目のドラッグを始める。終わるまで戻らない。</summary>
+    private static void DragFrom(ToolStrip strip, Bookmark bookmark)
     {
         s_dragging = bookmark;
-        try { strip.DoDragDrop(new DataObject(Format, ""), DragDropEffects.Move); }
+        try
+        {
+            if (strip.DoDragDrop(new DataObject(Format, ""), DragDropEffects.Move) != DragDropEffects.None) CloseMenus(strip);
+        }
         finally { s_dragging = null; }
+    }
+
+    /// <summary>
+    /// 並びを変えたら、開いているメニューを閉じる。メニューは開くたびに組み直すので、開いたままだと古い並びが残る
+    /// （バーから開いたメニューは、バーの作り直しで閉じる。ブックマークメニューから開いたものは閉じない）。
+    /// </summary>
+    private static void CloseMenus(ToolStrip strip)
+    {
+        if (strip is not ToolStripDropDown { IsDisposed: false } dropDown) return;
+        while (dropDown.OwnerItem?.Owner is ToolStripDropDown parent) dropDown = parent;
+        dropDown.Close(ToolStripDropDownCloseReason.CloseCalled);
     }
 
     /// <summary>並んでいるブックマークの項目。バーで入りきらない項目は » の中なので、見えている先頭の分だけ。</summary>
@@ -174,7 +208,9 @@ internal sealed class BookmarkDropZone
                 changed = true;
             }
         }
-        if (changed) _host.BookmarksChanged();
+        if (!changed) return;
+        _host.BookmarksChanged();
+        CloseMenus(_strip);
     }
 
     private void Reset()
