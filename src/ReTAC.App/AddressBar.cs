@@ -50,6 +50,15 @@ public sealed class AddressBar : Control
     /// <summary>先頭のアイコンを左クリックした。今のフォルダをエクスプローラーで開く（ブラウザのアドレスバーの鍵の位置）。</summary>
     public event EventHandler? IconClicked;
 
+    /// <summary>R-94: 右クリックの「このパスをコピー」。クリップボードの競合は呼び出し側が扱う（TryClipboard）。</summary>
+    public event EventHandler<string>? CopyPathRequested;
+
+    /// <summary>
+    /// R-94 / R-93: 段へファイルが落とされた。宛先・ファイル・元が許す効果・ドロップの時点の修飾キー。
+    /// 転送のダイアログは呼び出し側（MainForm.TransferDropped）が出す。
+    /// </summary>
+    public event EventHandler<(string Destination, string[] Files, DragDropEffects Allowed, bool Ctrl, bool Shift)>? FilesDropped;
+
     /// <summary>先頭のフォルダのアイコン。中身を読まない汎用の絵（応答しないドライブで待たない。N-05）。</summary>
     private Bitmap? _icon;
     private readonly ToolTip _tip = new();
@@ -68,6 +77,7 @@ public sealed class AddressBar : Control
         BackColor = SystemColors.Window;
         _input.Visible = false;   // 編集中だけ出す
         Controls.Add(_input);
+        AllowDrop = true;   // R-94: 段へのドロップ
         Height = BarHeight;
 
         // Enter ではなく GotFocus で見る。別のウィンドウから戻ったときは Enter が来ないが、
@@ -216,6 +226,8 @@ public sealed class AddressBar : Control
 
     private IReadOnlyList<BreadcrumbSegment> _segments = [];
     private List<Part> _parts = [];
+    /// <summary>ドロップで枠を描く段（_parts の添字）。無ければ -1。</summary>
+    private int _dropPart = -1;
     /// <summary>ホバーしている部品の添字（_parts）。先頭のアイコンなら IconHover、どちらでもなければ -1（余白）。</summary>
     private int _hover = -1;
     private const int IconHover = -2;
@@ -296,6 +308,12 @@ public sealed class AddressBar : Control
             {
                 using var brush = new SolidBrush(SystemColors.ControlLight);
                 g.FillRectangle(brush, part.Bounds);
+            }
+            if (i == _dropPart)
+            {
+                var width = Math.Max(2, LogicalToDeviceUnits(2));
+                using var pen = new Pen(SystemColors.Highlight, width);
+                g.DrawRectangle(pen, part.Bounds.X + 1, part.Bounds.Y + 1, part.Bounds.Width - 2, part.Bounds.Height - 2);
             }
             var text = part.Kind switch
             {
@@ -393,6 +411,90 @@ public sealed class AddressBar : Control
     private static bool PathEquals(string a, string b) =>
         string.Equals(Path.TrimEndingDirectorySeparator(a), Path.TrimEndingDirectorySeparator(b), StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// R-94: 右クリック。段なら先頭に ReTAC の項目、その後にそのフォルダのエクスプローラーのメニュー。余白なら ReTAC の項目だけ（今のフォルダ）。
+    /// アクセスキーはエクスプローラーのメニューでよく使われる字を避ける（9.2 の実機指摘）。
+    /// </summary>
+    private void ShowCrumbMenu(Point client)
+    {
+        var index = PartAt(client);
+        var path = index >= 0 && _parts[index] is { Kind: PartKind.Segment } part ? _segments[part.Index].Path : null;
+        string[] items = ["このパスをコピー(&Y)", "アドレスを編集(&E)"];
+        var screen = PointToScreen(client);
+        var result = path is not null
+            ? ShellContextMenu.ShowWithItems(Handle, [path], screen.X, screen.Y, items)   // 区切り線は ShowWithItems が入れる
+            : ShellContextMenu.ShowItems(Handle, screen.X, screen.Y, items);
+        if (result.Outcome != ContextMenuOutcome.AppItem) return;
+        if (result.AppItem == 0) CopyPathRequested?.Invoke(this, path ?? _folder);
+        else if (result.AppItem == 1) BeginEdit();
+    }
+
+    // ---- R-94: 段へのドロップ ----------------------------------------------------------
+
+    /// <summary>その位置の段（_parts の添字）。段でなければ -1（余白・▸・…・アイコンへは落とせない）。</summary>
+    private int DropPartAt(DragEventArgs e)
+    {
+        var index = PartAt(PointToClient(new Point(e.X, e.Y)));
+        return index >= 0 && _parts[index].Kind == PartKind.Segment ? index : -1;
+    }
+
+    protected override void OnDragEnter(DragEventArgs e)
+    {
+        base.OnDragEnter(e);
+        GuardDrop(e, () => SetDropEffect(e));
+    }
+
+    protected override void OnDragOver(DragEventArgs e)
+    {
+        base.OnDragOver(e);
+        GuardDrop(e, () => SetDropEffect(e));
+    }
+
+    /// <summary>
+    /// 判定はファイルリストへのドロップと同じ（DropFeedback。先頭の項目・修飾キー・元が許す効果）。
+    /// アドレスバーのアイコン自身のドラッグはリンクだけを許すので、ここで自然に None になる。フォルダの有無は確かめない（R-91）。
+    /// </summary>
+    private void SetDropEffect(DragEventArgs e)
+    {
+        var index = DropPartAt(e);
+        var path = index >= 0 ? _segments[_parts[index].Index].Path : null;
+        DropFeedback.Apply(e, path, path is null ? "" : DropFeedback.FolderLabel(path));
+        var shown = e.Effect == DragDropEffects.None ? -1 : index;
+        if (shown == _dropPart) return;
+        _dropPart = shown;
+        Invalidate();
+    }
+
+    protected override void OnDragLeave(EventArgs e)
+    {
+        base.OnDragLeave(e);
+        GuardDrop(null, ResetDrop);
+    }
+
+    protected override void OnDragDrop(DragEventArgs e)
+    {
+        base.OnDragDrop(e);
+        GuardDrop(e, () =>
+        {
+            var shown = _dropPart;
+            ResetDrop();
+            // 表示が禁止だった所へは落とさない
+            if (shown < 0 || shown != DropPartAt(e) || e.Data?.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files) return;
+            var (ctrl, shift) = DropFeedback.Modifiers(e);   // 後に回すとキーは離されている
+            FilesDropped?.Invoke(this, (_segments[_parts[shown].Index].Path, files, e.AllowedEffect, ctrl, shift));
+        });
+    }
+
+    private void ResetDrop()
+    {
+        if (_dropPart < 0) return;
+        _dropPart = -1;
+        Invalidate();
+    }
+
+    /// <summary>受け口から例外を漏らさない（漏れると OS がドロップ自体を断る）。ブックマークの受け口と同じ守り方。</summary>
+    private void GuardDrop(DragEventArgs? e, Action action) => BookmarkDropZone.Guarded(e, action, ResetDrop);
+
     protected override void OnMouseLeave(EventArgs e)
     {
         base.OnMouseLeave(e);
@@ -456,7 +558,13 @@ public sealed class AddressBar : Control
             else if (e.Button == MouseButtons.Right) ShellContextMenu.Show(Handle, [_folder], Cursor.Position.X, Cursor.Position.Y);
             return;
         }
-        if (e.Button != MouseButtons.Left || _input.Visible) return;
+        if (_input.Visible) return;
+        if (e.Button == MouseButtons.Right)
+        {
+            ShowCrumbMenu(e.Location);
+            return;
+        }
+        if (e.Button != MouseButtons.Left) return;
         if (PartAt(e.Location) is var index and >= 0)
         {
             var part = _parts[index];

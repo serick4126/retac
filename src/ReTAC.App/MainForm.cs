@@ -138,6 +138,8 @@ public sealed class MainForm : Form, IBookmarkHost
         _addressBar.JumpRequested += (_, e) => OnAddressJump(e.Text, e.Explorer);
         _addressBar.Cancelled += (_, _) => _list.Focus();
         _addressBar.IconClicked += (_, _) => OpenInExplorer(_currentFolder);
+        _addressBar.CopyPathRequested += (_, path) => TryClipboard(() => Clipboard.SetText(path));
+        _addressBar.FilesDropped += (_, drop) => TransferDropped(drop.Files, drop.Destination, drop.Allowed, drop.Ctrl, drop.Shift);
         // ドライブのボタンの右クリックはリストの項目と同じ扱い。移動はしない
         _driveBar.RightClicked += (_, click) => ShowShellContextMenu([click.Path], click.ScreenPoint);
         // R-65 ②③: 落とされたファイルの転送はどちらも同じ経路を通す
