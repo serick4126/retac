@@ -8,7 +8,7 @@ using ReTAC.Domain.Navigation;
 namespace ReTAC.App;
 
 /// <summary>
-/// R-89 §6.11: ブックマークの管理。左にツリー、右に操作。変更はその場で BookmarkSet に入れ、キャンセルを持たない
+/// R-89: ブックマークの管理。左にツリー、右に操作。変更はその場で BookmarkSet に入れ、キャンセルを持たない
 /// （クイックアクセスの設定と同じ。保存とバーの作り直しは閉じた後に呼び出し側が行う。V-13）。
 /// </summary>
 public sealed class BookmarkDialog : Form

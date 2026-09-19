@@ -4,7 +4,7 @@ using ReTAC.Domain.Listing;
 
 namespace ReTAC.Domain.Tests;
 
-/// <summary>§12.1「自然順比較」「ソート」</summary>
+/// <summary>自然順比較とソート</summary>
 public class SortTests
 {
     [Fact]
@@ -185,7 +185,7 @@ public class SortTests
     {
         // B-02: StrCmpLogicalW は大文字小文字を区別せず同値を返すため、序数で決めると
         // 'A'(0x41) が 'a'(0x61) より前に来てしまい、実測した「名前の昇順」と食い違う。
-        // StrCmpW（Windows 自身の大文字小文字順）に先に訊いて解決する（スコープ定義 §4）
+        // StrCmpW（Windows 自身の大文字小文字順）に先に訊いて解決する
         string[] input = ["A.txt", "a.txt", "B.txt", "b.txt"];
         string[] expected = ["a.txt", "A.txt", "b.txt", "B.txt"];
 

@@ -4,7 +4,7 @@ namespace ReTAC.Domain.Commands;
 
 /// <summary>
 /// キーやメニューが指す先（F-06）。組み込みのコマンドか、登録した外部ツール。
-/// <b>後から種類を足せるように</b>、2 択の型（bool や enum）ではなく派生の record で表す（予定 §7）。
+/// <b>後から種類を足せるように</b>、2 択の型（bool や enum）ではなく派生の record で表す。
 /// 設定ファイルには <see cref="Serialize"/> の文字列で書く。
 /// </summary>
 public abstract record CommandTarget

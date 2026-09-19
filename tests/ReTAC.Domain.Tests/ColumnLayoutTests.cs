@@ -2,7 +2,7 @@ using ReTAC.Domain.Listing;
 
 namespace ReTAC.Domain.Tests;
 
-/// <summary>仕様書 §5.1 のレイアウト計算（開発プラン T2-2）</summary>
+/// <summary>R-01-3・R-01-6・R-66-3 のレイアウト計算</summary>
 public class ColumnLayoutTests
 {
     // 行高 20 / 1 列 25 行 / アイコン 16 / gap 4 / 余白 4 / 基底名 100 / 拡張子 30

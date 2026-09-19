@@ -5,7 +5,7 @@ namespace ReTAC.App;
 
 /// <summary>
 /// キー割り当ての枠の表記（5-2 節 / F-06）。枠そのものは <see cref="KeySlotList"/>。
-/// 初期状態では修飾なし・Shift の 39 枠が有効（開発プラン §1 X-03）。Ctrl の枠の既定は Ctrl+F（B-18）だけ。
+/// 初期状態では修飾なし・Shift の 39 枠が有効（X-03）。Ctrl の枠の既定は Ctrl+F（B-18）だけ。
 /// </summary>
 public static class KeySlots
 {

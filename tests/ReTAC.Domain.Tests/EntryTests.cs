@@ -3,7 +3,7 @@ using ReTAC.Domain.Entries;
 
 namespace ReTAC.Domain.Tests;
 
-/// <summary>§12.1「拡張子の分離」「属性色」</summary>
+/// <summary>拡張子の分離と属性色</summary>
 public class EntryTests
 {
     [Theory]

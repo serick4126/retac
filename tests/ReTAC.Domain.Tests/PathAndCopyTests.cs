@@ -6,7 +6,7 @@ using ReTAC.Domain.Tools;
 
 namespace ReTAC.Domain.Tests;
 
-/// <summary>§12.1「相対パス解決」「複写条件」＋ キーマップ</summary>
+/// <summary>相対パス解決、複写条件、キーマップ</summary>
 public class PathResolverTests
 {
     [Theory]

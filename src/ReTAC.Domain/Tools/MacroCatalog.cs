@@ -6,8 +6,8 @@ public sealed record MacroCatalogEntry(string Group, string Label, string? Inser
 
 /// <summary>
 /// 外部ツールの設定ダイアログから開くマクロの一覧（F-04）。
-/// 利用者自身も名前と使い方を覚えきれないので、選んで挿入できるようにする（予定 §3.1.1）。
-/// スクリプトの例は例であって既定値ではない（予定 §1.4 A-4）。
+/// 利用者自身も名前と使い方を覚えきれないので、選んで挿入できるようにする（F-04）。
+/// スクリプトの例は例であって既定値ではない。
 /// </summary>
 public static class MacroCatalog
 {

@@ -3,7 +3,7 @@ using Microsoft.Win32;
 namespace ReTAC.Shell;
 
 /// <summary>
-/// 外部ツールのパスの解決（予定 §1.4 A-1）。名前だけ（<c>git.exe</c>）なら <c>PATH</c> と App Paths
+/// 外部ツールのパスの解決。名前だけ（<c>git.exe</c>）なら <c>PATH</c> と App Paths
 /// （アプリがレジストリに登録する場所）から探す。「終了後もウィンドウを閉じない」はコンソールか GUI かを
 /// 見分けるので、ReTAC が実体を知っている必要がある。
 /// </summary>
@@ -44,7 +44,7 @@ public static class ExecutableResolver
         return null;
     }
 
-    /// <summary>予定 §1.4 A-4: Windows が実行する種類か。<c>build.ps1</c> や <c>script.py</c> は関連付けで開かれるだけ。</summary>
+    /// <summary>Windows が実行する種類か。<c>build.ps1</c> や <c>script.py</c> は関連付けで開かれるだけ。</summary>
     public static bool IsExecutableType(string path) =>
         IsExecutableType(path, Environment.GetEnvironmentVariable("PATHEXT"));
 
@@ -76,7 +76,7 @@ public static class ExecutableResolver
 
 public enum ExecutableKind { Console, Gui, Unknown }
 
-/// <summary>実行ファイルの見出し（PE ヘッダ）から、コンソールか GUI かを読む（仕様書 §8 I-3）。</summary>
+/// <summary>実行ファイルの見出し（PE ヘッダ）から、コンソールか GUI かを読む（F-03）。</summary>
 public static class ExecutableKinds
 {
     private const ushort Mz = 0x5A4D;          // "MZ"

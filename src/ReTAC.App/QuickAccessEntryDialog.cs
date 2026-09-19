@@ -6,7 +6,7 @@ namespace ReTAC.App;
 
 /// <summary>
 /// 「アクセスフォルダの追加」（16.2 節）。タイトル欄 ＋ フォルダ欄の 2 項目。
-/// §9.1: 使えるキー操作を画面に印字し（R-47）、入力の誤りは中止せず入力欄に戻す（R-48）。
+/// 使えるキー操作を画面に印字し（R-47）、入力の誤りは中止せず入力欄に戻す（R-48）。
 /// </summary>
 public sealed class QuickAccessEntryDialog : Form
 {

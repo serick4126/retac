@@ -10,9 +10,9 @@ using ReTAC.Shell;
 namespace ReTAC.App;
 
 /// <summary>
-/// 自前描画の多段組ファイルリスト（仕様書 §5）。
+/// 自前描画の多段組ファイルリスト（R-01）。
 /// エントリは縦に流れ、高さを超えると右隣の列へ折り返す。スクロールは横方向のみ（R-01-2）。
-/// 標準 ListView を使わない理由は仕様書 §2.2。
+/// 標準 ListView では再現できない段組みと選択状態を扱うため、自前描画する。
 /// </summary>
 public sealed class FileListView : Control
 {
@@ -304,7 +304,7 @@ public sealed class FileListView : Control
         return isMarked && attributeColor == _theme.Foreground ? _theme.MarkForeground : attributeColor;
     }
 
-    // ---- 固定キー（仕様書 §6.1・5-3 節） ---------------------------------
+    // ---- 固定キー -----------------------------------------------------------
 
     protected override bool IsInputKey(Keys keyData) => (keyData & Keys.KeyCode) switch
     {

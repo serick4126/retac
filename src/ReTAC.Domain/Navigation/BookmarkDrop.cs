@@ -6,11 +6,11 @@ public readonly record struct DropSpot(int Index, bool Onto);
 /// <summary>項目の上（中央 1/3）に落としたときに起こすこと。</summary>
 public enum OntoAction { None, IntoGroup, Transfer }
 
-/// <summary>R-89: バー（横）とグループのメニュー（縦）の上で、ドラッグしている位置から落とす先を決める（§6.10）。</summary>
+/// <summary>R-89: バー（横）とグループのメニュー（縦）の上で、ドラッグしている位置から落とす先を決める。</summary>
 public static class BookmarkDrop
 {
     /// <summary>
-    /// §6.10 / §7.1: 項目の上（中央 1/3）に落としたとき。<b>どの種類も中央は「項目の上」</b>で、登録・並べ替えの挿入は両端と項目の間だけ
+    /// R-89 / R-93: 項目の上（中央 1/3）に落としたとき。<b>どの種類も中央は「項目の上」</b>で、登録・並べ替えの挿入は両端と項目の間だけ
     /// （バーの上では HasCenter をすべて true にして Hit を呼ぶ）。グループは中へ入れる、フォルダはファイルなら転送（R-93）、
     /// ファイル・コマンドは落とせない（利用者の決定。9.3 のレビューで仕様書どおりにした）。
     /// </summary>

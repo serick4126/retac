@@ -17,7 +17,7 @@ public sealed record QueueEntry(LaunchRequest Request, QueueItemState State, int
 
 /// <summary>
 /// 外部ツールキュー（F-05）。「マークした項目ごとに起動する」を、前の 1 件の終了を待ってから次を起動する形で処理する。
-/// <b>完全に独立した仕組み</b>で、ReTAC 内部の処理や将来の git 統合の処理は使わない（予定 §7 C-2）。
+/// <b>完全に独立した仕組み</b>で、ReTAC 内部の処理や将来の git 統合の処理は使わない（F-05）。
 /// 起動と終了待ちは <c>run</c> に任せる（App がプロセスを扱う）。このクラスはプロセスを知らない。
 /// 待つのは裏のスレッドで、ReTAC の操作は止めない（R-23）。
 /// </summary>

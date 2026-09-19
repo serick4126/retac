@@ -615,7 +615,7 @@ public sealed class MainForm : Form, IBookmarkHost
             answers.Add(dialog.Value);
         }
 
-        // 予定 §7 C-9: 値を求めるのは「待つことがある処理」として扱う（将来 git の値を取る）。UI を止めない
+        // 値を求めるのは「待つことがある処理」として扱う（将来 git の値を取る）。UI を止めない
         var requests = await Task.Run(() =>
             LaunchPlanner.Plan(tool, template, targets, cursor, folder, answers, suppress, ToolLauncher.TargetPath));
         if (requests.Count == 0 || IsDisposed) return;
@@ -647,7 +647,7 @@ public sealed class MainForm : Form, IBookmarkHost
     // ---- ファイル操作（段6） ----------------------------------------------
 
     /// <summary>
-    /// `C`（コピー・0x82DE）と `M`（移動・0x82E0）。§9.2 のダイアログ。
+    /// `C`（コピー・0x82DE）と `M`（移動・0x82E0）を選ぶダイアログ。
     /// R-41: 宛先の確定と複写条件の判定は自前、転送は OS（IFileOperation）に委ねる。
     /// </summary>
     private bool Transfer(bool moving)
@@ -658,7 +658,7 @@ public sealed class MainForm : Form, IBookmarkHost
 
     /// <summary>
     /// 転送のダイアログの後を続けてよいか。コマンドの戻り値（キーを処理したか）とは別物なので分けて持つ。
-    /// ドロップでコピーと移動が混ざるとき、コピーを取り消したら移動のダイアログを出さない（仕様書 §7.1）。
+    /// ドロップでコピーと移動が混ざるとき、コピーを取り消したら移動のダイアログを出さない（R-93）。
     /// </summary>
     private enum TransferStep { Proceed, Cancelled }
 
@@ -689,7 +689,7 @@ public sealed class MainForm : Form, IBookmarkHost
         if (dialog.Path.Length == 0)
         {
             // R-63 / R-63-2: 空欄はコピーならリネームコピー、移動ならエラー。
-            // ドロップ（R-93）の空欄は宛先を消したということなので、コピーでも入力に戻す（仕様書 §7.1）
+            // ドロップ（R-93）の空欄は宛先を消したということなので、コピーでも入力に戻す
             if (moving || sources is not null)
             {
                 MessageBox.Show(this, $"{verb}先を指定してください。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -1461,7 +1461,7 @@ public sealed class MainForm : Form, IBookmarkHost
         return true;
     }
 
-    /// <summary>R-89 §6.11: キャンセルを持たないので、閉じ方によらず保存して全ウィンドウのバーを作り直す（V-13）。</summary>
+    /// <summary>R-89: キャンセルを持たないので、閉じ方によらず保存して全ウィンドウのバーを作り直す（V-13）。</summary>
     private bool ShowBookmarkManager()
     {
         using (var dialog = new BookmarkDialog(_settings, _quickAccess, _currentFolder)) dialog.ShowDialog(this);
@@ -1489,7 +1489,7 @@ public sealed class MainForm : Form, IBookmarkHost
         var menu = new ToolStripMenuItem("ブックマーク(&B)");
         menu.DropDownItems.Add(BookmarkItems.Placeholder(""));   // 項目が無いと開けない
         ToolStripExtras.EnableWheel(menu.DropDown);
-        // 最上位に並ぶのは「その他のブックマーク」。バー・グループと同じく、ここでも並べ替え・出し入れができる（§6.10）。
+        // 最上位に並ぶのは「その他のブックマーク」。バー・グループと同じく、ここでも並べ替え・出し入れができる（R-89）。
         // 受けるのはその項目の範囲だけ。空のときは落とせない（空の行を常に出すと、使わない人には邪魔になる）
         BookmarkDropZone.Attach(menu.DropDown, _settings.Bookmarks.Other, this, vertical: true);
         menu.DropDownOpening += (_, _) =>

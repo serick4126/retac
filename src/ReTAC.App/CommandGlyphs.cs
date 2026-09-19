@@ -6,7 +6,7 @@ using ReTAC.Domain.Commands;
 namespace ReTAC.App;
 
 /// <summary>
-/// §6.6: 組み込みコマンドとグループのアイコン。OS の記号フォントのグリフを文字色で描く（テーマと DPI に追従する）。
+/// R-89: 組み込みコマンドとグループのアイコン。OS の記号フォントのグリフを文字色で描く（テーマと DPI に追従する）。
 /// コードポイントは Segoe Fluent Icons と Segoe MDL2 Assets の両方にあるものだけ（実行時に有無を判定できないため、表で固定する）。
 /// </summary>
 public static class CommandGlyphs
@@ -17,7 +17,7 @@ public static class CommandGlyphs
     private const char Star = '\uE735';
 
     // ponytail: 同梱フォント（Fluent UI System Icons）は入れていない。OS のフォントに素直な絵が無いものは汎用のグリフ。
-    // 見分けが要るという指摘が出たら、§6.6 の Bundled の行を足す
+    // 見分けが要るという指摘が出たら、Bundled の候補を足す
     private static readonly Dictionary<CommandId, char> Table = new()
     {
         [CommandId.OpenFile] = '\uE8E5',
@@ -93,7 +93,7 @@ public static class CommandGlyphs
     /// <summary>組み込みコマンドのアイコン。記号フォントが無ければ null。</summary>
     public static Bitmap? For(CommandId id, int size, Color color) => Draw(size, color, (GlyphOf(id), 1f, false));
 
-    /// <summary>グループ: フォルダに星を重ねる。実際のフォルダ（シェルのアイコン）と見分けるため（§6.6）。</summary>
+    /// <summary>グループ: フォルダに星を重ねる。実際のフォルダ（シェルのアイコン）と見分けるため（R-89）。</summary>
     public static Bitmap? Group(int size, Color color) => Draw(size, color, (Folder, 1f, false), (Star, 0.6f, true));
 
     /// <param name="layers">グリフ・大きさの割合・右下に寄せるか</param>

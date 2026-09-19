@@ -246,7 +246,7 @@ public sealed class AddressBar : Control
 
     /// <summary>
     /// 段・▸・… の矩形を計算し直す。Resize・Font・DPI・フォルダの変更のたびに呼ぶ。
-    /// 段の名前は 1 段あたりバーの幅の 1/3 までにし、末尾を … で省く（仕様書 §7.2）。
+    /// 段の名前は 1 段あたりバーの幅の 1/3 までにし、末尾を … で省く（R-94）。
     /// </summary>
     private void LayoutCrumbs()
     {

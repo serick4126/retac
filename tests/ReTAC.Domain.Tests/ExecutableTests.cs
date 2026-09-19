@@ -2,7 +2,7 @@ using ReTAC.Shell;
 
 namespace ReTAC.Domain.Tests;
 
-/// <summary>F-03 / 予定 §1.4 A-1・A-4: 実行ファイルの解決と、コンソールか GUI かの判定</summary>
+/// <summary>F-03: 実行ファイルの解決と、コンソールか GUI かの判定</summary>
 public class ExecutableTests
 {
     private static readonly string System32 = Environment.GetFolderPath(Environment.SpecialFolder.System);

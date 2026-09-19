@@ -341,7 +341,7 @@
       "id": "type:ReTAC.Domain.Commands.CommandTarget",
       "kind": "abstract record",
       "file": "src/ReTAC.Domain/Commands/CommandTarget.cs",
-      "doc": "キーやメニューが指す先（F-06）。組み込みのコマンドか、登録した外部ツール。 後から種類を足せるように、2 択の型（bool や enum）ではなく派生の record で表す（予定 §7）。 設定ファイルには の文字列で書く。"
+      "doc": "キーやメニューが指す先（F-06）。組み込みのコマンドか、登録した外部ツール。 後から種類を足せるように、2 択の型（bool や enum）ではなく派生の record で表す。 設定ファイルには の文字列で書く。"
     },
     "ReTAC.Domain.Commands.ToolTarget": {
       "id": "type:ReTAC.Domain.Commands.ToolTarget",
@@ -838,7 +838,7 @@
       "id": "type:ReTAC.Domain.Formatting.NameFormat",
       "kind": "enum",
       "file": "src/ReTAC.Domain/Formatting/NameFormats.cs",
-      "doc": "`I`（ファイル名をコピー）の 3 形式（D-04 / scope §7.1）。",
+      "doc": "`I`（ファイル名をコピー）の 3 形式（D-04）。",
       "members": [
         "PathAndName",
         "NameOnly",
@@ -916,7 +916,7 @@
       "id": "type:ReTAC.Domain.Listing.ColumnLayout",
       "kind": "sealed record",
       "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
-      "doc": "仕様書 §5.1 のレイアウト計算。R-01-3（ジャストフィット）・R-01-6（拡張子の固定オフセット）。 列幅はウィンドウ幅から独立し、フォルダを開くたびに再計算する（N-04-3）。 R-66-3: すべて実測値と DPI から算出し、物理ピクセルを直書きしない。 文字の実測は呼び出し側（描画層）が行い、ここには結果の数値だけを渡す。",
+      "doc": "R-01-3（ジャストフィット）・R-01-6（拡張子の固定オフセット）のレイアウト計算。 列幅はウィンドウ幅から独立し、フォルダを開くたびに再計算する（N-04-3）。 R-66-3: すべて実測値と DPI から算出し、物理ピクセルを直書きしない。 文字の実測は呼び出し側（描画層）が行い、ここには結果の数値だけを渡す。",
       "fields": [
         {
           "name": "RowHeight",
@@ -1197,7 +1197,7 @@
       "id": "type:ReTAC.Domain.Navigation.BookmarkDrop",
       "kind": "static class",
       "file": "src/ReTAC.Domain/Navigation/BookmarkDrop.cs",
-      "doc": "R-89: バー（横）とグループのメニュー（縦）の上で、ドラッグしている位置から落とす先を決める（§6.10）。"
+      "doc": "R-89: バー（横）とグループのメニュー（縦）の上で、ドラッグしている位置から落とす先を決める。"
     },
     "ReTAC.Domain.Navigation.BookmarkKind": {
       "id": "type:ReTAC.Domain.Navigation.BookmarkKind",
@@ -1537,7 +1537,7 @@
       "id": "type:ReTAC.Domain.Tools.ArgumentTemplate",
       "kind": "sealed class",
       "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
-      "doc": "外部ツールの引数の文字列を解析したもの（F-02 / R-71）。 引数を区切ってから展開するので、展開した値に空白があっても 1 つの引数のまま渡る。 知らない名前は誤りにする。文字どおり渡すと、後で同じ名前のマクロを足した瞬間に既存の設定の意味が変わる（予定 §7 C-1）。",
+      "doc": "外部ツールの引数の文字列を解析したもの（F-02 / R-71）。 引数を区切ってから展開するので、展開した値に空白があっても 1 つの引数のまま渡る。 知らない名前は誤りにする。文字どおり渡すと、後で同じ名前のマクロを足した瞬間に既存の設定の意味が変わる（F-02）。",
       "fields": [
         {
           "name": "Arguments",
@@ -1649,7 +1649,7 @@
       "id": "type:ReTAC.Domain.Tools.ExternalToolQueue",
       "kind": "sealed class",
       "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
-      "doc": "外部ツールキュー（F-05）。「マークした項目ごとに起動する」を、前の 1 件の終了を待ってから次を起動する形で処理する。 完全に独立した仕組みで、ReTAC 内部の処理や将来の git 統合の処理は使わない（予定 §7 C-2）。 起動と終了待ちは run に任せる（App がプロセスを扱う）。このクラスはプロセスを知らない。 待つのは裏のスレッドで、ReTAC の操作は止めない（R-23）。",
+      "doc": "外部ツールキュー（F-05）。「マークした項目ごとに起動する」を、前の 1 件の終了を待ってから次を起動する形で処理する。 完全に独立した仕組みで、ReTAC 内部の処理や将来の git 統合の処理は使わない（F-05）。 起動と終了待ちは run に任せる（App がプロセスを扱う）。このクラスはプロセスを知らない。 待つのは裏のスレッドで、ReTAC の操作は止めない（R-23）。",
       "fields": [
         {
           "name": "WaitingCount",
@@ -1729,7 +1729,7 @@
       "id": "type:ReTAC.Domain.Tools.MacroCatalog",
       "kind": "static class",
       "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-      "doc": "外部ツールの設定ダイアログから開くマクロの一覧（F-04）。 利用者自身も名前と使い方を覚えきれないので、選んで挿入できるようにする（予定 §3.1.1）。 スクリプトの例は例であって既定値ではない（予定 §1.4 A-4）。"
+      "doc": "外部ツールの設定ダイアログから開くマクロの一覧（F-04）。 利用者自身も名前と使い方を覚えきれないので、選んで挿入できるようにする（F-04）。 スクリプトの例は例であって既定値ではない。"
     },
     "ReTAC.Domain.Tools.MacroCatalogEntry": {
       "id": "type:ReTAC.Domain.Tools.MacroCatalogEntry",
@@ -3899,36 +3899,6 @@
         "line": 10
       }
     ],
-    "A-1": [
-      {
-        "file": "src/ReTAC.App/ToolProcess.cs",
-        "line": 12
-      },
-      {
-        "file": "src/ReTAC.Shell/Executables.cs",
-        "line": 6
-      }
-    ],
-    "A-3": [
-      {
-        "file": "src/ReTAC.App/ToolQueueHost.cs",
-        "line": 67
-      }
-    ],
-    "A-4": [
-      {
-        "file": "src/ReTAC.App/ExternalToolDialog.cs",
-        "line": 235
-      },
-      {
-        "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 10
-      },
-      {
-        "file": "src/ReTAC.Shell/Executables.cs",
-        "line": 47
-      }
-    ],
     "B-01": [
       {
         "file": "src/ReTAC.Domain/Navigation/InputText.cs",
@@ -4274,10 +4244,6 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolDialog.cs",
-        "line": 10
-      },
-      {
-        "file": "src/ReTAC.App/ExternalToolDialog.cs",
         "line": 120
       },
       {
@@ -4323,22 +4289,6 @@
       {
         "file": "src/ReTAC.App/TextInputDialog.cs",
         "line": 70
-      },
-      {
-        "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
-        "line": 37
-      }
-    ],
-    "C-2": [
-      {
-        "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
-        "line": 20
-      }
-    ],
-    "C-9": [
-      {
-        "file": "src/ReTAC.App/MainForm.cs",
-        "line": 618
       }
     ],
     "D-04": [
@@ -4405,6 +4355,10 @@
     ],
     "F-02": [
       {
+        "file": "src/ReTAC.App/ExternalToolDialog.cs",
+        "line": 10
+      },
+      {
         "file": "src/ReTAC.Domain/Tools/ArgumentExpander.cs",
         "line": 16
       },
@@ -4415,6 +4369,10 @@
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
         "line": 35
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
+        "line": 37
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
@@ -4467,6 +4425,10 @@
         "line": 16
       },
       {
+        "file": "src/ReTAC.App/ToolProcess.cs",
+        "line": 25
+      },
+      {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
         "line": 19
       },
@@ -4481,6 +4443,10 @@
       {
         "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
         "line": 20
+      },
+      {
+        "file": "src/ReTAC.Shell/Executables.cs",
+        "line": 79
       }
     ],
     "F-04": [
@@ -4503,6 +4469,10 @@
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
         "line": 8
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
+        "line": 9
       }
     ],
     "F-05": [
@@ -4541,6 +4511,10 @@
       {
         "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
         "line": 19
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
+        "line": 20
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
@@ -4673,26 +4647,6 @@
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
         "line": 48
-      },
-      {
-        "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 29
-      }
-    ],
-    "I-2": [
-      {
-        "file": "src/ReTAC.App/ConsoleHold.cs",
-        "line": 8
-      },
-      {
-        "file": "src/ReTAC.App/ToolProcess.cs",
-        "line": 25
-      }
-    ],
-    "I-3": [
-      {
-        "file": "src/ReTAC.Shell/Executables.cs",
-        "line": 79
       }
     ],
     "K-2": [
@@ -4968,6 +4922,10 @@
       }
     ],
     "R-01": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 13
+      },
       {
         "file": "src/ReTAC.App/FileListView.cs",
         "line": 238
@@ -6513,6 +6471,14 @@
         "line": 1984
       },
       {
+        "file": "src/ReTAC.App/Rendering/EntryMetrics.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.App/Rendering/TextMeasure.cs",
+        "line": 7
+      },
+      {
         "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
         "line": 6
       }
@@ -7117,6 +7083,14 @@
         "line": 11
       },
       {
+        "file": "src/ReTAC.App/BookmarkDropZone.cs",
+        "line": 26
+      },
+      {
+        "file": "src/ReTAC.App/BookmarkDropZone.cs",
+        "line": 140
+      },
+      {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
         "line": 10
       },
@@ -7138,6 +7112,10 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
+        "line": 93
+      },
+      {
+        "file": "src/ReTAC.App/BookmarkItems.cs",
         "line": 119
       },
       {
@@ -7151,6 +7129,14 @@
       {
         "file": "src/ReTAC.App/CommandCatalog.cs",
         "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/CommandGlyphs.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/CommandGlyphs.cs",
+        "line": 96
       },
       {
         "file": "src/ReTAC.App/CommandPickerDialog.cs",
@@ -7179,6 +7165,10 @@
       {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 1464
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1492
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -7219,6 +7209,10 @@
       {
         "file": "src/ReTAC.Domain/Navigation/BookmarkDrop.cs",
         "line": 9
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/BookmarkDrop.cs",
+        "line": 13
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
@@ -7394,6 +7388,10 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
+        "line": 128
+      },
+      {
+        "file": "src/ReTAC.App/BookmarkDropZone.cs",
         "line": 170
       },
       {
@@ -7418,6 +7416,10 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
+        "line": 661
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
         "line": 665
       },
       {
@@ -7439,6 +7441,10 @@
       {
         "file": "src/ReTAC.Domain/FileOps/Undo.cs",
         "line": 37
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/BookmarkDrop.cs",
+        "line": 13
       },
       {
         "file": "src/ReTAC.Domain/Navigation/BookmarkDrop.cs",
@@ -7469,6 +7475,10 @@
       {
         "file": "src/ReTAC.App/AddressBar.cs",
         "line": 220
+      },
+      {
+        "file": "src/ReTAC.App/AddressBar.cs",
+        "line": 249
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",

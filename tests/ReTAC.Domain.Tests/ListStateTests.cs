@@ -3,7 +3,7 @@ using ReTAC.Domain.Selection;
 
 namespace ReTAC.Domain.Tests;
 
-/// <summary>§12.1「マーク」「実効対象」</summary>
+/// <summary>マークと実効対象</summary>
 public class ListStateTests
 {
     private static ListState MakeState() => new(

@@ -94,7 +94,7 @@ public class ArgumentTemplateTests
 
     [Theory]
     [InlineData("${File}")]          // 大文字・小文字を区別する
-    [InlineData("${git:root}")]      // 将来のマクロ。今は知らない名前（予定 §7 C-1）
+    [InlineData("${git:root}")]      // 将来追加され得るマクロ。今は知らない名前
     [InlineData("${file:x}")]        // prompt 以外に「:」は付かない
     [InlineData("${file")]           // 閉じていない
     [InlineData("\"abc")]            // 引用符が閉じていない

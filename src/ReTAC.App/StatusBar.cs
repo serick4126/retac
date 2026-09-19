@@ -26,7 +26,7 @@ public sealed class StatusBar : Control
 
     /// <summary>
     /// F-05: 外部ツールキューの状況。空なら出さない。
-    /// 仕様書 §8 I-1: 既存の 4 区画（R-34）を上書きせず右端に置く。狭いときは ④ のほうが切れる。
+    /// 既存の 4 区画（R-34）を上書きせず右端に置く。狭いときは ④ のほうが切れる。
     /// 後から区画が増えても、左から詰める区画の並びは変わらない。
     /// </summary>
     [System.ComponentModel.Browsable(false)]

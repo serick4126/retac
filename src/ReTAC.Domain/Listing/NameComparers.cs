@@ -15,7 +15,7 @@ public static class NameComparers
     public static readonly IComparer<string> Natural = new ShellComparer(StrCmpLogicalW);
 
     // B-02: エクスプローラの並びは shlwapi のこの 2 関数そのものである。
-    // 2026-09-11 に利用者の記録した順序と突き合わせて実測で確認した（スコープ定義 §4）。
+    // 2026-09-11 に利用者の記録した順序と突き合わせて実測で確認した。
     // 自前の比較では日本語の照合表を再現できない。
     //
     // ReTAC.Domain は net10.0（プラットフォーム非依存）を対象にしているが、

@@ -3,7 +3,7 @@ using System.Windows.Forms;
 namespace ReTAC.App;
 
 /// <summary>
-/// §9.3 / R-52: フォルダ参照ツリー。パスを入力するあらゆる場所で `Shift+Enter` から開く（N-07）。
+/// R-52: フォルダ参照ツリー。パスを入力するあらゆる場所で `Shift+Enter` から開く（N-07）。
 /// 実体は ReTAC.Shell.ShellFolderBrowser（SHBrowseForFolder の新 UI 版）。
 /// </summary>
 public static class FolderBrowser

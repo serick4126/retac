@@ -8,7 +8,7 @@ using Timer = System.Windows.Forms.Timer;
 namespace ReTAC.App;
 
 /// <summary>
-/// R-89 §6.10: バーとグループのメニューの上のドラッグ。バーの項目の並べ替えと、ファイル・フォルダの追加を受ける。
+/// R-89: バーとグループのメニューの上のドラッグ。バーの項目の並べ替えと、ファイル・フォルダの追加を受ける。
 /// ToolStrip.AllowItemReorder は Alt を押しながらでないと働かず、挿入位置も出ないので自前で扱う。
 /// </summary>
 internal sealed class BookmarkDropZone
@@ -23,7 +23,7 @@ internal sealed class BookmarkDropZone
     private readonly List<Bookmark> _list;
     private readonly IBookmarkHost _host;
     private readonly bool _vertical;
-    /// <summary>グループの上で止まったら開く（§8 の「ホールドで展開」）。</summary>
+    /// <summary>グループの上で止まったら開く（R-89）。</summary>
     private readonly Timer _hold = new() { Interval = 1000 };
     private ToolStripDropDownItem? _holding;
     private DropSpot? _spot;
@@ -125,7 +125,7 @@ internal sealed class BookmarkDropZone
     private List<ToolStripItem> Slots() =>
         _strip.Items.Cast<ToolStripItem>().Where(i => i.Tag is Bookmark && i.Placement == ToolStripItemPlacement.Main).ToList();
 
-    // どの項目も中央 1/3 は「項目の上」。何が起こるかは BookmarkDrop.Onto が種類で決める（ファイル・コマンドの上は落とせない。§7.1）
+    // どの項目も中央 1/3 は「項目の上」。何が起こるかは BookmarkDrop.Onto が種類で決める（R-93: ファイル・コマンドの上は落とせない）
     private DropSpot Hit(List<ToolStripItem> slots, Point client) =>
         BookmarkDrop.Hit(slots.Select(i => _vertical
             ? (i.Bounds.Top, i.Bounds.Bottom, true)
@@ -137,7 +137,7 @@ internal sealed class BookmarkDropZone
     /// <summary>
     /// 縦のメニューでは、ブックマークの項目が並ぶ範囲（空なら「（空）」の行）だけを受け口にする。
     /// ブックマークメニューには管理・追加などの操作の行や区切りも並ぶので、その上に落としても受けない。
-    /// バーは空いた所へ落としても末尾に足す（§6.10）。
+    /// バーは空いた所へ落としても末尾に足す（R-89）。
     /// </summary>
     private bool Accepts(List<ToolStripItem> slots, Point client)
     {

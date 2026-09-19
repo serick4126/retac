@@ -147,7 +147,7 @@ public class BookmarkTests
     [InlineData(BookmarkKind.Group, true, OntoAction.IntoGroup)]
     [InlineData(BookmarkKind.Folder, false, OntoAction.Transfer)]   // R-93
     [InlineData(BookmarkKind.Folder, true, OntoAction.None)]        // 並べ替えはフォルダへ転送しない
-    [InlineData(BookmarkKind.File, false, OntoAction.None)]         // §7.1: ファイル・コマンドの上は落とせない
+    [InlineData(BookmarkKind.File, false, OntoAction.None)]         // R-93: ファイル・コマンドの上は落とせない
     [InlineData(BookmarkKind.Command, false, OntoAction.None)]
     [InlineData(BookmarkKind.File, true, OntoAction.None)]
     public void 項目の上に落としたときに起こすこと(BookmarkKind kind, bool reorder, OntoAction expected)

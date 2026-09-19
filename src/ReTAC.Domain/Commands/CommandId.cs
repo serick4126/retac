@@ -53,7 +53,7 @@ public enum CommandId
     CopyFileName = 0x831B,
     CopyFileNameWithPath = 0x83A9,
     CopyFileNameOnly = 0x7FC4,
-    /// <summary>卓駆にない追加要件（scope §7.1）。`C:/DEV/...` 形式。</summary>
+    /// <summary>卓駆にない追加要件。`C:/DEV/...` 形式。</summary>
     CopyFileNameWithPathSlash = 0x9001,
 
     // --- 外部連携 ---

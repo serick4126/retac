@@ -7,7 +7,7 @@ namespace ReTAC.App;
 
 /// <summary>
 /// 外部ツールの設定（0x815A / F-04）。件数可変の一覧を編集する。
-/// 知らないマクロは保存させない（予定 §7 C-1）。パスが見つからない・実行できない種類は注意だけ出す
+/// 知らないマクロは保存させない（F-02）。パスが見つからない・実行できない種類は注意だけ出す
 /// （後でインストールする・関連付けのアプリで開くことを狙う使い方がある）。
 /// </summary>
 public sealed class ExternalToolDialog : Form
@@ -232,7 +232,7 @@ public sealed class ExternalToolDialog : Form
         var (found, script) = await Task.Run(() =>
         {
             var resolved = ExecutableResolver.Resolve(path);
-            // 種類は拡張子で分かるので、まだ置いていないスクリプトでも案内を出す（予定 §1.4 A-4）
+            // 種類は拡張子で分かるので、まだ置いていないスクリプトでも案内を出す
             var target = resolved ?? path;
             return (resolved is not null, System.IO.Path.HasExtension(target) && !ExecutableResolver.IsExecutableType(target));
         });

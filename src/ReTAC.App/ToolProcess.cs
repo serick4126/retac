@@ -9,7 +9,7 @@ internal static class ToolProcess
 {
     public static ProcessStartInfo StartInfo(LaunchRequest request)
     {
-        // 予定 §1.4 A-1: 名前だけなら PATH と App Paths から探す。見つからなければ書かれたまま Windows に任せる
+        // 名前だけなら PATH と App Paths から探す。見つからなければ書かれたまま Windows に任せる
         var path = ExecutableResolver.Resolve(request.Tool.Path) ?? request.Tool.Path;
 
         ProcessStartInfo info;
@@ -22,7 +22,7 @@ internal static class ToolProcess
         }
         else
         {
-            // UseShellExecute: 管理者権限を求めるツールも UAC に任せて起動できる（仕様書 §8 I-2）
+            // UseShellExecute: 管理者権限を求めるツールも UAC に任せて起動できる（F-03）
             info = new ProcessStartInfo(path) { UseShellExecute = true };
         }
 

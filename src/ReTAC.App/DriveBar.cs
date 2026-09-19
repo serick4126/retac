@@ -42,7 +42,7 @@ public sealed class DriveBar : Control
     {
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer
                  | ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.Selectable, true);
-        TabStop = false;   // §6.1: Tab によるフォーカス移動は持たない。L で入って Esc で戻る
+        TabStop = false;   // Tab によるフォーカス移動は持たない。L で入って Esc で戻る
         AllowDrop = true;  // R-65 ③: ドライブアイコンへのドロップでコピー・移動
         Dock = DockStyle.Top;
         BackColor = SystemColors.Control;

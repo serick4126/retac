@@ -2,7 +2,7 @@ using ReTAC.Domain.Entries;
 
 namespace ReTAC.Domain.Formatting;
 
-/// <summary>`I`（ファイル名をコピー）の 3 形式（D-04 / scope §7.1）。</summary>
+/// <summary>`I`（ファイル名をコピー）の 3 形式（D-04）。</summary>
 public enum NameFormat
 {
     /// <summary>パス＋名前（0x83A9）。</summary>

@@ -34,7 +34,7 @@ public sealed record TemplateError(int Position, string Message);
 /// <summary>
 /// 外部ツールの引数の文字列を解析したもの（F-02 / R-71）。
 /// <b>引数を区切ってから展開する</b>ので、展開した値に空白があっても 1 つの引数のまま渡る。
-/// 知らない名前は誤りにする。文字どおり渡すと、後で同じ名前のマクロを足した瞬間に既存の設定の意味が変わる（予定 §7 C-1）。
+/// 知らない名前は誤りにする。文字どおり渡すと、後で同じ名前のマクロを足した瞬間に既存の設定の意味が変わる（F-02）。
 /// </summary>
 public sealed class ArgumentTemplate
 {
@@ -152,7 +152,7 @@ public sealed class ArgumentTemplate
             var promptIndex = -1;
             if (macro == MacroName.Prompt)
             {
-                // 既定値は区切り記号ではなく括弧で分ける。Everything の検索文字列で「|」を使うため（予定 §3.2.1）
+                // 既定値は区切り記号ではなく括弧で分ける。Everything の検索文字列で「|」を使うため
                 var defaultValue = "";
                 if (next < text.Length && text[next] == '{')
                 {
