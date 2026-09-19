@@ -63,14 +63,30 @@ public static class ToolStripExtras
     /// 項目が画面の高さに入りきらないメニューを、ホイールで送れるようにする（標準は ▲▼ を押すしかない）。
     /// 項目が多いときに使うので、1 ノッチで 3 段以上（Windows の「一度にスクロールする行数」と 3 の大きい方）送る。
     /// </summary>
+    /// <summary>その向きに、まだ隠れた項目があるか（▲▼ が押せるか）。</summary>
+    private static bool CanScroll(ToolStripDropDownMenu menu, bool up)
+    {
+        var shown = menu.Items.Cast<ToolStripItem>().Where(i => i.Available).ToList();
+        if (shown.Count == 0) return false;
+        var area = menu.DisplayRectangle;
+        return up ? shown[0].Bounds.Top < area.Top : shown[^1].Bounds.Bottom > area.Bottom;
+    }
+
     public static void EnableWheel(ToolStripDropDown dropDown)
     {
         if (ScrollOneRow is null || dropDown is not ToolStripDropDownMenu menu) return;
         menu.MouseWheel += (_, e) =>
         {
             var rows = Math.Max(3, SystemInformation.MouseWheelScrollLines) * Math.Abs(e.Delta) / 120;
-            object[] up = [e.Delta > 0];
-            for (var i = 0; i < rows; i++) ScrollOneRow.Invoke(menu, up);
+            var up = e.Delta > 0;
+            object[] args = [up];
+            for (var i = 0; i < rows && CanScroll(menu, up); i++)
+            {
+                // WinForms は ▲▼ が押せるときにしか呼ばない。端を越えて送ったり、展開表示が項目を差し替えた直後に
+                // 送ったりすると中で例外になる（速く回したときの実機指摘）。そうなったら、そのノッチは送るのをやめる
+                try { ScrollOneRow.Invoke(menu, args); }
+                catch (TargetInvocationException) { break; }
+            }
         };
     }
 }
