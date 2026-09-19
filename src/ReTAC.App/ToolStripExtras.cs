@@ -59,10 +59,6 @@ public static class ToolStripExtras
     private static readonly MethodInfo? ScrollOneRow = typeof(ToolStripDropDownMenu).GetMethod(
         "ScrollInternal", BindingFlags.Instance | BindingFlags.NonPublic, [typeof(bool)]);
 
-    /// <summary>
-    /// 項目が画面の高さに入りきらないメニューを、ホイールで送れるようにする（標準は ▲▼ を押すしかない）。
-    /// 項目が多いときに使うので、1 ノッチで 3 段以上（Windows の「一度にスクロールする行数」と 3 の大きい方）送る。
-    /// </summary>
     /// <summary>その向きに、まだ隠れた項目があるか（▲▼ が押せるか）。</summary>
     private static bool CanScroll(ToolStripDropDownMenu menu, bool up)
     {
@@ -72,6 +68,10 @@ public static class ToolStripExtras
         return up ? shown[0].Bounds.Top < area.Top : shown[^1].Bounds.Bottom > area.Bottom;
     }
 
+    /// <summary>
+    /// 項目が画面の高さに入りきらないメニューを、ホイールで送れるようにする（標準は ▲▼ を押すしかない）。
+    /// 項目が多いときに使うので、1 ノッチで 3 段以上（Windows の「一度にスクロールする行数」と 3 の大きい方）送る。
+    /// </summary>
     public static void EnableWheel(ToolStripDropDown dropDown)
     {
         if (ScrollOneRow is null || dropDown is not ToolStripDropDownMenu menu) return;

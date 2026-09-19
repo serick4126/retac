@@ -140,7 +140,7 @@ public sealed class DriveBar : Control
     public event EventHandler<Point>? OverflowClicked;
 
     /// <summary>入りきらないか（上部の行が、アドレスバーの最小幅を残すために幅を詰めたとき）。</summary>
-    public bool Clipped => _buttons.Count > 0 && Width < PreferredWidth;
+    internal bool Clipped => _buttons.Count > 0 && Width < PreferredWidth;
 
     private Rectangle OverflowBounds
     {
