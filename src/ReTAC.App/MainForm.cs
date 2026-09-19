@@ -1596,7 +1596,9 @@ public sealed class MainForm : Form, IBookmarkHost
         var top = item;
         while (top?.Owner is ToolStripDropDown { OwnerItem: { } parent }) top = parent;
         (top as ToolStripDropDownItem)?.HideDropDown();
-        if (result.Outcome == ContextMenuOutcome.AppItem) rows[result.AppItem].Run?.Invoke();
+        // 選んだ処理は後に回す。ここは右クリックした項目の MouseUp の中なので、その場で削除してバーを作り直すと、
+        // 処理中の項目ごと捨てることになり、閉じたメニューの跡がファイルリストに残った（実機指摘）
+        if (result.Outcome == ContextMenuOutcome.AppItem && rows[result.AppItem].Run is { } run) BeginInvoke(run);
     }
 
     BookmarkSet IBookmarkHost.Bookmarks => _settings.Bookmarks;

@@ -391,7 +391,8 @@ public sealed class AddressBar : Control
     /// <summary>一度だけ使うメニュー。閉じたら項目ごと捨てる（開くたびに作るので、捨てないと GDI ハンドルが積み上がる）。</summary>
     private ContextMenuStrip NewMenu()
     {
-        var menu = new ContextMenuStrip { ShowImageMargin = false };
+        // ContextMenuStrip は既定で項目のツールチップを出さない。一覧の項目にはフルパスを出す（実機指摘）
+        var menu = new ContextMenuStrip { ShowImageMargin = false, ShowItemToolTips = true };
         ToolStripExtras.EnableWheel(menu);
         menu.Closed += (_, _) => BeginInvoke(() =>
         {
@@ -403,7 +404,7 @@ public sealed class AddressBar : Control
 
     private ToolStripMenuItem JumpItem(string text, string path)
     {
-        var item = new ToolStripMenuItem(text.Replace("&", "&&"));
+        var item = new ToolStripMenuItem(text.Replace("&", "&&")) { ToolTipText = path };
         item.Click += (_, _) => JumpRequested?.Invoke(this, (path, false));
         return item;
     }
@@ -570,8 +571,11 @@ public sealed class AddressBar : Control
             var part = _parts[index];
             switch (part.Kind)
             {
-                // 最後の段は今のフォルダの読み直しになる（JumpInput がそのまま開き直す）
-                case PartKind.Segment: JumpRequested?.Invoke(this, (_segments[part.Index].Path, false)); break;
+                // R-40-2: 最後の段は今のフォルダなので何もしない。開き直すとカーソルが先頭に戻りマークも消える（実機指摘）。
+                // フォルダを移らない限りカーソルとマークを保つのが最重要の原則
+                case PartKind.Segment when part.Index < _segments.Count - 1:
+                    JumpRequested?.Invoke(this, (_segments[part.Index].Path, false));
+                    break;
                 case PartKind.Arrow: ShowChildren(part.Index, part.Bounds); break;
                 case PartKind.Ellipsis: ShowCollapsed(part.Index, part.Bounds); break;
             }
