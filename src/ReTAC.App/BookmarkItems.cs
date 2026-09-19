@@ -180,21 +180,43 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
             return jobs.Select(j => (j.item, image: icons.ForPath(j.path!) is { } b ? new Bitmap(b) : null)).ToList();
         }).ContinueWith(task =>
         {
-            if (!task.IsCompletedSuccessfully || invoker.IsDisposed) return;
-            invoker.BeginInvoke(() =>
+            if (!task.IsCompletedSuccessfully) return;
+            var results = task.Result;
+            try
             {
-                // 1 件ずつ差し替えるたびにメニュー全体を並べ直すと、数百件で固まる。並べ直しを止めてまとめて入れる
-                var owners = task.Result.Select(r => r.item.Owner).OfType<ToolStrip>().Distinct().ToList();
-                foreach (var owner in owners) owner.SuspendLayout();
-                foreach (var (item, image) in task.Result)
-                {
-                    if (image is null) continue;
-                    if (item.IsDisposed) { image.Dispose(); continue; }
-                    item.Image = image;
-                }
-                foreach (var owner in owners) owner.ResumeLayout();
-            });
+                if (invoker.IsDisposed || !invoker.IsHandleCreated) { DisposeImages(results); return; }
+                invoker.BeginInvoke(() => ApplyIcons(results));
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException)
+            {
+                DisposeImages(results);   // 確かめた直後に窓が閉じた。渡せなかった Bitmap は GC を待たずに捨てる
+            }
         });
+    }
+
+    private static void ApplyIcons(List<(ToolStripItem item, Bitmap? image)> results)
+    {
+        // 1 件ずつ差し替えるたびにメニュー全体を並べ直すと、数百件で固まる。並べ直しを止めてまとめて入れる
+        var owners = results.Select(r => r.item.Owner).OfType<ToolStrip>().Where(o => !o.IsDisposed).Distinct().ToList();
+        foreach (var owner in owners) owner.SuspendLayout();
+        try
+        {
+            foreach (var (item, image) in results)
+            {
+                if (image is null) continue;
+                if (item.IsDisposed) image.Dispose();   // 読んでいる間にメニューを閉じた・バーを作り直した
+                else item.Image = image;
+            }
+        }
+        finally
+        {
+            foreach (var owner in owners) owner.ResumeLayout();
+        }
+    }
+
+    private static void DisposeImages(List<(ToolStripItem item, Bitmap? image)> results)
+    {
+        foreach (var (_, image) in results) image?.Dispose();
     }
 
     /// <summary>グループと組み込みコマンドの絵。外部ツール・フォルダ・ファイルはシェルのアイコン（LoadIcons）なので null。</summary>
