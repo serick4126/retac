@@ -1446,6 +1446,8 @@ public sealed class MainForm : Form, IBookmarkHost
         var menu = new ToolStripMenuItem("ブックマーク(&B)");
         menu.DropDownItems.Add(BookmarkItems.Placeholder(""));   // 項目が無いと開けない
         ToolStripExtras.EnableWheel(menu.DropDown);
+        // 最上位に並ぶのは「その他のブックマーク」。バー・グループと同じく、ここでも並べ替え・出し入れができる（§6.10）
+        BookmarkDropZone.Attach(menu.DropDown, _settings.Bookmarks.Other, this, vertical: true);
         menu.DropDownOpening += (_, _) =>
         {
             BookmarkItems.Clear(menu.DropDownItems);
@@ -1459,6 +1461,7 @@ public sealed class MainForm : Form, IBookmarkHost
                 : _bookmarkItems.MenuItems(_settings.Bookmarks.Bar));
             MenuSpacing.Apply(bar.DropDownItems, DeviceDpi);   // グループのメニューと同じ行間・ホイールにそろえる
             ToolStripExtras.EnableWheel(bar.DropDown);
+            BookmarkDropZone.Attach(bar.DropDown, _settings.Bookmarks.Bar, this, vertical: true);
             menu.DropDownItems.AddRange([manage, add, new ToolStripSeparator(), bar]);
             if (_settings.Bookmarks.Other.Count > 0)
             {
