@@ -5,6 +5,25 @@ using ReTAC.Domain.Tools;
 
 namespace ReTAC.App;
 
+public sealed record LeftPanelMenuItems(
+    ToolStripMenuItem Root,
+    ToolStripMenuItem Toggle,
+    IReadOnlyDictionary<LeftPanelViewKind, ToolStripMenuItem> Views);
+
+/// <summary>R-96: 相互排他的にチェックする左パネルビュー項目。</summary>
+public sealed class RadioToolStripMenuItem : ToolStripMenuItem
+{
+    public RadioToolStripMenuItem(string text) : base(text) { }
+
+    protected override void OnCheckedChanged(EventArgs e)
+    {
+        if (Checked && Owner is { } owner)
+            foreach (var other in owner.Items.OfType<RadioToolStripMenuItem>().Where(item => item != this))
+                other.Checked = false;
+        base.OnCheckedChanged(e);
+    }
+}
+
 /// <summary>
 /// メニューバー。<b>マウスだけで操作を完結させるための経路</b>である。
 /// A-02（キーボードだけで完結する）と対になるものであって、それを置き換えるものではない。
@@ -21,9 +40,11 @@ public static class MenuBar
     /// <param name="driveBarItem">R-77: 「表示 ＞ ドライブバー」。チェックの付け外しは呼び出し側が行う</param>
     /// <param name="addressBarItem">R-86: 「表示 ＞ アドレスバー」。チェックの付け外しは呼び出し側が行う</param>
     /// <param name="bookmarkBarItem">R-89: 「表示 ＞ ブックマークバー」。チェックの付け外しは呼び出し側が行う</param>
+    /// <param name="leftPanelItems">R-96: 「表示 ＞ 左パネル」。状態の反映は呼び出し側が行う</param>
     /// <param name="undoDescription">R-82: 最新の記録の説明。無ければ null</param>
     public static MenuStrip Create(Action<CommandTarget> dispatch, KeyMap keyMap, IReadOnlyList<ExternalTool> tools,
                                    out ToolStripMenuItem driveBarItem, out ToolStripMenuItem addressBarItem, out ToolStripMenuItem bookmarkBarItem,
+                                   out LeftPanelMenuItems leftPanelItems,
                                    Func<string?> undoDescription)
     {
         var keys = KeyLabels(keyMap);
@@ -34,6 +55,15 @@ public static class MenuBar
         var driveBar = Item("ドライブバー(&D)", CommandId.ToggleDriveBar);
         var addressBar = Item("アドレスバー(&A)", CommandId.ToggleAddressBar);
         var bookmarkBar = Item("ブックマークバー(&B)", CommandId.ToggleBookmarkBar);
+        var leftToggle = Item("左パネルを表示(&L)", CommandId.ToggleLeftPanel);
+        var leftViews = new Dictionary<LeftPanelViewKind, ToolStripMenuItem>
+        {
+            [LeftPanelViewKind.DriveTree] = RadioItem("ドライブツリー(&D)", CommandId.ShowDriveTree),
+            [LeftPanelViewKind.DesktopTree] = RadioItem("デスクトップツリー(&T)", CommandId.ShowDesktopTree),
+            [LeftPanelViewKind.Bookmarks] = RadioItem("ブックマーク(&B)", CommandId.ShowBookmarksView),
+            [LeftPanelViewKind.Preview] = RadioItem("プレビュー(&P)", CommandId.ShowPreview),
+        };
+        var leftPanel = Top("左パネル(&L)", [leftToggle, Separator(), .. leftViews.Values]);
         // R-82 / R-83: Ctrl+Z は固定のキーなので、キーマップの逆引きでは出ない。表示を直接与える
         var undo = Item("元に戻す(&U)", CommandId.Undo);
         undo.ShortcutKeyDisplayString = "Ctrl+Z";
@@ -108,6 +138,7 @@ public static class MenuBar
                 driveBar,
                 addressBar,
                 bookmarkBar,
+                leftPanel,
                 Separator(),
                 Item("ソートの設定(&S)...", CommandId.SortSettings),
                 Item("表示するファイルタイプ(&T)...", CommandId.FileTypeSettings)),
@@ -131,6 +162,7 @@ public static class MenuBar
         driveBarItem = driveBar;
         addressBarItem = addressBar;
         bookmarkBarItem = bookmarkBar;
+        leftPanelItems = new LeftPanelMenuItems(leftPanel, leftToggle, leftViews);
         return menu;
 
         ToolStripItem[] ToolsMenu()
@@ -146,14 +178,20 @@ public static class MenuBar
             return [.. items];
         }
 
-        ToolStripMenuItem Item(string text, CommandId command)
+        ToolStripMenuItem Item(string text, CommandId command, bool radio = false)
         {
             var target = new BuiltinTarget(command);
-            var item = new ToolStripMenuItem(text);
+            var item = radio ? new RadioToolStripMenuItem(text) : new ToolStripMenuItem(text);
+            item.Tag = command;
             // 実際のキー処理はファイルリストが受け持つ。ここは割り当ての表示だけ
             if (keys.TryGetValue(target, out var label)) item.ShortcutKeyDisplayString = label;
             item.Click += (_, _) => dispatch(target);
             return item;
+        }
+
+        ToolStripMenuItem RadioItem(string text, CommandId command)
+        {
+            return Item(text, command, radio: true);
         }
 
         ToolStripMenuItem ToolItem(ExternalTool tool)
@@ -180,7 +218,7 @@ public static class MenuBar
     private static ToolStripSeparator Separator() => new();
 
     /// <summary>キーマップを逆引きして「C」「Shift+Enter」「Ctrl+E」のような表示用の文字列にする。</summary>
-    private static Dictionary<CommandTarget, string> KeyLabels(KeyMap keyMap)
+    internal static Dictionary<CommandTarget, string> KeyLabels(KeyMap keyMap)
     {
         var labels = new Dictionary<CommandTarget, string>();
         foreach (var (binding, target) in keyMap.Bindings)

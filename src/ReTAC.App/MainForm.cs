@@ -52,6 +52,7 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>R-89: このウィンドウでブックマークバーを出しているか（_driveBarShown と同じ理由でフィールドで持つ）。</summary>
     private bool _bookmarkBarShown;
     private ToolStripMenuItem _bookmarkBarMenuItem;
+    private LeftPanelMenuItems _leftPanelMenuItems;
     private readonly BookmarkBar _bookmarkBar = new();
     /// <summary>R-89 / R-90 / R-91: バー・ブックマークメニュー・展開表示で共通の項目の組み立て。</summary>
     private readonly BookmarkItems _bookmarkItems;
@@ -72,6 +73,7 @@ public sealed class MainForm : Form, IBookmarkHost
     private readonly FileDisplayPanel _fileDisplay;
     /// <summary>R-95: 左右に分かれるのは上部バーとステータスバーの間だけ。</summary>
     private readonly CentralDisplayArea _centralDisplay;
+    private readonly LeftPanel _leftPanel = new();
 
     /// <summary>通常表示だったときのクライアント領域。最小化中に保存しても潰れないようにするため。</summary>
     private Size _normalClientSize;
@@ -83,6 +85,7 @@ public sealed class MainForm : Form, IBookmarkHost
         _fileDisplay = new FileDisplayPanel(_list, _search);
         _centralDisplay = new CentralDisplayArea(_fileDisplay, _settings.LeftPanelWidth);
         _keyMap = _settings.ToKeyMap();
+        _leftPanel.SetKeyMap(_keyMap);
         _history = _settings.ToFolderHistory();
         _quickAccess = QuickAccessHost.For(_settings);   // Q12: 全ウィンドウで 1 つ
         _addressBar = new AddressBar(_history, _quickAccess, ((IBookmarkHost)this).Enumerate);
@@ -1952,15 +1955,16 @@ public sealed class MainForm : Form, IBookmarkHost
         Controls.Remove(_menu);
         _menu.Dispose();
         CreateMenu();
+        _leftPanel.SetKeyMap(_keyMap);
         ArrangeDocks();
     }
 
     /// <summary>メニューを作る 1 か所（コンストラクタとキー割り当て・外部ツールの変更後）。</summary>
-    [MemberNotNull(nameof(_menu), nameof(_driveBarMenuItem), nameof(_addressBarMenuItem), nameof(_bookmarkBarMenuItem))]
+    [MemberNotNull(nameof(_menu), nameof(_driveBarMenuItem), nameof(_addressBarMenuItem), nameof(_bookmarkBarMenuItem), nameof(_leftPanelMenuItems))]
     private void CreateMenu()
     {
         _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools,
-            out _driveBarMenuItem, out _addressBarMenuItem, out _bookmarkBarMenuItem, UndoDescription);
+            out _driveBarMenuItem, out _addressBarMenuItem, out _bookmarkBarMenuItem, out _leftPanelMenuItems, UndoDescription);
         _driveBarMenuItem.Checked = _driveBarShown;
         _addressBarMenuItem.Checked = _addressBarShown;
         _bookmarkBarMenuItem.Checked = _bookmarkBarShown;
