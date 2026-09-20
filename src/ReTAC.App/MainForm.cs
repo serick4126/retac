@@ -69,6 +69,9 @@ public sealed class MainForm : Form, IBookmarkHost
     private readonly MouseButtonFilter _mouseButtons;
     /// <summary>R-80: ステータスバーの一段上。検索中だけ出す。</summary>
     private readonly IncrementalSearchBar _search;
+    private readonly FileDisplayPanel _fileDisplay;
+    /// <summary>R-95: 左右に分かれるのは上部バーとステータスバーの間だけ。</summary>
+    private readonly CentralDisplayArea _centralDisplay;
 
     /// <summary>通常表示だったときのクライアント領域。最小化中に保存しても潰れないようにするため。</summary>
     private Size _normalClientSize;
@@ -77,6 +80,8 @@ public sealed class MainForm : Form, IBookmarkHost
     {
         _settings = settings ?? new AppSettings();
         _search = new IncrementalSearchBar(_list);
+        _fileDisplay = new FileDisplayPanel(_list, _search);
+        _centralDisplay = new CentralDisplayArea(_fileDisplay, _settings.LeftPanelWidth);
         _keyMap = _settings.ToKeyMap();
         _history = _settings.ToFolderHistory();
         _quickAccess = QuickAccessHost.For(_settings);   // Q12: 全ウィンドウで 1 つ
@@ -105,10 +110,8 @@ public sealed class MainForm : Form, IBookmarkHost
             StartPosition = FormStartPosition.Manual;
             Location = new Point(_settings.WindowX, _settings.WindowY);
         }
-        // Fill を先に足す（後から足した Dock の方が先に領域を取る）。
-        // ステータスバーが一番下、検索バーはその一段上に来るよう、検索バーを先に足す
-        Controls.Add(_list);
-        Controls.Add(_search);
+        // R-95 / R-100: 左右の内容は中央表示領域へ閉じ込め、上下のバーは全幅のままにする。
+        Controls.Add(_centralDisplay);
         Controls.Add(_topRow);
         Controls.Add(_bookmarkBar);
         Controls.Add(_statusBar);
@@ -520,20 +523,18 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>R-80: 検索バーを出す。</summary>
     private bool OpenIncrementalSearch()
     {
-        var opened = _search.Open();
-        ArrangeDocks();
-        return opened;
+        return _search.Open();
     }
 
     /// <summary>
     /// R-80 / R-86: Dock の外側・内側は追加した順ではなく、その時点の子の添字で決まる（添字が大きいほど外側）。
     /// 隠したまま作った部品は、表示のときに WinForms が並びを詰め替えることがある（検索バーが
     /// ステータスバーより外側へ移り、最下段に出ていた）。部品を出すたびにここで並びを決め直す。
-    /// 上から メニュー → 上部の行 → ブックマークバー → リスト → 検索バー → ステータスバー。
+    /// 上から メニュー → 上部の行 → ブックマークバー → 中央表示領域 → ステータスバー。
     /// </summary>
     private void ArrangeDocks()
     {
-        Control[] order = [_list, _search, _bookmarkBar, _topRow, _menu, _statusBar];
+        Control[] order = [_centralDisplay, _bookmarkBar, _topRow, _menu, _statusBar];
         for (var i = 0; i < order.Length; i++) Controls.SetChildIndex(order[i], i);
     }
 
