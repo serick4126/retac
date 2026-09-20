@@ -19,6 +19,7 @@ retac.settings.json
 # --- ツールが生成するメタデータ ---
 /.claude
 /.agents
+/.worktrees/
 
 # --- .NET ビルド生成物 ---
 [Bb]in/
