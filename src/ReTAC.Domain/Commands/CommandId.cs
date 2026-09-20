@@ -82,6 +82,16 @@ public enum CommandId
     BookmarkAddCurrentFolder = 0x900A,
     /// <summary>R-89: カーソル位置の項目（親フォルダ項目なら今のフォルダ）をブックマークバーの末尾に足す。</summary>
     BookmarkAddCursorItem = 0x900B,
+    /// <summary>R-96: 左パネルを表示してドライブツリーへ切り替える。</summary>
+    ShowDriveTree = 0x900C,
+    /// <summary>R-96: 左パネルを表示してデスクトップツリーへ切り替える。</summary>
+    ShowDesktopTree = 0x900D,
+    /// <summary>R-96: 左パネルを表示してブックマークへ切り替える。</summary>
+    ShowBookmarksView = 0x900E,
+    /// <summary>R-96: 左パネルを表示してプレビューへ切り替える。</summary>
+    ShowPreview = 0x900F,
+    /// <summary>R-96: 左パネルの表示を切り替える。</summary>
+    ToggleLeftPanel = 0x9010,
 
     // --- 設定・ウィンドウ ---
     ColorAndFontSettings = 0x8151,

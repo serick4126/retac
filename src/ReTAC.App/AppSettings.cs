@@ -69,6 +69,16 @@ public sealed class AppSettings
     /// <summary>R-89: ブックマークバーを出すか。初回は出す（空の案内を出す）。</summary>
     public bool ShowBookmarkBar { get; set; } = true;
 
+    /// <summary>B-20: 初回と設定キーが欠けた場合は、ドライブツリーを表示する。</summary>
+    public bool ShowLeftPanel { get; set; } = true;
+    public LeftPanelViewKind LeftPanelView { get; set; } = LeftPanelViewKind.DriveTree;
+
+    /// <summary>R-96: 全ビュー共通の幅を 96 DPI 論理値で保存する。</summary>
+    public int LeftPanelWidth { get; set; } = 280;
+
+    /// <summary>ブックマークビューで展開しているグループの安定 ID。</summary>
+    public List<string> ExpandedBookmarkGroupIds { get; set; } = [];
+
     /// <summary>R-89: ブックマーク。初期登録は 0 件（B-05）。置き場は「バー」と「その他」の 2 つで固定。</summary>
     public BookmarkSet Bookmarks { get; set; } = new();
 
@@ -265,6 +275,7 @@ public sealed class AppSettings
         // そのまま入れるので、型注釈だけでは防げず、ここで直さないと起動が NullReferenceException で止まる
         HiddenDrives = [.. (HiddenDrives ?? []).OfType<string>()];
         FolderHistory = [.. (FolderHistory ?? []).OfType<string>()];
+        ExpandedBookmarkGroupIds = [.. (ExpandedBookmarkGroupIds ?? []).OfType<string>()];
         DriveFolders = WithoutNulls(DriveFolders);
         Colors = WithoutNulls(Colors);
         KeyBindings = WithoutNulls(KeyBindings);

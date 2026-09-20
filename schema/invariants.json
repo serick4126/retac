@@ -34,6 +34,10 @@
     "ShowDriveBar": "menu:MainForm",
     "ShowAddressBar": "menu:MainForm",
     "ShowBookmarkBar": "menu:MainForm",
+    "ShowLeftPanel": "menu:MainForm",
+    "LeftPanelView": "runtime:MainForm",
+    "LeftPanelWidth": "runtime:MainForm",
+    "ExpandedBookmarkGroupIds": "runtime:BookmarkView",
     "Bookmarks": "dialog:BookmarkDialog",
     "BookmarkBarStyle": "dialog:BookmarkDialog",
 
