@@ -51,6 +51,22 @@ public static class ShellItemPath
         finally { Marshal.ReleaseComObject(item); }
     }
 
+    internal static string[] ParentPathsFromRoot(string path)
+    {
+        var root = RootOf(path);
+        var current = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(path));
+        var parents = new List<string>();
+        while (!string.IsNullOrEmpty(current)
+               && !string.Equals(Path.TrimEndingDirectorySeparator(current),
+                   Path.TrimEndingDirectorySeparator(root), StringComparison.OrdinalIgnoreCase))
+        {
+            parents.Add(current);
+            current = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(current));
+        }
+        parents.Reverse();
+        return [.. parents];
+    }
+
     internal static string[] FileSystemPathsOf(IntPtr arrayPointer)
     {
         if (arrayPointer == IntPtr.Zero) return [];
@@ -61,7 +77,13 @@ public static class ShellItemPath
             var paths = new List<string>((int)count);
             for (uint i = 0; i < count; i++)
             {
-                if (array.GetItemAt(i, out var item) < 0) continue;
+                var hr = array.GetItemAt(i, out var item);
+                if (hr < 0)
+                {
+                    if (item is not null) Marshal.ReleaseComObject(item);
+                    continue;
+                }
+                if (item is null) continue;
                 try { if (FileSystemPathOf(item) is { } path) paths.Add(path); }
                 finally { Marshal.ReleaseComObject(item); }
             }

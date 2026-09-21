@@ -74,6 +74,7 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>R-95: 左右に分かれるのは上部バーとステータスバーの間だけ。</summary>
     private readonly CentralDisplayArea _centralDisplay;
     private readonly LeftPanel _leftPanel = new();
+    private readonly DriveTreeView _driveTree = new();
 
     /// <summary>通常表示だったときのクライアント領域。最小化中に保存しても潰れないようにするため。</summary>
     private Size _normalClientSize;
@@ -95,6 +96,7 @@ public sealed class MainForm : Form, IBookmarkHost
         _topRow.SizeChanged += (_, _) => _bookmarkBar.SetRowHeight(_topRow.RowHeight, _topRow.SideMargin);
         _fileTypes = _settings.ToFileTypeFilter();
         _sortOrder = _settings.ToSortOrder();
+        _driveTree.FolderCommitted += (_, path) => _ = OpenFolderAsync(path);
 
         Text = "ReTAC";
         // H-14: Form の既定アイコンは exe のアイコンではないので、埋め込んだ .ico を明示的に渡す
@@ -189,6 +191,7 @@ public sealed class MainForm : Form, IBookmarkHost
             Application.RemoveMessageFilter(_mouseButtons);
             _watcher.Dispose();
             _autoRefresh.Dispose();
+            _driveTree.Dispose();
 
             // B-03: ループはどのウィンドウにも紐づいていない（Program.cs）。
             // 最後の 1 枚が閉じたらここでプロセスを終わらせる。
@@ -2426,6 +2429,8 @@ public sealed class MainForm : Form, IBookmarkHost
         if (sameFolder) _search.Rematch();
         else _search.Close(restore: false);
         WatchCurrentFolder();
+        _driveTree.SyncCurrentFolder(folder,
+            new ShellTreeVisibility(_fileTypes.HiddenFiles, _fileTypes.SystemFiles), resetExpansion: false);
 
         // 再表示ではマークを名前で戻す（R-11-4 の「フォルダ移動で解除」とは別）
         if (restoreMarks is { Count: > 0 })

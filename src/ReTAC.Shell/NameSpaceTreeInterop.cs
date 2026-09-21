@@ -20,6 +20,14 @@ public static class NameSpaceTreeInterop
     }
 
     [Flags]
+    internal enum TreeStyle2 : uint
+    {
+        None = 0,
+        NoSingletonAutoExpand = 0x00000010,
+        NeverInsertNonEnumerated = 0x00000020,
+    }
+
+    [Flags]
     internal enum RootStyle : uint { Visible = 0, Hidden = 1, Expanded = 2 }
 
     [Flags]
@@ -70,6 +78,37 @@ public static class NameSpaceTreeInterop
         [PreserveSig] int GetItemCustomState(IShellItem item, out int stateNumber);
         [PreserveSig] int SetItemCustomState(IShellItem item, int stateNumber);
         [PreserveSig] int EnsureItemVisible(IShellItem item);
+        [PreserveSig] int SetTheme([MarshalAs(UnmanagedType.LPWStr)] string? theme);
+        [PreserveSig] int GetNextItem(IShellItem item, NextItem relation, out IShellItem next);
+    }
+
+    // ShObjIdl.idl: IUnknown の後に INameSpaceTreeControl 19 枠、続いて Control2 の 4 枠。
+    [ComImport, Guid("7CC7AED8-290E-49BC-8945-C1401CC9306C"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface INameSpaceTreeControl2
+    {
+        [PreserveSig] int Initialize(IntPtr parent, ref NativeRect bounds, TreeStyle style);
+        [PreserveSig] int TreeAdvise(IntPtr sink, out uint cookie);
+        [PreserveSig] int TreeUnadvise(uint cookie);
+        [PreserveSig] int AppendRoot(IShellItem root, EnumFlags enumFlags, RootStyle rootStyle, IntPtr filter);
+        [PreserveSig] int InsertRoot(int index, IShellItem root, EnumFlags enumFlags, RootStyle rootStyle, IntPtr filter);
+        [PreserveSig] int RemoveRoot(IShellItem root);
+        [PreserveSig] int RemoveAllRoots();
+        [PreserveSig] int GetRootItems(out IntPtr rootItems);
+        [PreserveSig] int SetItemState(IShellItem item, ItemState mask, ItemState state);
+        [PreserveSig] int GetItemState(IShellItem item, ItemState mask, out ItemState state);
+        [PreserveSig] int GetSelectedItems(out IntPtr selectedItems);
+        [PreserveSig] int GetItemCustomState(IShellItem item, out int stateNumber);
+        [PreserveSig] int SetItemCustomState(IShellItem item, int stateNumber);
+        [PreserveSig] int EnsureItemVisible(IShellItem item);
+        [PreserveSig] int SetTheme([MarshalAs(UnmanagedType.LPWStr)] string? theme);
+        [PreserveSig] int GetNextItem(IShellItem item, NextItem relation, out IShellItem next);
+        [PreserveSig] int HitTest(ref NativePoint point, out IShellItem item);
+        [PreserveSig] int GetItemRect(IShellItem item, out NativeRect bounds);
+        [PreserveSig] int CollapseAll();
+        [PreserveSig] int SetControlStyle(TreeStyle mask, TreeStyle style);
+        [PreserveSig] int GetControlStyle(TreeStyle mask, out TreeStyle style);
+        [PreserveSig] int SetControlStyle2(TreeStyle2 mask, TreeStyle2 style);
+        [PreserveSig] int GetControlStyle2(TreeStyle2 mask, out TreeStyle2 style);
     }
 
     [ComImport, Guid("00000114-0000-0000-C000-000000000046"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
@@ -135,5 +174,12 @@ public static class NameSpaceTreeInterop
         [PreserveSig] int OnDrop(IntPtr over, IntPtr data, int position, uint keyState, ref uint effect);
         [PreserveSig] int OnDropPosition(IntPtr over, IntPtr data, int newPosition, int oldPosition);
         [PreserveSig] int OnDragLeave(IntPtr over);
+    }
+
+    [ComVisible(true), Guid("2659B475-EEB8-48B7-8F07-B378810F48CF"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    public interface IShellItemFilter
+    {
+        [PreserveSig] int IncludeItem(IntPtr item);
+        [PreserveSig] int GetEnumFlagsForItem(IntPtr item, out uint flags);
     }
 }
