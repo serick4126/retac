@@ -25,6 +25,8 @@ public sealed class PreviewView : UserControl
     /// <summary>Q36: 対象名はプレビューと重ねず、最下段の独立した 1 行に出す。</summary>
     private readonly Label _name = new() { Dock = DockStyle.Bottom, AutoEllipsis = true, TextAlign = ContentAlignment.MiddleLeft };
     private readonly ToolTip _tip = new();
+    /// <summary>ハンドラーの無いファイルの、Windows のサムネイル（利用者の決定）。</summary>
+    private readonly PictureBox _picture = new() { Dock = DockStyle.Fill, Visible = false };
     private readonly Timer _delay = new() { Interval = PreviewTarget.KeyboardDelayMs };
     private readonly Timer _loading = new() { Interval = PreviewTarget.LoadingNoticeMs };
 
@@ -49,6 +51,7 @@ public sealed class PreviewView : UserControl
         _statusPanel.Controls.Add(_status, 0, 1);
         _statusPanel.Controls.Add(_retry, 0, 2);
         _area.Controls.Add(_statusPanel);
+        _area.Controls.Add(_picture);
         Controls.Add(_area);
         Controls.Add(_name);
         UpdateNameHeight();
@@ -67,6 +70,7 @@ public sealed class PreviewView : UserControl
         };
         _area.Resize += (_, _) =>
         {
+            FitPicture();
             _shown?.Session.SetSize(_area.ClientSize);
             _pending?.Session.SetSize(_area.ClientSize);
         };
@@ -75,6 +79,7 @@ public sealed class PreviewView : UserControl
         {
             _delay.Dispose();
             _loading.Dispose();
+            _picture.Image?.Dispose();
             _tip.Dispose();
         };
     }
@@ -102,6 +107,7 @@ public sealed class PreviewView : UserControl
         _loading.Stop();
         ReleasePending();
         ReleaseShown();
+        _generation++;   // 調べている途中の代わりの出し方（サムネイル・テキスト）の結果も捨てる
         _loadedPath = null;
         SetStatus("");
     }
@@ -128,14 +134,53 @@ public sealed class PreviewView : UserControl
             SetStatus(NoTargetText);
             return;
         }
-        if (PreviewSession.FindHandler(path) is not { } clsid)
-        {
-            SetStatus(NoHandlerText);   // ハンドラーが無いのは一時的な失敗ではないので、再試行は出さない（Q58）
-            return;
-        }
-
         SetStatus("");
         var generation = ++_generation;
+        _loading.Start();   // 読込中の表示は要求の処理開始から数える（技術ゲート）
+        if (PreviewSession.FindHandler(path) is { } clsid)
+        {
+            StartSession(clsid, path, generation);
+            return;
+        }
+        // 登録の無いファイルは、Windows のサムネイルか、テキストなら TXT のハンドラーで出す（利用者の決定）
+        PreviewFallback.Resolve(path, _area.ClientSize, result => Post(() => Fallback(generation, path, result)));
+    }
+
+    private void Fallback(int generation, string path, PreviewFallback result)
+    {
+        if (generation != _generation)
+        {
+            result.Image?.Dispose();   // 古い要求
+            return;
+        }
+        if (result.Text && PreviewFallback.TextHandler is { } text)
+        {
+            StartSession(text, path, generation);
+            return;
+        }
+        _loading.Stop();
+        if (result.Image is not { } image)
+        {
+            SetStatus(NoHandlerText);   // 出し方が無いのは一時的な失敗ではないので、再試行は出さない（Q58）
+            return;
+        }
+        SetStatus("");
+        _picture.Image = image;
+        FitPicture();
+        _picture.Visible = true;
+        _picture.BringToFront();
+    }
+
+    /// <summary>領域より小さい画像は拡大せず中央に置き、大きい画像は縦横比を保って縮める。</summary>
+    private void FitPicture()
+    {
+        if (_picture.Image is not { } image) return;
+        var area = _area.ClientSize;
+        _picture.SizeMode = image.Width <= area.Width && image.Height <= area.Height ? PictureBoxSizeMode.CenterImage : PictureBoxSizeMode.Zoom;
+    }
+
+    private void StartSession(Guid clsid, string path, int generation)
+    {
         // 要求ごとに子ホストを分ける。止まった古いハンドラーが、新しい表示の上に描かないように
         var host = new Panel { Dock = DockStyle.Fill, Visible = false };
         _area.Controls.Add(host);
@@ -143,7 +188,6 @@ public sealed class PreviewView : UserControl
             completed: ok => Post(() => Completed(generation, ok)),
             tabPressed: () => Post(() => FocusFileViewRequested?.Invoke(this, EventArgs.Empty)));
         _pending = (session, host, generation);
-        _loading.Start();   // 読込中の表示は要求の処理開始から数える（技術ゲート）
     }
 
     private void Completed(int generation, bool ok)
@@ -166,6 +210,12 @@ public sealed class PreviewView : UserControl
 
     private void ReleaseShown()
     {
+        if (_picture.Image is { } image)
+        {
+            _picture.Visible = false;
+            _picture.Image = null;
+            image.Dispose();
+        }
         if (_shown is not var (session, host)) return;
         _shown = null;
         Release(session, host);

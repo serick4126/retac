@@ -8213,7 +8213,11 @@
       },
       {
         "file": "src/ReTAC.App/PreviewView.cs",
-        "line": 96
+        "line": 101
+      },
+      {
+        "file": "src/ReTAC.Shell/PreviewFallback.cs",
+        "line": 9
       },
       {
         "file": "src/ReTAC.Shell/PreviewSession.cs",

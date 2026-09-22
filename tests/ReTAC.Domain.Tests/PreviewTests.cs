@@ -15,4 +15,13 @@ public class PreviewTests
         Assert.Null(PreviewTarget.Of(Entry.ForParent(@"C:\")));
         Assert.Null(PreviewTarget.Of(null));
     }
+
+    [Theory]
+    [InlineData(new byte[] { 0x7B, 0x22, 0x61, 0x22, 0x7D }, true)]   // {"a"}
+    [InlineData(new byte[] { 0xE3, 0x81, 0x82 }, true)]               // UTF-8 の「あ」
+    [InlineData(new byte[] { 0xFF, 0xFE, 0x42, 0x30 }, true)]         // UTF-16 は NUL を含むが BOM で見る
+    [InlineData(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x00 }, false)]  // NUL を含むものはテキストではない
+    [InlineData(new byte[0], true)]                                   // 空のファイル
+    public void 登録の無いファイルは先頭にNULが無ければテキストとみなす(byte[] head, bool text) =>
+        Assert.Equal(text, ReTAC.Shell.PreviewFallback.IsText(head));
 }
