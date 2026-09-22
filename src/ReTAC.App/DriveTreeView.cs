@@ -70,7 +70,8 @@ public sealed class DriveTreeView : Control
         };
         _host.FilesDropped += (_, e) => FilesDropped?.Invoke(this, e);
         _host.ItemClicked += OnTreeItemClicked;
-        _host.CommitRequested += (_, _) => CommitSelectedFolder();
+        // R-97-2: Enter は確定のあとファイルビューへフォーカスを戻す（マウス確定はフォーカスを動かさない）
+        _host.CommitRequested += (_, _) => { CommitSelectedFolder(); FocusFileViewRequested?.Invoke(this, EventArgs.Empty); };
         _host.TabPressed += (_, _) => FocusFileViewRequested?.Invoke(this, EventArgs.Empty);
         _selectionWatchdog.Tick += (_, _) => CheckSelectionTimeout();
     }
