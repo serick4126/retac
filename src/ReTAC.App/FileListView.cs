@@ -451,16 +451,10 @@ public sealed class FileListView : Control
         _dragIndex = -1;
         if (targets.Count == 0) return;
 
-        var paths = new System.Collections.Specialized.StringCollection();
-        foreach (var target in targets) paths.Add(target.FullPath);
-        var data = new DataObject();
-        data.SetFileDropList(paths);
-
         // A-01: ドラッグしてもマークは変わらない
         // R-78: 画像付きで始める。画像の無いドラッグには、落とす先が説明（「◯◯へ移動」）を出せない
         using var image = DragImage(targets);
-        DoDragDrop(data, DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link,
-            image, new Point(Scaled(8), Scaled(8)), useDefaultDragImage: false);
+        ShellDrag.Start(this, targets.Select(target => target.FullPath).ToList(), image, new Point(Scaled(8), Scaled(8)));
     }
 
     /// <summary>R-78: ドラッグ中にカーソルに付ける画像。先頭の項目のアイコンと名前、複数なら件数。</summary>

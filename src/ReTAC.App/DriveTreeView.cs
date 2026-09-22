@@ -135,13 +135,9 @@ public sealed class DriveTreeView : Control, IMessageFilter
 
     private void StartDrag(string path)
     {
-        var paths = new System.Collections.Specialized.StringCollection { path };
-        var data = new DataObject();
-        data.SetFileDropList(paths);
         using var image = TreeDragImage(path);
-        // R-78 と同じ: 画像付きで始める(useDefaultDragImage:false)。既定の大きな画像は指す先を隠す(実機 NG)
-        DoDragDrop(data, DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link,
-            image, new Point(Scaled(8), Scaled(8)), useDefaultDragImage: false);
+        // R-78 と同じ: 画像付きで始める。既定の大きな画像は指す先を隠す(実機 NG)
+        ShellDrag.Start(this, [path], image, new Point(Scaled(8), Scaled(8)));
     }
 
     /// <summary>Q83: ドラッグ中にカーソルへ付ける小さな画像。ツリーは Theme を持たないのでシステム配色を使う。</summary>

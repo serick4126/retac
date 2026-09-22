@@ -82,6 +82,8 @@ public sealed class NameSpaceTreeHost : IDisposable
     private const uint SWP_NOACTIVATE = 0x0010;
     private const uint WM_KEYDOWN = 0x0100;
     private const uint WM_CHAR = 0x0102;
+    private const uint MK_SHIFT = 0x0004, MK_CONTROL = 0x0008;
+    private const uint DROPEFFECT_COPY = 1, DROPEFFECT_MOVE = 2;
     private const int VK_RETURN = 0x0D;
     private const int VK_TAB = 0x09;
 
@@ -1006,10 +1008,28 @@ public sealed class NameSpaceTreeHost : IDisposable
     /// R-97-3 / §9: パスを持たない項目(仮想項目)は転送先にしない(Phase10.2 技術確認: 実機 OK)。
     /// OnDragPosition には手を出さない。NSTC 標準の約 1 秒の自動展開が、この判定と無関係に保たれる。
     /// </summary>
-    private void RejectVirtualDropTarget(IntPtr over, ref uint effect)
+    /// <summary>
+    /// R-97-3 / R-78: ツリーの項目を指しているときの効果。ファイルリストと同じ判定で決め、実体の無い項目では禁止にする。
+    /// 説明（「◯◯へ移動」）は、この効果をもとに NSTC 自身が書き換える。ここへ来る data は IShellItemArray で、
+    /// IDataObject ではないので、説明をこちらで書き込むことはできない。
+    /// </summary>
+    private void UpdateDropFeedback(IntPtr over, IntPtr data, uint keyState, ref uint effect)
     {
         if (!_acceptEvents) return;
-        if (ShellItemPath.FileSystemPathOf(over) is null) effect = (uint)DragDropEffects.None;
+        var destination = ShellItemPath.FileSystemPathOf(over);
+        var action = _dropSources.Length == 0
+            ? ReTAC.Domain.FileOps.DropAction.None
+            : ReTAC.Domain.FileOps.DropRules.Allow(
+                ReTAC.Domain.FileOps.DropRules.DecideForTree(_dropSources[0], destination,
+                    ctrl: (keyState & MK_CONTROL) != 0, shift: (keyState & MK_SHIFT) != 0),
+                copyAllowed: (effect & DROPEFFECT_COPY) != 0, moveAllowed: (effect & DROPEFFECT_MOVE) != 0);
+        var newEffect = action switch
+        {
+            ReTAC.Domain.FileOps.DropAction.Copy => DROPEFFECT_COPY,
+            ReTAC.Domain.FileOps.DropAction.Move => DROPEFFECT_MOVE,
+            _ => 0u,
+        };
+        effect = newEffect;
     }
 
     private void DropFrom(IntPtr over, IntPtr data, uint keyState, ref uint effect)
@@ -1054,14 +1074,14 @@ public sealed class NameSpaceTreeHost : IDisposable
         public int OnDragEnter(IntPtr over, IntPtr data, bool outsideSource, uint keyState, ref uint effect)
         {
             var hr = CacheDropSources(data);
-            _host?.RejectVirtualDropTarget(over, ref effect);
+            _host?.UpdateDropFeedback(over, data, keyState, ref effect);
             return hr;
         }
 
         public int OnDragOver(IntPtr over, IntPtr data, uint keyState, ref uint effect)
         {
             var hr = CacheDropSources(data);
-            _host?.RejectVirtualDropTarget(over, ref effect);
+            _host?.UpdateDropFeedback(over, data, keyState, ref effect);
             return hr;
         }
 
