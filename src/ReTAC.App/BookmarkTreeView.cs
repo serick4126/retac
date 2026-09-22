@@ -58,7 +58,11 @@ public sealed class BookmarkTreeView : TreeView
             _hold.Stop();
             _holding?.Expand();
         };
-        Disposed += (_, _) => _hold.Dispose();
+        Disposed += (_, _) =>
+        {
+            _hold.Dispose();
+            _images.Dispose();   // TreeView は渡された ImageList を破棄しない。ウィンドウを閉じるたびに残る
+        };
     }
 
     /// <summary>今の BookmarkSet から作り直す。展開状態・選択は ID で引き継ぐ（名前変更・移動の後も同じグループに付く）。</summary>

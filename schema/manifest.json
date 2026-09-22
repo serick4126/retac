@@ -4865,7 +4865,7 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkTreeView.cs",
-        "line": 127
+        "line": 131
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
@@ -7287,7 +7287,7 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkTreeView.cs",
-        "line": 307
+        "line": 311
       },
       {
         "file": "src/ReTAC.App/CommandCatalog.cs",
@@ -7579,11 +7579,11 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkTreeView.cs",
-        "line": 307
+        "line": 311
       },
       {
         "file": "src/ReTAC.App/BookmarkTreeView.cs",
-        "line": 395
+        "line": 399
       },
       {
         "file": "src/ReTAC.App/FolderExpansion.cs",
