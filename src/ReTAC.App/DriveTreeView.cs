@@ -3,10 +3,12 @@ using ReTAC.Shell;
 
 namespace ReTAC.App;
 
-/// <summary>R-97: 現在位置のドライブまたはUNC共有だけをルートにするツリー。</summary>
+/// <summary>R-97: ドライブツリー(現在位置のドライブ/UNC共有だけがルート)とデスクトップツリー
+/// (PC全体で単一・固定のルート)の両方を、ルートの決め方だけを切り替えて 1 つの型で持つ。</summary>
 public sealed class DriveTreeView : Control
 {
     private const long SelectionTimeoutMilliseconds = 15_000;
+    private readonly NameSpaceTreeRootKind _rootKind;
     private readonly NameSpaceTreeHost _host = new();
     private readonly System.Windows.Forms.Timer _selectionWatchdog = new() { Interval = 100 };
     private readonly Label _errorMessage = new()
@@ -41,11 +43,16 @@ public sealed class DriveTreeView : Control
     public event EventHandler<ShellTreeDropEventArgs>? FilesDropped;
     /// <summary>Step5: Tab / Shift+Tab でツリーからファイルビューへ戻る合図。</summary>
     public event EventHandler? FocusFileViewRequested;
+    /// <summary>R-97: パスを持たない項目を確定した(選択・展開はできるが、ファイル表示パネルは動かせない)。</summary>
+    public event EventHandler? NoPathItemCommitted;
+    /// <summary>R-97-3: Enter/Tab 以外のキー。ReTAC の割り当てがあれば Handled にして NSTC 既定の処理を止める。</summary>
+    public event EventHandler<ShellTreeKeyEventArgs>? CommandKeyRequested;
 
     public string? SelectedFolder { get; private set; }
 
-    public DriveTreeView()
+    public DriveTreeView(NameSpaceTreeRootKind rootKind = NameSpaceTreeRootKind.Drive)
     {
+        _rootKind = rootKind;
         SetStyle(ControlStyles.Selectable, true);
         TabStop = true;
         _failure.Controls.Add(_errorMessage);
@@ -73,6 +80,7 @@ public sealed class DriveTreeView : Control
         // R-97-2: Enter は確定のあとファイルビューへフォーカスを戻す（マウス確定はフォーカスを動かさない）
         _host.CommitRequested += (_, _) => { CommitSelectedFolder(); FocusFileViewRequested?.Invoke(this, EventArgs.Empty); };
         _host.TabPressed += (_, _) => FocusFileViewRequested?.Invoke(this, EventArgs.Empty);
+        _host.KeyPressed += (_, e) => CommandKeyRequested?.Invoke(this, e);
         _selectionWatchdog.Tick += (_, _) => CheckSelectionTimeout();
     }
 
@@ -95,16 +103,19 @@ public sealed class DriveTreeView : Control
     {
         var downPoint = _pendingDownPoint ?? PointToClient(MousePosition);
         _pendingDownPoint = null;
-        if (e.Path is not { } path) return;
         if ((e.ClickType & ShellTreeClickType.ButtonMask) != ShellTreeClickType.Left) return;
 
+        // R-97: パスを持たない項目もクリックの確定候補になる(選択・展開はできるが、ファイル表示パネルは動かせない)。
         var pending = new NameSpaceTreePolicy.PendingTreeClick(
-            path, downPoint,
+            e.Path ?? "", downPoint,
             OnIconOrLabel: (e.HitTest & (ShellTreeHitTest.Icon | ShellTreeHitTest.Label)) != 0,
             IsDoubleClick: (e.ClickType & ShellTreeClickType.DoubleClick) != 0);
 
-        if (NameSpaceTreePolicy.ShouldCommit(pending, PointToClient(MousePosition), dragStarted: false, buttonReleased: true))
-            FolderCommitted?.Invoke(this, path);
+        if (!NameSpaceTreePolicy.ShouldCommit(pending, PointToClient(MousePosition), dragStarted: false, buttonReleased: true))
+            return;
+
+        if (e.Path is { } path) FolderCommitted?.Invoke(this, path);
+        else NoPathItemCommitted?.Invoke(this, EventArgs.Empty);
     }
 
     public void SyncCurrentFolder(string currentFolder, ShellTreeVisibility visibility, bool resetExpansion)
@@ -185,6 +196,7 @@ public sealed class DriveTreeView : Control
     internal void CommitSelectedFolder()
     {
         if (SelectedFolder is { } path) FolderCommitted?.Invoke(this, path);
+        else if (_host.HasSelectionWithoutPath) NoPathItemCommitted?.Invoke(this, EventArgs.Empty);
     }
 
     private void CreateOrApply()
@@ -210,7 +222,7 @@ public sealed class DriveTreeView : Control
         if (_requestedFolder is not { } folder) return;
         try
         {
-            var root = NameSpaceTreePolicy.RootOf(folder);
+            var root = NameSpaceTreePolicy.RootOf(_rootKind, folder);
             var rootChanged = _appliedRoot is not null
                 && NameSpaceTreePolicy.MustRebuildRoot(_appliedRoot, root);
             var rebuild = _resetPending || _appliedRoot is null || rootChanged
@@ -226,7 +238,8 @@ public sealed class DriveTreeView : Control
                     _host.Create(Handle, ClientRectangle);
                     _hostCreated = true;
                 }
-                _host.SetRoot(root, folder, _requestedVisibility);
+                if (_rootKind == NameSpaceTreeRootKind.Drive) _host.SetRoot(root, folder, _requestedVisibility);
+                else _host.SetDesktopRoot(folder, _requestedVisibility);
             }
             else if (!SamePath(_appliedFolder, folder))
             {

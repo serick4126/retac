@@ -57,6 +57,13 @@ public sealed class ShellTreeSynchronizationFailedEventArgs(Exception exception)
     public Exception Exception { get; } = exception;
 }
 
+/// <summary>R-97-3: WM_KEYDOWN の通知。Handled にすると NSTC 既定の処理（頭文字検索等）をさせない。</summary>
+public sealed class ShellTreeKeyEventArgs(Keys keyData) : EventArgs
+{
+    public Keys KeyData { get; } = keyData;
+    public bool Handled { get; set; }
+}
+
 /// <summary>R-97: Windows Shellの名前空間ツリーを、作成したSTA上で所有する。</summary>
 public sealed class NameSpaceTreeHost : IDisposable
 {
@@ -94,6 +101,8 @@ public sealed class NameSpaceTreeHost : IDisposable
     private int _lifetime;
     private CancellationTokenSource? _selectionFallback;
     private string[] _dropSources = [];
+    /// <summary>R-97: デスクトップツリー(PC全体で単一・固定のルート)かどうか。SelectItem の辿り方を変える。</summary>
+    private bool _desktopMode;
 
     public event EventHandler<ShellTreeSelectionChangedEventArgs>? SelectionChanged;
     public event EventHandler<ShellTreeClickEventArgs>? ItemClicked;
@@ -103,8 +112,12 @@ public sealed class NameSpaceTreeHost : IDisposable
     public event EventHandler? CommitRequested;
     /// <summary>Step5: Tab / Shift+Tab。ツリーへフォーカスがある間はツリー標準のタブ移動をさせず、ファイルビューへ戻す合図にする。</summary>
     public event EventHandler? TabPressed;
+    /// <summary>R-97-3: Enter/Tab 以外の WM_KEYDOWN。ReTAC の割り当てを優先させるため、NSTC 既定の処理より先に通知する。</summary>
+    public event EventHandler<ShellTreeKeyEventArgs>? KeyPressed;
 
     public string? SelectedPath => _selectedPath;
+    /// <summary>R-97: ツリーで何かは選択されているが、実パスを持たない項目である。</summary>
+    public bool HasSelectionWithoutPath { get; private set; }
 
     public void Create(IntPtr parentHwnd, Rectangle bounds)
     {
@@ -158,11 +171,31 @@ public sealed class NameSpaceTreeHost : IDisposable
     private void SetRoot(string rootPath, string currentPath, ShellTreeVisibility visibility,
         IReadOnlySet<string>? expandedPaths)
     {
-        var tree = RequireTree();
         VerifyOwner();
         var normalizedRoot = ShellItemPath.RootOf(rootPath);
         if (!string.Equals(normalizedRoot, ShellItemPath.RootOf(currentPath), StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("現在位置は指定したルート内にありません。", nameof(currentPath));
+        ApplyRoot(desktopMode: false, normalizedRoot, () => ShellItemPath.Create(normalizedRoot),
+            currentPath, visibility, allowVirtualItems: false, expandedPaths);
+    }
+
+    /// <summary>R-97: デスクトップツリーのルート。PC 全体で単一・固定で、ドライブ/UNC共有の変化では作り直さない。</summary>
+    public void SetDesktopRoot(string currentPath, ShellTreeVisibility visibility)
+        => SetDesktopRoot(currentPath, visibility, null);
+
+    private void SetDesktopRoot(string currentPath, ShellTreeVisibility visibility, IReadOnlySet<string>? expandedPaths)
+    {
+        VerifyOwner();
+        ApplyRoot(desktopMode: true, NameSpaceTreePolicy.DesktopRootMarker, ShellItemPath.CreateDesktopRoot,
+            currentPath, visibility, allowVirtualItems: true, expandedPaths);
+    }
+
+    /// <summary>SetRoot と SetDesktopRoot の共通部分（ルート項目の生成先だけが違う）。</summary>
+    private void ApplyRoot(bool desktopMode, string rootMarker, Func<IShellItem> createRoot, string currentPath,
+        ShellTreeVisibility visibility, bool allowVirtualItems, IReadOnlySet<string>? expandedPaths)
+    {
+        var tree = RequireTree();
+        _desktopMode = desktopMode;
 
         var removeHr = tree.RemoveAllRoots();
         if (_rootItem is not null || removeHr != E_INVALIDARG)
@@ -177,8 +210,8 @@ public sealed class NameSpaceTreeHost : IDisposable
         // 同じ階層の不要な項目は CurrentPathShellItemFilter が表示設定に従って除外する。
         var enumFlags = EnumFlags.Folders | EnumFlags.IncludeHidden | EnumFlags.IncludeSuperHidden;
 
-        IShellItem? newRoot = ShellItemPath.Create(normalizedRoot);
-        var newFilter = new CurrentPathShellItemFilter(currentPath, visibility);
+        IShellItem? newRoot = createRoot();
+        var newFilter = new CurrentPathShellItemFilter(currentPath, visibility, allowVirtualItems);
         try
         {
             var filterPointer = Marshal.GetComInterfaceForObject(newFilter, typeof(IShellItemFilter));
@@ -191,7 +224,7 @@ public sealed class NameSpaceTreeHost : IDisposable
             _rootItem = newRoot;
             _rootFilter = newFilter;
             newRoot = null;
-            _rootPath = normalizedRoot;
+            _rootPath = rootMarker;
             _pendingExpandedPaths = expandedPaths is null
                 ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 : expandedPaths.Where(newFilter.IncludesBranch).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -216,7 +249,8 @@ public sealed class NameSpaceTreeHost : IDisposable
         var tree = RequireTree();
         VerifyOwner();
         if (_rootPath is null) throw new InvalidOperationException("先にルートを設定してください。");
-        if (!string.Equals(_rootPath, ShellItemPath.RootOf(path), StringComparison.OrdinalIgnoreCase))
+        // R-97: デスクトップツリーは PC 全体で単一のルートなので、選択先がドライブ/UNC共有をまたいでもよい。
+        if (!_desktopMode && !string.Equals(_rootPath, ShellItemPath.RootOf(path), StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("選択先は現在のルート内にありません。", nameof(path));
 
         var filter = _rootFilter!;
@@ -225,7 +259,8 @@ public sealed class NameSpaceTreeHost : IDisposable
         {
             // NSTC には枝の再フィルター API がないため、例外枝が変わる場合だけ展開状態を退避してルートを入れ直す。
             var expandedPaths = ExpandedPaths(tree);
-            SetRoot(_rootPath, path, filter.Visibility, expandedPaths);
+            if (_desktopMode) SetDesktopRoot(path, filter.Visibility, expandedPaths);
+            else SetRoot(_rootPath, path, filter.Visibility, expandedPaths);
             return;
         }
 
@@ -366,6 +401,13 @@ public sealed class NameSpaceTreeHost : IDisposable
     private void ContinuePendingSelection()
     {
         if (_pendingSelectionPath is not { } path || _tree is not { } tree || _rootItem is null) return;
+        if (_desktopMode && !NameSpaceTreePolicy.CanAutoSelectInDesktopTree(path))
+        {
+            // ponytail: UNC 現在位置をマップ済みドライブ文字へ変換しての解決はやらない。This PC 配下は
+            // ドライブ文字でしか一致しないため、リトライを続けても原理的に解決しない。選択なしで完了とする。
+            CompleteSelection(path);
+            return;
+        }
         if (_selectionContinuationRunning)
         {
             _selectionSignalPending = true;
@@ -410,7 +452,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         _selectionSignalPending = false;
         CancelSelectionFallback();
         _ignoreSelectionEvents = false;
-        PublishSelection(path);
+        PublishSelection(path, hasSelection: true);
     }
 
     private void ScheduleSelectionContinuation(string source)
@@ -491,39 +533,82 @@ public sealed class NameSpaceTreeHost : IDisposable
 
     private bool SelectItem(INameSpaceTreeControl tree, IShellItem root, string path)
     {
-        if (string.Equals(Path.TrimEndingDirectorySeparator(ShellItemPath.FileSystemPathOf(root) ?? ""),
-                Path.TrimEndingDirectorySeparator(path), StringComparison.OrdinalIgnoreCase))
+        if (!_desktopMode)
         {
-            var hr = tree.GetNextItem(null!, NextItem.FirstVisible, out var actualRoot);
-            if (hr < 0 || actualRoot is null)
-            {
-                if (actualRoot is not null) Marshal.ReleaseComObject(actualRoot);
-                if (hr < 0 && hr is not E_FAIL and not E_INVALIDARG)
-                    Check(hr, "名前空間ツリーのルートを取得できません。");
-                return false;
-            }
-            try
-            {
-                var same = SameItem(root, actualRoot);
-                var selected = same && SetSelected(tree, actualRoot);
-                return selected;
-            }
-            finally { Marshal.ReleaseComObject(actualRoot); }
+            var rootPath = Path.TrimEndingDirectorySeparator(ShellItemPath.FileSystemPathOf(root) ?? "");
+            if (string.Equals(rootPath, Path.TrimEndingDirectorySeparator(path), StringComparison.OrdinalIgnoreCase))
+                return SelectVisibleRoot(tree, root);
+            return DescendAndSelect(tree, root, ShellItemPath.ParentPathsFromRoot(path), path);
         }
 
-        IShellItem current = root;
+        // R-97: デスクトップツリーは Desktop → This PC(仮想) → ドライブ文字、の順でしか辿れない
+        // (実機ゲートで確認済み。マップ済みネットワークドライブもドライブ文字としてのみ現れる)。
+        // ContinuePendingSelection が UNC を先に弾くので、ここに来る path は常にローカルドライブのパス。
+        var computer = ShellItemPath.CreateComputerFolder();
+        IShellItem? computerInTree = null;
+        IShellItem? driveInTree = null;
+        try
+        {
+            computerInTree = FindChildMatching(tree, root, computer);
+            if (computerInTree is null) return false;
+
+            // This PC は Desktop 直下の仮想項目で RootStyle.Expanded の対象外なので、明示的に展開する。
+            // 展開直後は子(ドライブ)がまだ列挙されていないことがあるが、それは false を返して既存の
+            // OnAfterExpand / OnItemAdded 経由の再試行に任せる(SelectItem 全体が再実行される)。
+            Check(tree.SetItemState(computerInTree, ItemState.Expanded, ItemState.Expanded),
+                "名前空間ツリーの枝を展開できません。");
+            var visibleHr = tree.EnsureItemVisible(computerInTree);
+            if (visibleHr == E_INVALIDARG) return false;
+            Check(visibleHr, "名前空間ツリーの枝を表示できません。");
+
+            var driveRoot = ShellItemPath.RootOf(path);
+            driveInTree = FindChild(tree, computerInTree, driveRoot);
+            if (driveInTree is null) return false;
+            if (string.Equals(Path.TrimEndingDirectorySeparator(driveRoot),
+                    Path.TrimEndingDirectorySeparator(path), StringComparison.OrdinalIgnoreCase))
+                return SetSelected(tree, driveInTree);
+            return DescendAndSelect(tree, driveInTree, ShellItemPath.ParentPathsFrom(driveRoot, path), path);
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(computer);
+            if (computerInTree is not null) Marshal.ReleaseComObject(computerInTree);
+            if (driveInTree is not null) Marshal.ReleaseComObject(driveInTree);
+        }
+    }
+
+    /// <summary>SelectItem の起点(root)そのものを選ぶ場合だけの経路。root は AppendRoot に渡した
+    /// こちら側の IShellItem で、ツリー内部の実体とは COM の同一性が違うことがあるため、
+    /// GetNextItem(FirstVisible) で実体を取り直してから選択する。</summary>
+    private bool SelectVisibleRoot(INameSpaceTreeControl tree, IShellItem root)
+    {
+        var hr = tree.GetNextItem(null!, NextItem.FirstVisible, out var actualRoot);
+        if (hr < 0 || actualRoot is null)
+        {
+            if (actualRoot is not null) Marshal.ReleaseComObject(actualRoot);
+            if (hr < 0 && hr is not E_FAIL and not E_INVALIDARG)
+                Check(hr, "名前空間ツリーのルートを取得できません。");
+            return false;
+        }
+        try { return SameItem(root, actualRoot) && SetSelected(tree, actualRoot); }
+        finally { Marshal.ReleaseComObject(actualRoot); }
+    }
+
+    /// <summary>startItem(その実パスへの祖先を辿った後の項目)から parentPaths を 1 段ずつ展開し、
+    /// 最後に targetPath の子を選択する。startItem は FindChild 等で得たツリー内在の項目である想定
+    /// (SetSelected を直接呼べる。SelectVisibleRoot の再取得は不要)。</summary>
+    private bool DescendAndSelect(INameSpaceTreeControl tree, IShellItem startItem, string[] parentPaths, string targetPath)
+    {
+        IShellItem current = startItem;
         var releaseCurrent = false;
         try
         {
-            foreach (var parentPath in ShellItemPath.ParentPathsFromRoot(path))
+            foreach (var parentPath in parentPaths)
             {
-                var parent = FindChild(tree, current, parentPath);
-                if (parent is null)
-                {
-                    return false;
-                }
+                var child = FindChild(tree, current, parentPath);
+                if (child is null) return false;
                 if (releaseCurrent) Marshal.ReleaseComObject(current);
-                current = parent;
+                current = child;
                 releaseCurrent = true;
 
                 Check(tree.GetItemState(current, ItemState.Expanded, out var state),
@@ -532,18 +617,12 @@ public sealed class NameSpaceTreeHost : IDisposable
                     Check(tree.SetItemState(current, ItemState.Expanded, ItemState.Expanded),
                         "名前空間ツリーの枝を展開できません。");
                 var visibleHr = tree.EnsureItemVisible(current);
-                if (visibleHr == E_INVALIDARG)
-                {
-                    return false;
-                }
+                if (visibleHr == E_INVALIDARG) return false;
                 Check(visibleHr, "名前空間ツリーの枝を表示できません。");
             }
 
-            var target = FindChild(tree, current, path);
-            if (target is null)
-            {
-                return false;
-            }
+            var target = FindChild(tree, current, targetPath);
+            if (target is null) return false;
             try { return SetSelected(tree, target); }
             finally { Marshal.ReleaseComObject(target); }
         }
@@ -556,6 +635,13 @@ public sealed class NameSpaceTreeHost : IDisposable
     private static IShellItem? FindChild(INameSpaceTreeControl tree, IShellItem parent, string path)
     {
         var expected = ShellItemPath.Create(path);
+        try { return FindChildMatching(tree, parent, expected); }
+        finally { Marshal.ReleaseComObject(expected); }
+    }
+
+    /// <summary>This PC のような、パスからは作れない期待値(既知フォルダー等)で子を探すための下請け。</summary>
+    private static IShellItem? FindChildMatching(INameSpaceTreeControl tree, IShellItem parent, IShellItem expected)
+    {
         IShellItem? item = null;
         try
         {
@@ -586,7 +672,6 @@ public sealed class NameSpaceTreeHost : IDisposable
         finally
         {
             if (item is not null) Marshal.ReleaseComObject(item);
-            Marshal.ReleaseComObject(expected);
         }
     }
 
@@ -675,12 +760,15 @@ public sealed class NameSpaceTreeHost : IDisposable
             return;
         }
         if (_ignoreSelectionEvents) return;
-        PublishSelection(ShellItemPath.FileSystemPathsOf(array).FirstOrDefault());
+        PublishSelection(ShellItemPath.FileSystemPathsOf(array).FirstOrDefault(), hasSelection: array != IntPtr.Zero);
     }
 
-    private void PublishSelection(string? path)
+    /// <summary>R-97: hasSelection は「ツリーで何かは選ばれているか」。path が無くても、パスを持たない
+    /// 項目が選ばれていることはある(HasSelectionWithoutPath はその区別に使う)。</summary>
+    private void PublishSelection(string? path, bool hasSelection)
     {
         _selectedPath = path;
+        HasSelectionWithoutPath = hasSelection && path is null;
         SelectionChanged?.Invoke(this, new ShellTreeSelectionChangedEventArgs(path));
     }
 
@@ -808,7 +896,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         if (_pendingSelectionPath is null && _tree is not null
             && _tree.GetSelectedItems(out var selection) >= 0 && selection != IntPtr.Zero)
         {
-            try { PublishSelection(ShellItemPath.FileSystemPathsOf(selection).FirstOrDefault()); }
+            try { PublishSelection(ShellItemPath.FileSystemPathsOf(selection).FirstOrDefault(), hasSelection: true); }
             finally { Marshal.Release(selection); }
         }
         CommitRequested?.Invoke(this, EventArgs.Empty);
@@ -818,6 +906,16 @@ public sealed class NameSpaceTreeHost : IDisposable
     private void RequestTab()
     {
         if (_acceptEvents) TabPressed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>R-97-3: ReTAC の割り当てを優先するため、Enter/Tab 以外のキーを NSTC 既定の処理より先に通知する。
+    /// Control.ModifierKeys はこの呼び出しと同じ UI スレッドで見るので、押下時の状態と一致する。</summary>
+    private bool RequestKey(Keys keyCode)
+    {
+        if (!_acceptEvents) return false;
+        var args = new ShellTreeKeyEventArgs(keyCode | Control.ModifierKeys);
+        KeyPressed?.Invoke(this, args);
+        return args.Handled;
     }
 
     private void ReplaceDropSources(IntPtr data) => _dropSources = ShellItemPath.FileSystemPathsOf(data);
@@ -899,6 +997,7 @@ public sealed class NameSpaceTreeHost : IDisposable
                 {
                     if ((int)wParam == VK_RETURN) { _host?.RequestCommit(); return S_OK; }
                     if ((int)wParam == VK_TAB) { _host?.RequestTab(); return S_OK; }
+                    if (_host?.RequestKey((Keys)(int)wParam) == true) return S_OK;
                 }
             }
             catch (Exception) { }

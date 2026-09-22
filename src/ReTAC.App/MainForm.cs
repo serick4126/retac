@@ -77,11 +77,14 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>R-95: 左右に分かれるのは上部バーとステータスバーの間だけ。</summary>
     private readonly CentralDisplayArea _centralDisplay;
     private readonly LeftPanel _leftPanel = new();
-    private readonly DriveTreeView _driveTree = new();
-    // R-96: Phase 10.1 で中身を持つのはドライブツリーだけ。残り3ビューは案内だけの控え
-    private readonly UnavailableLeftPanelView _desktopTreeView = new();
+    private readonly DriveTreeView _driveTree = new(NameSpaceTreeRootKind.Drive);
+    private readonly DriveTreeView _desktopTree = new(NameSpaceTreeRootKind.Desktop);
+    // R-96: Phase 10.2 で中身を持つのは 2 つのツリーだけ。残り2ビューは案内だけの控え
     private readonly UnavailableLeftPanelView _bookmarksView = new();
     private readonly UnavailableLeftPanelView _previewView = new();
+    /// <summary>R-97-3: ツリーのキー経由でコマンドを実行している間だけ、そのツリーの選択を対象にする
+    /// (CommandTargets)。それ以外は null で、ファイル表示パネルの対象(_list.State)を使う。</summary>
+    private DriveTreeView? _treeCommandTarget;
 
     /// <summary>通常表示だったときのクライアント領域。最小化中に保存しても潰れないようにするため。</summary>
     private Size _normalClientSize;
@@ -105,6 +108,13 @@ public sealed class MainForm : Form, IBookmarkHost
         _sortOrder = _settings.ToSortOrder();
         // R-97-2: ツリーのマウス確定はフォーカスを動かさない。Enter は FocusFileViewRequested 側でリストへ戻す
         _driveTree.FolderCommitted += (_, path) => _ = OpenFolderAsync(path, keepFocus: true);
+        _desktopTree.FolderCommitted += (_, path) => _ = OpenFolderAsync(path, keepFocus: true);
+        // R-97: パスを持たない項目を確定してもファイル表示パネルは動かさず、案内だけ出す
+        _driveTree.NoPathItemCommitted += (_, _) => _statusBar.ShowMessage(NoPathItemMessage);
+        _desktopTree.NoPathItemCommitted += (_, _) => _statusBar.ShowMessage(NoPathItemMessage);
+        // R-97-3: ReTAC の割り当てを優先する。既存の OnCommandKey をそのまま通す（ツリー専用の分岐は持たない）
+        _driveTree.CommandKeyRequested += (_, e) => e.Handled = ExecuteTreeCommandKey(_driveTree, e.KeyData);
+        _desktopTree.CommandKeyRequested += (_, e) => e.Handled = ExecuteTreeCommandKey(_desktopTree, e.KeyData);
         // R-96-2: 上端の選択欄もメニューと同じ入口を通す（表示・保存・ラジオ印の反映を 1 か所にする）
         _leftPanel.ViewRequested += (_, kind) => ExecuteLeftPanelCommand(LeftPanel.CommandOf(kind));
 
@@ -155,6 +165,7 @@ public sealed class MainForm : Form, IBookmarkHost
         // Step5: 左パネルが表示中のときだけ往復する。非表示なら CentralDisplayArea.LeftPanelVisible が false のまま何もしない
         _list.FocusLeftPanelRequested += (_, _) => { if (_centralDisplay.LeftPanelVisible) _leftPanel.CurrentView.Focus(); };
         _driveTree.FocusFileViewRequested += (_, _) => _list.Focus();
+        _desktopTree.FocusFileViewRequested += (_, _) => _list.Focus();
         // R-96-2 / R-66: 利用者が境界を動かしたときだけ上がる。狭い窓による一時縮小はここへ来ない
         _centralDisplay.LeftWidthChanged += (_, logical) => { _settings.LeftPanelWidth = logical; SaveSettings(); };
         // R-39-3 の「明示的なドライブ変更」。相対移動とは別経路
@@ -213,7 +224,7 @@ public sealed class MainForm : Form, IBookmarkHost
             _watcher.Dispose();
             _autoRefresh.Dispose();
             _driveTree.Dispose();
-            _desktopTreeView.Dispose();
+            _desktopTree.Dispose();
             _bookmarksView.Dispose();
             _previewView.Dispose();
 
@@ -303,6 +314,46 @@ public sealed class MainForm : Form, IBookmarkHost
             MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
+
+    /// <summary>R-97: パスを持たない項目を確定したときの案内。</summary>
+    private const string NoPathItemMessage = "この項目はツリーで展開できますが、ファイル表示パネルには表示できません";
+
+    /// <summary>
+    /// R-97-3: ツリーのキー入力を、既存の OnCommandKey(R-12 の 1 経路)へそのまま流す。
+    /// 処理中だけ _treeCommandTarget を立てておき、ファイル操作・外部ツールの対象をこのツリーの
+    /// 選択に差し替える(CommandTargets)。移動・履歴コマンドは元から _currentFolder/_history だけを
+    /// 見ているので、ここを経由しても対象は変わらない。
+    /// </summary>
+    private bool ExecuteTreeCommandKey(DriveTreeView tree, Keys keyData)
+    {
+        _treeCommandTarget = tree;
+        try
+        {
+            var args = new KeyEventArgs(keyData);
+            OnCommandKey(args);
+            return args.Handled;
+        }
+        finally { _treeCommandTarget = null; }
+    }
+
+    /// <summary>R-97-3: ツリーのキー経由で実行中なら、選択中の実フォルダ 1 件(無ければ対象なし)。
+    /// そうでなければ null を返し、呼び出し側はファイル表示パネルの対象を使う。</summary>
+    private IReadOnlyList<Entry>? TreeOverrideTargets() =>
+        TreeCommandTarget.Resolve(_treeCommandTarget is not null, TreeFocusFolderEntry());
+
+    private Entry? TreeFocusFolderEntry()
+    {
+        if (_treeCommandTarget?.SelectedFolder is not { } folder) return null;
+        try
+        {
+            var info = new DirectoryInfo(folder);
+            return Entry.ForFolder(info.FullName, info.Name, info.Attributes, info.LastWriteTime);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
+    }
+
+    /// <summary>R-97-3: ファイル操作・クリップボードの対象。ツリーのキー経由でなければ従来どおり _list.State。</summary>
+    private IReadOnlyList<Entry> CommandTargets() => TreeOverrideTargets() ?? _list.State.EffectiveTarget();
 
     // ---- キーマップ経由のコマンド（R-12: 解決の経路はここ 1 つ） -----------
 
@@ -647,7 +698,7 @@ public sealed class MainForm : Form, IBookmarkHost
 
         // 押した時点の対象で起動する。入力の間にカーソルやマークが動いても変わらない
         var suppress = _settings.SuppressMultipleToolLaunch;
-        var targets = LaunchPlanner.TargetsFor(_list.State, suppress);
+        var targets = TreeOverrideTargets() ?? LaunchPlanner.TargetsFor(_list.State, suppress);
         var cursor = _list.State.Cursor;
         var folder = _currentFolder;
 
@@ -711,7 +762,7 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <param name="preset">宛先の初期値。R-46-4 の例外で、ドロップで宛先が決まっているときだけ入れる</param>
     private TransferStep TransferCore(bool moving, IReadOnlyList<string>? sources = null, string preset = "")
     {
-        var targets = sources is null ? _list.State.EffectiveTarget() : [];   // R-10
+        var targets = sources is null ? CommandTargets() : [];   // R-10
         IReadOnlyList<string> paths = sources ?? [.. targets.Select(t => t.FullPath)];
         if (paths.Count == 0) return TransferStep.Proceed;
 
@@ -964,7 +1015,7 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>`D`（削除・0x82DF）。R-19: ごみ箱経由。確認は Windows 標準（R-44）。</summary>
     private bool DeleteTargets()
     {
-        var targets = _list.State.EffectiveTarget();
+        var targets = CommandTargets();
         if (targets.Count == 0) return true;
 
         var deleted = RunOperation(silentOverwrite: false, operation =>
@@ -1026,7 +1077,7 @@ public sealed class MainForm : Form, IBookmarkHost
         var state = _list.State;
         var marks = state.Marks.Select(i => state.Entries[i].Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var target in _list.State.EffectiveTarget())
+        foreach (var target in CommandTargets())
         {
             using var dialog = new TextInputDialog(
                 target.Kind == EntryKind.Folder ? "フォルダ名の変更" : "ファイル名の変更",
@@ -1063,7 +1114,7 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>`A`（属性変更・0x82E2）。R-49: 属性とタイムスタンプは独立。R-50: 「以降全て」。</summary>
     private bool ChangeAttributes()
     {
-        var targets = _list.State.EffectiveTarget();
+        var targets = CommandTargets();
         if (targets.Count == 0) return true;
 
         var containsFolder = targets.Any(t => t.Kind == EntryKind.Folder);
@@ -1169,7 +1220,7 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>`O`（ショートカットの作成・0x82F1）。R-58 の 3 オプション。複数対象は連続作成。</summary>
     private bool CreateShortcuts()
     {
-        var targets = _list.State.EffectiveTarget();
+        var targets = CommandTargets();
         if (targets.Count == 0) return true;
 
         using var dialog = new ShortcutDialog();
@@ -1202,7 +1253,7 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>`I`（ファイル名をコピー・0x831B）。R-57: カーソル位置に形式選択のポップアップ。</summary>
     private bool ShowNameFormatPopup()
     {
-        var targets = _list.State.EffectiveTarget();
+        var targets = CommandTargets();
         if (targets.Count == 0) return true;
 
         List<(string, Action)> items =
@@ -1233,7 +1284,7 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>形式を選ばせずに直接コピーする（キー割り当て用）。</summary>
     private bool CopyNamesCommand(NameFormat format)
     {
-        CopyNames(_list.State.EffectiveTarget(), format);
+        CopyNames(CommandTargets(), format);
         return true;
     }
 
@@ -1259,7 +1310,7 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>`R`（プロパティ・0x82F2）。R-56-2: 複数時の扱いは外部ツールと同じ規則。</summary>
     private bool ShowProperties()
     {
-        var targets = LaunchTargets.For(_list.State, _settings.SuppressMultipleToolLaunch);
+        var targets = TreeOverrideTargets() ?? LaunchTargets.For(_list.State, _settings.SuppressMultipleToolLaunch);
         if (targets.Count == 0 || !ConfirmManyWindows(targets.Count)) return true;
 
         foreach (var target in targets)
@@ -1277,7 +1328,7 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>ファイルの連結（0x82E4）。R-35: 連結順を並べ替えられること。</summary>
     private bool ConcatFiles()
     {
-        var targets = _list.State.EffectiveTarget().Where(t => t.Kind == EntryKind.File).ToList();
+        var targets = CommandTargets().Where(t => t.Kind == EntryKind.File).ToList();
         if (targets.Count == 0)
         {
             MessageBox.Show(this, "連結するファイルがありません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1524,11 +1575,11 @@ public sealed class MainForm : Form, IBookmarkHost
         else if (!shown && wasInLeft) _list.Focus();
     }
 
-    /// <summary>R-96: Phase 10.1 で中身を持つのはドライブツリーだけ。残りは案内だけの控えを使い回す。</summary>
+    /// <summary>R-96: Phase 10.2 で中身を持つのは 2 つのツリーだけ。残りは案内だけの控えを使い回す。</summary>
     private Control LeftPanelViewControl(LeftPanelViewKind kind) => kind switch
     {
         LeftPanelViewKind.DriveTree => _driveTree,
-        LeftPanelViewKind.DesktopTree => _desktopTreeView,
+        LeftPanelViewKind.DesktopTree => _desktopTree,
         LeftPanelViewKind.Bookmarks => _bookmarksView,
         LeftPanelViewKind.Preview => _previewView,
         _ => _driveTree,
@@ -1823,7 +1874,7 @@ public sealed class MainForm : Form, IBookmarkHost
     /// </summary>
     private bool ClipboardPut(bool cut)
     {
-        var targets = _list.State.EffectiveTarget();
+        var targets = CommandTargets();
         if (targets.Count == 0) return true;
 
         var paths = new System.Collections.Specialized.StringCollection();
@@ -2514,8 +2565,9 @@ public sealed class MainForm : Form, IBookmarkHost
         if (sameFolder) _search.Rematch();
         else _search.Close(restore: false);
         WatchCurrentFolder();
-        _driveTree.SyncCurrentFolder(folder,
-            new ShellTreeVisibility(_fileTypes.HiddenFiles, _fileTypes.SystemFiles), resetExpansion: false);
+        var treeVisibility = new ShellTreeVisibility(_fileTypes.HiddenFiles, _fileTypes.SystemFiles);
+        _driveTree.SyncCurrentFolder(folder, treeVisibility, resetExpansion: false);
+        _desktopTree.SyncCurrentFolder(folder, treeVisibility, resetExpansion: false);
 
         // 再表示ではマークを名前で戻す（R-11-4 の「フォルダ移動で解除」とは別）
         if (restoreMarks is { Count: > 0 })
