@@ -468,18 +468,8 @@ public sealed class FileListView : Control
     {
         var first = targets[0];
         var text = targets.Count == 1 ? first.Name : $"{first.Name} ほか {targets.Count - 1} 件";
-        var textSize = TextRenderer.MeasureText(text, _font, Size.Empty, TextMeasure.Flags);
-        var width = _icons.Size + Gap + textSize.Width + Gap;
-        var height = Math.Max(_icons.Size, textSize.Height);
-
-        var bitmap = new Bitmap(width, height);
-        using var g = Graphics.FromImage(bitmap);
-        g.Clear(_theme.Background);
         var icon = first.Kind == EntryKind.File ? _icons.ForFile(first.FullPath) : _icons.ForFolder();
-        if (icon is not null) g.DrawImage(icon, new Rectangle(0, (height - _icons.Size) / 2, _icons.Size, _icons.Size));
-        TextRenderer.DrawText(g, text, _font, new Point(_icons.Size + Gap, (height - textSize.Height) / 2),
-            _theme.Foreground, TextMeasure.Flags);
-        return bitmap;
+        return DragImageRenderer.Render(icon, _icons.Size, text, _font, _theme.Foreground, _theme.Background, Gap);
     }
 
     protected override void OnDragEnter(DragEventArgs e) => SetDropEffect(e);

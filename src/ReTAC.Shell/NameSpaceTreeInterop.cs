@@ -15,6 +15,8 @@ public static class NameSpaceTreeInterop
         HorizontalScroll = 0x00000020,
         RootHasExpando = 0x00000040,
         ShowSelectionAlways = 0x00000080,
+        // R-97-3 / Q83: NSTC 自身の既定の大きなドラッグ画像（実機 NG）を出させず、自前でドラッグを始める(FileListView と揃える)。
+        DisableDragDrop = 0x00001000,
         NoEditLabels = 0x00010000,
         TabStop = 0x00020000,
     }

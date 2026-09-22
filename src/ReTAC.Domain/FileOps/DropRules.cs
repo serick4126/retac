@@ -31,6 +31,13 @@ public static class DropRules
     }
 
     /// <summary>
+    /// R-97-3 / §9: ツリーへのドラッグ中の判定。パスを持たない項目(仮想項目)は転送先にしない。
+    /// パスがあれば通常の Decide（自分自身・自分の子孫への判定を含む）と同じ。
+    /// </summary>
+    public static DropAction DecideForTree(string sourcePath, string? destinationPath, bool ctrl, bool shift) =>
+        destinationPath is null ? DropAction.None : Decide(sourcePath, destinationPath, ctrl, shift);
+
+    /// <summary>
     /// R-78: ドラッグ元が許す効果に合わせる。移動を許さないドラッグ元（コピーしか渡さないアプリ）から
     /// 同じドライブへ落とされたとき、規則どおり移動すると、ドラッグ元が想定しない形で元のファイルが消える。
     /// コピーを移動に格上げすることはしない。

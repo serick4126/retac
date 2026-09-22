@@ -46,10 +46,15 @@ public sealed class ShellTreeClickEventArgs(string? path, ShellTreeHitTest hitTe
 public sealed class ShellTreeDropEventArgs(
     string[] files, string destination, uint keyState, DragDropEffects allowedEffect) : EventArgs
 {
+    private const uint MK_CONTROL = 0x0008, MK_SHIFT = 0x0004;
+
     public string[] Files { get; } = files;
     public string Destination { get; } = destination;
     public uint KeyState { get; } = keyState;
     public DragDropEffects AllowedEffect { get; } = allowedEffect;
+    /// <summary>§9: ドロップ時点の修飾キー(OLE の KeyState は DragEventArgs と同じ MK_* ビット)。</summary>
+    public bool Ctrl => (KeyState & MK_CONTROL) != 0;
+    public bool Shift => (KeyState & MK_SHIFT) != 0;
 }
 
 public sealed class ShellTreeSynchronizationFailedEventArgs(Exception exception) : EventArgs
@@ -139,7 +144,8 @@ public sealed class NameSpaceTreeHost : IDisposable
             _sink = new EventSink(this);
             var nativeBounds = new NativeRect(bounds);
             var style = TreeStyle.HasExpandos | TreeStyle.HasLines | TreeStyle.HorizontalScroll
-                      | TreeStyle.RootHasExpando | TreeStyle.ShowSelectionAlways | TreeStyle.NoEditLabels | TreeStyle.TabStop;
+                      | TreeStyle.RootHasExpando | TreeStyle.ShowSelectionAlways | TreeStyle.NoEditLabels | TreeStyle.TabStop
+                      | TreeStyle.DisableDragDrop;
             Check(_tree.Initialize(parentHwnd, ref nativeBounds, style), "名前空間ツリーを初期化できません。");
             var style2 = TreeStyle2.NeverInsertNonEnumerated;
             Check(((INameSpaceTreeControl2)_tree).SetControlStyle2(style2, style2),
@@ -294,6 +300,53 @@ public sealed class NameSpaceTreeHost : IDisposable
         if (_treeHwnd == IntPtr.Zero) return;
         var inner = FindWindowEx(_treeHwnd, IntPtr.Zero, "SysTreeView32", null);
         SetFocus(inner != IntPtr.Zero ? inner : _treeHwnd);
+    }
+
+    /// <summary>
+    /// R-97-3 / Q83: クライアント座標 clientPoint にある項目の実パス。仮想項目・当たり無しは null。
+    /// 自前のドラッグを始めるかどうかの判定に使う(実フォルダだけドラッグ元にする)。
+    /// </summary>
+    public string? RealFolderAt(Point clientPoint)
+    {
+        VerifyOwner();
+        if (_tree is not { } tree) return null;
+        var point = new NativePoint { X = clientPoint.X, Y = clientPoint.Y };
+        var hr = ((INameSpaceTreeControl2)tree).HitTest(ref point, out var item);
+        if (hr < 0 || item is null) return null;
+        try { return ShellItemPath.FileSystemPathOf(item); }
+        finally { Marshal.ReleaseComObject(item); }
+    }
+
+    /// <summary>
+    /// R-97-3 / N-06: キー起動のシェルメニューを選択項目の直下に出すための位置(クライアント座標)。
+    /// 選択が無い・矩形が取れないときは null(呼び出し側は何もしないか、既定の位置を使う)。
+    /// </summary>
+    public Point? SelectedItemAnchor()
+    {
+        VerifyOwner();
+        if (_tree is not { } tree) return null;
+        if (tree.GetSelectedItems(out var selection) < 0 || selection == IntPtr.Zero) return null;
+
+        IShellItemArray? items = null;
+        try
+        {
+            items = (IShellItemArray)Marshal.GetObjectForIUnknown(selection);
+            Marshal.Release(selection);
+            selection = IntPtr.Zero;
+            if (items.GetCount(out var count) < 0 || count == 0) return null;
+            if (items.GetItemAt(0, out var item) < 0 || item is null) return null;
+            try
+            {
+                if (((INameSpaceTreeControl2)tree).GetItemRect(item, out var rect) < 0) return null;
+                return new Point(rect.Left, rect.Bottom);
+            }
+            finally { Marshal.ReleaseComObject(item); }
+        }
+        finally
+        {
+            if (selection != IntPtr.Zero) Marshal.Release(selection);
+            if (items is not null) Marshal.ReleaseComObject(items);
+        }
     }
 
     /// <summary>現在位置への展開・選択がまだ終わっていないか。</summary>
@@ -958,6 +1011,16 @@ public sealed class NameSpaceTreeHost : IDisposable
 
     private void ReplaceDropSources(IntPtr data) => _dropSources = ShellItemPath.FileSystemPathsOf(data);
 
+    /// <summary>
+    /// R-97-3 / §9: パスを持たない項目(仮想項目)は転送先にしない(Phase10.2 技術確認: 実機 OK)。
+    /// OnDragPosition には手を出さない。NSTC 標準の約 1 秒の自動展開が、この判定と無関係に保たれる。
+    /// </summary>
+    private void RejectVirtualDropTarget(IntPtr over, ref uint effect)
+    {
+        if (!_acceptEvents) return;
+        if (ShellItemPath.FileSystemPathOf(over) is null) effect = (uint)DragDropEffects.None;
+    }
+
     private void DropFrom(IntPtr over, IntPtr data, uint keyState, ref uint effect)
     {
         var allowed = effect;
@@ -995,11 +1058,19 @@ public sealed class NameSpaceTreeHost : IDisposable
             return S_OK;
         }
 
-        public int OnDragEnter(IntPtr over, IntPtr data, bool outsideSource, uint keyState, ref uint effect) =>
-            CacheDropSources(data);
+        public int OnDragEnter(IntPtr over, IntPtr data, bool outsideSource, uint keyState, ref uint effect)
+        {
+            var hr = CacheDropSources(data);
+            _host?.RejectVirtualDropTarget(over, ref effect);
+            return hr;
+        }
 
-        public int OnDragOver(IntPtr over, IntPtr data, uint keyState, ref uint effect) =>
-            CacheDropSources(data);
+        public int OnDragOver(IntPtr over, IntPtr data, uint keyState, ref uint effect)
+        {
+            var hr = CacheDropSources(data);
+            _host?.RejectVirtualDropTarget(over, ref effect);
+            return hr;
+        }
 
         public int OnDragPosition(IntPtr over, IntPtr data, int newPosition, int oldPosition) =>
             CacheDropSources(data);

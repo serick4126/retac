@@ -60,6 +60,16 @@ public class DropRulesTests
         static (int, int) Count((IReadOnlyList<string> Copies, IReadOnlyList<string> Moves) split) => (split.Copies.Count, split.Moves.Count);
     }
 
+    /// <summary>R-97-3 / §9: ツリーへのドラッグ中の宛先判定（実フォルダ・仮想項目・自分自身・自分の子孫）。</summary>
+    [Fact]
+    public void ツリーの宛先判定_実フォルダ_仮想項目_自分自身_子孫()
+    {
+        Assert.Equal(DropAction.Move, DropRules.DecideForTree(@"C:\a\x.txt", @"C:\b", false, false));   // 実フォルダ
+        Assert.Equal(DropAction.None, DropRules.DecideForTree(@"C:\a\x.txt", null, false, false));      // 仮想項目(パス無し)
+        Assert.Equal(DropAction.None, DropRules.DecideForTree(@"C:\work", @"C:\work", false, false));   // 自分自身
+        Assert.Equal(DropAction.None, DropRules.DecideForTree(@"C:\work", @"C:\work\inner", false, false));   // 自分の子孫
+    }
+
     [Theory]
     [InlineData(DropAction.Move, true, true, DropAction.Move)]
     [InlineData(DropAction.Move, true, false, DropAction.Copy)]    // 移動を許さないドラッグ元ならコピーに落とす

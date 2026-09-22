@@ -1,11 +1,16 @@
+using System.Drawing;
 using System.Windows.Forms;
+using ReTAC.App.Rendering;
 using ReTAC.Shell;
 
 namespace ReTAC.App;
 
+/// <summary>R-97-3: ツリーの項目を右クリックした(シェルメニュー要求。実フォルダだけ。仮想項目は Path が無いので出さない)。</summary>
+public readonly record struct TreeContextMenuRequest(string Path, Point ScreenPoint);
+
 /// <summary>R-97: ドライブツリー(現在位置のドライブ/UNC共有だけがルート)とデスクトップツリー
 /// (PC全体で単一・固定のルート)の両方を、ルートの決め方だけを切り替えて 1 つの型で持つ。</summary>
-public sealed class DriveTreeView : Control
+public sealed class DriveTreeView : Control, IMessageFilter
 {
     private const long SelectionTimeoutMilliseconds = 15_000;
     private readonly NameSpaceTreeRootKind _rootKind;
@@ -35,9 +40,18 @@ public sealed class DriveTreeView : Control
     private long _selectionDeadline;
     /// <summary>R-97-2: NSTC は別ウィンドウの子なので、押下位置は WM_PARENTNOTIFY で拾っておく。</summary>
     private Point? _pendingDownPoint;
+    /// <summary>
+    /// R-97-3 / Q83: 左ボタンを押した位置にあった実フォルダのパス。NSTCS_DISABLEDRAGDROP で
+    /// NSTC 自身のドラッグ(既定の大きな画像。実機 NG)を止めた分、しきい値を超えて動いたら
+    /// このパス 1 件だけを対象に自前で DoDragDrop を始める。仮想項目なら null のままでドラッグを始めない。
+    /// </summary>
+    private string? _dragCandidatePath;
+    private Point _dragDownScreenPoint;
 
     private const int WM_PARENTNOTIFY = 0x0210;
     private const int WM_LBUTTONDOWN = 0x0201;
+    private const int WM_LBUTTONUP = 0x0202;
+    private const int WM_MOUSEMOVE = 0x0200;
 
     public event EventHandler<string>? FolderCommitted;
     public event EventHandler<ShellTreeDropEventArgs>? FilesDropped;
@@ -47,6 +61,8 @@ public sealed class DriveTreeView : Control
     public event EventHandler? NoPathItemCommitted;
     /// <summary>R-97-3: Enter/Tab 以外のキー。ReTAC の割り当てがあれば Handled にして NSTC 既定の処理を止める。</summary>
     public event EventHandler<ShellTreeKeyEventArgs>? CommandKeyRequested;
+    /// <summary>R-97-3: 項目の右クリック。実フォルダだけ(パスが無い項目は Path が無いので呼び出し側は何もしない)。</summary>
+    public event EventHandler<TreeContextMenuRequest>? ContextMenuRequested;
 
     public string? SelectedFolder { get; private set; }
 
@@ -91,18 +107,75 @@ public sealed class DriveTreeView : Control
         {
             var lp = unchecked((int)(long)m.LParam);
             _pendingDownPoint = new Point(unchecked((short)(lp & 0xFFFF)), unchecked((short)((lp >> 16) & 0xFFFF)));
+            // R-97-3 / Q83: 押した位置が実フォルダなら、後続の移動でドラッグを自前で始める候補にする。
+            // 仮想項目(null)ならこのまま候補にしない(ドラッグ元にしない)
+            _dragCandidatePath = _hostCreated ? _host.RealFolderAt(_pendingDownPoint.Value) : null;
+            _dragDownScreenPoint = MousePosition;
         }
         base.WndProc(ref m);
     }
 
     /// <summary>
-    /// R-97-2: 確定はマウスを離した時（OnItemClick）だけで行う。ドラッグへ移行した操作はシェル自身が
-    /// ドロップとして処理しここへは来ない想定だが、押下位置との距離チェックを二重の確認として残す。
+    /// R-97-3 / Q83: NSTCS_DISABLEDRAGDROP で NSTC 自身のドラッグを止めた分、しきい値を超えて動いたら
+    /// ここで自前の DoDragDrop を始める(FileListView の R-78 と同じ、小さい画像付き)。
+    /// アプリ全体のマウス移動を見る必要があるため IMessageFilter を使う(MouseButtonFilter と同じ理由)。
+    /// </summary>
+    bool IMessageFilter.PreFilterMessage(ref Message m)
+    {
+        if (_dragCandidatePath is not { } path) return false;
+        if (m.Msg == WM_LBUTTONUP) { _dragCandidatePath = null; return false; }
+        if (m.Msg != WM_MOUSEMOVE) return false;
+        if (Control.FromChildHandle(m.HWnd) != this) return false;
+        if (!Control.MouseButtons.HasFlag(MouseButtons.Left)) { _dragCandidatePath = null; return false; }
+
+        var current = MousePosition;
+        if (Math.Abs(current.X - _dragDownScreenPoint.X) < SystemInformation.DragSize.Width
+            && Math.Abs(current.Y - _dragDownScreenPoint.Y) < SystemInformation.DragSize.Height)
+            return false;
+
+        _dragCandidatePath = null;
+        StartDrag(path);
+        return false;   // 移動そのものは通常どおり処理させる(消費しない)
+    }
+
+    private void StartDrag(string path)
+    {
+        var paths = new System.Collections.Specialized.StringCollection { path };
+        var data = new DataObject();
+        data.SetFileDropList(paths);
+        using var image = TreeDragImage(path);
+        // R-78 と同じ: 画像付きで始める(useDefaultDragImage:false)。既定の大きな画像は指す先を隠す(実機 NG)
+        DoDragDrop(data, DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link,
+            image, new Point(Scaled(8), Scaled(8)), useDefaultDragImage: false);
+    }
+
+    /// <summary>Q83: ドラッグ中にカーソルへ付ける小さな画像。ツリーは Theme を持たないのでシステム配色を使う。</summary>
+    private Bitmap TreeDragImage(string path)
+    {
+        using var icons = new ShellIcons(Scaled(16));
+        var icon = icons.ForPath(path);
+        var text = Path.GetFileName(Path.TrimEndingDirectorySeparator(path));
+        if (text.Length == 0) text = path;   // ドライブルート等は末尾が空になる
+        return DragImageRenderer.Render(icon, icons.Size, text, Font, SystemColors.WindowText, SystemColors.Window, Scaled(4));
+    }
+
+    private int Scaled(int logical) => logical * DeviceDpi / 96;
+
+    /// <summary>
+    /// R-97-2: 確定はマウスを離した時（OnItemClick）だけで行う。ドラッグへ移行した操作は自前の
+    /// DoDragDrop がマウスを掴むため、ここへは来ない想定だが、押下位置との距離チェックを二重の確認として残す。
     /// </summary>
     private void OnTreeItemClicked(object? sender, ShellTreeClickEventArgs e)
     {
         var downPoint = _pendingDownPoint ?? PointToClient(MousePosition);
         _pendingDownPoint = null;
+
+        // R-97-3: 右クリックは確定(ファイル表示パネルの移動)をしない。実フォルダだけシェルメニューの対象にする
+        if ((e.ClickType & ShellTreeClickType.ButtonMask) == ShellTreeClickType.Right)
+        {
+            if (e.Path is { } rightPath) ContextMenuRequested?.Invoke(this, new TreeContextMenuRequest(rightPath, MousePosition));
+            return;
+        }
         if ((e.ClickType & ShellTreeClickType.ButtonMask) != ShellTreeClickType.Left) return;
 
         // R-97: パスを持たない項目もクリックの確定候補になる(選択・展開はできるが、ファイル表示パネルは動かせない)。
@@ -163,11 +236,14 @@ public sealed class DriveTreeView : Control
 
     {
         base.OnHandleCreated(e);
+        Application.AddMessageFilter(this);   // Q83: 自前のドラッグ開始検出(ハンドル再生成のたびに掛け直す)
         CreateOrApply();
     }
 
     protected override void OnHandleDestroyed(EventArgs e)
     {
+        Application.RemoveMessageFilter(this);
+        _dragCandidatePath = null;
         if (_hostCreated)
         {
             _selectionWatchdog.Stop();
@@ -199,6 +275,9 @@ public sealed class DriveTreeView : Control
         if (SelectedFolder is { } path) FolderCommitted?.Invoke(this, path);
         else if (_host.HasSelectionWithoutPath) NoPathItemCommitted?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>R-97-3 / N-06: キー起動のシェルメニューを出す位置(クライアント座標)。選択・矩形が無ければ null。</summary>
+    internal Point? SelectedItemAnchor() => _hostCreated ? _host.SelectedItemAnchor() : null;
 
     private void CreateOrApply()
     {
