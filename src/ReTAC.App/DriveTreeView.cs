@@ -80,7 +80,7 @@ public sealed class DriveTreeView : Control
         // R-97-2: Enter は確定のあとファイルビューへフォーカスを戻す（マウス確定はフォーカスを動かさない）
         _host.CommitRequested += (_, _) => { CommitSelectedFolder(); FocusFileViewRequested?.Invoke(this, EventArgs.Empty); };
         _host.TabPressed += (_, _) => FocusFileViewRequested?.Invoke(this, EventArgs.Empty);
-        _host.KeyPressed += (_, e) => { CommandKeyRequested?.Invoke(this, e); _dropNextChar = e.Handled; };
+        _host.KeyPressed += (_, e) => CommandKeyRequested?.Invoke(this, e);
         _selectionWatchdog.Tick += (_, _) => CheckSelectionTimeout();
     }
 
@@ -152,17 +152,11 @@ public sealed class DriveTreeView : Control
     /// </summary>
     public override bool PreProcessMessage(ref Message msg)
     {
-        // R-97-3: ReTAC のコマンドとして処理したキーの文字も捨てる。届くとツリーの頭文字検索が走り、選択が動く。
-        // 文字を生まないキー（F キー等）で残った印は、次の WM_KEYDOWN で消す
-        if (msg.Msg == WM_KEYDOWN) _dropNextChar = false;
-        else if (msg.Msg == WM_CHAR && _dropNextChar) { _dropNextChar = false; return true; }
         if (msg.Msg == WM_CHAR && (int)(long)msg.WParam is '\t' or '\r') return true;
         return base.PreProcessMessage(ref msg);
     }
 
     private const int WM_CHAR = 0x0102;
-    private const int WM_KEYDOWN = 0x0100;
-    private bool _dropNextChar;
 
     protected override void OnHandleCreated(EventArgs e)
 
@@ -318,7 +312,9 @@ public sealed class DriveTreeView : Control
             _selectionWatchdog.Stop();
             return;
         }
-        if (SamePath(SelectedFolder, folder))
+        // R-97-2: 自動の選択が残っていなければ失敗ではない。利用者がキーで動かすと自動の選択は捨てられ、
+        // 選択は現在位置と一致しなくなる
+        if (SamePath(SelectedFolder, folder) || !_host.SelectionPending)
         {
             _selectionWatchdog.Stop();
             return;

@@ -76,6 +76,7 @@ public sealed class NameSpaceTreeHost : IDisposable
     private const uint SWP_NOZORDER = 0x0004;
     private const uint SWP_NOACTIVATE = 0x0010;
     private const uint WM_KEYDOWN = 0x0100;
+    private const uint WM_CHAR = 0x0102;
     private const int VK_RETURN = 0x0D;
     private const int VK_TAB = 0x09;
 
@@ -297,6 +298,23 @@ public sealed class NameSpaceTreeHost : IDisposable
 
     /// <summary>現在位置への展開・選択がまだ終わっていないか。</summary>
     public bool SelectionPending => _pendingSelectionPath is not null;
+
+    /// <summary>
+    /// R-97-2: 利用者がツリーをキーで操作したら、現在位置への自動の展開・選択は捨てる。残すと、
+    /// 利用者が動かした選択を自動の選択が奪い返したり、見張りが「展開の失敗」と取り違えたりする。
+    /// OnItemClick はコードからの選択でも届くので、マウスはきっかけにしない（マウスの確定は新しい移動になる）。
+    /// </summary>
+    private void AbandonPendingSelection()
+    {
+        if (_pendingSelectionPath is null) return;
+        _pendingSelectionPath = null;
+        _pendingExpandedPaths.Clear();
+        _selectionVersion++;
+        _selectionContinuationPosted = false;
+        _selectionSignalPending = false;
+        CancelSelectionFallback();
+        _ignoreSelectionEvents = false;
+    }
 
     public void CancelPendingSelection()
     {
@@ -1009,15 +1027,25 @@ public sealed class NameSpaceTreeHost : IDisposable
         // R-97-2 / Step4-5: 矢印・Home・End・PageUp・PageDown は S_FALSE でツリー標準の処理へ渡し、
         // 現在位置（選択中の実フォルダ）は変えない。Enter だけが確定、Tab だけがファイルビューへ戻す合図で、
         // どちらもツリー既定の動作（ラベル編集の開始・既定のタブ移動）をさせないため S_OK で止める。
+        private bool _swallowChar;
+
         public int OnKeyboardInput(uint message, nuint wParam, nint lParam)
         {
             try
             {
                 if (message == WM_KEYDOWN)
                 {
+                    _swallowChar = false;
+                    _host?.AbandonPendingSelection();
                     if ((int)wParam == VK_RETURN) { _host?.RequestCommit(); return S_OK; }
                     if ((int)wParam == VK_TAB) { _host?.RequestTab(); return S_OK; }
-                    if (_host?.RequestKey((Keys)(int)wParam) == true) return S_OK;
+                    if (_host?.RequestKey((Keys)(int)wParam) == true) { _swallowChar = true; return S_OK; }
+                }
+                // R-97-3: ReTAC のコマンドとして処理したキーの WM_CHAR も止める。通すとツリーの頭文字検索が走り、選択が動く
+                else if (message == WM_CHAR && _swallowChar)
+                {
+                    _swallowChar = false;
+                    return S_OK;
                 }
             }
             catch (Exception) { }

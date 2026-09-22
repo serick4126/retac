@@ -399,7 +399,8 @@ public sealed class MainForm : Form, IBookmarkHost
         if (_keyMap.Resolve(binding) is not { } target)
         {
             // 卓駆: Shift+英字でその頭文字の項目へ。キーマップに無いときだけ効く
-            if (!e.Control && e.Shift && e.KeyCode is >= Keys.A and <= Keys.Z) e.Handled = JumpToInitial((char)e.KeyCode);
+            // R-97-3: ツリーから来たときは、未割り当ての Shift+英字をツリーの頭文字検索へ渡す（Handled にしない）
+            if (!e.Control && e.Shift && e.KeyCode is >= Keys.A and <= Keys.Z && _treeCommandTarget is null) e.Handled = JumpToInitial((char)e.KeyCode);
             return;
         }
         e.Handled = Execute(target, e.KeyCode);
