@@ -136,7 +136,36 @@ public class CentralDisplayAreaTests
         Assert.Equal([240], notified);
     }
 
+    // R-96: SplitContainer はドラッグ中に SplitX を書き換えても読み返さないので、離した時点で最小幅へ戻す
+    [Theory]
+    [InlineData(0, 160)]
+    [InlineData(1000, 1000 - 320 - 4)]
+    public void 境界を最小幅を越えて動かすと最小幅で止まる(int dragLogical, int expectedLogical)
+    {
+        var list = new FileListView();
+        var search = new IncrementalSearchBar(list);
+        var fileDisplay = new FileDisplayPanel(list, search);
+        using var area = new CentralDisplayArea(fileDisplay, 280) { Size = new Size(1000, 500) };
+        area.ShowLeft(new Panel());
+        area.PerformLayout();
+        var split = area.Controls.OfType<SplitContainer>().Single();
+        var dpi = area.DeviceDpi;
+        area.Size = new Size(CentralDisplayArea.ToDeviceWidth(1000, dpi), 500);
+        var notified = new List<int>();
+        area.LeftWidthChanged += (_, width) => notified.Add(width);
+
+        var drag = Math.Min(CentralDisplayArea.ToDeviceWidth(dragLogical, dpi), split.ClientSize.Width - split.SplitterWidth);
+        Invoke(area, "OnSplitterMoving", split, new SplitterCancelEventArgs(0, 0, drag, 0));
+        split.SplitterDistance = drag;
+        if (notified.Count == 0)
+            Invoke(area, "OnSplitterMoved", split, new SplitterEventArgs(0, 0, drag, 0));
+
+        Assert.Equal(CentralDisplayArea.ToDeviceWidth(expectedLogical, dpi), split.SplitterDistance, tolerance: 1);
+        Assert.Equal([expectedLogical], notified);
+    }
+
     private static void Invoke(CentralDisplayArea area, string method, params object[] arguments)
+
     {
         typeof(CentralDisplayArea).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(area, arguments);

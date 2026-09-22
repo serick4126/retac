@@ -124,14 +124,10 @@ public sealed class CentralDisplayArea : UserControl
         }
     }
 
-    private void OnSplitterMoving(object? sender, SplitterCancelEventArgs e)
-    {
-        _userMoving = true;
-        var dpi = DeviceDpi;
-        var widths = DecideWidths(_split.ClientSize.Width, e.SplitX,
-            ToDeviceWidth(LeftMinimumLogical, dpi), ToDeviceWidth(RightMinimumLogical, dpi), _split.SplitterWidth);
-        e.SplitX = widths.VisibleLeft;
-    }
+    // SplitContainer はここで SplitX を書き換えても読み返さない（ドラッグ中の線も確定位置も変わらない）。
+    // Panel1MinSize / Panel2MinSize は窓が両最小の和より狭いと SplitterDistance の設定で例外になるため使わず、
+    // 離した時点（OnSplitterMoved）で最小幅へ戻す。
+    private void OnSplitterMoving(object? sender, SplitterCancelEventArgs e) => _userMoving = true;
 
     private void OnSplitterMoved(object? sender, SplitterEventArgs e)
     {
@@ -141,6 +137,16 @@ public sealed class CentralDisplayArea : UserControl
         var leftMinimum = ToDeviceWidth(LeftMinimumLogical, dpi);
         var maximumLeft = Math.Max(0,
             _split.ClientSize.Width - ToDeviceWidth(RightMinimumLogical, dpi) - _split.SplitterWidth);
+        // R-96: 左 160 / 右 320（96 DPI 論理値）を下回る位置で離されたら、その最小幅へ戻す
+        var clamped = DecideWidths(_split.ClientSize.Width, _split.SplitterDistance,
+            leftMinimum, ToDeviceWidth(RightMinimumLogical, dpi), _split.SplitterWidth).VisibleLeft;
+        if (clamped != _split.SplitterDistance)
+        {
+            _arranging = true;
+            try { _split.SplitterDistance = clamped; }
+            finally { _arranging = false; }
+        }
+
         // 狭い窓による一時縮小は保存値へ反映しない（R-96）。
         if (maximumLeft < leftMinimum) return;
 
