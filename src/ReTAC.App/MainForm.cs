@@ -81,7 +81,7 @@ public sealed class MainForm : Form, IBookmarkHost
     private readonly DriveTreeView _desktopTree = new(NameSpaceTreeRootKind.Desktop);
     // R-96: Phase 10.2 で中身を持つのは 2 つのツリーだけ。残り2ビューは案内だけの控え
     private readonly BookmarkTreeView _bookmarksView;
-    private readonly UnavailableLeftPanelView _previewView = new();
+    private readonly PreviewView _previewView = new();
     /// <summary>R-97-3: ツリーのキー経由でコマンドを実行している間だけ、そのツリーの選択を対象にする
     /// (CommandTargets)。それ以外は null で、ファイル表示パネルの対象(_list.State)を使う。</summary>
     private DriveTreeView? _treeCommandTarget;
@@ -170,7 +170,13 @@ public sealed class MainForm : Form, IBookmarkHost
 
         _list.EntryActivated += (_, entry) => OnActivated(entry);
         _list.ParentRequested += (_, _) => GoParent();
-        _list.CursorMoved += (_, _) => RefreshStatus();
+        _list.CursorMoved += (_, _) =>
+        {
+            RefreshStatus();
+            // R-99 / Q31: クリックで決めたときはすぐ、キーボードで動かしたときは止まってから読む
+            if (PreviewVisible) _previewView.SetTarget(PreviewTarget.Of(_list.State.Cursor), immediate: MouseButtons != MouseButtons.None);
+        };
+        _previewView.FocusFileViewRequested += (_, _) => _list.Focus();
         _list.MarksChanged += (_, _) => RefreshStatus();
         _list.Theme = _settings.ToTheme();                       // 5-1 節の配色とフォント
         _driveBar.SetVisibility(_settings.ToHiddenDrives(), _settings.ShowDesktopButton);   // 16.7 節
@@ -220,7 +226,11 @@ public sealed class MainForm : Form, IBookmarkHost
         };
 
         _normalClientSize = ClientSize;
-        Resize += (_, _) => { if (WindowState == FormWindowState.Normal) _normalClientSize = ClientSize; };
+        Resize += (_, _) =>
+        {
+            if (WindowState == FormWindowState.Normal) _normalClientSize = ClientSize;
+            UpdatePreview();   // R-99 / Q46: 最小化（常駐を含む）で解放し、戻したら今のカーソルから読み直す
+        };
 
         // R-74: マウスボタン3/4/5 は一覧・ドライブバー・ステータスバーのどこで押しても効かせる
         _mouseButtons = new MouseButtonFilter(this, PressMouseButton);
@@ -240,6 +250,7 @@ public sealed class MainForm : Form, IBookmarkHost
             _driveTree.Dispose();
             _desktopTree.Dispose();
             _bookmarksView.Dispose();
+            _previewView.Shutdown();
             _previewView.Dispose();
 
             // B-03: ループはどのウィンドウにも紐づいていない（Program.cs）。
@@ -1599,6 +1610,18 @@ public sealed class MainForm : Form, IBookmarkHost
 
         if (shown && wasInLeft) _leftPanel.CurrentView.Focus();
         else if (!shown && wasInLeft) _list.Focus();
+        UpdatePreview();
+    }
+
+    /// <summary>R-99: プレビューが見えているか。別ビュー・左パネル非表示・最小化では見えない。</summary>
+    private bool PreviewVisible => _leftPanelShown && _leftPanel.ViewKind == LeftPanelViewKind.Preview
+                                   && WindowState != FormWindowState.Minimized;
+
+    /// <summary>R-99: 見えていれば今のカーソルをすぐ読み、見えなければハンドラーを解放してファイルを離す。</summary>
+    private void UpdatePreview()
+    {
+        if (PreviewVisible) _previewView.SetTarget(PreviewTarget.Of(_list.State.Cursor), immediate: true);
+        else _previewView.Unload();
     }
 
     /// <summary>R-96: Phase 10.2 で中身を持つのは 2 つのツリーだけ。残りは案内だけの控えを使い回す。</summary>

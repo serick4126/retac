@@ -98,11 +98,4 @@ public class LeftPanelTests
         Assert.False(leftPanel.Views[LeftPanelViewKind.DriveTree].Checked);
         Assert.True(leftPanel.Views[LeftPanelViewKind.Preview].Checked);
     }
-
-    [Fact]
-    public void 未実装ビューは領域内に案内を表示する()
-    {
-        using var view = new UnavailableLeftPanelView();
-        Assert.Contains("Phase 10 の後続段", view.Controls.OfType<Label>().Single().Text);
-    }
 }

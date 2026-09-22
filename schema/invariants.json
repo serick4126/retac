@@ -107,6 +107,15 @@
       "reason": "同じフォルダを別のグループに入れる使い方がある（ブラウザと同じ。Q5）。重複を許すので、項目は値ではなく参照で探す（BookmarkRules.Locate / Remove / Move）。record の IndexOf は値で比べ、重複した別の項目を指すので使わない。"
     },
     {
+      "id": "INV-PREVIEW-RELEASE",
+      "status": "enforced",
+      "specIds": ["R-99"],
+      "applies": ["command:ShowPreview", "settings:LeftPanelView"],
+      "rule": "プレビューハンドラーは、対象の変更・別ビューへの切り替え・左パネルの非表示・最小化（常駐を含む）・終了で解放し、ReTAC は対象ファイルを掴み続けない。解放（Unload → site 解除 → COM 解放）はそのハンドラーを作った STA 自身で行う。CoCancelCall と共有 Prevhost.exe の強制終了はしない。表示するのは世代が最新の要求の結果だけ。",
+      "enforcedBy": "shell:PreviewSession（要求ごとの STA、Release は待ち行列に積むだけ）/ app:PreviewView（世代番号、Unload / Shutdown）/ MainForm.UpdatePreview（見えなくなったら Unload）",
+      "note": "技術ゲートで CoCancelCall の直後に共有 Prevhost.exe との RPC_E_DISCONNECTED を観測したため使わない。応答しないワーカーはバックグラウンドスレッドとして残し、終了を妨げない。"
+    },
+    {
       "id": "INV-BOOKMARK-STABLE-ID",
       "status": "enforced",
       "specIds": ["R-98"],
