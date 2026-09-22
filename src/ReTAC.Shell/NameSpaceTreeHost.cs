@@ -229,7 +229,22 @@ public sealed class NameSpaceTreeHost : IDisposable
             return;
         }
 
+        // R-97-2: ツリーで選んだフォルダへ移ったときの同期。選び直すと祖先から順に EnsureItemVisible して
+        // 選択が最下段付近へスクロールしてしまうので、既に選ばれていれば状態だけ揃えて表示位置は動かさない
+        if (CurrentSelectionPath(tree) is { } selected && SamePath(selected, path))
+        {
+            CompleteSelection(path);
+            return;
+        }
+
         BeginSelection(path);
+    }
+
+    private static string? CurrentSelectionPath(INameSpaceTreeControl tree)
+    {
+        if (tree.GetSelectedItems(out var selection) < 0 || selection == IntPtr.Zero) return null;
+        try { return ShellItemPath.FileSystemPathsOf(selection).FirstOrDefault(); }
+        finally { Marshal.Release(selection); }
     }
 
     /// <summary>
@@ -384,6 +399,11 @@ public sealed class NameSpaceTreeHost : IDisposable
             return;
         }
 
+        CompleteSelection(path);
+    }
+
+    private void CompleteSelection(string path)
+    {
         _pendingSelectionPath = null;
         _selectionVersion++;
         _selectionContinuationPosted = false;

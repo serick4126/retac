@@ -135,6 +135,18 @@ public sealed class DriveTreeView : Control
 
     protected override bool IsInputChar(char charCode) => true;
 
+    /// <summary>
+    /// R-97-2: Tab / Enter の WM_KEYDOWN は NSTC の OnKeyboardInput で処理済みだが、続く WM_CHAR が
+    /// SysTreeView32 まで届くと、ツリーが扱えない文字として警告音を鳴らす。文字の側だけここで捨てる。
+    /// </summary>
+    public override bool PreProcessMessage(ref Message msg)
+    {
+        if (msg.Msg == WM_CHAR && (int)(long)msg.WParam is '\t' or '\r') return true;
+        return base.PreProcessMessage(ref msg);
+    }
+
+    private const int WM_CHAR = 0x0102;
+
     protected override void OnHandleCreated(EventArgs e)
 
     {
