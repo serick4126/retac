@@ -252,6 +252,24 @@
       "enforcedBy": "domain:UndoRecord.Transfer（コピーと移動を 1 件に。項目の種類は UndoItem.Kind / UndoRecord.KindOf）・UndoRecord.Steps（逆順）／app:MainForm.TransferDropped（BeginInvoke の中を Recording で包む）・UndoRecorder.Commit",
       "testedBy": "tests/ReTAC.Domain.Tests/UndoTests.cs",
       "note": "9.3 のレビューで、混ざったドロップが 2 件に分かれていた（Ctrl+Z 2 回）のを直した。記録を足すときは record.Kind ではなく KindOf(item) で項目の種類を見ること。"
+    },
+    {
+      "id": "INV-LEFTPANEL-SINGLE",
+      "status": "enforced",
+      "specIds": ["R-96", "R-96-2", "R-100"],
+      "applies": ["settings:ShowLeftPanel", "settings:LeftPanelView", "settings:LeftPanelWidth"],
+      "rule": "1 ウィンドウにつき左パネルは高々 1 個、左パネルが表示するビューも高々 1 個。ビューを切り替えるときは前のビューを外してから新しいビューを載せる。左パネルの表示・ビュー・幅はウィンドウごとの状態で、開いているほかのウィンドウとは同期しない。設定値は次に開くウィンドウと次回起動の既定にだけ使う。",
+      "enforcedBy": "app:MainForm（_leftPanel を 1 個だけ持ち、コンストラクタで設定から一度だけ写す）/ LeftPanel.ShowView（Controls を入れ替えて常に 1 ビュー）/ CentralDisplayArea.ShowLeft・HideLeft（左の置き場は 1 か所）",
+      "testedBy": "tests/ReTAC.Domain.Tests/LeftPanelCommandsTests.cs"
+    },
+    {
+      "id": "INV-TAB-CYCLE",
+      "status": "enforced",
+      "specIds": ["R-97-2"],
+      "applies": ["settings:ShowLeftPanel"],
+      "rule": "Tab / Shift+Tab は、現在のファイルビューと表示中の左パネルビューの 2 つだけを往復する。ドライブバー・上部バー・左パネル上端の選択欄は巡回しない。左パネルが非表示なら何もしない。インクリメンタル検索中の Tab は検索の確定を優先する。",
+      "enforcedBy": "app:FileListView.ProcessCmdKey（FocusLeftPanelRequested）/ MainForm（LeftPanelVisible のときだけ左へ移す）/ NameSpaceTreeHost.OnKeyboardInput（ツリー上の Tab をファイルビューへ戻す合図にする）/ IncrementalSearchBar",
+      "note": "巡回対象を増やすと、ツリー既定のタブ移動とぶつかって往復が崩れる。"
     }
   ]
 }
