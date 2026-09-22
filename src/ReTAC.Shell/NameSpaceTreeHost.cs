@@ -89,6 +89,7 @@ public sealed class NameSpaceTreeHost : IDisposable
     private bool _selectionContinuationRunning;
     private bool _selectionSignalPending;
     private bool _ignoreSelectionEvents;
+    private bool _selectingItem;
     private int _selectionVersion;
     private int _lifetime;
     private CancellationTokenSource? _selectionFallback;
@@ -229,6 +230,18 @@ public sealed class NameSpaceTreeHost : IDisposable
         }
 
         BeginSelection(path);
+    }
+
+    /// <summary>
+    /// R-97-2: IOleWindow.GetWindow が返すのは外枠の窓で、キーを処理するのはその中の SysTreeView32。
+    /// 外枠へ SetFocus してもキーは内側へ届かないので、内側のツリーへ直接フォーカスを置く。
+    /// </summary>
+    public void Focus()
+    {
+        VerifyOwner();
+        if (_treeHwnd == IntPtr.Zero) return;
+        var inner = FindWindowEx(_treeHwnd, IntPtr.Zero, "SysTreeView32", null);
+        SetFocus(inner != IntPtr.Zero ? inner : _treeHwnd);
     }
 
     public void CancelPendingSelection()
@@ -566,8 +579,15 @@ public sealed class NameSpaceTreeHost : IDisposable
 
     private bool SetSelected(INameSpaceTreeControl tree, IShellItem item)
     {
-        Check(tree.SetItemState(item, ItemState.Selected, ItemState.Selected),
-            "名前空間ツリーの項目を選択できません。");
+        // R-97-2: NSTC はコードからの選択でも OnItemClick を出す。確定扱いにすると現在位置の同期のたびに
+        // 同じフォルダを開き直し、フォーカスもファイル一覧へ移ってしまう
+        _selectingItem = true;
+        try
+        {
+            Check(tree.SetItemState(item, ItemState.Selected, ItemState.Selected),
+                "名前空間ツリーの項目を選択できません。");
+        }
+        finally { _selectingItem = false; }
         Check(tree.GetItemState(item, ItemState.Selected, out var state),
             "名前空間ツリーの選択状態を取得できません。");
         if ((state & ItemState.Selected) == 0)
@@ -755,14 +775,25 @@ public sealed class NameSpaceTreeHost : IDisposable
 
     private void ClickFrom(IntPtr item, ShellTreeHitTest hitTest, ShellTreeClickType clickType)
     {
-        if (_acceptEvents)
+        if (_acceptEvents && !_selectingItem)
+
             ItemClicked?.Invoke(this, new ShellTreeClickEventArgs(ShellItemPath.FileSystemPathOf(item), hitTest, clickType));
     }
 
     private void RequestCommit()
     {
-        if (_acceptEvents) CommitRequested?.Invoke(this, EventArgs.Empty);
+        if (!_acceptEvents) return;
+        // R-97-2: NSTC はキーでの選択移動の OnSelectionChanged をダブルクリック時間ほど遅らせて出す。
+        // 矢印の直後の Enter で一つ前のフォルダを確定しないよう、その場の選択を読み直す
+        if (_pendingSelectionPath is null && _tree is not null
+            && _tree.GetSelectedItems(out var selection) >= 0 && selection != IntPtr.Zero)
+        {
+            try { PublishSelection(ShellItemPath.FileSystemPathsOf(selection).FirstOrDefault()); }
+            finally { Marshal.Release(selection); }
+        }
+        CommitRequested?.Invoke(this, EventArgs.Empty);
     }
+
 
     private void RequestTab()
     {
@@ -900,6 +931,13 @@ public sealed class NameSpaceTreeHost : IDisposable
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr childAfter, string className, string? windowName);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetFocus(IntPtr hwnd);
+
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

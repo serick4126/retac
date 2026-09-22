@@ -73,10 +73,14 @@ public sealed class IncrementalSearchBar : FlowLayoutPanel
         if (!_open) return;   // Enter / Esc で閉じた後に LostFocus が来る
         _open = false;
         if (restore) RestoreOrigin();
-        Visible = false;
         // 隠した入力欄が ActiveControl に残ると、ウィンドウに戻ってきたときキーがどこにも届かない。
-        // ただし、ほかの入力欄（アドレスバー）をクリックして閉じたときは、そちらのフォーカスを奪わない（R-87）
-        if (FindForm() is { } form && (form.ActiveControl == _input || form.ActiveControl is null)) form.ActiveControl = _list;
+        // ただし、ほかの入力欄（アドレスバー）をクリックして閉じたときは、そちらのフォーカスを奪わない（R-87）。
+        // 隠すより先に移す。フォーカスを持ったまま隠すと WinForms が次のタブ位置（左パネルのツリー）へ送ってしまう。
+        // form.ActiveControl は入れ子の UserControl（FileDisplayPanel）を返すので、入力欄かどうかは Focused で見る
+        if (FindForm() is { } form && (_input.Focused || form.ActiveControl is null)) _list.Focus();
+
+        Visible = false;
+
     }
 
     private void OnTextChanged()

@@ -103,7 +103,8 @@ public sealed class MainForm : Form, IBookmarkHost
         _topRow.SizeChanged += (_, _) => _bookmarkBar.SetRowHeight(_topRow.RowHeight, _topRow.SideMargin);
         _fileTypes = _settings.ToFileTypeFilter();
         _sortOrder = _settings.ToSortOrder();
-        _driveTree.FolderCommitted += (_, path) => _ = OpenFolderAsync(path);
+        // R-97-2: ツリーのマウス確定はフォーカスを動かさない。Enter は FocusFileViewRequested 側でリストへ戻す
+        _driveTree.FolderCommitted += (_, path) => _ = OpenFolderAsync(path, keepFocus: true);
         // R-96-2: 上端の選択欄もメニューと同じ入口を通す（表示・保存・ラジオ印の反映を 1 か所にする）
         _leftPanel.ViewRequested += (_, kind) => ExecuteLeftPanelCommand(LeftPanel.CommandOf(kind));
 
@@ -2412,8 +2413,10 @@ public sealed class MainForm : Form, IBookmarkHost
     /// 呼び出し時点で控えると、待っている間に動いたカーソルを古い位置へ書き戻してしまう
     /// （コンテキストメニューを開いたまま別の項目を右クリックしたときの戻り・ちらつき）
     /// </param>
+    /// <param name="keepFocus">R-97-2: ツリーのマウス確定。フォーカスをツリーに残す</param>
     public async Task OpenFolderAsync(string folder, string? selectName = null, bool record = true,
-                                      IReadOnlySet<string>? restoreMarks = null, bool keepCursor = false)
+                                      IReadOnlySet<string>? restoreMarks = null, bool keepCursor = false,
+                                      bool keepFocus = false)
     {
         // ドライブの切り替えは、開けなければ移動しないことで分かる。エラーは出さない（R-32 の運用）
         var quiet = FolderEnumerator.IsDriveRoot(folder);
@@ -2462,7 +2465,7 @@ public sealed class MainForm : Form, IBookmarkHost
         // 自動更新もこの経路を通るので、`L` でドライブバーへ移った直後に
         // カレントフォルダが変化すると、300ms 後にフォーカスがリストへ戻され、
         // 続けて押したドライブ名の文字（`LI` で I:）が届かなくなっていた（V-06）
-        if (!keepCursor) _list.Focus();
+        if (!keepCursor && !keepFocus) _list.Focus();
     }
 
     /// <summary>オフスクリーン描画（--shot）用。列挙を同期で行う。</summary>

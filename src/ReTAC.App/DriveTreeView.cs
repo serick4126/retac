@@ -118,7 +118,25 @@ public sealed class DriveTreeView : Control
         if (_hostCreated) ApplyRequestedFolder();
     }
 
+    /// <summary>R-97-2: WinForms の Control.Focus() はこの外側の窓に止まり、NSTC はキーを受け取れない。</summary>
+    protected override void OnGotFocus(EventArgs e)
+    {
+        base.OnGotFocus(e);
+        if (_hostCreated && !_failure.Visible) _host.Focus();
+    }
+
+    /// <summary>
+    /// R-97-2: NSTC の窓は WinForms のコントロールではないので、その窓宛てのキーも前処理はここを通る。
+    /// 入力キー扱いにしないと、矢印はフォームの矢印キー移動（上端の選択欄へ飛ぶ）、Tab / Shift+Tab は
+    /// 既定のタブ移動に取られて NSTC まで届かない。Enter / Tab の扱いは NSTC の OnKeyboardInput が決める。
+    /// Alt 付きはメニューのために通常どおり流す。
+    /// </summary>
+    protected override bool IsInputKey(Keys keyData) => (keyData & Keys.Alt) == 0 || base.IsInputKey(keyData);
+
+    protected override bool IsInputChar(char charCode) => true;
+
     protected override void OnHandleCreated(EventArgs e)
+
     {
         base.OnHandleCreated(e);
         CreateOrApply();
