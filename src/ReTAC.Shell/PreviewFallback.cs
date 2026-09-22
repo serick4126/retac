@@ -77,7 +77,7 @@ public sealed record PreviewFallback(bool Text, Bitmap? Image)
 
     /// <summary>
     /// Image.FromHbitmap は透過を捨てる（PNG の透明部分が黒くなる）。DIB の中身を 32bpp のまま写す。
-    /// 高さが正なら下から上へ並んだ DIB なので上下を返す。
+    /// この DIB は上から下へ並んでいる。BITMAPINFOHEADER の高さの符号を見て上下を返すと、逆さまになった（実機指摘。上半分が赤の PNG で確認）。
     /// </summary>
     private static Bitmap ToBitmap(IntPtr hbitmap)
     {
@@ -85,9 +85,7 @@ public sealed record PreviewFallback(bool Text, Bitmap? Image)
         if (GetObject(hbitmap, Marshal.SizeOf<DIBSECTION>(), ref section) == 0 || section.Bits == IntPtr.Zero || section.BitsPixel != 32)
             return System.Drawing.Image.FromHbitmap(hbitmap);
         using var view = new Bitmap(section.Width, section.Height, section.WidthBytes, PixelFormat.Format32bppPArgb, section.Bits);
-        var copy = new Bitmap(view);   // DIB は DeleteObject で消えるので、自前のメモリへ写す
-        if (section.HeaderHeight > 0) copy.RotateFlip(RotateFlipType.RotateNoneFlipY);
-        return copy;
+        return new Bitmap(view);   // DIB は DeleteObject で消えるので、自前のメモリへ写す
     }
 
     private const int SIIGBF_BIGGERSIZEOK = 0x01, SIIGBF_THUMBNAILONLY = 0x08;
