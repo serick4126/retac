@@ -28,6 +28,7 @@ public sealed class BookmarkTreeView : TreeView
     private bool _barExpanded = true, _otherExpanded = true;
     private bool _building, _dragged;
     private TreeNode? _holding, _highlight;
+    private (TreeNode Node, int After)? _insert;
     private Drop? _drop;
 
     /// <summary>落とす先。Transfer があればそのフォルダへの転送、無ければ List の Index の前へ入れる。</summary>
@@ -347,9 +348,9 @@ public sealed class BookmarkTreeView : TreeView
         var set = _items.Host.Bookmarks;
         var node = GetNodeAt(client);
 
-        ClearMarks();
         Drop? drop = null;
         TreeNode? onto = null;
+        (TreeNode Node, int After)? insert = null;
         if (!reorder && !files) { }
         else if (node is null)
         {
@@ -379,12 +380,12 @@ public sealed class BookmarkTreeView : TreeView
             else if (spot.Index == 1 && node.IsExpanded && b.Children is { Count: > 0 } children)
             {
                 drop = new Drop(children, 0, null);   // 開いたグループの下半分は、見た目どおり中の先頭へ
-                SendMessage(Handle, TVM_SETINSERTMARK, 0, node.Nodes[0].Handle);
+                insert = (node.Nodes[0], 0);
             }
             else if (BookmarkRules.Locate(set, b) is var (list, index))
             {
                 drop = new Drop(list, index + spot.Index, null);
-                SendMessage(Handle, TVM_SETINSERTMARK, spot.Index, node.Handle);
+                insert = (node, spot.Index);
             }
         }
 
@@ -408,7 +409,7 @@ public sealed class BookmarkTreeView : TreeView
         }
         _drop = e.Effect == DragDropEffects.None ? null : drop;
         if (_drop is null) ClearMarks();
-        else if (onto is not null) Highlight(onto);
+        else SetMarks(onto, onto is null ? insert : null);
         _items.Host.ShowStatus(message);
 
         if (!ReferenceEquals(onto, _holding))
@@ -448,20 +449,26 @@ public sealed class BookmarkTreeView : TreeView
         _items.Host.ShowStatus("");
     }
 
-    private void Highlight(TreeNode node)
-    {
-        _highlight = node;
-        SendMessage(Handle, TVM_SELECTITEM, TVGN_DROPHILITE, node.Handle);
-    }
-
-    private void ClearMarks()
+    /// <summary>
+    /// 強調と挿入線を、前と違うときだけ付け替える。DragOver は止まっていても繰り返し来るので、
+    /// 毎回消して付け直すと強調・線がちらつく（実機指摘）。
+    /// </summary>
+    private void SetMarks(TreeNode? highlight, (TreeNode Node, int After)? insert)
     {
         if (!IsHandleCreated) return;
-        SendMessage(Handle, TVM_SETINSERTMARK, 0, IntPtr.Zero);
-        if (_highlight is null) return;
-        SendMessage(Handle, TVM_SELECTITEM, TVGN_DROPHILITE, IntPtr.Zero);
-        _highlight = null;
+        if (!ReferenceEquals(highlight, _highlight))
+        {
+            SendMessage(Handle, TVM_SELECTITEM, TVGN_DROPHILITE, highlight?.Handle ?? IntPtr.Zero);
+            _highlight = highlight;
+        }
+        if (insert != _insert)
+        {
+            SendMessage(Handle, TVM_SETINSERTMARK, insert?.After ?? 0, insert?.Node.Handle ?? IntPtr.Zero);
+            _insert = insert;
+        }
     }
+
+    private void ClearMarks() => SetMarks(null, null);
 
     /// <summary>ドラッグ中に上端・下端へ来たら 1 行ずつ送る（TreeView は OLE のドラッグ中に自分では送らない）。</summary>
     private void ScrollNearEdge(Point client)
