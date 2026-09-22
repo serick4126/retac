@@ -116,8 +116,6 @@ public sealed class MainForm : Form, IBookmarkHost
         _driveTree.CommandKeyRequested += (_, e) => e.Handled = ExecuteTreeCommandKey(_driveTree, e.KeyData);
         _desktopTree.CommandKeyRequested += (_, e) => e.Handled = ExecuteTreeCommandKey(_desktopTree, e.KeyData);
         // R-97-3: 右クリックは実フォルダだけシェルメニューの対象(パスが無ければ Path イベントが来ない)。開くだけでは移動しない
-        _driveTree.ContextMenuRequested += (_, e) => ShowShellContextMenu([e.Path], e.ScreenPoint);
-        _desktopTree.ContextMenuRequested += (_, e) => ShowShellContextMenu([e.Path], e.ScreenPoint);
         // R-97-3 / §9: ツリーへのドロップも既存の宛先入り転送ダイアログ(TransferDropped)を必ず通す
         _driveTree.FilesDropped += (_, e) => TransferDropped(e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
         _desktopTree.FilesDropped += (_, e) => TransferDropped(e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
@@ -377,15 +375,9 @@ public sealed class MainForm : Form, IBookmarkHost
                 e.Handled = GoRoot();
                 return;
             // アプリケーションキー。マークがあればマーク集合、無ければカーソルの 1 件が対象。
-            // R-97-3: ツリーのキー経由なら、ファイルリストではなくツリーの選択項目に出す(既知の落とし穴)
-            case Keys.Apps:
-                e.Handled = _treeCommandTarget is { } appsTarget
-                    ? ShowTreeShellContextMenu(appsTarget)
-                    : ShowShellContextMenu(_list.PointToScreen(_list.PopupAnchor()));
-                return;
-            // R-97-3: Shift+F10 はツリーから来たときだけここで扱う。ファイルリストからは今までどおり未割り当て
-            case Keys.F10 when e.Shift && !e.Control && !e.Alt && _treeCommandTarget is { } f10Target:
-                e.Handled = ShowTreeShellContextMenu(f10Target);
+            // R-97-3: ツリーから来たときは処理しない。NSTC 自身がツリーの選択項目にシェルメニューを出す
+            case Keys.Apps when _treeCommandTarget is null:
+                e.Handled = ShowShellContextMenu(_list.PointToScreen(_list.PopupAnchor()));
                 return;
         }
 
@@ -1956,17 +1948,6 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>シェルのコンテキストメニュー（0x8328）。書庫の圧縮・解凍はここから WinRAR へ委譲する。</summary>
     private bool ShowShellContextMenu(Point screenPoint) =>
         ShowShellContextMenu(_list.State.EffectiveTarget().Select(e => e.FullPath).ToList(), screenPoint);
-
-    /// <summary>
-    /// R-97-3: Apps / Shift+F10（ツリーから）のシェルメニュー。選択中の実フォルダ 1 件だけを対象にする
-    /// （ツリーにはマークが無い）。パスを持たない項目は ShowShellContextMenu へ渡すパスが無いので何も出さない。
-    /// </summary>
-    private bool ShowTreeShellContextMenu(DriveTreeView tree)
-    {
-        if (tree.SelectedFolder is not { } folder) return false;
-        var anchor = tree.SelectedItemAnchor() ?? Point.Empty;
-        return ShowShellContextMenu([folder], tree.PointToScreen(anchor));
-    }
 
     private bool ShowShellContextMenu(IReadOnlyList<string> targets, Point screenPoint)
     {

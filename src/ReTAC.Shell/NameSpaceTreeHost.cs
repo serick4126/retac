@@ -317,37 +317,6 @@ public sealed class NameSpaceTreeHost : IDisposable
         finally { Marshal.ReleaseComObject(item); }
     }
 
-    /// <summary>
-    /// R-97-3 / N-06: キー起動のシェルメニューを選択項目の直下に出すための位置(クライアント座標)。
-    /// 選択が無い・矩形が取れないときは null(呼び出し側は何もしないか、既定の位置を使う)。
-    /// </summary>
-    public Point? SelectedItemAnchor()
-    {
-        VerifyOwner();
-        if (_tree is not { } tree) return null;
-        if (tree.GetSelectedItems(out var selection) < 0 || selection == IntPtr.Zero) return null;
-
-        IShellItemArray? items = null;
-        try
-        {
-            items = (IShellItemArray)Marshal.GetObjectForIUnknown(selection);
-            Marshal.Release(selection);
-            selection = IntPtr.Zero;
-            if (items.GetCount(out var count) < 0 || count == 0) return null;
-            if (items.GetItemAt(0, out var item) < 0 || item is null) return null;
-            try
-            {
-                if (((INameSpaceTreeControl2)tree).GetItemRect(item, out var rect) < 0) return null;
-                return new Point(rect.Left, rect.Bottom);
-            }
-            finally { Marshal.ReleaseComObject(item); }
-        }
-        finally
-        {
-            if (selection != IntPtr.Zero) Marshal.Release(selection);
-            if (items is not null) Marshal.ReleaseComObject(items);
-        }
-    }
 
     /// <summary>現在位置への展開・選択がまだ終わっていないか。</summary>
     public bool SelectionPending => _pendingSelectionPath is not null;
@@ -1070,7 +1039,9 @@ public sealed class NameSpaceTreeHost : IDisposable
         {
             try { _host?.ClickFrom(item, hitTest, clickType); }
             catch (Exception) { }
-            return (hitTest & ShellTreeHitTest.Button) != 0 ? S_FALSE : S_OK;
+            // 右クリックは S_FALSE で NSTC 既定の処理（シェルメニュー）に任せる（R-97-3）
+            return (hitTest & ShellTreeHitTest.Button) != 0
+                || (clickType & ShellTreeClickType.ButtonMask) == ShellTreeClickType.Right ? S_FALSE : S_OK;
         }
 
         public int OnSelectionChanged(IntPtr selection)
@@ -1172,8 +1143,10 @@ public sealed class NameSpaceTreeHost : IDisposable
             return S_OK;
         }
         public int OnItemDeleted(IntPtr item, bool isRoot) => S_OK;
-        public int OnBeforeContextMenu(IntPtr item, ref Guid iid, out IntPtr result) { result = IntPtr.Zero; return S_OK; }
-        public int OnAfterContextMenu(IntPtr item, IntPtr contextMenu, ref Guid iid, out IntPtr result) { result = IntPtr.Zero; return S_OK; }
+        // R-97-3: S_OK で null を返すと、NSTC は空のメニューを使おうとしてプロセスごと落ちる（実機）。
+        // E_NOTIMPL で NSTC 標準のシェルメニューに任せる。実体の無い項目（PC 等）にもメニューが出る
+        public int OnBeforeContextMenu(IntPtr item, ref Guid iid, out IntPtr result) { result = IntPtr.Zero; return E_NOTIMPL; }
+        public int OnAfterContextMenu(IntPtr item, IntPtr contextMenu, ref Guid iid, out IntPtr result) { result = IntPtr.Zero; return E_NOTIMPL; }
         public int OnBeforeStateImageChange(IntPtr item) => S_OK;
         // S_OK で -1 を返すと「アイコンなし」と受け取られ、ツリーにアイコンが出なくなる。E_NOTIMPL で NSTC 標準のシェルアイコンに任せる
         public int OnGetDefaultIconIndex(IntPtr item, out int defaultIcon, out int openIcon) { defaultIcon = -1; openIcon = -1; return unchecked((int)0x80004001); }

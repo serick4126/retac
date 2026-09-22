@@ -5,9 +5,6 @@ using ReTAC.Shell;
 
 namespace ReTAC.App;
 
-/// <summary>R-97-3: ツリーの項目を右クリックした(シェルメニュー要求。実フォルダだけ。仮想項目は Path が無いので出さない)。</summary>
-public readonly record struct TreeContextMenuRequest(string Path, Point ScreenPoint);
-
 /// <summary>R-97: ドライブツリー(現在位置のドライブ/UNC共有だけがルート)とデスクトップツリー
 /// (PC全体で単一・固定のルート)の両方を、ルートの決め方だけを切り替えて 1 つの型で持つ。</summary>
 public sealed class DriveTreeView : Control, IMessageFilter
@@ -61,8 +58,6 @@ public sealed class DriveTreeView : Control, IMessageFilter
     public event EventHandler? NoPathItemCommitted;
     /// <summary>R-97-3: Enter/Tab 以外のキー。ReTAC の割り当てがあれば Handled にして NSTC 既定の処理を止める。</summary>
     public event EventHandler<ShellTreeKeyEventArgs>? CommandKeyRequested;
-    /// <summary>R-97-3: 項目の右クリック。実フォルダだけ(パスが無い項目は Path が無いので呼び出し側は何もしない)。</summary>
-    public event EventHandler<TreeContextMenuRequest>? ContextMenuRequested;
 
     public string? SelectedFolder { get; private set; }
 
@@ -170,12 +165,7 @@ public sealed class DriveTreeView : Control, IMessageFilter
         var downPoint = _pendingDownPoint ?? PointToClient(MousePosition);
         _pendingDownPoint = null;
 
-        // R-97-3: 右クリックは確定(ファイル表示パネルの移動)をしない。実フォルダだけシェルメニューの対象にする
-        if ((e.ClickType & ShellTreeClickType.ButtonMask) == ShellTreeClickType.Right)
-        {
-            if (e.Path is { } rightPath) ContextMenuRequested?.Invoke(this, new TreeContextMenuRequest(rightPath, MousePosition));
-            return;
-        }
+        // R-97-3: 右クリックなどは確定(ファイル表示パネルの移動)をしない。シェルメニューは NSTC 自身が出す
         if ((e.ClickType & ShellTreeClickType.ButtonMask) != ShellTreeClickType.Left) return;
 
         // R-97: パスを持たない項目もクリックの確定候補になる(選択・展開はできるが、ファイル表示パネルは動かせない)。
@@ -276,8 +266,6 @@ public sealed class DriveTreeView : Control, IMessageFilter
         else if (_host.HasSelectionWithoutPath) NoPathItemCommitted?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>R-97-3 / N-06: キー起動のシェルメニューを出す位置(クライアント座標)。選択・矩形が無ければ null。</summary>
-    internal Point? SelectedItemAnchor() => _hostCreated ? _host.SelectedItemAnchor() : null;
 
     private void CreateOrApply()
     {
