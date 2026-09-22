@@ -220,11 +220,11 @@
     {
       "id": "INV-POPUP-POSITION",
       "status": "enforced",
-      "specIds": ["R-79", "N-06"],
+      "specIds": ["R-79", "N-06", "R-97-3"],
       "applies": ["command:ShowPopupMenu", "command:ShowContextMenu", "command:ShowFolderBackgroundMenu"],
-      "rule": "マウスで開いたメニューはマウスの位置に、キーボード・メニューバー・マウスボタンの割り当てから開いたメニューはカーソル行の直下に出す。",
-      "enforcedBy": "app:MainForm.OnRightClick（右クリックの位置を渡す）。それ以外の経路は FileListView.PopupAnchor",
-      "note": "同じメニューを出す経路が複数ある。片方だけ直すと再発する（2.1.0 まで、空いた所の右クリックでもカーソル行の直下に出ていた）。"
+      "rule": "マウスで開いたメニューはマウスの位置に、キーボード・メニューバー・マウスボタンの割り当てから開いたメニューはカーソル行の直下に出す。ツリー(ドライブツリー・デスクトップツリー)のシェルメニューも同じ規則に従う: 右クリックはマウスの位置、Apps キー・Shift+F10 は選択項目の直下。",
+      "enforcedBy": "app:MainForm.OnRightClick（右クリックの位置を渡す）。それ以外の経路は FileListView.PopupAnchor。ツリーは DriveTreeView.ContextMenuRequested（右クリック。MousePosition）と MainForm.ShowTreeShellContextMenu（Apps/Shift+F10。NameSpaceTreeHost.SelectedItemAnchor の直下）",
+      "note": "同じメニューを出す経路が複数ある。片方だけ直すと再発する（2.1.0 まで、空いた所の右クリックでもカーソル行の直下に出ていた）。Phase10.2 でツリーの経路を追加したときも、この規則から外さないこと。"
     },
     {
       "id": "INV-UNDO-NO-DATA-LOSS",
@@ -261,6 +261,26 @@
       "rule": "1 ウィンドウにつき左パネルは高々 1 個、左パネルが表示するビューも高々 1 個。ビューを切り替えるときは前のビューを外してから新しいビューを載せる。左パネルの表示・ビュー・幅はウィンドウごとの状態で、開いているほかのウィンドウとは同期しない。設定値は次に開くウィンドウと次回起動の既定にだけ使う。",
       "enforcedBy": "app:MainForm（_leftPanel を 1 個だけ持ち、コンストラクタで設定から一度だけ写す）/ LeftPanel.ShowView（Controls を入れ替えて常に 1 ビュー）/ CentralDisplayArea.ShowLeft・HideLeft（左の置き場は 1 か所）",
       "testedBy": "tests/ReTAC.Domain.Tests/LeftPanelCommandsTests.cs"
+    },
+    {
+      "id": "INV-TREE-DROP-VIA-DIALOG",
+      "status": "enforced",
+      "specIds": ["R-97-3", "R-93"],
+      "applies": ["type:ReTAC.Domain.FileOps.DropRules", "type:ReTAC.Domain.FileOps.DropAction"],
+      "rule": "ドライブツリー・デスクトップツリーへのドロップは、NSTC(INameSpaceTreeControl)自身の即時転送を使わず、必ず宛先入りの転送確認ダイアログ(既存の TransferDropped → TransferCore)を経由する。ファイルリスト・ドライブバーの通常のドロップ(DropInto、確認無しの即時転送)とは別の経路である。ブックマークのフォルダへのドロップも同じ確認を行う(既存)。",
+      "enforcedBy": "shell:NameSpaceTreeHost.OnDrop/DropFrom(effect を常に DragDropEffects.None に戻し、Shell 自身に即時転送させない。FilesDropped イベントだけを外へ出す)/ app:MainForm(_driveTree.FilesDropped / _desktopTree.FilesDropped を DropInto ではなく TransferDropped へ購読する)",
+      "testedBy": "tests/ReTAC.Domain.Tests/DropRulesTests.cs",
+      "note": "DropInto を使うと確認ダイアログが出ない(ファイルリスト・ドライブバーの通常のドロップと同じ挙動になってしまう)。ツリーは §9 の例外で、宛先を見せて確認する側を使う。"
+    },
+    {
+      "id": "INV-NO-PATH-ITEM-NOT-IN-FILEPANEL",
+      "status": "enforced",
+      "specIds": ["R-39", "R-97", "R-97-3"],
+      "applies": ["type:ReTAC.Domain.FileOps.DropRules", "command:ShowContextMenu"],
+      "rule": "ツリー(デスクトップツリーの This PC・ライブラリ・ネットワーク等)で実パスを持たない項目(仮想項目)は、展開・選択はできるが、ファイル表示パネルに表示しない・転送先にしない・ドラッグ元にしない。展開すること自体は禁止しない。R-39 系のドライブルート制約はファイル表示パネル内の相対移動にだけ適用し、ツリーの仮想階層の展開には関係しない。",
+      "enforcedBy": "shell:NameSpaceTreeHost.RejectVirtualDropTarget(OnDragEnter/OnDragOver で実パスが無ければ DROPEFFECT_NONE)/ NameSpaceTreeHost.DropFrom(destination が null なら FilesDropped を出さない)/ NameSpaceTreeHost.RealFolderAt(実パスが無ければ null。DriveTreeView は null のときドラッグを始めない)/ app:DriveTreeView.NoPathItemCommitted(確定してもファイル表示パネルは動かさない)/ MainForm.ShowTreeShellContextMenu(SelectedFolder が無ければ何も出さない。仮想項目のシェルメニューは対象外)",
+      "testedBy": "tests/ReTAC.Domain.Tests/DropRulesTests.cs",
+      "note": "ファイル表示パネル自身は実パスの列挙(Directory 系 API)しか使わないため、仮想項目が紛れ込む経路は元から無い。ここで守るのは、ツリー側からの確定・ドロップ・ドラッグの 3 経路。"
     },
     {
       "id": "INV-TAB-CYCLE",
