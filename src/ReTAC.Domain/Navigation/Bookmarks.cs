@@ -93,23 +93,6 @@ public static class BookmarkRules
         return changed;
     }
 
-    /// <summary>R-98: ids のうち、今あるグループの ID だけ。消えたグループ・グループでない項目の状態は捨てる。</summary>
-    public static IEnumerable<string> ExistingGroupIds(BookmarkSet set, IEnumerable<string> ids)
-    {
-        var groups = new HashSet<string>();
-        void Collect(List<Bookmark> items)
-        {
-            foreach (var b in items.Where(b => b.Kind == BookmarkKind.Group))
-            {
-                groups.Add(b.Id);
-                if (b.Children is { } children) Collect(children);
-            }
-        }
-        Collect(set.Bar);
-        Collect(set.Other);
-        return ids.Where(groups.Contains).Distinct();
-    }
-
     /// <summary>
     /// その項目（参照が同じもの）を、入れ子の中まで探して取り除く。取り除けたら true。
     /// 重複を許すので、値が同じ別の項目を消さないよう参照で比べる。

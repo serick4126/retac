@@ -80,7 +80,7 @@ public sealed class MainForm : Form, IBookmarkHost
     private readonly DriveTreeView _driveTree = new(NameSpaceTreeRootKind.Drive);
     private readonly DriveTreeView _desktopTree = new(NameSpaceTreeRootKind.Desktop);
     // R-96: Phase 10.2 で中身を持つのは 2 つのツリーだけ。残り2ビューは案内だけの控え
-    private readonly UnavailableLeftPanelView _bookmarksView = new();
+    private readonly BookmarkTreeView _bookmarksView;
     private readonly UnavailableLeftPanelView _previewView = new();
     /// <summary>R-97-3: ツリーのキー経由でコマンドを実行している間だけ、そのツリーの選択を対象にする
     /// (CommandTargets)。それ以外は null で、ファイル表示パネルの対象(_list.State)を使う。</summary>
@@ -102,6 +102,16 @@ public sealed class MainForm : Form, IBookmarkHost
         _addressBar = new AddressBar(_history, _quickAccess, ((IBookmarkHost)this).Enumerate);
         _topRow = new TopRow(_driveBar, _addressBar);
         _bookmarkItems = new BookmarkItems(this, this);
+        _bookmarksView = new BookmarkTreeView(_bookmarkItems, _settings.ExpandedBookmarkGroupIds);
+        // R-98: 展開状態は最後に変えたウィンドウのものを、次のウィンドウと次回起動の既定として保存する（R-96-2）
+        _bookmarksView.ExpandedGroupsChanged += (_, _) =>
+        {
+            _settings.ExpandedBookmarkGroupIds = [.. _bookmarksView.ExpandedGroupIds];
+            SaveSettings();
+        };
+        _bookmarksView.FocusFileViewRequested += (_, _) => _list.Focus();
+        _bookmarksView.CommandKeyRequested += (_, e) => e.Handled = ExecuteBookmarkViewKey(e);
+        _bookmarksView.ContextMenuRequested += (bookmark, into, screen) => ShowBookmarkMenu(bookmark, into, screen, closing: null);
         // 行の高さは DPI・フォントで変わる。上部の行が高さを決め直したら、ブックマークバーも揃える
         _topRow.SizeChanged += (_, _) => _bookmarkBar.SetRowHeight(_topRow.RowHeight, _topRow.SideMargin);
         _fileTypes = _settings.ToFileTypeFilter();
@@ -1550,6 +1560,16 @@ public sealed class MainForm : Form, IBookmarkHost
     }
 
     /// <summary>R-96-2: 5コマンドの入口。判定は LeftPanelCommands（純粋関数）へ出し、ここは副作用だけを持つ。</summary>
+    /// <summary>
+    /// R-98 / Q63: ブックマークビューのキー。割り当てが左パネルの 5 コマンドのときだけ実行する。
+    /// ファイル操作コマンドは通さない（ビューには対象のファイルが無い）。それ以外は頭文字検索など TreeView 標準に任せる。
+    /// </summary>
+    private bool ExecuteBookmarkViewKey(KeyEventArgs e) =>
+        !e.Alt
+        && _keyMap.Resolve(new KeyBinding((ushort)e.KeyCode, Shift: e.Shift && !e.Control, Ctrl: e.Control)) is BuiltinTarget { Command: var command }
+        && LeftPanelCommands.IsLeftPanelCommand(command)
+        && ExecuteLeftPanelCommand(command);
+
     private bool ExecuteLeftPanelCommand(CommandId command)
     {
         var result = LeftPanelCommands.Apply(command, _leftPanelShown, _leftPanel.ViewKind);
@@ -1622,7 +1642,11 @@ public sealed class MainForm : Form, IBookmarkHost
         RebuildBookmarkBars();
     }
 
-    private void RebuildBookmarkBar() => _bookmarkBar.Rebuild(_settings.Bookmarks.Bar, _settings.BookmarkBarStyle, _bookmarkItems);
+    private void RebuildBookmarkBar()
+    {
+        _bookmarkBar.Rebuild(_settings.Bookmarks.Bar, _settings.BookmarkBarStyle, _bookmarkItems);
+        _bookmarksView.Rebuild();   // R-98: 共有のブックマークなので、ビューもバーと一緒に全ウィンドウで作り直す
+    }
 
     /// <summary>Q12: ブックマークは全ウィンドウで共有しているので、変えたら全ウィンドウのバーを作り直す。</summary>
     private static void RebuildBookmarkBars()
@@ -1666,7 +1690,8 @@ public sealed class MainForm : Form, IBookmarkHost
 
     // ---- IBookmarkHost（R-89 / R-91）: バー・メニュー・展開表示の項目を押したとき -----------
 
-    void IBookmarkHost.JumpTo(string folder) => _ = OpenFolderAsync(folder);
+    // R-98 / Q52: ブックマークビューから実行したときはフォーカスをビューに残す
+    void IBookmarkHost.JumpTo(string folder) => _ = OpenFolderAsync(folder, keepFocus: _bookmarksView.ContainsFocus);
 
     void IBookmarkHost.OpenFile(string path) => OpenWithAssociation(path);
 

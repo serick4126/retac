@@ -232,7 +232,7 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
     private static bool HasGlyph(Bookmark b) => CommandGlyphs.FontName is not null
         && (b.Kind == BookmarkKind.Group || b.Kind == BookmarkKind.Command && CommandTarget.Parse(b.Target) is BuiltinTarget);
 
-    private Bitmap? Glyph(Bookmark b)
+    internal Bitmap? Glyph(Bookmark b)
     {
         var size = 16 * invoker.DeviceDpi / 96;
         return b switch
@@ -244,7 +244,7 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
         };
     }
 
-    private string? IconPath(object? tag) => tag switch
+    internal string? IconPath(object? tag) => tag switch
     {
         Bookmark { Kind: BookmarkKind.Folder or BookmarkKind.File } b => b.Target,
         Bookmark { Kind: BookmarkKind.Command } b when CommandTarget.Parse(b.Target) is { } t => host.IconPathOf(t),

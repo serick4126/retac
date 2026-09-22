@@ -123,17 +123,6 @@ public class BookmarkTests
     }
 
     [Fact]
-    public void 展開状態は今あるグループのIDだけを残す()
-    {
-        Bookmark inner = new("h", BookmarkKind.Group) { Id = "h" };
-        var set = new BookmarkSet
-        {
-            Bar = [new("g", BookmarkKind.Group, Children: [inner]) { Id = "g" }, new("f", BookmarkKind.Folder, @"C:\f") { Id = "f" }],
-        };
-        Assert.Equal(["g", "h"], BookmarkRules.ExistingGroupIds(set, ["gone", "h", "f", "g"]).Order());
-    }
-
-    [Fact]
     public void 空の設定からは空のブックマークを読む()
     {
         var set = JsonSerializer.Deserialize<BookmarkSet>("{}", Json)!;

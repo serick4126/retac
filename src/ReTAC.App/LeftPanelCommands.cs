@@ -22,6 +22,10 @@ public static class LeftPanelCommands
         _ => new Result(shown, view, false),
     };
 
+    /// <summary>R-98 / Q63: ブックマークビューでも頭文字検索より優先する 5 コマンド。</summary>
+    public static bool IsLeftPanelCommand(CommandId command) => command is CommandId.ToggleLeftPanel
+        or CommandId.ShowDriveTree or CommandId.ShowDesktopTree or CommandId.ShowBookmarksView or CommandId.ShowPreview;
+
     private static Result Show(bool shown, LeftPanelViewKind view, LeftPanelViewKind target) => shown && view == target
         ? new Result(shown, view, false)
         : new Result(true, target, true);
