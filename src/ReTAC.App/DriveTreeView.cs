@@ -80,7 +80,7 @@ public sealed class DriveTreeView : Control
         // R-97-2: Enter は確定のあとファイルビューへフォーカスを戻す（マウス確定はフォーカスを動かさない）
         _host.CommitRequested += (_, _) => { CommitSelectedFolder(); FocusFileViewRequested?.Invoke(this, EventArgs.Empty); };
         _host.TabPressed += (_, _) => FocusFileViewRequested?.Invoke(this, EventArgs.Empty);
-        _host.KeyPressed += (_, e) => CommandKeyRequested?.Invoke(this, e);
+        _host.KeyPressed += (_, e) => { CommandKeyRequested?.Invoke(this, e); _dropNextChar = e.Handled; };
         _selectionWatchdog.Tick += (_, _) => CheckSelectionTimeout();
     }
 
@@ -152,11 +152,17 @@ public sealed class DriveTreeView : Control
     /// </summary>
     public override bool PreProcessMessage(ref Message msg)
     {
+        // R-97-3: ReTAC のコマンドとして処理したキーの文字も捨てる。届くとツリーの頭文字検索が走り、選択が動く。
+        // 文字を生まないキー（F キー等）で残った印は、次の WM_KEYDOWN で消す
+        if (msg.Msg == WM_KEYDOWN) _dropNextChar = false;
+        else if (msg.Msg == WM_CHAR && _dropNextChar) { _dropNextChar = false; return true; }
         if (msg.Msg == WM_CHAR && (int)(long)msg.WParam is '\t' or '\r') return true;
         return base.PreProcessMessage(ref msg);
     }
 
     private const int WM_CHAR = 0x0102;
+    private const int WM_KEYDOWN = 0x0100;
+    private bool _dropNextChar;
 
     protected override void OnHandleCreated(EventArgs e)
 
@@ -247,7 +253,9 @@ public sealed class DriveTreeView : Control
             }
             else
             {
-                StartSelectionWatchdog(folder);
+                // R-97-2: 同じ現在位置での再同期。利用者がキーで選択を動かしていることがあるので、
+                // 展開がまだ終わっていないときだけ見張る。常に見張ると、動かした選択を「展開の失敗」と取り違える
+                if (_host.SelectionPending) StartSelectionWatchdog(folder);
                 HideFailure();
                 return;
             }
@@ -274,7 +282,7 @@ public sealed class DriveTreeView : Control
 
     private void ShowFailure(Exception exception)
     {
-        _errorMessage.Text = $"ドライブツリーを表示できません。{Environment.NewLine}{exception.Message}";
+        _errorMessage.Text = $"{(_rootKind == NameSpaceTreeRootKind.Drive ? "ドライブ" : "デスクトップ")}ツリーを表示できません。{Environment.NewLine}{exception.Message}";
         _failure.Visible = true;
         _failure.BringToFront();
     }

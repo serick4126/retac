@@ -7781,27 +7781,31 @@
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 104
+        "line": 105
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 119
+        "line": 120
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 182
+        "line": 183
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 252
+        "line": 253
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 544
+        "line": 549
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 766
+        "line": 771
+      },
+      {
+        "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
+        "line": 795
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreePolicy.cs",
@@ -7862,6 +7866,10 @@
         "line": 150
       },
       {
+        "file": "src/ReTAC.App/DriveTreeView.cs",
+        "line": 256
+      },
+      {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 109
       },
@@ -7875,27 +7883,27 @@
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 111
+        "line": 112
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 267
+        "line": 268
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 286
+        "line": 287
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 687
+        "line": 692
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 894
+        "line": 914
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 989
+        "line": 1009
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreePolicy.cs",
@@ -7910,6 +7918,10 @@
       {
         "file": "src/ReTAC.App/DriveTreeView.cs",
         "line": 48
+      },
+      {
+        "file": "src/ReTAC.App/DriveTreeView.cs",
+        "line": 155
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -7945,11 +7957,11 @@
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 115
+        "line": 116
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 911
+        "line": 931
       }
     ],
     "S-07": [

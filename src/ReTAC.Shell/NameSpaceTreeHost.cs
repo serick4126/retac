@@ -90,6 +90,7 @@ public sealed class NameSpaceTreeHost : IDisposable
     private string? _rootPath;
     private string? _selectedPath;
     private HashSet<string> _pendingExpandedPaths = new(StringComparer.OrdinalIgnoreCase);
+    private long _expansionRestoreDeadline;
     private string? _pendingSelectionPath;
     private SynchronizationContext? _ownerContext;
     private bool _selectionContinuationPosted;
@@ -294,6 +295,9 @@ public sealed class NameSpaceTreeHost : IDisposable
         SetFocus(inner != IntPtr.Zero ? inner : _treeHwnd);
     }
 
+    /// <summary>現在位置への展開・選択がまだ終わっていないか。</summary>
+    public bool SelectionPending => _pendingSelectionPath is not null;
+
     public void CancelPendingSelection()
     {
         _pendingSelectionPath = null;
@@ -394,6 +398,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         _selectionSignalPending = false;
         CancelSelectionFallback();
         _pendingSelectionPath = path;
+        _expansionRestoreDeadline = 0;
         _selectedPath = null;
         _ignoreSelectionEvents = true;
     }
@@ -422,7 +427,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         try
         {
             var selected = SelectItem(tree, _rootItem, path);
-            completed = selected && RestorePendingExpansion(tree);
+            completed = selected && (RestorePendingExpansion(tree) || ExpansionRestoreExpired());
         }
         finally { _selectionContinuationRunning = false; }
 
@@ -786,6 +791,21 @@ public sealed class NameSpaceTreeHost : IDisposable
             ShellItemPath.ParentPathsFromRoot(path).Append(path);
     }
 
+    /// <summary>
+    /// R-97: 作り直す前に開いていた枝の復元を、選択が済んでから一定時間で諦める。消えた枝や
+    /// 表示対象から外れた枝は見つからないので、期限が無いと選択が完了せず、選択と EnsureItemVisible を
+    /// やり直し続ける（スクロールが最下部に固定され、以後の移動にも追従しなくなる）。復元は見た目だけなので捨ててよい。
+    /// </summary>
+    private bool ExpansionRestoreExpired()
+    {
+        const long GiveUpMilliseconds = 3000;
+        var now = Environment.TickCount64;
+        if (_expansionRestoreDeadline == 0) _expansionRestoreDeadline = now + GiveUpMilliseconds;
+        if (now < _expansionRestoreDeadline) return false;
+        _pendingExpandedPaths.Clear();
+        return true;
+    }
+
     private bool RestorePendingExpansion(INameSpaceTreeControl tree)
     {
         foreach (var expandedPath in _pendingExpandedPaths.OrderBy(path => path.Length))
@@ -1032,7 +1052,8 @@ public sealed class NameSpaceTreeHost : IDisposable
         public int OnBeforeContextMenu(IntPtr item, ref Guid iid, out IntPtr result) { result = IntPtr.Zero; return S_OK; }
         public int OnAfterContextMenu(IntPtr item, IntPtr contextMenu, ref Guid iid, out IntPtr result) { result = IntPtr.Zero; return S_OK; }
         public int OnBeforeStateImageChange(IntPtr item) => S_OK;
-        public int OnGetDefaultIconIndex(IntPtr item, out int defaultIcon, out int openIcon) { defaultIcon = -1; openIcon = -1; return S_OK; }
+        // S_OK で -1 を返すと「アイコンなし」と受け取られ、ツリーにアイコンが出なくなる。E_NOTIMPL で NSTC 標準のシェルアイコンに任せる
+        public int OnGetDefaultIconIndex(IntPtr item, out int defaultIcon, out int openIcon) { defaultIcon = -1; openIcon = -1; return unchecked((int)0x80004001); }
 
         private int CacheDropSources(IntPtr data)
         {
