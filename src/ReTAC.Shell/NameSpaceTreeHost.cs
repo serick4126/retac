@@ -620,6 +620,18 @@ public sealed class NameSpaceTreeHost : IDisposable
         // R-97: デスクトップツリーは Desktop → This PC(仮想) → ドライブ文字、の順でしか辿れない
         // (実機ゲートで確認済み。マップ済みネットワークドライブもドライブ文字としてのみ現れる)。
         // ContinuePendingSelection が UNC を先に弾くので、ここに来る path は常にローカルドライブのパス。
+        // R-97: デスクトップの実フォルダとその配下は、PC の下ではなく最上段（デスクトップ直下）から選ぶ。
+        // 利用者が見ているのはそこで、PC → ドライブ経由では辿れないこともある（リダイレクトされたデスクトップ等）
+        if (ShellItemPath.FileSystemPathOf(root) is { Length: > 0 } desktopPath)
+        {
+            var desktop = Path.TrimEndingDirectorySeparator(desktopPath);
+            var target = Path.TrimEndingDirectorySeparator(path);
+            if (string.Equals(desktop, target, StringComparison.OrdinalIgnoreCase))
+                return SelectVisibleRoot(tree, root);
+            if (target.StartsWith(desktop + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                return DescendAndSelect(tree, root, ShellItemPath.ParentPathsFrom(desktop, path), path);
+        }
+
         var computer = ShellItemPath.CreateComputerFolder();
         IShellItem? computerInTree = null;
         IShellItem? driveInTree = null;

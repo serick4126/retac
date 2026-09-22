@@ -7669,11 +7669,11 @@
       },
       {
         "file": "src/ReTAC.App/CentralDisplayArea.cs",
-        "line": 140
+        "line": 142
       },
       {
         "file": "src/ReTAC.App/CentralDisplayArea.cs",
-        "line": 150
+        "line": 152
       },
       {
         "file": "src/ReTAC.App/LeftPanel.cs",
@@ -7821,11 +7821,15 @@
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 842
+        "line": 623
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 866
+        "line": 854
+      },
+      {
+        "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
+        "line": 878
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreePolicy.cs",
@@ -7923,15 +7927,15 @@
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 763
+        "line": 775
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 985
+        "line": 997
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 1098
+        "line": 1110
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreePolicy.cs",
@@ -8049,15 +8053,15 @@
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 1002
+        "line": 1014
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 1015
+        "line": 1027
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 1110
+        "line": 1122
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeInterop.cs",

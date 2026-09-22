@@ -115,7 +115,9 @@ public sealed class CentralDisplayArea : UserControl
         try
         {
             _split.SplitterWidth = Math.Max(1, splitter);
-            var available = Math.Max(0, _split.ClientSize.Width - _split.SplitterWidth);
+            // 終了中などで幅が区切り線より狭いと、どの値を入れても SplitContainer が例外を出す。そのときは触らない
+            var available = _split.Width - _split.SplitterWidth;
+            if (available < 0) return;
             _split.SplitterDistance = Math.Min(widths.VisibleLeft, available);
         }
         finally
