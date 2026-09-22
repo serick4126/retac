@@ -160,6 +160,8 @@ public sealed class MainForm : Form, IBookmarkHost
         // R-39-3 の「明示的なドライブ変更」。相対移動とは別経路
         _driveBar.PathSelected += (_, path) => OnDriveChosen(path);
         _driveBar.Cancelled += (_, _) => _list.Focus();
+        // R-32-3: subst は WM_DEVICECHANGE を出さないので、前面に戻ったときにも確かめる
+        Activated += (_, _) => _driveBar.RefreshDrives();
         // 入りきらないドライブは既存のモーダルから選ぶ。マウスで押したので「»」の直下に出す
         _driveBar.OverflowClicked += (_, at) => SelectDriveInModal(at);
         _addressBar.JumpRequested += (_, e) => OnAddressJump(e.Text, e.Explorer);
@@ -261,6 +263,15 @@ public sealed class MainForm : Form, IBookmarkHost
     public FileListView List => _list;
     public DriveBar DriveBar => _driveBar;
     public string CurrentFolder => _currentFolder;
+
+    protected override void WndProc(ref Message m)
+    {
+        base.WndProc(ref m);
+        // R-32-3: WM_DEVICECHANGE はトップレベルのウィンドウにだけ届く。子コントロールの DriveBar では受けられない。
+        // 通知の中身は見ない。ドライブ文字が変わっていなければ RefreshDrives は何もしない
+        const int WM_DEVICECHANGE = 0x0219, DBT_DEVICEARRIVAL = 0x8000, DBT_DEVICEREMOVECOMPLETE = 0x8004;
+        if (m.Msg == WM_DEVICECHANGE && (int)m.WParam is DBT_DEVICEARRIVAL or DBT_DEVICEREMOVECOMPLETE) _driveBar.RefreshDrives();
+    }
 
     private void OnActivated(Entry entry)
     {

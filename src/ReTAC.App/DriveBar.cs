@@ -163,8 +163,23 @@ public sealed class DriveBar : Control
     /// <summary>ボタンの並びが変わった。幅だけ変わって高さが変わらないと、親は SizeChanged では気付けない。</summary>
     public event EventHandler? LayoutNeeded;
 
+    /// <summary>R-32-3: 最後に並べたときのドライブ文字。増減の判定にだけ使う。</summary>
+    private string _driveLetters = "";
+
+    private static string CurrentDriveLetters() => string.Concat(DriveInfo.GetDrives().Select(d => d.Name[0]));
+
+    /// <summary>
+    /// R-32-3: ReTAC の外でドライブが増減したら並べ直す。通知の種類を問わず呼んでよいように、
+    /// ドライブ文字が変わっていなければ何もしない（ウィンドウが前面に来るたびに呼ばれる）。
+    /// </summary>
+    public void RefreshDrives()
+    {
+        if (CurrentDriveLetters() != _driveLetters) Rebuild();
+    }
+
     private void Rebuild()
     {
+        _driveLetters = CurrentDriveLetters();
         var iconSize = IconSize;
         var padding = Scaled(6);
         var gap = Scaled(2);
