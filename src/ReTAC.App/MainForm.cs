@@ -52,6 +52,9 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>R-89: このウィンドウでブックマークバーを出しているか（_driveBarShown と同じ理由でフィールドで持つ）。</summary>
     private bool _bookmarkBarShown;
     private ToolStripMenuItem _bookmarkBarMenuItem;
+    /// <summary>R-96-2: このウィンドウで左パネルを出しているか。設定はコンストラクタで一度読むだけで、
+    /// 以後は他ウィンドウの変更を読まない（表示ビューは _leftPanel.ViewKind、幅は _centralDisplay が持つ）。</summary>
+    private bool _leftPanelShown;
     private LeftPanelMenuItems _leftPanelMenuItems;
     private readonly BookmarkBar _bookmarkBar = new();
     /// <summary>R-89 / R-90 / R-91: バー・ブックマークメニュー・展開表示で共通の項目の組み立て。</summary>
@@ -75,6 +78,10 @@ public sealed class MainForm : Form, IBookmarkHost
     private readonly CentralDisplayArea _centralDisplay;
     private readonly LeftPanel _leftPanel = new();
     private readonly DriveTreeView _driveTree = new();
+    // R-96: Phase 10.1 で中身を持つのはドライブツリーだけ。残り3ビューは案内だけの控え
+    private readonly UnavailableLeftPanelView _desktopTreeView = new();
+    private readonly UnavailableLeftPanelView _bookmarksView = new();
+    private readonly UnavailableLeftPanelView _previewView = new();
 
     /// <summary>通常表示だったときのクライアント領域。最小化中に保存しても潰れないようにするため。</summary>
     private Size _normalClientSize;
@@ -125,10 +132,14 @@ public sealed class MainForm : Form, IBookmarkHost
         _driveBarShown = _settings.ShowDriveBar;
         _addressBarShown = _settings.ShowAddressBar;
         _bookmarkBarShown = _settings.ShowBookmarkBar;
+        // R-96-2: ここで一度だけ設定から写す。CreateMenu がラジオ印を _leftPanel.ViewKind から決めるので先に合わせる
+        _leftPanelShown = _settings.ShowLeftPanel;
+        _leftPanel.ShowView(_settings.LeftPanelView, LeftPanelViewControl(_settings.LeftPanelView));
         CreateMenu();
         RebuildBookmarkBar();
         _bookmarkBar.Visible = _bookmarkBarShown;
         ApplyTopRow();   // ArrangeDocks が _menu を並べるので、メニューを足した後
+        if (_leftPanelShown) _centralDisplay.ShowLeft(_leftPanel);
 
         _list.EntryActivated += (_, entry) => OnActivated(entry);
         _list.ParentRequested += (_, _) => GoParent();
@@ -141,6 +152,8 @@ public sealed class MainForm : Form, IBookmarkHost
         // Step5: 左パネルが表示中のときだけ往復する。非表示なら CentralDisplayArea.LeftPanelVisible が false のまま何もしない
         _list.FocusLeftPanelRequested += (_, _) => { if (_centralDisplay.LeftPanelVisible) _leftPanel.CurrentView.Focus(); };
         _driveTree.FocusFileViewRequested += (_, _) => _list.Focus();
+        // R-96-2 / R-66: 利用者が境界を動かしたときだけ上がる。狭い窓による一時縮小はここへ来ない
+        _centralDisplay.LeftWidthChanged += (_, logical) => { _settings.LeftPanelWidth = logical; SaveSettings(); };
         // R-39-3 の「明示的なドライブ変更」。相対移動とは別経路
         _driveBar.PathSelected += (_, path) => OnDriveChosen(path);
         _driveBar.Cancelled += (_, _) => _list.Focus();
@@ -195,6 +208,9 @@ public sealed class MainForm : Form, IBookmarkHost
             _watcher.Dispose();
             _autoRefresh.Dispose();
             _driveTree.Dispose();
+            _desktopTreeView.Dispose();
+            _bookmarksView.Dispose();
+            _previewView.Dispose();
 
             // B-03: ループはどのウィンドウにも紐づいていない（Program.cs）。
             // 最後の 1 枚が閉じたらここでプロセスを終わらせる。
@@ -472,6 +488,11 @@ public sealed class MainForm : Form, IBookmarkHost
         CommandId.ToggleDriveBar => ToggleDriveBar(),
         CommandId.ToggleAddressBar => ToggleAddressBar(),
         CommandId.ToggleBookmarkBar => ToggleBookmarkBar(),
+        CommandId.ShowDriveTree => ExecuteLeftPanelCommand(CommandId.ShowDriveTree),
+        CommandId.ShowDesktopTree => ExecuteLeftPanelCommand(CommandId.ShowDesktopTree),
+        CommandId.ShowBookmarksView => ExecuteLeftPanelCommand(CommandId.ShowBookmarksView),
+        CommandId.ShowPreview => ExecuteLeftPanelCommand(CommandId.ShowPreview),
+        CommandId.ToggleLeftPanel => ExecuteLeftPanelCommand(CommandId.ToggleLeftPanel),
         CommandId.BookmarkAddCurrentFolder => AddBookmark(new Bookmark("", BookmarkKind.Folder, _currentFolder)),
         CommandId.BookmarkAddCursorItem => AddBookmark(CursorBookmark()),
         CommandId.BookmarkManage => ShowBookmarkManager(),
@@ -1457,6 +1478,48 @@ public sealed class MainForm : Form, IBookmarkHost
         return true;
     }
 
+    /// <summary>R-96-2: 5コマンドの入口。判定は LeftPanelCommands（純粋関数）へ出し、ここは副作用だけを持つ。</summary>
+    private bool ExecuteLeftPanelCommand(CommandId command)
+    {
+        var result = LeftPanelCommands.Apply(command, _leftPanelShown, _leftPanel.ViewKind);
+        if (result.Changed) ApplyLeftPanelState(result.Shown, result.View);
+        return true;
+    }
+
+    /// <summary>
+    /// R-96-2: 左パネルの表示・ビュー・メニュー・設定保存・フォーカスの往復をまとめて反映する。
+    /// フォーカスは「隠す直前に左側にいたか」だけで判断する。ファイル側にいたときは何もしないことで
+    /// 「ファイル側にいればファイル側のまま」を満たす。
+    /// </summary>
+    private void ApplyLeftPanelState(bool shown, LeftPanelViewKind view)
+    {
+        var wasInLeft = _centralDisplay.LeftPanelVisible && _leftPanel.ContainsFocus;
+
+        if (view != _leftPanel.ViewKind) _leftPanel.ShowView(view, LeftPanelViewControl(view));
+        if (shown) _centralDisplay.ShowLeft(_leftPanel); else _centralDisplay.HideLeft();
+
+        _leftPanelShown = shown;
+        _settings.ShowLeftPanel = shown;
+        _settings.LeftPanelView = view;
+        _leftPanelMenuItems.Toggle.Checked = shown;
+        // R-96: 非表示中も最後のビューへラジオ印を残す（Views は RadioToolStripMenuItem で相互排他）
+        _leftPanelMenuItems.Views[view].Checked = true;
+        SaveSettings();   // V-13
+
+        if (shown && wasInLeft) _leftPanel.CurrentView.Focus();
+        else if (!shown && wasInLeft) _list.Focus();
+    }
+
+    /// <summary>R-96: Phase 10.1 で中身を持つのはドライブツリーだけ。残りは案内だけの控えを使い回す。</summary>
+    private Control LeftPanelViewControl(LeftPanelViewKind kind) => kind switch
+    {
+        LeftPanelViewKind.DriveTree => _driveTree,
+        LeftPanelViewKind.DesktopTree => _desktopTreeView,
+        LeftPanelViewKind.Bookmarks => _bookmarksView,
+        LeftPanelViewKind.Preview => _previewView,
+        _ => _driveTree,
+    };
+
     /// <summary>R-89: カーソル位置の 1 件。親フォルダ項目（とカーソルが無いとき）は今のフォルダ。</summary>
     private Bookmark CursorBookmark() => _list.State.Cursor is { IsParent: false } entry
         ? new Bookmark("", entry.Kind == EntryKind.Folder ? BookmarkKind.Folder : BookmarkKind.File, entry.FullPath)
@@ -1974,6 +2037,9 @@ public sealed class MainForm : Form, IBookmarkHost
         _driveBarMenuItem.Checked = _driveBarShown;
         _addressBarMenuItem.Checked = _addressBarShown;
         _bookmarkBarMenuItem.Checked = _bookmarkBarShown;
+        // R-96-2: RebuildMenu は項目を作り直すので、このウィンドウの状態を毎回このメニューへ映す
+        _leftPanelMenuItems.Toggle.Checked = _leftPanelShown;
+        _leftPanelMenuItems.Views[_leftPanel.ViewKind].Checked = true;
         // R-90: 「ツール」の前に「ブックマーク」。中身は MainForm の状態（ブックマーク・今のフォルダ）に依るのでここで足す
         var tools = _menu.Items.Cast<ToolStripItem>().First(item => item.Text == "ツール(&T)");
         _menu.Items.Insert(_menu.Items.IndexOf(tools), BookmarkMenu());
