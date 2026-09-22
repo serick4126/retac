@@ -1010,8 +1010,9 @@ public sealed class NameSpaceTreeHost : IDisposable
     /// </summary>
     /// <summary>
     /// R-97-3 / R-78: ツリーの項目を指しているときの効果。ファイルリストと同じ判定で決め、実体の無い項目では禁止にする。
-    /// 説明（「◯◯へ移動」）は、この効果をもとに NSTC 自身が書き換える。ここへ来る data は IShellItemArray で、
-    /// IDataObject ではないので、説明をこちらで書き込むことはできない。
+    /// NSTC がこれを呼ぶのは、指した先のシェルのフォルダが受け付けない項目（PC など）の上だけ。普通のフォルダの上では
+    /// 呼ばれず、効果も説明もシェルのフォルダが決める（自分のサブフォルダでも「◯◯へ移動」になる）。その表示はシェルに
+    /// 任せ（利用者が了承）、落とせない所へのドロップは FilesDropped の先で止める。
     /// </summary>
     private void UpdateDropFeedback(IntPtr over, IntPtr data, uint keyState, ref uint effect)
     {
