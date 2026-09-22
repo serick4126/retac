@@ -171,6 +171,13 @@ dotnet publish src/ReTAC.App/ReTAC.App.csproj -c Release -r win-x64 --self-conta
   -p:EnableCompressionInSingleFile=true -o publish
 ```
 
+## 困ったとき
+
+- **左パネルのプレビューで、PDF など特定の種類だけが真っ白のままになる**
+  ReTAC が異常終了したり強制終了されたりすると、Windows のプレビュー用のプロセス（`prevhost.exe`）が止まったまま残ることがあります。
+  タスクマネージャーの「詳細」で `prevhost.exe` を終了するか、サインインし直してください。次にプレビューしたときに作り直されます。
+  このプロセスはエクスプローラーなどと共有しているので、ReTAC は自分では終了させません。
+
 ## 開発
 
 設計から実装まで、[Claude Code](https://claude.com/claude-code) を使って開発しています。
