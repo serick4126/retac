@@ -37,6 +37,29 @@ public class NameSpaceTreePolicyTests
         Assert.Equal(expected, NameSpaceTreePolicy.MustRebuildRoot(oldRoot, newRoot));
     }
 
+    // R-97 / Task2: デスクトップツリーは PC 全体で単一のルートを持ち、ドライブ/UNC共有が変わっても作り直さない。
+    // ドライブツリーは現在のドライブ/UNC共有 1 つだけがルートなので、変わったら作り直す。
+    [Theory]
+    [InlineData(NameSpaceTreeRootKind.Drive, @"C:\a", @"D:\b", true)]
+    [InlineData(NameSpaceTreeRootKind.Drive, @"C:\a", @"C:\b", false)]
+    [InlineData(NameSpaceTreeRootKind.Desktop, @"C:\a", @"D:\b", false)]
+    [InlineData(NameSpaceTreeRootKind.Desktop, @"C:\a", @"\\server\share\b", false)]
+    public void 作り直しの要否はドライブツリーとデスクトップツリーで分かれる(
+        NameSpaceTreeRootKind kind, string oldFolder, string newFolder, bool expected)
+    {
+        var oldRoot = NameSpaceTreePolicy.RootOf(kind, oldFolder);
+        var newRoot = NameSpaceTreePolicy.RootOf(kind, newFolder);
+        Assert.Equal(expected, NameSpaceTreePolicy.MustRebuildRoot(oldRoot, newRoot));
+    }
+
+    [Theory]
+    [InlineData(@"C:\a\b", true)]
+    [InlineData(@"\\server\share\a", false)]
+    public void デスクトップツリーの自動選択はUNCのドライブ文字変換をしない(string currentFolder, bool expected)
+    {
+        Assert.Equal(expected, NameSpaceTreePolicy.CanAutoSelectInDesktopTree(currentFolder));
+    }
+
     // R-97-2: マウスの確定は「名前・アイコンを、ドラッグへ移行せず離した」場合だけ。
     // 展開ボタン・右側余白は候補にしない。ダブルクリックの2回目は最初のクリックで確定済みなので確定し直さない。
     [Theory]

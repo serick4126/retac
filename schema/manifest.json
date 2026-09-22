@@ -7752,6 +7752,10 @@
         "line": 6
       },
       {
+        "file": "src/ReTAC.Shell/CurrentPathShellItemFilter.cs",
+        "line": 50
+      },
+      {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
         "line": 60
       },
@@ -7760,8 +7764,32 @@
         "line": 3
       },
       {
+        "file": "src/ReTAC.Shell/NameSpaceTreePolicy.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Shell/NameSpaceTreePolicy.cs",
+        "line": 14
+      },
+      {
+        "file": "src/ReTAC.Shell/NameSpaceTreePolicy.cs",
+        "line": 19
+      },
+      {
         "file": "src/ReTAC.Shell/ShellItemPath.cs",
         "line": 6
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellItemPath.cs",
+        "line": 42
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellItemPath.cs",
+        "line": 46
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellItemPath.cs",
+        "line": 76
       }
     ],
     "R-97-2": [
@@ -7827,11 +7855,11 @@
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreePolicy.cs",
-        "line": 21
+        "line": 42
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreePolicy.cs",
-        "line": 25
+        "line": 46
       }
     ],
     "S-07": [

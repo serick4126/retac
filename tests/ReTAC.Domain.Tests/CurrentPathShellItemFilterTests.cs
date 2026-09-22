@@ -70,6 +70,26 @@ public class CurrentPathShellItemFilterTests
         }
     }
 
+    // R-97 / Task2: デスクトップツリーは「PC」等、実パスを持たない仮想項目も選択・展開できる必要がある。
+    [Fact]
+    public void allowVirtualItemsが真なら実パスを持たない項目も含める()
+    {
+        var computer = ShellItemPath.CreateComputerFolder();
+        var pointer = Marshal.GetIUnknownForObject(computer);
+        try
+        {
+            var allow = new CurrentPathShellItemFilter(Path.GetTempPath(), new ShellTreeVisibility(false, false), allowVirtualItems: true);
+            Assert.Equal(0, allow.IncludeItem(pointer));
+
+            var deny = new CurrentPathShellItemFilter(Path.GetTempPath(), new ShellTreeVisibility(false, false));
+            Assert.Equal(1, deny.IncludeItem(pointer));
+        }
+        finally
+        {
+            Marshal.Release(pointer);
+        }
+    }
+
     [Theory]
     [InlineData(false, false, true, false, false, false)]
     [InlineData(true, false, true, true, false, false)]

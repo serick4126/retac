@@ -6,7 +6,7 @@ namespace ReTAC.Shell;
 /// <summary>R-97: 非表示項目を除きつつ、現在位置へ至る枝だけは列挙できるようにする。</summary>
 [ComVisible(true), ClassInterface(ClassInterfaceType.None)]
 internal sealed class CurrentPathShellItemFilter(
-    string currentPath, ShellTreeVisibility visibility) : IShellItemFilter
+    string currentPath, ShellTreeVisibility visibility, bool allowVirtualItems = false) : IShellItemFilter
 {
     private const int S_OK = 0;
     private const int S_FALSE = 1;
@@ -47,7 +47,8 @@ internal sealed class CurrentPathShellItemFilter(
         try
         {
             var path = ShellItemPath.FileSystemPathOf(item);
-            if (path is null) return S_FALSE;
+            // R-97: デスクトップツリーは「PC」「ネットワーク」等、実パスを持たない仮想項目も辿れる必要がある。
+            if (path is null) return allowVirtualItems ? S_OK : S_FALSE;
             var attributes = File.GetAttributes(path);
             if ((attributes & FileAttributes.Directory) == 0) return S_FALSE;
             if (NameSpaceTreePolicy.IsCurrentPathOrAncestor(path, _currentPath)) return S_OK;

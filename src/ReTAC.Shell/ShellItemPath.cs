@@ -27,11 +27,31 @@ public static class ShellItemPath
         return $"{char.ToUpperInvariant(root[0])}:\\";
     }
 
+    private static readonly Guid FolderIdDesktop = new("B4BFCC3A-DB2C-424C-B029-7FE99A87C641");
+    private static readonly Guid FolderIdComputerFolder = new("0AC0837C-BBF8-452A-850D-79D08E667CA7");
+
     internal static IShellItem Create(string path)
     {
         var iid = ShellItemIid;
         var hr = SHCreateItemFromParsingName(path, IntPtr.Zero, ref iid, out var unknown);
         if (hr < 0 || unknown == IntPtr.Zero) throw Error(hr, $"Shell項目を解決できません: {path}");
+        try { return (IShellItem)Marshal.GetObjectForIUnknown(unknown); }
+        finally { Marshal.Release(unknown); }
+    }
+
+    /// <summary>R-97: デスクトップツリーのルート。実機ゲートで確認済みの取得順（SHGetKnownFolderItem）。
+    /// パス指定の SHCreateItemFromParsingName では「PC」「ネットワーク」等の仮想項目が展開されない。</summary>
+    internal static IShellItem CreateDesktopRoot() => CreateKnownFolderItem(FolderIdDesktop);
+
+    /// <summary>R-97: デスクトップ直下の仮想項目「PC」。既知フォルダ GUID から生成し、ツリー内の項目と
+    /// IShellItem.Compare(SICHINT_CANONICAL) で同一性を確かめて辿る（パスでは見つからない）。</summary>
+    internal static IShellItem CreateComputerFolder() => CreateKnownFolderItem(FolderIdComputerFolder);
+
+    private static IShellItem CreateKnownFolderItem(Guid folderId)
+    {
+        var iid = ShellItemIid;
+        var hr = SHGetKnownFolderItem(ref folderId, 0, IntPtr.Zero, ref iid, out var unknown);
+        if (hr < 0 || unknown == IntPtr.Zero) throw Error(hr, $"既知フォルダーを解決できません: {folderId}");
         try { return (IShellItem)Marshal.GetObjectForIUnknown(unknown); }
         finally { Marshal.Release(unknown); }
     }
@@ -51,14 +71,17 @@ public static class ShellItemPath
         finally { Marshal.ReleaseComObject(item); }
     }
 
-    internal static string[] ParentPathsFromRoot(string path)
+    internal static string[] ParentPathsFromRoot(string path) => ParentPathsFrom(RootOf(path), path);
+
+    /// <summary>R-97: デスクトップツリーは Desktop → This PC(仮想) → ドライブ文字 と辿った後、
+    /// そのドライブ項目を起点に降りる。起点は RootOf(path) と限らないので、起点を引数で受ける形にする。</summary>
+    internal static string[] ParentPathsFrom(string ancestor, string path)
     {
-        var root = RootOf(path);
+        var stop = Path.TrimEndingDirectorySeparator(ancestor);
         var current = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(path));
         var parents = new List<string>();
         while (!string.IsNullOrEmpty(current)
-               && !string.Equals(Path.TrimEndingDirectorySeparator(current),
-                   Path.TrimEndingDirectorySeparator(root), StringComparison.OrdinalIgnoreCase))
+               && !string.Equals(Path.TrimEndingDirectorySeparator(current), stop, StringComparison.OrdinalIgnoreCase))
         {
             parents.Add(current);
             current = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(current));
@@ -97,4 +120,7 @@ public static class ShellItemPath
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern int SHCreateItemFromParsingName(string path, IntPtr bindContext, ref Guid iid, out IntPtr item);
+
+    [DllImport("shell32.dll")]
+    private static extern int SHGetKnownFolderItem(ref Guid folderId, uint flags, IntPtr token, ref Guid iid, out IntPtr item);
 }
