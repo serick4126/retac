@@ -27,6 +27,15 @@ public sealed class PreviewSession
         _thread.SetApartmentState(ApartmentState.STA);
     }
 
+    /// <summary>
+    /// R-99（Q90）: 表示専用にするハンドラー。Microsoft の PDF のハンドラー（WebView2 で描く）は、ReTAC に置くと
+    /// プレビューの中をクリックして WebView2 にフォーカスが入った時点で入力が止まり、ReTAC ごと操作できなくなった
+    /// （エクスプローラーでは起きない。エクスプローラーは非公開の仕組みで低い整合性レベルの Prevhost に作っている。
+    /// site・呼ぶスレッド・描画先の表示状態を変えても直らなかった）。ホイールでのスクロールは固まらないので、
+    /// マウスのボタンを届けず、フォーカスも渡さずに、見ることとホイールだけにする。
+    /// </summary>
+    public static bool IsViewOnly(Guid clsid) => clsid == new Guid("3A84F9C2-6164-485C-A7D9-4B27F8AC009E");
+
     /// <summary>R-99: 拡張子に登録されたプレビューハンドラーの CLSID。無ければ null（「プレビューできません」。再試行は出さない）。</summary>
     public static Guid? FindHandler(string path)
     {

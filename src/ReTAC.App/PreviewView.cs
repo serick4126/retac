@@ -38,6 +38,9 @@ public sealed class PreviewView : UserControl
     private (PreviewSession Session, Panel Host)? _shown;
     private (PreviewSession Session, Panel Host, int Generation)? _pending;
     private bool _pendingIsText;
+    private bool _pendingViewOnly;
+    /// <summary>表示専用のハンドラー（Q90）の上で、マウスのボタンを止める。表示している間だけ。</summary>
+    private PreviewMouseBlocker? _blocker;
     /// <summary>テキストを表示している間だけ、移動キーをスクロールに変え、右クリックでコピーのメニューを出す（利用者の要望）。</summary>
     private TextPreviewInput? _textInput;
     private readonly ContextMenuStrip _textMenu = new();
@@ -85,6 +88,7 @@ public sealed class PreviewView : UserControl
         Disposed += (_, _) =>
         {
             _textInput?.Dispose();
+            _blocker?.Dispose();
             _textMenu.Dispose();
             _delay.Dispose();
             _loading.Dispose();
@@ -194,6 +198,7 @@ public sealed class PreviewView : UserControl
         var host = new Panel { Dock = DockStyle.Fill, Visible = false };
         _area.Controls.Add(host);
         _pendingIsText = clsid == PreviewFallback.TextHandler;
+        _pendingViewOnly = PreviewSession.IsViewOnly(clsid);
         var session = PreviewSession.Start(clsid, path, host.Handle, _area.ClientSize,
             completed: ok => Post(() => Completed(generation, ok)),
             tabPressed: () => Post(() => FocusFileViewRequested?.Invoke(this, EventArgs.Empty)));
@@ -216,6 +221,8 @@ public sealed class PreviewView : UserControl
         host.Visible = true;
         host.BringToFront();
         _shown = (session, host);
+        if (_pendingViewOnly) _blocker = new PreviewMouseBlocker(point => _shown?.Host == host && host.Visible
+                                                                  && host.RectangleToScreen(host.ClientRectangle).Contains(point));
         if (_pendingIsText)
             _textInput = new TextPreviewInput(isTextWindow: window => TextPreviewInput.IsInside(host.Handle, window),
                                               rightButtonUp: point => OnRightClick(host, point));
@@ -239,6 +246,8 @@ public sealed class PreviewView : UserControl
         }
         _textInput?.Dispose();
         _textInput = null;
+        _blocker?.Dispose();
+        _blocker = null;
         if (_shown is not var (session, host)) return;
         _shown = null;
         Release(session, host);
@@ -287,7 +296,8 @@ public sealed class PreviewView : UserControl
     protected override void OnEnter(EventArgs e)
     {
         base.OnEnter(e);
-        _shown?.Session.Focus();   // 利用者がクリック・Tab で入ったときだけハンドラーへ渡す（Q12）
+        // 利用者がクリック・Tab で入ったときだけハンドラーへ渡す（Q12）。表示専用（Q90）には渡さない（渡すと固まる）
+        if (_blocker is null) _shown?.Session.Focus();
     }
 
     /// <summary>ハンドラーが無い・フォーカスを取らないときは、ビュー自身の Tab でファイルリストへ戻す。</summary>

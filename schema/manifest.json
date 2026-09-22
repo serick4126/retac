@@ -8213,11 +8213,15 @@
       },
       {
         "file": "src/ReTAC.App/PreviewView.cs",
-        "line": 110
+        "line": 114
       },
       {
         "file": "src/ReTAC.Shell/PreviewFallback.cs",
         "line": 9
+      },
+      {
+        "file": "src/ReTAC.Shell/PreviewMouseBlocker.cs",
+        "line": 7
       },
       {
         "file": "src/ReTAC.Shell/PreviewSession.cs",
@@ -8225,11 +8229,15 @@
       },
       {
         "file": "src/ReTAC.Shell/PreviewSession.cs",
-        "line": 30
+        "line": 31
       },
       {
         "file": "src/ReTAC.Shell/PreviewSession.cs",
-        "line": 260
+        "line": 39
+      },
+      {
+        "file": "src/ReTAC.Shell/PreviewSession.cs",
+        "line": 269
       },
       {
         "file": "src/ReTAC.Shell/TextPreviewInput.cs",
