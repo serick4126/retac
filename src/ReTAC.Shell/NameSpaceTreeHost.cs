@@ -767,7 +767,13 @@ public sealed class NameSpaceTreeHost : IDisposable
     {
         Check(left.Compare(right, SICHINT_CANONICAL, out var order),
             "Shell項目を比較できません。");
-        return order == 0;
+        if (order == 0) return true;
+        // R-97: デスクトップ直下の項目はデスクトップを親に持つ識別子で、パスから作った項目と Compare では一致しない。
+        // 同じ実フォルダかどうかは実パスで確かめる（実パスを持たない仮想項目はここで一致しない）
+        return ShellItemPath.FileSystemPathOf(left) is { } leftPath
+            && ShellItemPath.FileSystemPathOf(right) is { } rightPath
+            && string.Equals(Path.TrimEndingDirectorySeparator(leftPath), Path.TrimEndingDirectorySeparator(rightPath),
+                StringComparison.OrdinalIgnoreCase);
     }
 
     private bool SetSelected(INameSpaceTreeControl tree, IShellItem item)
