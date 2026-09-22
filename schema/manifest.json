@@ -6866,6 +6866,10 @@
         "line": 53
       },
       {
+        "file": "src/ReTAC.Shell/DragImageWindow.cs",
+        "line": 7
+      },
+      {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
         "line": 1012
       },
@@ -8026,6 +8030,10 @@
       {
         "file": "src/ReTAC.Domain/FileOps/DropRules.cs",
         "line": 34
+      },
+      {
+        "file": "src/ReTAC.Shell/DragImageWindow.cs",
+        "line": 7
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
