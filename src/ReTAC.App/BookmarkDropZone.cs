@@ -14,10 +14,12 @@ namespace ReTAC.App;
 internal sealed class BookmarkDropZone
 {
     /// <summary>バーの項目のドラッグの形式。中身には何も載せない（他のアプリへ渡さない。ReTAC の外へは落とせない）。</summary>
-    private const string Format = "ReTAC.Bookmark";
+    internal const string Format = "ReTAC.Bookmark";
 
-    /// <summary>ドラッグ中のバーの項目。窓をまたいでも同じプロセスの中なので、ここで受け渡す。</summary>
+    /// <summary>ドラッグ中のバーの項目。窓をまたいでも同じプロセスの中なので、ここで受け渡す（R-98: ブックマークビューとも）。</summary>
     private static Bookmark? s_dragging;
+
+    internal static Bookmark? Dragging => s_dragging;
 
     private readonly ToolStrip _strip;
     private readonly List<Bookmark> _list;
@@ -99,14 +101,16 @@ internal sealed class BookmarkDropZone
         };
     }
 
-    /// <summary>ブックマークの項目のドラッグを始める。終わるまで戻らない。</summary>
     private static void DragFrom(ToolStrip strip, Bookmark bookmark)
     {
+        if (DragBookmark(strip, bookmark) != DragDropEffects.None) CloseMenus(strip);
+    }
+
+    /// <summary>ブックマークの項目のドラッグを始める。終わるまで戻らない（R-98: ブックマークビューからも使う）。</summary>
+    internal static DragDropEffects DragBookmark(Control source, Bookmark bookmark)
+    {
         s_dragging = bookmark;
-        try
-        {
-            if (strip.DoDragDrop(new DataObject(Format, ""), DragDropEffects.Move) != DragDropEffects.None) CloseMenus(strip);
-        }
+        try { return source.DoDragDrop(new DataObject(Format, ""), DragDropEffects.Move); }
         finally { s_dragging = null; }
     }
 
@@ -216,7 +220,7 @@ internal sealed class BookmarkDropZone
     /// <summary>
     /// ドラッグ元が許す中から選ぶ。ファイルは Move にしない。移動と受け取った元（エクスプローラー）が、元のファイルを消すことがある。
     /// </summary>
-    private static DragDropEffects Effect(bool reorder, DragDropEffects allowed) =>
+    internal static DragDropEffects Effect(bool reorder, DragDropEffects allowed) =>
         reorder ? allowed & DragDropEffects.Move
         : allowed.HasFlag(DragDropEffects.Link) ? DragDropEffects.Link
         : allowed & DragDropEffects.Copy;
@@ -250,18 +254,26 @@ internal sealed class BookmarkDropZone
         }
         else if (e.Data?.GetData(DataFormats.FileDrop) is string[] paths)
         {
-            // Q5: ドロップ元の順に全件。重複は畳まない。見つからないパスは飛ばす
-            foreach (var path in paths)
-            {
-                BookmarkKind? kind = Directory.Exists(path) ? BookmarkKind.Folder : File.Exists(path) ? BookmarkKind.File : null;
-                if (kind is not { } k) continue;
-                dest.Insert(index++, new Bookmark("", k, path));
-                changed = true;
-            }
+            changed = InsertFiles(dest, index, paths);
         }
         if (!changed) return;
         _host.BookmarksChanged();
         CloseMenus(_strip);
+    }
+
+    /// <summary>R-89: 落とされたファイル・フォルダを dest の index の前へ登録する。足したら true（R-98: ブックマークビューと共有）。</summary>
+    internal static bool InsertFiles(List<Bookmark> dest, int index, string[] paths)
+    {
+        var changed = false;
+        // Q5: ドロップ元の順に全件。重複は畳まない。見つからないパスは飛ばす
+        foreach (var path in paths)
+        {
+            BookmarkKind? kind = Directory.Exists(path) ? BookmarkKind.Folder : File.Exists(path) ? BookmarkKind.File : null;
+            if (kind is not { } k) continue;
+            dest.Insert(index++, new Bookmark("", k, path));
+            changed = true;
+        }
+        return changed;
     }
 
     private void Reset()
