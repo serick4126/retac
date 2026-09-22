@@ -107,6 +107,16 @@
       "reason": "同じフォルダを別のグループに入れる使い方がある（ブラウザと同じ。Q5）。重複を許すので、項目は値ではなく参照で探す（BookmarkRules.Locate / Remove / Move）。record の IndexOf は値で比べ、重複した別の項目を指すので使わない。"
     },
     {
+      "id": "INV-BOOKMARK-STABLE-ID",
+      "status": "enforced",
+      "specIds": ["R-98"],
+      "applies": ["type:ReTAC.Domain.Navigation.Bookmark", "settings:Bookmarks", "settings:ExpandedBookmarkGroupIds"],
+      "rule": "ブックマークの Id は集合内で一意で、移動・名前変更・編集では変わらない。展開状態（ExpandedBookmarkGroupIds）はグループの Id だけを指し、消えたグループの Id は捨てる。",
+      "enforcedBy": "domain:Bookmark.Id（初期化子で新規発行、with では保持）/ BookmarkRules.EnsureIds（読み込み時に空・重複を振り直す。AppSettings.Normalize から呼ぶ）/ BookmarkRules.ExistingGroupIds",
+      "testedBy": "tests/ReTAC.Domain.Tests/BookmarkTests.cs",
+      "note": "値が同じブックマークの重複を許す方針（INV-BOOKMARK-DUPLICATES-ALLOWED）は変えない。Id は値の一部だが、項目は引き続き参照で探す。"
+    },
+    {
       "id": "INV-BOOKMARK-FIXED-ROOTS",
       "status": "enforced",
       "specIds": ["R-89"],

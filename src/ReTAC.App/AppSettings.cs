@@ -293,6 +293,7 @@ public sealed class AppSettings
         // 一時の一覧を整理しただけでは QuickAccess は変わらない。書き戻さないと、後で共有の一覧を作るときに整理前の値から作ってしまう
         if (list.DropUnknownTools(ids)) QuickAccess = [.. list.Items];
         BookmarkRules.DropUnknownTools(Bookmarks, ids);
+        BookmarkRules.EnsureIds(Bookmarks);   // R-98: DropUnknownTools が null の項目を落とした後で
     }
 
     private static Dictionary<string, string> WithoutNulls(Dictionary<string, string>? map) =>

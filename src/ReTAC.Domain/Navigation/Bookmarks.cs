@@ -13,7 +13,17 @@ public enum BookmarkBarStyle { IconAndText, IconOnly, TextOnly }
 /// R-89: ブックマーク 1 件。Target は Folder / File ならパス、Command なら CommandTarget.Serialize() の文字列。
 /// Group のときだけ Children を使う（段数の制限は無い）。重複は許す（Q5）。
 /// </summary>
-public sealed record Bookmark(string Title, BookmarkKind Kind, string Target = "", List<Bookmark>? Children = null);
+public sealed record Bookmark(string Title, BookmarkKind Kind, string Target = "", List<Bookmark>? Children = null)
+{
+    /// <summary>
+    /// R-98: 画面に出さない安定 ID。展開状態はグループのこの ID で覚える。位置引数にせず初期化子で持つので、
+    /// new で作れば新しい ID、with（編集・名前変更）では元の ID のまま、JSON に無ければ読み込み時に新しい ID が付く。
+    /// 一意性は BookmarkRules.EnsureIds が読み込み時に保証する。
+    /// </summary>
+    public string Id { get; init; } = NewId();
+
+    internal static string NewId() => Guid.NewGuid().ToString("N");
+}
 
 /// <summary>R-89: 置き場は 2 つで固定（INV-BOOKMARK-FIXED-ROOTS）。固定の欄で持つので、削除・改名・移動できない。</summary>
 public sealed class BookmarkSet
@@ -54,6 +64,50 @@ public static class BookmarkRules
                 items[i] = items[i] with { Title = items[i].Title ?? "", Target = items[i].Target ?? "" };
         foreach (var group in items.Where(b => b.Children is not null)) changed |= Drop(group.Children!, ids);
         return changed;
+    }
+
+    /// <summary>
+    /// R-98: 空・重複の ID を新しい ID に振り直す（手で書いた JSON・複製への備え）。先に出てきた 1 件は元の ID のまま。
+    /// DropUnknownTools と同じく、その場で書き換えて変わったら true。
+    /// </summary>
+    public static bool EnsureIds(BookmarkSet set)
+    {
+        var seen = new HashSet<string>();
+        return EnsureIds(set.Bar, seen) | EnsureIds(set.Other, seen);   // | は両方を必ず走らせる
+    }
+
+    private static bool EnsureIds(List<Bookmark> items, HashSet<string> seen)
+    {
+        var changed = false;
+        for (var i = 0; i < items.Count; i++)
+        {
+            if (string.IsNullOrEmpty(items[i].Id) || !seen.Add(items[i].Id))
+            {
+                // record なので差し替えになる。子の並びは同じインスタンスを引き継ぐ
+                items[i] = items[i] with { Id = Bookmark.NewId() };
+                seen.Add(items[i].Id);
+                changed = true;
+            }
+            if (items[i].Children is { } children) changed |= EnsureIds(children, seen);
+        }
+        return changed;
+    }
+
+    /// <summary>R-98: ids のうち、今あるグループの ID だけ。消えたグループ・グループでない項目の状態は捨てる。</summary>
+    public static IEnumerable<string> ExistingGroupIds(BookmarkSet set, IEnumerable<string> ids)
+    {
+        var groups = new HashSet<string>();
+        void Collect(List<Bookmark> items)
+        {
+            foreach (var b in items.Where(b => b.Kind == BookmarkKind.Group))
+            {
+                groups.Add(b.Id);
+                if (b.Children is { } children) Collect(children);
+            }
+        }
+        Collect(set.Bar);
+        Collect(set.Other);
+        return ids.Where(groups.Contains).Distinct();
     }
 
     /// <summary>

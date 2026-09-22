@@ -1208,6 +1208,14 @@
           "nullable": true,
           "required": false,
           "mutability": "init"
+        },
+        {
+          "name": "Id",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "R-98: 画面に出さない安定 ID。展開状態はグループのこの ID で覚える。位置引数にせず初期化子で持つので、 new で作れば新しい ID、with（編集・名前変更）では元の ID のまま、JSON に無ければ読み込み時に新しい ID が付く。 一意性は BookmarkRules.EnsureIds が読み込み時に保証する。"
         }
       ]
     },
@@ -7371,7 +7379,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 18
+        "line": 28
       },
       {
         "file": "src/ReTAC.Shell/ShellContextMenu.cs",
@@ -8078,6 +8086,24 @@
       {
         "file": "src/ReTAC.Shell/ShellDataObject.cs",
         "line": 28
+      }
+    ],
+    "R-98": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 296
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
+        "line": 19
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
+        "line": 70
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
+        "line": 96
       }
     ],
     "S-07": [

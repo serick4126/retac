@@ -84,6 +84,56 @@ public class BookmarkTests
     }
 
     [Fact]
+    public void IDの無い項目を読むと入れ子の中まで新しいIDが付く()
+    {
+        var back = JsonSerializer.Deserialize<BookmarkSet>("""{"Bar":[{"Title":"g","Kind":"Group","Children":[{"Title":"","Kind":"Folder","Target":"x"}]}]}""", Json)!;
+        Assert.NotEqual("", back.Bar[0].Id);
+        Assert.NotEqual("", back.Bar[0].Children![0].Id);
+        Assert.NotEqual(back.Bar[0].Id, back.Bar[0].Children![0].Id);
+    }
+
+    [Fact]
+    public void IDは保存して読み戻せて_名前変更と移動では変わらない()
+    {
+        Bookmark a = new("a", BookmarkKind.Group, Children: []), b = new("b", BookmarkKind.Folder, @"C:\b");
+        var set = new BookmarkSet { Bar = [a, b] };
+        Assert.Equal(a.Id, JsonSerializer.Deserialize<BookmarkSet>(JsonSerializer.Serialize(set, Json), Json)!.Bar[0].Id);
+        Assert.Equal(a.Id, (a with { Title = "z" }).Id);
+        Assert.True(BookmarkRules.Move(set, b, a.Children!, 0));
+        Assert.Equal(b.Id, a.Children![0].Id);
+    }
+
+    [Fact]
+    public void 空と重複のIDは振り直し_最初の1件は残す()
+    {
+        Bookmark first = new("a", BookmarkKind.Folder, @"C:\a") { Id = "x" };
+        var set = new BookmarkSet
+        {
+            Bar = [first, new("g", BookmarkKind.Group, Children: [new("b", BookmarkKind.Folder, @"C:\b") { Id = "x" }]) { Id = "" }],
+            Other = [new("c", BookmarkKind.Folder, @"C:\c") { Id = null! }],
+        };
+
+        Assert.True(BookmarkRules.EnsureIds(set));
+        var ids = new[] { set.Bar[0].Id, set.Bar[1].Id, set.Bar[1].Children![0].Id, set.Other[0].Id };
+        Assert.Equal("x", ids[0]);
+        Assert.Same(first, set.Bar[0]);
+        Assert.Equal(4, ids.Distinct().Count());
+        Assert.DoesNotContain(ids, id => string.IsNullOrEmpty(id));
+        Assert.False(BookmarkRules.EnsureIds(set));
+    }
+
+    [Fact]
+    public void 展開状態は今あるグループのIDだけを残す()
+    {
+        Bookmark inner = new("h", BookmarkKind.Group) { Id = "h" };
+        var set = new BookmarkSet
+        {
+            Bar = [new("g", BookmarkKind.Group, Children: [inner]) { Id = "g" }, new("f", BookmarkKind.Folder, @"C:\f") { Id = "f" }],
+        };
+        Assert.Equal(["g", "h"], BookmarkRules.ExistingGroupIds(set, ["gone", "h", "f", "g"]).Order());
+    }
+
+    [Fact]
     public void 空の設定からは空のブックマークを読む()
     {
         var set = JsonSerializer.Deserialize<BookmarkSet>("{}", Json)!;
