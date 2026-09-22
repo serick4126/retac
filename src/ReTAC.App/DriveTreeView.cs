@@ -152,7 +152,8 @@ public sealed class DriveTreeView : Control
     /// </summary>
     public override bool PreProcessMessage(ref Message msg)
     {
-        if (msg.Msg == WM_CHAR && (int)(long)msg.WParam is '\t' or '\r') return true;
+        // Esc などほかの制御文字も、ツリーでは警告音になるだけなので同じく捨てる
+        if (msg.Msg == WM_CHAR && (int)(long)msg.WParam < ' ') return true;
         return base.PreProcessMessage(ref msg);
     }
 

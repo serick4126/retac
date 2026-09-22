@@ -1027,25 +1027,27 @@ public sealed class NameSpaceTreeHost : IDisposable
         // R-97-2 / Step4-5: 矢印・Home・End・PageUp・PageDown は S_FALSE でツリー標準の処理へ渡し、
         // 現在位置（選択中の実フォルダ）は変えない。Enter だけが確定、Tab だけがファイルビューへ戻す合図で、
         // どちらもツリー既定の動作（ラベル編集の開始・既定のタブ移動）をさせないため S_OK で止める。
-        private bool _swallowChar;
-
         public int OnKeyboardInput(uint message, nuint wParam, nint lParam)
         {
             try
             {
                 if (message == WM_KEYDOWN)
                 {
-                    _swallowChar = false;
                     _host?.AbandonPendingSelection();
                     if ((int)wParam == VK_RETURN) { _host?.RequestCommit(); return S_OK; }
                     if ((int)wParam == VK_TAB) { _host?.RequestTab(); return S_OK; }
-                    if (_host?.RequestKey((Keys)(int)wParam) == true) { _swallowChar = true; return S_OK; }
-                }
-                // R-97-3: ReTAC のコマンドとして処理したキーの WM_CHAR も止める。通すとツリーの頭文字検索が走り、選択が動く
-                else if (message == WM_CHAR && _swallowChar)
-                {
-                    _swallowChar = false;
-                    return S_OK;
+                    // R-97-3: ReTAC のコマンドとして処理したキーの WM_CHAR をツリーへ届けない。届くと頭文字検索で選択が動き、
+                    // 一致しなければ警告音が鳴る（テンキーのドライブ移動など）。コマンドはここでダイアログを開くことがあり、
+                    // その中で WM_CHAR が配られてしまうので、処理の後ではなく前にキューから外し、処理しなかったときだけ戻す
+                    var hasChar = PeekMessage(out var charMessage, IntPtr.Zero, WM_CHAR, WM_CHAR, PM_REMOVE);
+                    var handled = false;
+                    try { handled = _host?.RequestKey((Keys)(int)wParam) == true; }
+                    finally
+                    {
+                        if (hasChar && !handled)
+                            PostMessage(charMessage.Hwnd, charMessage.Message, charMessage.WParam, charMessage.LParam);
+                    }
+                    if (handled) return S_OK;
                 }
             }
             catch (Exception) { }
@@ -1095,6 +1097,28 @@ public sealed class NameSpaceTreeHost : IDisposable
             if (_host is { } host) host._dropSources = [];
         }
     }
+
+    private const uint PM_REMOVE = 0x0001;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeMessage
+    {
+        public IntPtr Hwnd;
+        public uint Message;
+        public IntPtr WParam;
+        public IntPtr LParam;
+        public uint Time;
+        public int X;
+        public int Y;
+    }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool PeekMessage(out NativeMessage message, IntPtr hwnd, uint filterMin, uint filterMax, uint remove);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool PostMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
