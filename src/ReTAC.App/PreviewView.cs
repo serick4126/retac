@@ -37,6 +37,11 @@ public sealed class PreviewView : UserControl
     private int _generation;
     private (PreviewSession Session, Panel Host)? _shown;
     private (PreviewSession Session, Panel Host, int Generation)? _pending;
+    private bool _pendingIsText;
+    /// <summary>テキストを表示している間だけ、移動キーをスクロールに変え、右クリックでコピーのメニューを出す（利用者の要望）。</summary>
+    private TextPreviewInput? _textInput;
+    private readonly ContextMenuStrip _textMenu = new();
+    private IntPtr _textWindow;
 
     public event EventHandler? FocusFileViewRequested;
 
@@ -74,9 +79,13 @@ public sealed class PreviewView : UserControl
             _shown?.Session.SetSize(_area.ClientSize);
             _pending?.Session.SetSize(_area.ClientSize);
         };
+        _textMenu.Items.Add("コピー(&C)", null, (_, _) => TextPreviewInput.Copy(_textWindow));
+        _textMenu.Items.Add("すべて選択(&A)", null, (_, _) => TextPreviewInput.SelectAll(_textWindow));
         SetStatus(NoTargetText);
         Disposed += (_, _) =>
         {
+            _textInput?.Dispose();
+            _textMenu.Dispose();
             _delay.Dispose();
             _loading.Dispose();
             _picture.Image?.Dispose();
@@ -184,6 +193,7 @@ public sealed class PreviewView : UserControl
         // 要求ごとに子ホストを分ける。止まった古いハンドラーが、新しい表示の上に描かないように
         var host = new Panel { Dock = DockStyle.Fill, Visible = false };
         _area.Controls.Add(host);
+        _pendingIsText = clsid == PreviewFallback.TextHandler;
         var session = PreviewSession.Start(clsid, path, host.Handle, _area.ClientSize,
             completed: ok => Post(() => Completed(generation, ok)),
             tabPressed: () => Post(() => FocusFileViewRequested?.Invoke(this, EventArgs.Empty)));
@@ -206,6 +216,17 @@ public sealed class PreviewView : UserControl
         host.Visible = true;
         host.BringToFront();
         _shown = (session, host);
+        if (_pendingIsText)
+            _textInput = new TextPreviewInput(isTextWindow: window => TextPreviewInput.IsInside(host.Handle, window),
+                                              rightButtonUp: point => OnRightClick(host, point));
+    }
+
+    private void OnRightClick(Panel host, Point screen)
+    {
+        if (_shown?.Host != host || !host.Visible || !host.RectangleToScreen(host.ClientRectangle).Contains(screen)) return;
+        _textWindow = TextPreviewInput.WindowAt(screen);
+        // フックの中ではメニューを出さない（出している間マウス全体が止まる）。テキストの窓が右クリックを処理し終えてから出す
+        BeginInvoke(() => _textMenu.Show(screen));
     }
 
     private void ReleaseShown()
@@ -216,6 +237,8 @@ public sealed class PreviewView : UserControl
             _picture.Image = null;
             image.Dispose();
         }
+        _textInput?.Dispose();
+        _textInput = null;
         if (_shown is not var (session, host)) return;
         _shown = null;
         Release(session, host);
