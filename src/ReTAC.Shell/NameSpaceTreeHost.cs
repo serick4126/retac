@@ -655,6 +655,10 @@ public sealed class NameSpaceTreeHost : IDisposable
             if (string.Equals(Path.TrimEndingDirectorySeparator(driveRoot),
                     Path.TrimEndingDirectorySeparator(path), StringComparison.OrdinalIgnoreCase))
                 return SetSelected(tree, driveInTree);
+            // ドライブツリーではルートのドライブが最初から展開されているが、PC の下のドライブは閉じたまま。
+            // 開かないと子が列挙されず、DescendAndSelect が最初の段で見つけられずにやり直し続ける
+            Check(tree.SetItemState(driveInTree, ItemState.Expanded, ItemState.Expanded),
+                "名前空間ツリーの枝を展開できません。");
             return DescendAndSelect(tree, driveInTree, ShellItemPath.ParentPathsFrom(driveRoot, path), path);
         }
         finally
