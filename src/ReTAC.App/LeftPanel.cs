@@ -35,7 +35,18 @@ public sealed class LeftPanel : UserControl
             _items[kind] = item;
         }
         _selector.ContextMenuStrip = menu;
-        _selector.Click += (_, _) => menu.Show(_selector, new Point(0, _selector.Height));
+        _selector.Click += (_, _) =>
+        {
+            // 欄のどこを押しても開くので、選択肢も欄と同じ幅にして、どこでも選べるようにする
+            menu.MinimumSize = new Size(_selector.Width, 0);
+            menu.Show(_selector, new Point(0, _selector.Height));
+            // 行は文字幅のままなので、開いた後の内側の幅に合わせる（余白を押しても選べるように）
+            foreach (ToolStripItem item in menu.Items)
+            {
+                item.AutoSize = false;
+                item.Width = menu.DisplayRectangle.Width;
+            }
+        };
         _selector.FontChanged += (_, _) => UpdateSelectorHeight();
 
         var empty = new Panel { Dock = DockStyle.Fill };
@@ -76,12 +87,21 @@ public sealed class LeftPanel : UserControl
     }
 
     private void UpdateSelector() =>
-        _selector.Text = $"{Views.Single(view => view.Kind == ViewKind).Label}  ▼";
+        _selector.Text = Views.Single(view => view.Kind == ViewKind).Label;
 
     /// <summary>クリックでフォーカスを持つと、ツリーへ戻らないまま Enter で一覧が開き直す。
     /// 選択後のフォーカスはビュー側へ置くので、欄自体はフォーカスを受けない。</summary>
     private sealed class SelectorButton : Button
     {
         public SelectorButton() => SetStyle(ControlStyles.Selectable, false);
+
+        /// <summary>▼ は欄全体が開くことを示すので、文字の直後ではなく右端に置く。</summary>
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            var bounds = ClientRectangle with { Width = ClientSize.Width - LogicalToDeviceUnits(8) };
+            TextRenderer.DrawText(e.Graphics, "▼", Font, bounds, ForeColor,
+                TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+        }
     }
 }
