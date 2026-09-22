@@ -38,7 +38,20 @@ public class LeftPanelTests
     }
 
     [Fact]
+    public void 選択欄の高さはフォントに合わせて文字が切れない高さになる()
+    {
+        using var panel = new LeftPanel();
+        var selector = panel.Controls.OfType<Button>().Single();
+        using var font = new System.Drawing.Font("Meiryo UI", 24f);
+        panel.Font = font;
+
+        Assert.True(selector.Height > TextRenderer.MeasureText(selector.Text, font).Height);
+        Assert.False(selector.CanSelect);
+    }
+
+    [Fact]
     public void 選択欄は要求だけを通知して自分ではビューを変えない()
+
     {
         using var panel = new LeftPanel();
         LeftPanelViewKind? requested = null;

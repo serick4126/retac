@@ -15,7 +15,7 @@ public sealed class LeftPanel : UserControl
         (LeftPanelViewKind.Preview, "プレビュー", CommandId.ShowPreview),
     ];
 
-    private readonly Button _selector = new() { Dock = DockStyle.Top, TabStop = false, TextAlign = ContentAlignment.MiddleLeft };
+    private readonly Button _selector = new SelectorButton { Dock = DockStyle.Top, TabStop = false, TextAlign = ContentAlignment.MiddleLeft };
     private readonly Panel _content = new() { Dock = DockStyle.Fill };
     private readonly Dictionary<LeftPanelViewKind, ToolStripMenuItem> _items = [];
 
@@ -36,14 +36,28 @@ public sealed class LeftPanel : UserControl
         }
         _selector.ContextMenuStrip = menu;
         _selector.Click += (_, _) => menu.Show(_selector, new Point(0, _selector.Height));
+        _selector.FontChanged += (_, _) => UpdateSelectorHeight();
 
         var empty = new Panel { Dock = DockStyle.Fill };
         _content.Controls.Add(empty);
         Controls.Add(_content);
         Controls.Add(_selector);
         UpdateSelector();
+        UpdateSelectorHeight();
     }
 
+    public static CommandId CommandOf(LeftPanelViewKind kind) => Views.Single(view => view.Kind == kind).Command;
+
+    protected override void OnDpiChangedAfterParent(EventArgs e)
+    {
+        base.OnDpiChangedAfterParent(e);
+        UpdateSelectorHeight();
+    }
+
+    /// <summary>R-96 / R-66: 既定の 23px 固定では Meiryo 等の行の高いフォントや高 DPI で文字の上下が切れる。
+    /// 高さはその時点のフォントの実測から決める。</summary>
+    private void UpdateSelectorHeight() =>
+        _selector.Height = TextRenderer.MeasureText("ドライブツリー ▼", _selector.Font).Height + _selector.LogicalToDeviceUnits(8);
     public void ShowView(LeftPanelViewKind kind, Control view)
     {
         // ビューの寿命は MainForm が所有し、切り替え後に再利用する。ここでは外すだけで破棄しない。
@@ -63,4 +77,11 @@ public sealed class LeftPanel : UserControl
 
     private void UpdateSelector() =>
         _selector.Text = $"{Views.Single(view => view.Kind == ViewKind).Label}  ▼";
+
+    /// <summary>クリックでフォーカスを持つと、ツリーへ戻らないまま Enter で一覧が開き直す。
+    /// 選択後のフォーカスはビュー側へ置くので、欄自体はフォーカスを受けない。</summary>
+    private sealed class SelectorButton : Button
+    {
+        public SelectorButton() => SetStyle(ControlStyles.Selectable, false);
+    }
 }

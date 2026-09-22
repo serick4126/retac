@@ -104,6 +104,8 @@ public sealed class MainForm : Form, IBookmarkHost
         _fileTypes = _settings.ToFileTypeFilter();
         _sortOrder = _settings.ToSortOrder();
         _driveTree.FolderCommitted += (_, path) => _ = OpenFolderAsync(path);
+        // R-96-2: 上端の選択欄もメニューと同じ入口を通す（表示・保存・ラジオ印の反映を 1 か所にする）
+        _leftPanel.ViewRequested += (_, kind) => ExecuteLeftPanelCommand(LeftPanel.CommandOf(kind));
 
         Text = "ReTAC";
         // H-14: Form の既定アイコンは exe のアイコンではないので、埋め込んだ .ico を明示的に渡す
