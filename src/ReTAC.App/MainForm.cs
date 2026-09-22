@@ -138,6 +138,9 @@ public sealed class MainForm : Form, IBookmarkHost
         _driveBar.SetVisibility(_settings.ToHiddenDrives(), _settings.ShowDesktopButton);   // 16.7 節
         _list.CommandKey += (_, e) => OnCommandKey(e);
         _list.RightClicked += (_, click) => OnRightClick(click);
+        // Step5: 左パネルが表示中のときだけ往復する。非表示なら CentralDisplayArea.LeftPanelVisible が false のまま何もしない
+        _list.FocusLeftPanelRequested += (_, _) => { if (_centralDisplay.LeftPanelVisible) _leftPanel.CurrentView.Focus(); };
+        _driveTree.FocusFileViewRequested += (_, _) => _list.Focus();
         // R-39-3 の「明示的なドライブ変更」。相対移動とは別経路
         _driveBar.PathSelected += (_, path) => OnDriveChosen(path);
         _driveBar.Cancelled += (_, _) => _list.Focus();

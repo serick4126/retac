@@ -68,6 +68,9 @@ public sealed class NameSpaceTreeHost : IDisposable
     private const uint SICHINT_CANONICAL = 0x10000000;
     private const uint SWP_NOZORDER = 0x0004;
     private const uint SWP_NOACTIVATE = 0x0010;
+    private const uint WM_KEYDOWN = 0x0100;
+    private const int VK_RETURN = 0x0D;
+    private const int VK_TAB = 0x09;
 
     private INameSpaceTreeControl? _tree;
     private EventSink? _sink;
@@ -95,6 +98,10 @@ public sealed class NameSpaceTreeHost : IDisposable
     public event EventHandler<ShellTreeClickEventArgs>? ItemClicked;
     public event EventHandler<ShellTreeDropEventArgs>? FilesDropped;
     public event EventHandler<ShellTreeSynchronizationFailedEventArgs>? SynchronizationFailed;
+    /// <summary>R-97-2: Enter キー。選択中の実フォルダを確定する合図（矢印等は既定のツリー処理へ渡すだけで、ここへは来ない）。</summary>
+    public event EventHandler? CommitRequested;
+    /// <summary>Step5: Tab / Shift+Tab。ツリーへフォーカスがある間はツリー標準のタブ移動をさせず、ファイルビューへ戻す合図にする。</summary>
+    public event EventHandler? TabPressed;
 
     public string? SelectedPath => _selectedPath;
 
@@ -752,6 +759,16 @@ public sealed class NameSpaceTreeHost : IDisposable
             ItemClicked?.Invoke(this, new ShellTreeClickEventArgs(ShellItemPath.FileSystemPathOf(item), hitTest, clickType));
     }
 
+    private void RequestCommit()
+    {
+        if (_acceptEvents) CommitRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void RequestTab()
+    {
+        if (_acceptEvents) TabPressed?.Invoke(this, EventArgs.Empty);
+    }
+
     private void ReplaceDropSources(IntPtr data) => _dropSources = ShellItemPath.FileSystemPathsOf(data);
 
     private void DropFrom(IntPtr over, IntPtr data, uint keyState, ref uint effect)
@@ -820,7 +837,22 @@ public sealed class NameSpaceTreeHost : IDisposable
         public int OnPropertyItemCommit(IntPtr item) => S_OK;
         public int OnItemStateChanging(IntPtr item, ItemState mask, ItemState state) => S_OK;
         public int OnItemStateChanged(IntPtr item, ItemState mask, ItemState state) => S_OK;
-        public int OnKeyboardInput(uint message, nuint wParam, nint lParam) => S_OK;
+        // R-97-2 / Step4-5: 矢印・Home・End・PageUp・PageDown は S_FALSE でツリー標準の処理へ渡し、
+        // 現在位置（選択中の実フォルダ）は変えない。Enter だけが確定、Tab だけがファイルビューへ戻す合図で、
+        // どちらもツリー既定の動作（ラベル編集の開始・既定のタブ移動）をさせないため S_OK で止める。
+        public int OnKeyboardInput(uint message, nuint wParam, nint lParam)
+        {
+            try
+            {
+                if (message == WM_KEYDOWN)
+                {
+                    if ((int)wParam == VK_RETURN) { _host?.RequestCommit(); return S_OK; }
+                    if ((int)wParam == VK_TAB) { _host?.RequestTab(); return S_OK; }
+                }
+            }
+            catch (Exception) { }
+            return S_FALSE;
+        }
         public int OnBeforeExpand(IntPtr item) => S_OK;
         public int OnAfterExpand(IntPtr item)
         {

@@ -31,9 +31,16 @@ public sealed class DriveTreeView : Control
     private bool _resetPending = true;
     private bool _hostCreated;
     private long _selectionDeadline;
+    /// <summary>R-97-2: NSTC は別ウィンドウの子なので、押下位置は WM_PARENTNOTIFY で拾っておく。</summary>
+    private Point? _pendingDownPoint;
+
+    private const int WM_PARENTNOTIFY = 0x0210;
+    private const int WM_LBUTTONDOWN = 0x0201;
 
     public event EventHandler<string>? FolderCommitted;
     public event EventHandler<ShellTreeDropEventArgs>? FilesDropped;
+    /// <summary>Step5: Tab / Shift+Tab でツリーからファイルビューへ戻る合図。</summary>
+    public event EventHandler? FocusFileViewRequested;
 
     public string? SelectedFolder { get; private set; }
 
@@ -62,7 +69,41 @@ public sealed class DriveTreeView : Control
             ShowFailure(e.Exception);
         };
         _host.FilesDropped += (_, e) => FilesDropped?.Invoke(this, e);
+        _host.ItemClicked += OnTreeItemClicked;
+        _host.CommitRequested += (_, _) => CommitSelectedFolder();
+        _host.TabPressed += (_, _) => FocusFileViewRequested?.Invoke(this, EventArgs.Empty);
         _selectionWatchdog.Tick += (_, _) => CheckSelectionTimeout();
+    }
+
+    /// <summary>NSTC の子ウィンドウが受けた WM_LBUTTONDOWN は、直接の親であるここへ通知が来る。</summary>
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == WM_PARENTNOTIFY && unchecked((int)(long)m.WParam & 0xFFFF) == WM_LBUTTONDOWN)
+        {
+            var lp = unchecked((int)(long)m.LParam);
+            _pendingDownPoint = new Point(unchecked((short)(lp & 0xFFFF)), unchecked((short)((lp >> 16) & 0xFFFF)));
+        }
+        base.WndProc(ref m);
+    }
+
+    /// <summary>
+    /// R-97-2: 確定はマウスを離した時（OnItemClick）だけで行う。ドラッグへ移行した操作はシェル自身が
+    /// ドロップとして処理しここへは来ない想定だが、押下位置との距離チェックを二重の確認として残す。
+    /// </summary>
+    private void OnTreeItemClicked(object? sender, ShellTreeClickEventArgs e)
+    {
+        var downPoint = _pendingDownPoint ?? PointToClient(MousePosition);
+        _pendingDownPoint = null;
+        if (e.Path is not { } path) return;
+        if ((e.ClickType & ShellTreeClickType.ButtonMask) != ShellTreeClickType.Left) return;
+
+        var pending = new NameSpaceTreePolicy.PendingTreeClick(
+            path, downPoint,
+            OnIconOrLabel: (e.HitTest & (ShellTreeHitTest.Icon | ShellTreeHitTest.Label)) != 0,
+            IsDoubleClick: (e.ClickType & ShellTreeClickType.DoubleClick) != 0);
+
+        if (NameSpaceTreePolicy.ShouldCommit(pending, PointToClient(MousePosition), dragStarted: false, buttonReleased: true))
+            FolderCommitted?.Invoke(this, path);
     }
 
     public void SyncCurrentFolder(string currentFolder, ShellTreeVisibility visibility, bool resetExpansion)
@@ -94,6 +135,7 @@ public sealed class DriveTreeView : Control
         _appliedRoot = null;
         SelectedFolder = null;
         _resetPending = true;
+        _pendingDownPoint = null;
         base.OnHandleDestroyed(e);
     }
 

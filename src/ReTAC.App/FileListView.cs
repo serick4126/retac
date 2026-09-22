@@ -74,6 +74,8 @@ public sealed class FileListView : Control
 
     /// <summary>右クリックされた。シェルのメニューか `G` のメニューかは呼び出し側が決める。</summary>
     public event EventHandler<RightClick>? RightClicked;
+    /// <summary>Step5: Tab / Shift+Tab。左パネルが見えているときだけ、そちらへ往復する合図。</summary>
+    public event EventHandler? FocusLeftPanelRequested;
 
     /// <param name="Index">押された行。行の外なら -1</param>
     /// <param name="Shift">
@@ -313,6 +315,20 @@ public sealed class FileListView : Control
         Keys.Enter or Keys.Space or Keys.Back => true,
         _ => base.IsInputKey(keyData),
     };
+
+    /// <summary>
+    /// Step5: Tab / Shift+Tab は、上端の選択欄や上部バーへの既定のダイアログ移動をさせず、
+    /// 表示中の左パネルとの往復だけに使う（左パネル非表示なら MainForm 側で何もしない）。
+    /// </summary>
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if (keyData is Keys.Tab or (Keys.Tab | Keys.Shift))
+        {
+            FocusLeftPanelRequested?.Invoke(this, EventArgs.Empty);
+            return true;
+        }
+        return base.ProcessCmdKey(ref msg, keyData);
+    }
 
     protected override void OnKeyDown(KeyEventArgs e)
     {

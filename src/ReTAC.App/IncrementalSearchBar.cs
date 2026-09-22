@@ -103,6 +103,7 @@ public sealed class IncrementalSearchBar : FlowLayoutPanel
                 ShowResult();
                 break;
             case Keys.Enter:
+            case Keys.Tab:   // Step5: 検索中の Tab は左パネルとの往復より検索の確定を優先する
                 Close(restore: false);   // 確定。項目は開かない
                 break;
             case Keys.Escape:
@@ -148,7 +149,7 @@ public sealed class IncrementalSearchBar : FlowLayoutPanel
     {
         protected override bool IsInputKey(Keys keyData) => (keyData & Keys.KeyCode) switch
         {
-            Keys.Up or Keys.Down or Keys.Enter or Keys.Escape => true,
+            Keys.Up or Keys.Down or Keys.Enter or Keys.Escape or Keys.Tab => true,
             _ => base.IsInputKey(keyData),
         };
     }

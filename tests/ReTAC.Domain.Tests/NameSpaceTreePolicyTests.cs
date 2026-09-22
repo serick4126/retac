@@ -1,3 +1,4 @@
+using System.Drawing;
 using ReTAC.Shell;
 
 namespace ReTAC.Domain.Tests;
@@ -34,5 +35,26 @@ public class NameSpaceTreePolicyTests
     public void ルートが変わる場合だけ作り直す(string oldRoot, string newRoot, bool expected)
     {
         Assert.Equal(expected, NameSpaceTreePolicy.MustRebuildRoot(oldRoot, newRoot));
+    }
+
+    // R-97-2: マウスの確定は「名前・アイコンを、ドラッグへ移行せず離した」場合だけ。
+    // 展開ボタン・右側余白は候補にしない。ダブルクリックの2回目は最初のクリックで確定済みなので確定し直さない。
+    [Theory]
+    [InlineData("名前", true, false, false, true, 0, 0, true)]
+    [InlineData("アイコン", true, false, false, true, 0, 0, true)]
+    [InlineData("展開ボタン", false, false, false, true, 0, 0, false)]
+    [InlineData("右側余白", false, false, false, true, 0, 0, false)]
+    [InlineData("ドラッグしきい値内", true, false, false, true, 1, 1, true)]
+    [InlineData("ドラッグしきい値外", true, false, false, true, 100, 100, false)]
+    [InlineData("ドラッグ開始", true, false, true, true, 0, 0, false)]
+    [InlineData("ダブルクリック", true, true, false, true, 0, 0, false)]
+    [InlineData("ボタンを離す前", true, false, false, false, 0, 0, false)]
+    public void ツリーのクリックは名前アイコンを離した時だけ確定する(
+        string _, bool onIconOrLabel, bool isDoubleClick, bool dragStarted, bool buttonReleased,
+        int dx, int dy, bool expected)
+    {
+        var pending = new NameSpaceTreePolicy.PendingTreeClick(@"C:\a", new Point(0, 0), onIconOrLabel, isDoubleClick);
+        var upPoint = new Point(dx, dy);
+        Assert.Equal(expected, NameSpaceTreePolicy.ShouldCommit(pending, upPoint, dragStarted, buttonReleased));
     }
 }
