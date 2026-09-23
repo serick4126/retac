@@ -28,6 +28,13 @@ public sealed record Theme
     public string FontFamily { get; init; } = "メイリオ";
     public float FontSize { get; init; } = 16f;
 
+    /// <summary>R-101: 左パネルのフォント。一覧とは別に持つ。
+    /// 一覧は 1 件ずつの読みやすさを取って 16pt だが、ツリーは一度に見渡せる行数が要るので既定を小さくする。
+    /// 12pt はメイリオの行の高さが約 24px になる大きさで、16pt の約 1.3 倍の行数が入る。
+    /// これ以上小さくしても、アイコンの 16px が下限として効いて行数はあまり伸びず、漢字だけが潰れる。</summary>
+    public string LeftPanelFontFamily { get; init; } = "メイリオ";
+    public float LeftPanelFontSize { get; init; } = 12f;
+
     /// <summary>R-31: マークが有効なとき、属性配色より選択の配色を優先する（現行設定は「分けない」）。</summary>
     public bool SeparateMarkColorFromAttributes { get; init; } = false;
 

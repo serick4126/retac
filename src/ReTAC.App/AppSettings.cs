@@ -91,6 +91,10 @@ public sealed class AppSettings
     public string? FontFamily { get; set; }
     public float? FontSize { get; set; }
 
+    /// <summary>R-101: 左パネルのフォント。一覧とは別に持つ。</summary>
+    public string? LeftPanelFontFamily { get; set; }
+    public float? LeftPanelFontSize { get; set; }
+
     // --- キー割り当て（5-2 節） --------------------------------------------
     /// <summary>
     /// 既定（`DefaultKeyMap`）から変えた枠だけを持つ。値が空文字なら「割り当てなし」。
@@ -205,6 +209,8 @@ public sealed class AppSettings
 
         if (!string.IsNullOrWhiteSpace(FontFamily)) theme = theme with { FontFamily = FontFamily };
         if (FontSize is > 0) theme = theme with { FontSize = FontSize.Value };
+        if (!string.IsNullOrWhiteSpace(LeftPanelFontFamily)) theme = theme with { LeftPanelFontFamily = LeftPanelFontFamily };
+        if (LeftPanelFontSize is > 0) theme = theme with { LeftPanelFontSize = LeftPanelFontSize.Value };
         return theme;
     }
 
@@ -219,6 +225,8 @@ public sealed class AppSettings
         }
         FontFamily = theme.FontFamily == Rendering.Theme.Default.FontFamily ? null : theme.FontFamily;
         FontSize = Math.Abs(theme.FontSize - Rendering.Theme.Default.FontSize) < 0.01f ? null : theme.FontSize;
+        LeftPanelFontFamily = theme.LeftPanelFontFamily == Rendering.Theme.Default.LeftPanelFontFamily ? null : theme.LeftPanelFontFamily;
+        LeftPanelFontSize = Math.Abs(theme.LeftPanelFontSize - Rendering.Theme.Default.LeftPanelFontSize) < 0.01f ? null : theme.LeftPanelFontSize;
     }
 
     /// <summary>R-14 の初期キーマップに、保存されている変更だけを重ねる。</summary>

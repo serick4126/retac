@@ -88,6 +88,10 @@ public sealed class NameSpaceTreeHost : IDisposable
     private const int VK_TAB = 0x09;
 
     private INameSpaceTreeControl? _tree;
+    /// <summary>R-101: 呼び出し側が所有するフォント。ツリーを作り直すたびに当て直す</summary>
+    private Font? _font;
+    /// <summary>R-101: WM_SETFONT で渡した HFONT。自分で作ったものなので自分で捨てる</summary>
+    private IntPtr _fontHandle;
     private EventSink? _sink;
     private IShellItem? _rootItem;
     private CurrentPathShellItemFilter? _rootFilter;
@@ -157,6 +161,7 @@ public sealed class NameSpaceTreeHost : IDisposable
             finally { Marshal.Release(sinkEvents); }
             Check(((IOleWindow)_tree).GetWindow(out _treeHwnd), "名前空間ツリーのウィンドウを取得できません。");
             _acceptEvents = true;
+            ApplyFont();   // R-101: 作り直しのたびに当て直す。既定のフォントに戻ってしまうため
             SetBounds(bounds);
         }
         catch
@@ -305,6 +310,42 @@ public sealed class NameSpaceTreeHost : IDisposable
     }
 
     /// <summary>
+    /// R-101: NSTC は WinForms の Control.Font を見ない。中で実際に項目を描く SysTreeView32 へ
+    /// WM_SETFONT を送って初めてフォントが変わる。行の高さはツリー自身が新しいフォントから測り直す。
+    /// </summary>
+    public void SetFont(Font font)
+    {
+        VerifyOwner();
+        _font = font;
+        ApplyFont();
+    }
+
+    /// <summary>
+    /// WM_SETFONT は HFONT を借りるだけで複製しない。ツリーが使っている間は生かしておく必要があるので、
+    /// 新しいものを渡してから前のものを捨てる。
+    /// 行の高さは NSTC が作成時に決めた値（アイコンに合わせた 20px）のまま固定で、フォントからは測り直さない。
+    /// 大きな字を選ぶと上下が切れるので、高さもこちらから送る。
+    /// </summary>
+    private void ApplyFont()
+    {
+        if (_treeHwnd == IntPtr.Zero || _font is null) return;
+        var inner = FindWindowEx(_treeHwnd, IntPtr.Zero, "SysTreeView32", null);
+        var target = inner != IntPtr.Zero ? inner : _treeHwnd;
+
+        var handle = _font.ToHfont();
+        SendMessage(target, WM_SETFONT, handle, 1);
+        if (_fontHandle != IntPtr.Zero) DeleteObject(_fontHandle);
+        _fontHandle = handle;
+
+        // 下限の 20 は 96 DPI でのアイコン 16px + 余白。高 DPI では文字の実測が必ずこれを上回るので効かない
+        var height = Math.Max(TextRenderer.MeasureText("Ag", _font).Height + 4, 20);
+        SendMessage(target, TVM_SETITEMHEIGHT, height, IntPtr.Zero);
+    }
+
+    private const uint WM_SETFONT = 0x0030;
+    private const uint TVM_SETITEMHEIGHT = 0x111B;
+
+    /// <summary>
     /// R-97-3 / Q83: クライアント座標 clientPoint にある項目の実パス。仮想項目・当たり無しは null。
     /// 自前のドラッグを始めるかどうかの判定に使う(実フォルダだけドラッグ元にする)。
     /// </summary>
@@ -399,6 +440,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         _selectionVersion++;
         _lifetime++;
         _ownerThreadId = 0;
+        if (_fontHandle != IntPtr.Zero) { DeleteObject(_fontHandle); _fontHandle = IntPtr.Zero; }
     }
 
     private INameSpaceTreeControl RequireTree() =>
@@ -1216,6 +1258,13 @@ public sealed class NameSpaceTreeHost : IDisposable
 
     [DllImport("user32.dll")]
     private static extern IntPtr SetFocus(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeleteObject(IntPtr handle);
 
 
     [DllImport("user32.dll")]

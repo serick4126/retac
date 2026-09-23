@@ -44,6 +44,8 @@
     "Colors": "dialog:ColorFontDialog",
     "FontFamily": "dialog:ColorFontDialog",
     "FontSize": "dialog:ColorFontDialog",
+    "LeftPanelFontFamily": "dialog:ColorFontDialog",
+    "LeftPanelFontSize": "dialog:ColorFontDialog",
 
     "KeyBindings": "dialog:KeyAssignDialog",
     "SuppressMultipleToolLaunch": "dialog:EnvironmentDialog",

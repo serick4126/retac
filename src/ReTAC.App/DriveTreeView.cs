@@ -205,6 +205,13 @@ public sealed class DriveTreeView : Control, IMessageFilter
 
     protected override bool IsInputChar(char charCode) => true;
 
+    /// <summary>R-101: NSTC は別ウィンドウなので、Control.Font を変えただけでは中身に届かない。</summary>
+    protected override void OnFontChanged(EventArgs e)
+    {
+        base.OnFontChanged(e);
+        if (_hostCreated) _host.SetFont(Font);
+    }
+
     /// <summary>
     /// R-97-2: Tab / Enter の WM_KEYDOWN は NSTC の OnKeyboardInput で処理済みだが、続く WM_CHAR が
     /// SysTreeView32 まで届くと、ツリーが扱えない文字として警告音を鳴らす。文字の側だけここで捨てる。
@@ -273,6 +280,7 @@ public sealed class DriveTreeView : Control, IMessageFilter
                 _host.Create(Handle, ClientRectangle);
                 _hostCreated = true;
             }
+            _host.SetFont(Font);   // R-101: 作り直した直後は既定のフォントなので、毎回当てる
             ApplyRequestedFolder();
         }
         catch (Exception ex)

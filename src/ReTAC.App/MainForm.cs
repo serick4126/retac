@@ -77,6 +77,8 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>R-95: 左右に分かれるのは上部バーとステータスバーの間だけ。</summary>
     private readonly CentralDisplayArea _centralDisplay;
     private readonly LeftPanel _leftPanel = new();
+    /// <summary>R-101: 左パネルへ配っているフォント。差し替えのたびに前のものを捨てる（R-98 と同じ趣旨）。</summary>
+    private Font? _leftPanelFont;
     private readonly DriveTreeView _driveTree = new(NameSpaceTreeRootKind.Drive);
     private readonly DriveTreeView _desktopTree = new(NameSpaceTreeRootKind.Desktop);
     // R-96: Phase 10.2 で中身を持つのは 2 つのツリーだけ。残り2ビューは案内だけの控え
@@ -179,6 +181,7 @@ public sealed class MainForm : Form, IBookmarkHost
         _previewView.FocusFileViewRequested += (_, _) => _list.Focus();
         _list.MarksChanged += (_, _) => RefreshStatus();
         _list.Theme = _settings.ToTheme();                       // 5-1 節の配色とフォント
+        ApplyLeftPanelFont(_list.Theme);                         // R-101: 左パネルは一覧とは別のフォント
         _driveBar.SetVisibility(_settings.ToHiddenDrives(), _settings.ShowDesktopButton);   // 16.7 節
         _list.CommandKey += (_, e) => OnCommandKey(e);
         _list.RightClicked += (_, click) => OnRightClick(click);
@@ -252,6 +255,7 @@ public sealed class MainForm : Form, IBookmarkHost
             _bookmarksView.Dispose();
             _previewView.Shutdown();
             _previewView.Dispose();
+            _leftPanelFont?.Dispose();   // R-101: Font は自分で作ったものなので、ウィンドウと一緒には消えない
 
             // B-03: ループはどのウィンドウにも紐づいていない（Program.cs）。
             // 最後の 1 枚が閉じたらここでプロセスを終わらせる。
@@ -2191,9 +2195,29 @@ public sealed class MainForm : Form, IBookmarkHost
         if (dialog.ShowDialog(this) != DialogResult.OK) return true;
 
         _list.Theme = dialog.Result;   // 行の高さと列幅はフォントから再計算される（R-66-3）
+        ApplyLeftPanelFont(dialog.Result);
         _settings.FromTheme(dialog.Result);
         SaveSettings();
         return true;
+    }
+
+    /// <summary>R-101: 左パネルのフォントを、欄と 4 つのビューすべてに配る。
+    /// 表示していないビューは _leftPanel の子ではないので、親からの継承では届かない。
+    /// 行の高さは LeftPanel の選択欄・プレビューのファイル名欄が FontChanged で測り直す（R-96 / R-66）。</summary>
+    private void ApplyLeftPanelFont(Rendering.Theme theme)
+    {
+        // Control.Font は値の等しい Font を代入しても差し替えない（前の実体を持ち続ける）。
+        // 気づかずに古いほうを捨てると、まだ使われているフォントを壊す。値が同じなら作らない
+        if (_leftPanelFont is { } current
+            && current.Name == theme.LeftPanelFontFamily
+            && Math.Abs(current.Size - theme.LeftPanelFontSize) < 0.01f) return;
+
+        var old = _leftPanelFont;
+        _leftPanelFont = new Font(theme.LeftPanelFontFamily, theme.LeftPanelFontSize);
+        _leftPanel.Font = _leftPanelFont;
+        foreach (var kind in Enum.GetValues<LeftPanelViewKind>())
+            LeftPanelViewControl(kind).Font = _leftPanelFont;
+        old?.Dispose();   // 差し替えてから捨てる。先に捨てると、まだ描いている途中の再描画が落ちる
     }
 
     /// <summary>表示するドライブの設定（0x814C）。16.7 節。</summary>
