@@ -1130,15 +1130,16 @@ public sealed class NameSpaceTreeHost : IDisposable
         }
 
         /// <summary>
-        /// R-97-3: 位置の通知は「項目の上（0）」だけを受け取り、「項目と項目の間（±1）」は断る。
+        /// R-97-3: 位置の通知は「項目の上」だけを受け取り、「項目と項目の間」は断る。
         /// シェルのフォルダの並びは ReTAC が決めるものではないので、間へ差し込む操作が無い。
         /// 受けたままにすると NSTC が挿入線を出し、そこが上位のフォルダへのドロップとして成立してしまう。
-        /// 0 をそのまま通すことで、フォルダの上で待つと開く NSTC 標準の自動展開は残る（実機確認済み）。
+        /// 項目の上は負の値（実測では -1）で来る。正の値が挿入位置。
+        /// 上をそのまま通すことで、フォルダの上で待つと開く NSTC 標準の自動展開は残る（実機確認済み）。
         /// </summary>
         public int OnDragPosition(IntPtr over, IntPtr data, int newPosition, int oldPosition)
         {
             var hr = CacheDropSources(data);
-            return newPosition == 0 ? hr : S_FALSE;
+            return newPosition < 0 ? hr : S_FALSE;
         }
 
         public int OnDrop(IntPtr over, IntPtr data, int position, uint keyState, ref uint effect)
@@ -1153,7 +1154,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         public int OnDropPosition(IntPtr over, IntPtr data, int newPosition, int oldPosition)
         {
             var hr = CacheDropSources(data);
-            return newPosition == 0 ? hr : S_FALSE;
+            return newPosition < 0 ? hr : S_FALSE;
         }
 
         public int OnDragLeave(IntPtr over)

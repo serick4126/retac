@@ -16,7 +16,7 @@
     <!-- 既定でも 1.0.0 が入るが、名乗る値は明示しておく。
          ここから AssemblyVersion / FileVersion / InformationalVersion が導かれ、
          エクスプローラーのプロパティ→詳細に出る -->
-    <Version>2.5.0</Version>
+    <Version>2.5.1</Version>
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <!-- スキーマ・マニフェストが XML コメントを取り込むため -->
