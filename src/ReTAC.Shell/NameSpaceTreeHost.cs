@@ -1048,7 +1048,8 @@ public sealed class NameSpaceTreeHost : IDisposable
 
     /// <summary>
     /// R-97-3 / §9: パスを持たない項目(仮想項目)は転送先にしない(Phase10.2 技術確認: 実機 OK)。
-    /// OnDragPosition には手を出さない。NSTC 標準の約 1 秒の自動展開が、この判定と無関係に保たれる。
+    /// 項目の上（位置 0）の通知だけを受け、項目の間は OnDragPosition / OnDropPosition で断る（R-97-3）。
+    /// 自動展開は位置 0 の通知に紐づくので、断っても残る。
     /// </summary>
     /// <summary>
     /// R-97-3 / R-78: ツリーの項目を指しているときの効果。ファイルリストと同じ判定で決め、実体の無い項目では禁止にする。
@@ -1128,8 +1129,17 @@ public sealed class NameSpaceTreeHost : IDisposable
             return hr;
         }
 
-        public int OnDragPosition(IntPtr over, IntPtr data, int newPosition, int oldPosition) =>
-            CacheDropSources(data);
+        /// <summary>
+        /// R-97-3: 位置の通知は「項目の上（0）」だけを受け取り、「項目と項目の間（±1）」は断る。
+        /// シェルのフォルダの並びは ReTAC が決めるものではないので、間へ差し込む操作が無い。
+        /// 受けたままにすると NSTC が挿入線を出し、そこが上位のフォルダへのドロップとして成立してしまう。
+        /// 0 をそのまま通すことで、フォルダの上で待つと開く NSTC 標準の自動展開は残る（実機確認済み）。
+        /// </summary>
+        public int OnDragPosition(IntPtr over, IntPtr data, int newPosition, int oldPosition)
+        {
+            var hr = CacheDropSources(data);
+            return newPosition == 0 ? hr : S_FALSE;
+        }
 
         public int OnDrop(IntPtr over, IntPtr data, int position, uint keyState, ref uint effect)
         {
@@ -1139,8 +1149,12 @@ public sealed class NameSpaceTreeHost : IDisposable
             return S_OK;
         }
 
-        public int OnDropPosition(IntPtr over, IntPtr data, int newPosition, int oldPosition) =>
-            CacheDropSources(data);
+        /// <summary>R-97-3: OnDragPosition と対にする。断った位置へ落とさせない。</summary>
+        public int OnDropPosition(IntPtr over, IntPtr data, int newPosition, int oldPosition)
+        {
+            var hr = CacheDropSources(data);
+            return newPosition == 0 ? hr : S_FALSE;
+        }
 
         public int OnDragLeave(IntPtr over)
         {
