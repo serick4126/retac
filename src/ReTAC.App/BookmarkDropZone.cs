@@ -97,6 +97,9 @@ internal sealed class BookmarkDropZone
                 && Math.Abs(e.Y - o.Y) < SystemInformation.DragSize.Height) return;
             origin = null;
             (item as BarDropDownButton)?.CancelOpen();
+            // R-91-2: ドラッグを始めたら、覚えていた押下の情報を次のクリックに使わせない
+            // （バーのボタンは CancelOpen が自分のトラッカーを直接捨てるので、ここでは主にホバー展開の項目向け）
+            DoubleClickTrackers.Forget(item);
             DragFrom(strip, bookmark);
         };
     }

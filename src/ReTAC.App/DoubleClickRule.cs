@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 
 namespace ReTAC.App;
@@ -46,5 +47,23 @@ internal sealed class DoubleClickTracker
         if (_pending is not { } prev) return false;
         _pending = null;
         return DoubleClickRule.IsSecondClick(prev.Time, prev.Pos, time, pos, button, doubleClickTime, doubleClickSize);
+    }
+}
+
+/// <summary>
+/// ホバーで開くメニュー項目の DoubleClickTracker を項目に結び付け、ドラッグの開始（BookmarkDropZone.EnableDrag）から
+/// 項目の種類を気にせず捨てられるようにする対応表。BarDropDownButton は自分の CancelOpen で自分のトラッカーを直接
+/// 捨てるので登録しない（Forget を呼んでも登録が無ければ何もしない）。
+/// </summary>
+internal static class DoubleClickTrackers
+{
+    private static readonly ConditionalWeakTable<ToolStripItem, DoubleClickTracker> s_map = new();
+
+    public static void Register(ToolStripItem item, DoubleClickTracker tracker) => s_map.Add(item, tracker);
+
+    /// <summary>ドラッグの開始など、クリックとして成立しなかったときに呼ぶ。登録が無ければ何もしない。</summary>
+    public static void Forget(ToolStripItem item)
+    {
+        if (s_map.TryGetValue(item, out var tracker)) tracker.Forget();
     }
 }

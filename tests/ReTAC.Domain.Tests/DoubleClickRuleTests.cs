@@ -122,3 +122,32 @@ public class DoubleClickTrackerTests
         Assert.False(tracker.Decide(T0 + TimeSpan.FromMilliseconds(200), P0, MouseButtons.Left, Time, Size));
     }
 }
+
+public class DoubleClickTrackersTests
+{
+    private static readonly DateTime T0 = new(2026, 1, 1, 0, 0, 0);
+    private static readonly Point P0 = new(100, 100);
+    private static readonly TimeSpan Time = TimeSpan.FromMilliseconds(500);
+    private static readonly Size Size = new(8, 6);
+
+    [Fact]
+    public void ドラッグ開始で登録した項目のトラッカーを外から捨てられる()
+    {
+        var item = new ToolStripMenuItem();
+        var tracker = new DoubleClickTracker();
+        tracker.Remember(T0, P0);
+        DoubleClickTrackers.Register(item, tracker);
+
+        DoubleClickTrackers.Forget(item);
+
+        // ドラッグを始めた後に素早くクリックしても、ドラッグ前の押下との二回目にはならない
+        Assert.False(tracker.Decide(T0 + TimeSpan.FromMilliseconds(100), P0, MouseButtons.Left, Time, Size));
+    }
+
+    [Fact]
+    public void 登録の無い項目にForgetを呼んでも何も起きない()
+    {
+        var item = new ToolStripMenuItem();
+        DoubleClickTrackers.Forget(item);   // 例外にならなければ良い（バーのボタンはここに登録しない）
+    }
+}
