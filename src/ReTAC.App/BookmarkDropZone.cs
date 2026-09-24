@@ -421,14 +421,20 @@ internal sealed class ExpansionDropZone
 
 /// <summary>
 /// バーのフォルダ・グループのボタン。押したときではなく離したときに開く（押した時点で開くと、ドラッグを始められない）。
-/// 開いているときに押したら、今までどおり閉じる。
+/// 開いているときに押したら、今までどおり閉じる。ただしフォルダは、その 2 回目の押下が直前に開いた時刻・位置の
+/// ダブルクリックの範囲内なら「閉じてジャンプ」（R-91-2）にする。標準の DoubleClick はここには届かない
+/// （2 回目の押下は開いたメニューを閉じるのに使われ、Click イベントの対まで進まない）。
 /// </summary>
 internal sealed class BarDropDownButton : ToolStripDropDownButton
 {
     private bool _openOnUp;
+    private readonly DoubleClickTracker _doubleClick = new();
 
     /// <summary>閉じているときに左ボタンで押された。このときは MouseDown イベントが出ないので、ドラッグの始点はここで知らせる。</summary>
     public event MouseEventHandler? LeftPressedClosed;
+
+    /// <summary>フォルダのダブルクリック（R-91-2）。グループには繋がない（呼び出し側の判断）。</summary>
+    public event EventHandler? DoubleClicked;
 
     protected override void OnMouseDown(MouseEventArgs e)
     {
@@ -436,6 +442,13 @@ internal sealed class BarDropDownButton : ToolStripDropDownButton
         {
             _openOnUp = true;
             LeftPressedClosed?.Invoke(this, e);
+            return;
+        }
+        if (e.Button == MouseButtons.Left && DropDown.Visible
+            && _doubleClick.Decide(DateTime.UtcNow, e.Location, e.Button, TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime), SystemInformation.DoubleClickSize))
+        {
+            HideDropDown();
+            DoubleClicked?.Invoke(this, EventArgs.Empty);
             return;
         }
         base.OnMouseDown(e);
@@ -447,11 +460,17 @@ internal sealed class BarDropDownButton : ToolStripDropDownButton
         {
             _openOnUp = false;
             ShowDropDown();
+            // 開いた時刻・位置を覚える。次の左の押下（開いている間）がこの範囲内ならダブルクリック（R-91-2）
+            _doubleClick.Remember(DateTime.UtcNow, e.Location);
             return;
         }
         base.OnMouseUp(e);
     }
 
-    /// <summary>ドラッグが始まったので、離しても開かない。</summary>
-    public void CancelOpen() => _openOnUp = false;
+    /// <summary>ドラッグが始まったので、離しても開かない。古い開いた時刻・位置も次のクリックに使わせない。</summary>
+    public void CancelOpen()
+    {
+        _openOnUp = false;
+        _doubleClick.Forget();
+    }
 }

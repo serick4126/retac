@@ -97,6 +97,8 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
         {
             case BookmarkKind.Folder:
                 FolderExpansion.Attach((ToolStripDropDownItem)item, b.Target, this, onMissing: () => host.BookmarkMissing(b));
+                // R-91-2: バー直下のフォルダのダブルクリック。Group には繋がない（Group はこの分岐に来ない）
+                if (item is BarDropDownButton bar) bar.DoubleClicked += (_, _) => host.JumpTo(b.Target);
                 break;
             case BookmarkKind.Group:
                 AttachGroup((ToolStripDropDownItem)item, b);

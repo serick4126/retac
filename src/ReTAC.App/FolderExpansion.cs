@@ -54,6 +54,28 @@ public static class FolderExpansion
         ToolStripExtras.EnableWheel(item.DropDown);   // 数百件を ▲▼ だけで送らせない（実機指摘）
         ExpansionDropZone.Attach(item.DropDown, folder, host);   // R-93: 中へファイルを落として転送する
 
+        // R-91-2: バーのボタンは自分の開閉で判定する（Configure 側で配線）。ここはホバーで開くメニュー項目
+        // （グループの中・ブックマークメニュー・展開した中のサブフォルダ）だけを対象に、押下どうしの間隔で自前判定する
+        if (item is not BarDropDownButton)
+        {
+            var doubleClick = new DoubleClickTracker();
+            item.MouseDown += (_, e) =>
+            {
+                if (e.Button != MouseButtons.Left) return;
+                if (doubleClick.Decide(DateTime.UtcNow, e.Location, e.Button,
+                        TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime), SystemInformation.DoubleClickSize))
+                {
+                    // 子だけ閉じると親のブックマークメニューが残るので、階層をすべて閉じてからジャンプする
+                    if (item.Owner is not null) BookmarkDropZone.CloseMenus(item.Owner);
+                    host.JumpTo(folder);
+                }
+                else
+                {
+                    doubleClick.Remember(DateTime.UtcNow, e.Location);
+                }
+            };
+        }
+
         item.DropDownOpening += (_, _) =>
         {
             var mine = ++generation;
