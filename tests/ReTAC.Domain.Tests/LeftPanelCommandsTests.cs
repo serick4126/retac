@@ -40,7 +40,7 @@ public class LeftPanelCommandsTests
     [Fact]
     public void 上端のビュー選択欄から同じビューを選んでも何もしない()
     {
-        // R-96-3: 上端の欄はビューの選択だけで、閉じる操作を置かない（Phase 10 の決定）。
+        // R-96-3: 上端の欄はビューの選択だけで、閉じる操作を置かない。
         var result = LeftPanelCommands.Apply(CommandId.ShowDriveTree, shown: true, view: LeftPanelViewKind.DriveTree, fromSelector: true);
 
         Assert.False(result.Changed);

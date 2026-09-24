@@ -1759,7 +1759,7 @@ public sealed class MainForm : Form, IBookmarkHost
             manage.Click += (_, _) => Execute(new BuiltinTarget(CommandId.BookmarkManage), Keys.None);
             var add = new ToolStripMenuItem("現在のフォルダを追加(&A)");
             add.Click += (_, _) => Execute(new BuiltinTarget(CommandId.BookmarkAddCurrentFolder), Keys.None);
-            // R-12-2: バーの右クリックからは届くが、メニューバー側に直接の項目が無かった（Phase11 のメニュー再編で検出）
+            // R-12-2: バーの右クリックからは届くが、メニューバー側に直接の項目が無かった
             var addCursor = new ToolStripMenuItem("カーソル位置の項目を追加(&I)");
             addCursor.Click += (_, _) => Execute(new BuiltinTarget(CommandId.BookmarkAddCursorItem), Keys.None);
             var bar = new ToolStripMenuItem("ブックマークバー");

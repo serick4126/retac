@@ -5393,7 +5393,7 @@
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
-        "line": 124
+        "line": 126
       },
       {
         "file": "src/ReTAC.Domain/Navigation/QuickAccessList.cs",
@@ -6037,11 +6037,11 @@
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
-        "line": 133
+        "line": 135
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
-        "line": 170
+        "line": 172
       }
     ],
     "R-37-3": [

@@ -104,6 +104,8 @@ public sealed class SettingsDraft
             KeepLastFolder = settings.KeepLastFolder,
             SuppressMultipleToolLaunch = settings.SuppressMultipleToolLaunch,
             Theme = theme,
+            // KeyBindings を先に代入する。ExternalTools のセッターが「存在しないツールを指す
+            // 割り当てを落とす」処理を持つため、後から代入すると順序が入れ替わり効果が消える。
             KeyBindings = KeySlots.All.ToDictionary(slot => slot, slot => keyMap.Resolve(slot)),
             ExternalTools = [.. settings.ExternalTools],
             NextExternalToolId = settings.NextExternalToolId,

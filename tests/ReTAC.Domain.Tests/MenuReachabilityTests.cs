@@ -22,8 +22,8 @@ public class MenuReachabilityTests
     [
         CommandId.BookmarkManage,            // 「ブックマークを管理...」
         CommandId.BookmarkAddCurrentFolder,  // 「現在のフォルダを追加」
-        // Phase11 でここに直接の項目が無いことが分かった（右クリックの「カーソル位置の項目を追加」からは
-        // AddBookmark を直接呼んでいて Execute を経由しない別経路だった）。BookmarkMenu に項目を足して直した
+        // 右クリックの「カーソル位置の項目を追加」からは AddBookmark を直接呼んでいて Execute を経由しない
+        // 別経路で、BookmarkMenu に直接の項目が無かった。項目を足して届くようにした（R-12-2）
         CommandId.BookmarkAddCursorItem,
     ];
 
@@ -34,14 +34,14 @@ public class MenuReachabilityTests
     /// </summary>
     private static readonly CommandId[] ReachableViaSameFunction =
     [
-        // M1: 編集＞ファイル名のコピー▸ が CopyFileNameWithPath / CopyFileNameOnly / CopyFileNameWithPathSlash の
+        // 編集＞ファイル名のコピー▸ が CopyFileNameWithPath / CopyFileNameOnly / CopyFileNameWithPathSlash の
         // 3 項目に展開されている。総称の CopyFileName 自体は直接の項目を持たない
         CommandId.CopyFileName,
-        // M4: フォルダ＞クイックアクセス▸ の動的な登録先一覧（開くたびに作る）が同じ機能を果たす
+        // フォルダ＞クイックアクセス▸ の動的な登録先一覧（開くたびに作る）が同じ機能を果たす
         CommandId.QuickAccess,
-        // M4: フォルダ＞フォルダ履歴▸ の動的な履歴一覧（開くたびに作る）が同じ機能を果たす
+        // フォルダ＞フォルダ履歴▸ の動的な履歴一覧（開くたびに作る）が同じ機能を果たす
         CommandId.FolderHistory,
-        // M5: フォルダ＞ドライブの選択▸ の動的なドライブ一覧（開くたびに作る）が同じ機能を果たす
+        // フォルダ＞ドライブの選択▸ の動的なドライブ一覧（開くたびに作る）が同じ機能を果たす
         CommandId.SelectDrive,
         // R-12-2 の例示そのもの: 数字キーでのドライブ移動も「ドライブの選択▸」から同じ切り替えができる
         CommandId.DriveByNumberKey,
