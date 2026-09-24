@@ -5290,6 +5290,28 @@
         "line": 313
       }
     ],
+    "R-103": [
+      {
+        "file": "src/ReTAC.App/KeyBindingFile.cs",
+        "line": 26
+      }
+    ],
+    "R-103-1": [
+      {
+        "file": "src/ReTAC.App/KeyBindingFile.cs",
+        "line": 33
+      }
+    ],
+    "R-103-2": [
+      {
+        "file": "src/ReTAC.App/KeyBindingFile.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/KeyBindingFile.cs",
+        "line": 49
+      }
+    ],
     "R-11": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
@@ -8442,6 +8464,10 @@
       {
         "file": "src/ReTAC.App/AppSettings.cs",
         "line": 188
+      },
+      {
+        "file": "src/ReTAC.App/KeyBindingFile.cs",
+        "line": 27
       }
     ],
     "V-08": [
