@@ -96,6 +96,8 @@ public enum CommandId
     // --- 設定・ウィンドウ ---
     /// <summary>R-102-2: 統合した設定画面を「動作環境」ページで開く。既定のキーは無い。</summary>
     OpenSettings = 0x9011,
+    /// <summary>R-105 / M11: GitHub の Releases ページを既定のブラウザーで開く。既定のキーは無い。</summary>
+    OpenGitHub = 0x9012,
     ColorAndFontSettings = 0x8151,
     KeyAssignSettings = 0x8155,
     VisibleDriveSettings = 0x814C,

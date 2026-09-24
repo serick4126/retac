@@ -146,14 +146,17 @@ public static class MenuBar
             Top("ツール(&T)", ToolsMenu()),
 
             Top("設定(&O)",
+                Item("設定(&S)...", CommandId.OpenSettings),
+                Separator(),
+                Item("動作環境の設定(&E)...", CommandId.EnvironmentSettings),
                 Item("配色・フォントの設定(&C)...", CommandId.ColorAndFontSettings),
                 Item("キー割り当ての設定(&K)...", CommandId.KeyAssignSettings),
-                Item("表示するドライブの設定(&D)...", CommandId.VisibleDriveSettings),
                 Item("外部ツールの設定(&T)...", CommandId.ExternalToolSettings),
+                Item("表示するドライブの設定(&D)...", CommandId.VisibleDriveSettings),
                 Item("クイックアクセスの設定(&Q)...", CommandId.QuickAccessSettings),
-                Item("クイックアクセスに追加(&A)", CommandId.QuickAccessAdd),
+                // R-12-2: 11.2 で「フォルダ ＞ クイックアクセス ▸」の末尾へ移すまで、この経路を残す
                 Separator(),
-                Item("動作環境の設定(&E)...", CommandId.EnvironmentSettings)),
+                Item("クイックアクセスに追加(&A)", CommandId.QuickAccessAdd)),
 
             Top("ヘルプ(&H)",
                 Item("バージョン情報(&A)...", CommandId.About)),

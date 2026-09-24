@@ -78,6 +78,7 @@ public static class CommandGlyphs
         [CommandId.KeyAssignSettings] = '\uE765',
         [CommandId.VisibleDriveSettings] = '\uEDA2',
         [CommandId.EnvironmentSettings] = '\uE713',
+        [CommandId.OpenSettings] = '\uE713',
         [CommandId.NewWindow] = '\uE78B',
         [CommandId.About] = '\uE946',
     };

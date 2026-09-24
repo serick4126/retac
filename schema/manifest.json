@@ -373,6 +373,7 @@
         "ShowPreview",
         "ToggleLeftPanel",
         "OpenSettings",
+        "OpenGitHub",
         "ClipboardCopy",
         "ClipboardCut",
         "ClipboardPaste",
@@ -2867,6 +2868,14 @@
         ]
       },
       {
+        "id": "OpenGitHub",
+        "hex": "0x9012",
+        "label": null,
+        "category": null,
+        "assignable": false,
+        "defaultKeys": []
+      },
+      {
         "id": "OpenSettings",
         "hex": "0x9011",
         "label": "設定",
@@ -4650,7 +4659,7 @@
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 199
+        "line": 202
       }
     ],
     "F-08": [
@@ -5417,6 +5426,12 @@
         "line": 158
       }
     ],
+    "R-105": [
+      {
+        "file": "src/ReTAC.Domain/Commands/CommandId.cs",
+        "line": 99
+      }
+    ],
     "R-11": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
@@ -5569,6 +5584,12 @@
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
         "line": 50
+      }
+    ],
+    "R-12-2": [
+      {
+        "file": "src/ReTAC.App/MenuBar.cs",
+        "line": 157
       }
     ],
     "R-13": [
@@ -6910,7 +6931,7 @@
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 226
+        "line": 229
       },
       {
         "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
@@ -7262,7 +7283,7 @@
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 213
+        "line": 216
       },
       {
         "file": "src/ReTAC.App/UndoRecorder.cs",
@@ -7406,7 +7427,7 @@
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 212
+        "line": 215
       },
       {
         "file": "src/ReTAC.App/MenuSpacing.cs",
@@ -7512,7 +7533,7 @@
       },
       {
         "file": "src/ReTAC.App/CommandGlyphs.cs",
-        "line": 101
+        "line": 102
       },
       {
         "file": "src/ReTAC.App/CommandPickerDialog.cs",

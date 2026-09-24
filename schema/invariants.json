@@ -5,11 +5,11 @@
   "settingsOwners": {
     "$note": "設定項目を誰が編集するか。dialog:<画面> / menu:<メニューのトグルを持つ場所> / runtime:<自動更新する場所> / manual:<手編集>。UNKNOWN は L5 で失敗する",
 
-    "KeepLastFolder": "dialog:EnvironmentDialog",
+    "KeepLastFolder": "dialog:SettingsDialog#EnvironmentPage",
     "LastFolder": "runtime:MainForm",
     "StartFolder": "manual:settings-file",
-    "Resident": "dialog:EnvironmentDialog",
-    "StartMinimized": "dialog:EnvironmentDialog",
+    "Resident": "dialog:SettingsDialog#EnvironmentPage",
+    "StartMinimized": "dialog:SettingsDialog#EnvironmentPage",
 
     "WindowX": "runtime:MainForm",
     "WindowY": "runtime:MainForm",
@@ -28,9 +28,9 @@
     "ShowSystemFiles": "dialog:FileTypeDialog",
     "ShowHiddenFiles": "dialog:FileTypeDialog",
 
-    "HiddenDrives": "dialog:DriveVisibilityDialog",
+    "HiddenDrives": "dialog:SettingsDialog#DriveVisibilityPage",
     "DriveFolders": "runtime:DriveBar",
-    "ShowDesktopButton": "dialog:DriveVisibilityDialog",
+    "ShowDesktopButton": "dialog:SettingsDialog#DriveVisibilityPage",
     "ShowDriveBar": "menu:MainForm",
     "ShowAddressBar": "menu:MainForm",
     "ShowBookmarkBar": "menu:MainForm",
@@ -41,21 +41,21 @@
     "Bookmarks": "dialog:BookmarkDialog",
     "BookmarkBarStyle": "dialog:BookmarkDialog",
 
-    "Colors": "dialog:ColorFontDialog",
-    "FontFamily": "dialog:ColorFontDialog",
-    "FontSize": "dialog:ColorFontDialog",
-    "LeftPanelFontFamily": "dialog:ColorFontDialog",
-    "LeftPanelFontSize": "dialog:ColorFontDialog",
+    "Colors": "dialog:SettingsDialog#ColorFontPage",
+    "FontFamily": "dialog:SettingsDialog#ColorFontPage",
+    "FontSize": "dialog:SettingsDialog#ColorFontPage",
+    "LeftPanelFontFamily": "dialog:SettingsDialog#ColorFontPage",
+    "LeftPanelFontSize": "dialog:SettingsDialog#ColorFontPage",
 
-    "KeyBindings": "dialog:KeyAssignDialog",
-    "SuppressMultipleToolLaunch": "dialog:EnvironmentDialog",
+    "KeyBindings": "dialog:SettingsDialog#KeyAssignPage",
+    "SuppressMultipleToolLaunch": "dialog:SettingsDialog#EnvironmentPage",
 
-    "ExternalTools": "dialog:ExternalToolDialog",
-    "NextExternalToolId": "dialog:ExternalToolDialog",
+    "ExternalTools": "dialog:SettingsDialog#ExternalToolPage",
+    "NextExternalToolId": "dialog:SettingsDialog#ExternalToolPage",
 
-    "QuickAccess": "dialog:QuickAccessDialog",
-    "QuickAccessShowTitles": "dialog:QuickAccessDialog",
-    "QuickAccessFixMissing": "dialog:QuickAccessDialog",
+    "QuickAccess": "dialog:SettingsDialog#QuickAccessPage",
+    "QuickAccessShowTitles": "dialog:SettingsDialog#QuickAccessPage",
+    "QuickAccessFixMissing": "dialog:SettingsDialog#QuickAccessPage",
 
     "FolderHistory": "runtime:MainForm"
   },
@@ -146,7 +146,7 @@
       "plannedShape": {
         "StartFolderMode": "enum LastFolder|Fixed（既定 LastFolder）",
         "StartFolder": "string?（Fixed のときだけ使う）",
-        "editedBy": "dialog:EnvironmentDialog",
+        "editedBy": "dialog:SettingsDialog#EnvironmentPage",
         "note": "既定が現在の挙動なので、古い設定ファイルはそのまま読める。移行コードは要らない。"
       },
       "enforcedBy": null
@@ -177,6 +177,14 @@
       "applies": ["command:About"],
       "rule": "About（0xE140）はキー割り当ての対象にしない。",
       "reason": "卓駆と同じ ID を持つがヘルプメニュー専用で、キーに割り当てる意味が無いため CommandLabels に載せていない。"
+    },
+    {
+      "id": "INV-OPENGITHUB-NOT-ASSIGNABLE",
+      "status": "accepted",
+      "specIds": ["R-105"],
+      "applies": ["command:OpenGitHub"],
+      "rule": "OpenGitHub（0x9012）はキー割り当ての対象にしない。",
+      "reason": "利用者が開くだけの項目でキーに割り当てる理由がない（About と同じ）。ヘルプメニューへの配線は 11.2 で行うため、CommandLabels にはまだ載せていない。"
     },
     {
       "id": "INV-EXTERNALTOOL-ID-UNIQUE",
@@ -223,7 +231,7 @@
       "reason": "2.1.0（Phase6）でマウスボタンへのコマンド割り当てを入れた際に、左ボタンは固定として対象から外した。左シングルクリックはカーソル移動・行頭アイコンのマーク・Shift 範囲マーク・ドラッグ開始の 4 つを同時に担っており、1 つのコマンドに畳めないため。シングルクリック運用の手当ては入力モデルの切り替えとして別に行う。割り当ての枠に押し込まないこと。",
       "plannedShape": {
         "ClickMode": "enum DoubleClick|SingleClick（既定 DoubleClick）",
-        "editedBy": "dialog:EnvironmentDialog",
+        "editedBy": "dialog:SettingsDialog#EnvironmentPage",
         "note": "SingleClick ではホバーでカーソルが移動し、左シングルクリックで開く。行頭アイコンのクリックは両モードともマークのトグル（R-11-2 / B-07）。ダブルクリックで開く経路は SingleClick では使わない。既定が現在の挙動なので移行コードは要らない。"
       },
       "enforcedBy": null
