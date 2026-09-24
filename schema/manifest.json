@@ -4428,6 +4428,10 @@
         "line": 2146
       },
       {
+        "file": "src/ReTAC.App/SettingsDraft.cs",
+        "line": 76
+      },
+      {
         "file": "src/ReTAC.Domain/Commands/CommandId.cs",
         "line": 60
       },
@@ -4706,6 +4710,14 @@
       {
         "file": "src/ReTAC.App/ExternalToolDialog.cs",
         "line": 46
+      },
+      {
+        "file": "src/ReTAC.App/SettingsDraft.cs",
+        "line": 27
+      },
+      {
+        "file": "src/ReTAC.App/SettingsDraft.cs",
+        "line": 94
       },
       {
         "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
@@ -5290,6 +5302,20 @@
         "line": 313
       }
     ],
+    "R-102-3": [
+      {
+        "file": "src/ReTAC.App/SettingsDraft.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.App/SettingsDraft.cs",
+        "line": 124
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/QuickAccessList.cs",
+        "line": 35
+      }
+    ],
     "R-103": [
       {
         "file": "src/ReTAC.App/KeyBindingFile.cs",
@@ -5808,6 +5834,14 @@
       {
         "file": "src/ReTAC.App/QuickAccessHost.cs",
         "line": 7
+      },
+      {
+        "file": "src/ReTAC.App/SettingsDraft.cs",
+        "line": 133
+      },
+      {
+        "file": "src/ReTAC.App/SettingsDraft.cs",
+        "line": 166
       }
     ],
     "R-37-3": [
@@ -7649,7 +7683,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Navigation/QuickAccessList.cs",
-        "line": 48
+        "line": 59
       }
     ],
     "R-93": [

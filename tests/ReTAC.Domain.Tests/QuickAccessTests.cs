@@ -99,4 +99,24 @@ public class QuickAccessTests
         Assert.True(list.Replace(1, second with { Title = "改名" }));
         Assert.Equal("改名", list.Items[1].Title);
     }
+
+    [Fact]
+    public void ReplaceAllは実体を差し替えず中身だけ入れ替える()
+    {
+        var list = TwoEntries();
+
+        list.ReplaceAll([new QuickAccessEntry("新規", @"D:\new")]);
+
+        Assert.Equal([@"D:\new"], list.Items.Select(e => e.Path));
+    }
+
+    [Fact]
+    public void ReplaceAllもAddと同じ重複規則で弾く()
+    {
+        var list = new QuickAccessList();
+
+        list.ReplaceAll([new QuickAccessEntry("仕事", @"D:\work"), new QuickAccessEntry("別名", @"D:\work")]);
+
+        Assert.Equal(["仕事"], list.Items.Select(e => e.Title));
+    }
 }

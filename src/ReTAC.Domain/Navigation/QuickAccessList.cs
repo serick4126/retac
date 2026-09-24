@@ -31,6 +31,17 @@ public sealed class QuickAccessList
         return true;
     }
 
+    /// <summary>
+    /// R-102-3: 中身をまるごと差し替える。INV-QUICKACCESS-SHARED によりこの実体（参照）は全ウィンドウで共有するので、
+    /// 設定画面の確定では新しい QuickAccessList を作って差し替えるのではなく、この実体の中身だけを入れ替える。
+    /// Add と同じ重複規則を通すので、渡した並びに重複が混ざっていても後勝ちで弾かれる。
+    /// </summary>
+    public void ReplaceAll(IEnumerable<QuickAccessEntry> entries)
+    {
+        _items.Clear();
+        foreach (var entry in entries) Add(entry);
+    }
+
     /// <summary>差し替えられたら true。他の項目と同じフォルダになる差し替えはしない。</summary>
     public bool Replace(int index, QuickAccessEntry entry)
     {
