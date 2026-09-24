@@ -65,7 +65,7 @@ public sealed class DriveBar : Control
     public event EventHandler<(string Path, Point ScreenPoint)>? RightClicked;
 
     /// <summary>
-    /// M5: 「フォルダ ＞ ドライブの選択」サブメニュー用に、ボタンと同じ絞り込み・並びを公開する。
+    /// 「フォルダ ＞ ドライブの選択」サブメニュー用に、ボタンと同じ絞り込み・並びを公開する（R-104-1）。
     /// アイコンを持たないメニュー項目でも見分けが付くよう、デスクトップの文字はアイコンの有無に関わらず出す。
     /// </summary>
     public IReadOnlyList<(char? DriveLetter, string Label, string Path)> Entries() =>

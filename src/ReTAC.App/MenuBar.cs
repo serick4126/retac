@@ -11,15 +11,15 @@ public sealed record LeftPanelMenuItems(
     IReadOnlyDictionary<LeftPanelViewKind, ToolStripMenuItem> Views);
 
 /// <summary>
-/// R-104-1: 状態で中身が変わるサブメニュー（M2〜M5）を、開くたびに MainForm の状態から作るための関数の束。
+/// R-104-1: 状態で中身が変わるサブメニューを、開くたびに MainForm の状態から作るための関数の束。
 /// ブックマークメニュー（R-90）と同じ考え方だが、こちらは 1 つの MenuStrip に複数あるので record にまとめる。
 /// </summary>
-/// <param name="SortItems">M2: 並べ替えのラジオ（ソートキー・並べ方）</param>
-/// <param name="FileTypeItems">M3: 表示するファイルタイプのチェック</param>
-/// <param name="QuickAccessItems">M4: クイックアクセスの登録先一覧</param>
-/// <param name="FolderHistoryItems">M4: フォルダ履歴</param>
-/// <param name="ClearFolderHistory">M4: 「履歴のクリア」。コマンドではないので Tag は持たない</param>
-/// <param name="DriveItems">M5: 表示するドライブ（デスクトップを含む）</param>
+/// <param name="SortItems">並べ替えのラジオ（ソートキー・並べ方）</param>
+/// <param name="FileTypeItems">表示するファイルタイプのチェック</param>
+/// <param name="QuickAccessItems">クイックアクセスの登録先一覧</param>
+/// <param name="FolderHistoryItems">フォルダ履歴</param>
+/// <param name="ClearFolderHistory">「履歴のクリア」。コマンドではないので Tag は持たない</param>
+/// <param name="DriveItems">表示するドライブ（デスクトップを含む）</param>
 public sealed record MenuDynamicContent(
     Func<IReadOnlyList<ToolStripItem>> SortItems,
     Func<IReadOnlyList<ToolStripItem>> FileTypeItems,
@@ -55,7 +55,7 @@ public static class MenuBar
     /// <param name="dispatch">コマンドの実行。MainForm の Execute に繋ぐ</param>
     /// <param name="keyMap">項目の右側に割り当てキーを出すために引く</param>
     /// <param name="tools">F-07: 「ツール」メニューの先頭に登録順で並べる（「ポップアップに表示する」は効かない）</param>
-    /// <param name="dynamicContent">R-104-1: M2〜M5 のサブメニューの中身を、開くたびに MainForm から取り直す</param>
+    /// <param name="dynamicContent">R-104-1: 状態で中身が変わるサブメニューの中身を、開くたびに MainForm から取り直す</param>
     /// <param name="driveBarItem">R-77: 「表示 ＞ ドライブバー」。チェックの付け外しは呼び出し側が行う</param>
     /// <param name="addressBarItem">R-86: 「表示 ＞ アドレスバー」。チェックの付け外しは呼び出し側が行う</param>
     /// <param name="bookmarkBarItem">R-89: 「表示 ＞ ブックマークバー」。チェックの付け外しは呼び出し側が行う</param>
@@ -75,7 +75,7 @@ public static class MenuBar
         var driveBar = Item("ドライブバー(&D)", CommandId.ToggleDriveBar);
         var addressBar = Item("アドレスバー(&A)", CommandId.ToggleAddressBar);
         var bookmarkBar = Item("ブックマークバー(&B)", CommandId.ToggleBookmarkBar);
-        // Q10 / M12: チェックは親（leftPanel）に付ける。この項目は切り替えの操作に特化し、チェックは持たない
+        // Q10: チェックは親（leftPanel）に付ける。この項目は切り替えの操作に特化し、チェックは持たない
         var leftToggle = Item("左パネルの表示切り替え(&L)", CommandId.ToggleLeftPanel);
         var leftViews = new Dictionary<LeftPanelViewKind, ToolStripMenuItem>
         {
@@ -89,7 +89,7 @@ public static class MenuBar
         var undo = Item("元に戻す(&U)", CommandId.Undo);
         undo.ShortcutKeyDisplayString = "Ctrl+Z";
 
-        // M1: 3 つの既存コマンドをサブメニューに展開する。CopyFileName 自体は直接の項目を持たなくなるが、
+        // R-104-1: 3 つの既存コマンドをサブメニューに展開する。CopyFileName 自体は直接の項目を持たなくなるが、
         // R-12-2 の例外条件（選択肢はサブメニューから届く）を満たす
         var copyFileName = Top("ファイル名のコピー(&B)",
             Item("パス＋名前(&P)", CommandId.CopyFileNameWithPath),
@@ -120,7 +120,7 @@ public static class MenuBar
             undo.Text = description is null ? "元に戻す(&U)" : $"{description.Replace("&", "&&")}を元に戻す(&U)";
         };
 
-        // M2〜M5: 中身が状態で変わるサブメニュー。固定の末尾（Tag にコマンドを持つ）は組み立て時に作り、
+        // R-104-1: 中身が状態で変わるサブメニュー。固定の末尾（Tag にコマンドを持つ）は組み立て時に作り、
         // 動的な項目はその前に、開くたびに差し込む（DynamicSubmenu）
         var sortMenu = DynamicSubmenu("並べ替え(&S)", dynamicContent.SortItems,
             Item("ソートの設定(&O)...", CommandId.SortSettings));
@@ -148,7 +148,7 @@ public static class MenuBar
                 Item("名前の変更(&N)...", CommandId.Rename),
                 Item("属性の変更(&A)...", CommandId.ChangeAttributes),
                 Separator(),
-                // M8: プロパティ・右クリックメニューをツールメニューから移す。Q7: 「右クリックメニュー」の呼び方に揃える
+                // R-104: プロパティ・右クリックメニューをツールメニューから移す。Q7: 「右クリックメニュー」の呼び方に揃える
                 Item("プロパティ(&R)", CommandId.ShowProperties),
                 Item("右クリックメニュー(&C)", CommandId.ShowContextMenu),
                 Separator(),
@@ -165,7 +165,7 @@ public static class MenuBar
 
             Top("フォルダ(&D)",
                 Item("フォルダ作成(&M)...", CommandId.CreateFolder),
-                // M9: 現在のフォルダの右クリックメニューをここへ移す（Q7 の呼び方）
+                // R-104 / Q7: 現在のフォルダの右クリックメニューをここへ移す（呼び方は Q7 のとおり）
                 Item("現在のフォルダの右クリックメニュー(&B)", CommandId.ShowFolderBackgroundMenu),
                 Separator(),
                 Item("親フォルダへ(&U)", CommandId.GoParent),
@@ -174,12 +174,12 @@ public static class MenuBar
                 Item("前のフォルダに戻る(&P)", CommandId.GoBack),
                 Item("次のフォルダに進む(&A)", CommandId.GoForward),
                 Separator(),
-                // M4・M6: クイックアクセス・フォルダ履歴をサブメニューに。設定 ＞ クイックアクセスに追加はここへ統合
+                // R-104-1: クイックアクセス・フォルダ履歴をサブメニューに。設定 ＞ クイックアクセスに追加はここへ統合
                 quickAccessMenu,
                 folderHistoryMenu,
                 Item("ダイレクトジャンプ(&J)...", CommandId.DirectJump),
                 Separator(),
-                // M5: 表示するドライブをサブメニューに
+                // R-104-1: 表示するドライブをサブメニューに
                 driveSelectMenu,
                 Item("デスクトップへ移動(&K)", CommandId.GoDesktop)),
 
@@ -191,7 +191,7 @@ public static class MenuBar
                 bookmarkBar,
                 leftPanel,
                 Separator(),
-                // M2・M3: ソート・ファイルタイプをサブメニューに
+                // R-104-1: ソート・ファイルタイプをサブメニューに
                 sortMenu,
                 fileTypeMenu),
 
@@ -208,7 +208,7 @@ public static class MenuBar
                 Item("クイックアクセスの設定(&Q)...", CommandId.QuickAccessSettings)),
 
             Top("ヘルプ(&H)",
-                // M11: 新しいコマンド。既定のキーなし
+                // R-105: 新しいコマンド。既定のキーなし
                 Item("GitHub のページを開く(&G)", CommandId.OpenGitHub),
                 Separator(),
                 Item("バージョン情報(&A)...", CommandId.About)),
@@ -222,7 +222,7 @@ public static class MenuBar
 
         ToolStripItem[] ToolsMenu()
         {
-            // M10: プロパティ・右クリックメニュー系はファイル・フォルダメニューへ移した（M8・M9）
+            // R-104: プロパティ・右クリックメニュー系はファイル・フォルダメニューへ移した
             var items = new List<ToolStripItem>(tools.Select(ToolItem));
             if (items.Count > 0) items.Add(Separator());
             items.Add(Item("外部ツールキュー(&Q)...", CommandId.ExternalToolQueue));
@@ -269,7 +269,7 @@ public static class MenuBar
     }
 
     /// <summary>
-    /// R-104-1: M2〜M5 のサブメニュー。<paramref name="tail"/>（Tag にコマンドを持つ固定項目）は組み立て時に
+    /// R-104-1: 状態で中身が変わるサブメニュー。<paramref name="tail"/>（Tag にコマンドを持つ固定項目）は組み立て時に
     /// 一度だけ足し、開くたびに <paramref name="dynamicItems"/> の結果へ作り直して <paramref name="tail"/> の前へ差し込む。
     /// </summary>
     private static ToolStripMenuItem DynamicSubmenu(string text, Func<IReadOnlyList<ToolStripItem>> dynamicItems, params ToolStripItem[] tail)

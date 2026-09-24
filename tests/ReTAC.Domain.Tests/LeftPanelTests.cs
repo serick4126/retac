@@ -99,7 +99,7 @@ public class LeftPanelTests
         Assert.True(leftPanel.Views[LeftPanelViewKind.Preview].Checked);
     }
 
-    /// <summary>M2〜M5 のサブメニューはこのテストの対象外なので、中身を持たない関数の束を渡す。</summary>
+    /// <summary>状態で中身が変わるサブメニュー（R-104-1）はこのテストの対象外なので、中身を持たない関数の束を渡す。</summary>
     private static MenuDynamicContent NoDynamicContent() =>
         new(() => [], () => [], () => [], () => [], () => { }, () => []);
 }

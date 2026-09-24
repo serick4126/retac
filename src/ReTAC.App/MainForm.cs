@@ -680,7 +680,7 @@ public sealed class MainForm : Form, IBookmarkHost
         return true;
     }
 
-    /// <summary>M4: 「フォルダ ＞ フォルダ履歴」サブメニュー。新しい順・最大 16 件（FolderHistory.Capacity）。</summary>
+    /// <summary>「フォルダ ＞ フォルダ履歴」サブメニュー（R-104-1）。新しい順・最大 16 件（FolderHistory.Capacity）。</summary>
     private IReadOnlyList<ToolStripItem> FolderHistoryMenuItems()
     {
         if (_history.Recent.Count == 0)
@@ -702,7 +702,7 @@ public sealed class MainForm : Form, IBookmarkHost
         return ApplySortOrder(dialog.Result);
     }
 
-    /// <summary>M2: ダイアログの OK と並べ替えサブメニューのラジオが共有する反映処理。</summary>
+    /// <summary>ソートの設定ダイアログの OK と、並べ替えサブメニューのラジオが共有する反映処理（R-104-1）。</summary>
     private bool ApplySortOrder(SortOrder order)
     {
         _sortOrder = order;
@@ -710,9 +710,15 @@ public sealed class MainForm : Form, IBookmarkHost
         return Reload();
     }
 
-    /// <summary>M2: 「表示 ＞ 並べ替え」サブメニュー。開くたびに今の設定でラジオの印を作り直す。</summary>
+    /// <summary>「表示 ＞ 並べ替え」サブメニュー（R-104-1）。開くたびに今の設定でラジオの印を作り直す。</summary>
     private IReadOnlyList<ToolStripItem> SortMenuItems()
     {
+        // ソートキー 5 個と並べ方 4 個は 2 つのグループだが、同じサブメニューに入るので
+        // RadioToolStripMenuItem からは 1 つの Owner を共有する（グループをまたいで排他を掛けてしまう）。
+        // 実害が無いのは、Checked を初期化子で設定する時点ではまだ Owner が無く
+        // （OnCheckedChanged の排他処理は Owner が付いてから効く）、この一覧を DropDownItems に
+        // 足した後は誰も .Checked を書き換えないため。次に排他が効くのは開き直して作り直したときで、
+        // そのときは新しい RadioToolStripMenuItem に一から Checked を設定するので問題にならない。
         List<ToolStripItem> items =
         [
             SortKeyRadio("名前でソート(&N)", SortKey.Name),
@@ -1968,7 +1974,7 @@ public sealed class MainForm : Form, IBookmarkHost
         return true;
     }
 
-    /// <summary>M5: 「フォルダ ＞ ドライブの選択」サブメニュー。表示・行き先はドライブバーのボタンと同じ計算を使い回す。</summary>
+    /// <summary>「フォルダ ＞ ドライブの選択」サブメニュー（R-104-1）。表示・行き先はドライブバーのボタンと同じ計算を使い回す。</summary>
     private IReadOnlyList<ToolStripItem> DriveMenuItems()
     {
         return _driveBar.Entries().Select(entry =>
@@ -2285,7 +2291,7 @@ public sealed class MainForm : Form, IBookmarkHost
         return ApplyFileTypeChange();
     }
 
-    /// <summary>M3: ダイアログの OK とファイルタイプサブメニューのチェックが共有する反映処理。
+    /// <summary>表示するファイルタイプの設定ダイアログの OK と、サブメニューのチェックが共有する反映処理（R-104-1）。
     /// _fileTypes 自体は呼び出し側が先に書き換えてから呼ぶ。</summary>
     private bool ApplyFileTypeChange()
     {
@@ -2293,7 +2299,7 @@ public sealed class MainForm : Form, IBookmarkHost
         return Reload();
     }
 
-    /// <summary>M3: 「表示 ＞ 表示するファイルタイプ」サブメニュー。開くたびに今の設定でチェックを作り直す。</summary>
+    /// <summary>「表示 ＞ 表示するファイルタイプ」サブメニュー（R-104-1）。開くたびに今の設定でチェックを作り直す。</summary>
     private IReadOnlyList<ToolStripItem> FileTypeMenuItems()
     {
         return
@@ -2506,7 +2512,7 @@ public sealed class MainForm : Form, IBookmarkHost
         return true;
     }
 
-    /// <summary>M4: 「フォルダ ＞ クイックアクセス」サブメニュー。表示名・動作は `J` のポップアップと同じ。</summary>
+    /// <summary>「フォルダ ＞ クイックアクセス」サブメニュー（R-104-1）。表示名・動作は `J` のポップアップと同じ。</summary>
     private IReadOnlyList<ToolStripItem> QuickAccessMenuItems()
     {
         if (_quickAccess.Items.Count == 0)
