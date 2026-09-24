@@ -59,7 +59,8 @@ public static class FolderExpansion
         if (item is not BarDropDownButton)
         {
             var doubleClick = new DoubleClickTracker();
-            // ドラッグが始まったら BookmarkDropZone.EnableDrag から捨てられるように登録する（レビュー指摘: fix round 1）
+            // ドラッグが始まったらクリックとして成立しないので、BookmarkDropZone.EnableDrag が
+            // DoubleClickTrackers.Forget で捨てられるよう、種類を問わずここで登録しておく
             DoubleClickTrackers.Register(item, doubleClick);
             item.MouseDown += (_, e) =>
             {

@@ -329,6 +329,25 @@
       "rule": "Tab / Shift+Tab は、現在のファイルビューと表示中の左パネルビューの 2 つだけを往復する。ドライブバー・上部バー・左パネル上端の選択欄は巡回しない。左パネルが非表示なら何もしない。インクリメンタル検索中の Tab は検索の確定を優先する。",
       "enforcedBy": "app:FileListView.ProcessCmdKey（FocusLeftPanelRequested）/ MainForm（LeftPanelVisible のときだけ左へ移す）/ NameSpaceTreeHost.OnKeyboardInput（ツリー上の Tab をファイルビューへ戻す合図にする）/ IncrementalSearchBar",
       "note": "巡回対象を増やすと、ツリー既定のタブ移動とぶつかって往復が崩れる。"
+    },
+    {
+      "id": "INV-MENU-REACHABLE",
+      "status": "enforced",
+      "specIds": ["R-12-2"],
+      "applies": ["command:*"],
+      "rule": "CommandId の全値は、メニューバー（MenuBar.Create の結果）か、ブックマークメニュー（MainForm.BookmarkMenu、R-90。中身が窓の状態に依るため MenuBar.Create の外で組み立てる）のどちらかに直接の項目を持つ。直接の項目が無くてよいのは、同じ機能に別の項目（主にサブメニューの中身）から届く場合に限る。メニューの再編で項目を移す・サブメニューにまとめることはあっても、外してはならない。",
+      "enforcedBy": "app:MenuBar.Create（メニューバー本体）/ MainForm.BookmarkMenu（ブックマークメニュー）",
+      "testedBy": "tests/ReTAC.Domain.Tests/MenuReachabilityTests.cs",
+      "note": "Phase11 でこのテストを書いた際、BookmarkAddCursorItem がメニューバー・ブックマークメニューのどちらにも直接の項目を持たず（右クリックの「カーソル位置の項目を追加」は Execute を経由しない別経路だった）、実際に漏れていた。BookmarkMenu に項目を足して直した（外す方向には直さない）。"
+    },
+    {
+      "id": "INV-MENU-CHOICE-SUBMENU",
+      "status": "enforced",
+      "specIds": ["R-104-1"],
+      "applies": ["command:CopyFileName", "command:SortSettings", "command:FileTypeSettings", "command:QuickAccess", "command:FolderHistory", "command:SelectDrive"],
+      "rule": "選択肢の中から 1 つを選ぶコマンドは、メニューバーではサブメニューに中身を展開する（開くたびに作り直す）。キー割り当て・`G` のポップアップ・ブックマーク・クイックアクセスから呼んだときは、今までどおりのモーダル・ポップアップのまま出す。メニューバーだけの扱いであり、ほかの呼び出し経路は変えない。",
+      "enforcedBy": "app:MenuBar.DynamicSubmenu（並べ替え・表示するファイルタイプ・クイックアクセス・フォルダ履歴・ドライブの選択の 5 つを開くたびに作り直す）/ MainForm の各 *MenuItems メソッド（中身の組み立て。CommandId の実行経路（R-12）へ合流させる）",
+      "note": "サブメニューの項目から実行するときも、既存のコマンドの実行経路を通す（R-12）。専用の処理を足すのは、1 つのコマンドの中の選択肢を直接選ぶ場合（履歴の 1 件・ドライブの 1 つなど）に限る。"
     }
   ]
 }

@@ -1759,6 +1759,9 @@ public sealed class MainForm : Form, IBookmarkHost
             manage.Click += (_, _) => Execute(new BuiltinTarget(CommandId.BookmarkManage), Keys.None);
             var add = new ToolStripMenuItem("現在のフォルダを追加(&A)");
             add.Click += (_, _) => Execute(new BuiltinTarget(CommandId.BookmarkAddCurrentFolder), Keys.None);
+            // R-12-2: バーの右クリックからは届くが、メニューバー側に直接の項目が無かった（Phase11 のメニュー再編で検出）
+            var addCursor = new ToolStripMenuItem("カーソル位置の項目を追加(&I)");
+            addCursor.Click += (_, _) => Execute(new BuiltinTarget(CommandId.BookmarkAddCursorItem), Keys.None);
             var bar = new ToolStripMenuItem("ブックマークバー");
             bar.DropDownItems.AddRange(_settings.Bookmarks.Bar.Count == 0
                 ? [BookmarkItems.EmptySlot()]
@@ -1766,7 +1769,7 @@ public sealed class MainForm : Form, IBookmarkHost
             MenuSpacing.Apply(bar.DropDownItems, DeviceDpi);   // グループのメニューと同じ行間・ホイールにそろえる
             ToolStripExtras.EnableWheel(bar.DropDown);
             BookmarkDropZone.Attach(bar.DropDown, _settings.Bookmarks.Bar, this, vertical: true);
-            menu.DropDownItems.AddRange([manage, add, new ToolStripSeparator(), bar]);
+            menu.DropDownItems.AddRange([manage, add, addCursor, new ToolStripSeparator(), bar]);
             if (_settings.Bookmarks.Other.Count > 0)
             {
                 menu.DropDownItems.Add(new ToolStripSeparator());
