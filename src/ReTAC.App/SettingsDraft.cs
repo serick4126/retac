@@ -25,7 +25,7 @@ public sealed class SettingsDraft
     private bool _suppressMultipleToolLaunch = true;
     /// <summary>
     /// F-09: 外部ツールの連続起動をしない。外部ツールページの「マークした項目ごとに起動する」の
-    /// 灰色表示はこの値に従う（§2.4）ので、変わったら <see cref="SuppressMultipleChanged"/> を上げる。
+    /// 灰色表示はこの値に従うので、変わったら <see cref="SuppressMultipleChanged"/> を上げる。
     /// </summary>
     public bool SuppressMultipleToolLaunch
     {
@@ -50,7 +50,7 @@ public sealed class SettingsDraft
     /// <summary>
     /// 一覧をまるごと差し替える形（プロジェクト全体の慣習。<c>_settings.ExternalTools = [.. tools]</c> と同じ）。
     /// 消えたツールを指す割り当て・クイックアクセスの登録は、差し替えのたびにここで下書きの中から閉じる
-    /// （§2.4: ページがどう編集しても、消したツールへの参照を残さない）。
+    /// （ページがどう編集しても、消したツールへの参照を残さない。F-01 / INV-TOOLTARGET-FK）。
     /// </summary>
     public List<ExternalTool> ExternalTools
     {
@@ -88,7 +88,7 @@ public sealed class SettingsDraft
     /// <summary>共有の実体とは別のインスタンス（INV-QUICKACCESS-SHARED）。確定時に <see cref="QuickAccessList.ReplaceAll"/> で書き戻す。</summary>
     public QuickAccessList QuickAccess { get; set; } = new();
 
-    // --- ページ間のつながり（§2.4） ------------------------------------------
+    // --- ページ間のつながり ------------------------------------------
     /// <summary>外部ツールの一覧が変わった（追加・改名・削除）。キー割り当て・クイックアクセスページが一覧を出し直す合図。</summary>
     public event EventHandler? ToolsChanged;
     /// <summary>「連続起動はしない」が変わった。外部ツールページの灰色表示を更新する合図（F-09）。</summary>
@@ -121,7 +121,7 @@ public sealed class SettingsDraft
     /// <summary>
     /// 下書きを <paramref name="settings"/> と共有の <paramref name="quickAccess"/> へ書き写す。
     /// 画面への反映（メニューの作り直し・テーマの適用・ドライブバーの更新）は MainForm 側の仕事なので、
-    /// ここでは渡された 2 つの実体を書き換えるだけで、UI には触らない（R-102-3 / §2.5）。
+    /// ここでは渡された 2 つの実体を書き換えるだけで、UI には触らない（R-102-3）。
     /// </summary>
     public SettingsCommitResult CommitTo(AppSettings settings, QuickAccessList quickAccess)
     {
@@ -141,13 +141,17 @@ public sealed class SettingsDraft
         var keyMap = new KeyMap(KeyBindings
             .Where(b => b.Value is not null)
             .Select(b => new KeyValuePair<KeyBinding, CommandTarget>(b.Key, b.Value!)));
+        // KeyBindings は公開の setter を持ち、インポート等で存在しないツールを指す値が
+        // 紛れ込みうる（INV-TOOLTARGET-FK）。ExternalTools のセッターを経由しない編集もあるため、
+        // 確定の直前にもう一度落とす
+        keyMap.DropUnknownTools(ExternalTools.Select(t => t.Id));
         settings.FromKeyMap(keyMap);
         var keyBindingsChanged = !KeyBindingsEqual(beforeKeyBindings, settings.KeyBindings);
 
         settings.HiddenDrives = [.. HiddenDrives.Select(c => c.ToString())];
         settings.ShowDesktopButton = ShowDesktopButton;
 
-        // ブックマークは統合画面に入らないが、消したツールを指す項目は確定のときにここで外す（§2.4）
+        // ブックマークは統合画面に入らないが、消したツールを指す項目は確定のときにここで外す（INV-TOOLTARGET-FK）
         BookmarkRules.DropUnknownTools(settings.Bookmarks, ExternalTools.Select(t => t.Id));
 
         quickAccess.ShowTitles = QuickAccess.ShowTitles;

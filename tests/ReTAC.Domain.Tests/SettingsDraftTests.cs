@@ -194,6 +194,24 @@ public class SettingsDraftTests
     }
 
     [Fact]
+    public void CommitToは存在しないツールを指すキー割り当てを保存しない()
+    {
+        var (settings, keyMap, quickAccess) = Baseline();
+        var draft = SettingsDraft.From(settings, keyMap, Theme.Default, quickAccess);
+
+        // ExternalTools のセッターを経由しない直接編集（インポート等を想定）で、
+        // 存在しないツールを指す割り当てを紛れ込ませる（INV-TOOLTARGET-FK）
+        draft.KeyBindings[EditorKey] = new ToolTarget(9999);
+
+        draft.CommitTo(settings, quickAccess);
+
+        // ToKeyMap は読み込み時に自分でも同じ掃除をするので、CommitTo 自体が落としたかは
+        // 生の KeyBindings（JSON に書く辞書）の値を見ないと確かめられない
+        Assert.DoesNotContain(settings.KeyBindings.Values, v => v == new ToolTarget(9999).Serialize());
+        Assert.Null(settings.ToKeyMap().Resolve(EditorKey));
+    }
+
+    [Fact]
     public void CommitToはツールと割り当てが変わったときだけ変化を伝える()
     {
         var (settings, keyMap, quickAccess) = Baseline();

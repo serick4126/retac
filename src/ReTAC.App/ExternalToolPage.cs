@@ -12,7 +12,7 @@ namespace ReTAC.App;
 ///
 /// 一覧・次の ID・削除は <see cref="SettingsDraft"/> へ直接向ける。「マークした項目ごとに起動する」の
 /// 灰色表示は下書きの <see cref="SettingsDraft.SuppressMultipleToolLaunch"/> に従い、
-/// <see cref="SettingsDraft.SuppressMultipleChanged"/> で塗り直す（§2.4・F-09）。
+/// <see cref="SettingsDraft.SuppressMultipleChanged"/> で塗り直す（F-09）。
 /// 確定前の検証は他のページと違いここだけ必要なので、<see cref="Validate"/> に残す。
 /// </summary>
 public sealed class ExternalToolPage : UserControl
@@ -97,7 +97,7 @@ public sealed class ExternalToolPage : UserControl
         foreach (var box in new[] { _perItem, _popup, _keepOpen, _confirm })
             box.CheckedChanged += (_, _) => Commit();
 
-        // F-09: 動作環境ページで「連続起動はしない」が変わったら灰色表示を塗り直す（§2.4）
+        // F-09: 動作環境ページで「連続起動はしない」が変わったら灰色表示を塗り直す
         _draft.SuppressMultipleChanged += (_, _) => _perItem.Enabled = _editing >= 0 && !_draft.SuppressMultipleToolLaunch;
 
         RefillList(_draft.ExternalTools.Count > 0 ? 0 : -1);
@@ -178,7 +178,7 @@ public sealed class ExternalToolPage : UserControl
             KeepWindowOpen = _keepOpen.Checked,
             ConfirmBeforeRun = _confirm.Checked,
         };
-        // §2.4: 改名もキー割り当て・クイックアクセスページへ ToolsChanged で伝える
+        // 改名もキー割り当て・クイックアクセスページへ ToolsChanged で伝える（F-01 / INV-TOOLTARGET-FK）
         _draft.ExternalTools = tools;
     }
 

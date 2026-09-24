@@ -151,6 +151,38 @@ public class KeyBindingFileTests
     }
 
     [Fact]
+    public void 今ツールが割り当たっている枠は値が文字列でなくてもToolとして数える()
+    {
+        var current = DefaultAssignments();
+        var f5 = new KeyBinding(Vk.Function(5));
+        current[f5] = new ToolTarget(DefaultExternalTools.EditorId); // 手で F5 にツールを割り当てた想定
+        var json = "{\"format\":\"ReTAC.KeyBindings\",\"keyBindings\":{\"F5\":123}}";
+
+        var result = KeyBindingFile.Import(json, current, AllToolIds);
+
+        Assert.NotNull(result);
+        Assert.Equal(1, result!.Tool);
+        Assert.Equal(0, result.UnknownCommand);
+        Assert.Equal(new ToolTarget(DefaultExternalTools.EditorId), result.Assignments[f5]); // ツールのまま
+    }
+
+    [Fact]
+    public void 今ツールが割り当たっている枠は知らないコマンド文字列でもToolとして数える()
+    {
+        var current = DefaultAssignments();
+        var f5 = new KeyBinding(Vk.Function(5));
+        current[f5] = new ToolTarget(DefaultExternalTools.EditorId);
+        var json = "{\"format\":\"ReTAC.KeyBindings\",\"keyBindings\":{\"F5\":\"NoSuchCommand\"}}";
+
+        var result = KeyBindingFile.Import(json, current, AllToolIds);
+
+        Assert.NotNull(result);
+        Assert.Equal(1, result!.Tool);
+        Assert.Equal(0, result.UnknownCommand);
+        Assert.Equal(new ToolTarget(DefaultExternalTools.EditorId), result.Assignments[f5]);
+    }
+
+    [Fact]
     public void 通知文は読み込み件数だけを出す()
     {
         var message = KeyBindingFile.FormatMessage(new ImportResult([], 3, 0, 0, 0, 0));

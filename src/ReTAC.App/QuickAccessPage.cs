@@ -13,7 +13,7 @@ namespace ReTAC.App;
 /// R-102-3・Q1: 独立ダイアログだった「アクセス」（選んだ項目へ直接移動する）と「閉じる」は無くす。
 /// 一覧のダブルクリックは今どおり「変更」。編集はすべて下書きの <see cref="SettingsDraft.QuickAccess"/> へ直接向ける。
 /// 「コマンドを追加」で選べるツールの一覧は下書きのツールで、外部ツールページの変更を
-/// <see cref="SettingsDraft.ToolsChanged"/> で拾って一覧の表示（コマンド名）を作り直す（§2.4）。
+/// <see cref="SettingsDraft.ToolsChanged"/> で拾って一覧の表示（コマンド名）を作り直す。
 /// </summary>
 public sealed class QuickAccessPage : UserControl
 {
@@ -78,7 +78,7 @@ public sealed class QuickAccessPage : UserControl
 
         Controls.AddRange([listLabel, _view, _showTitles, _fixMissing]);
 
-        // §2.4: 外部ツールの改名・削除を、コマンドを指す行の表示にすぐ反映する
+        // 外部ツールの改名・削除を、コマンドを指す行の表示にすぐ反映する
         _draft.ToolsChanged += (_, _) => Reload(Selected);
 
         Reload(0);

@@ -98,6 +98,15 @@ public static class KeyBindingFile
                     continue;
                 }
 
+                if (current.GetValueOrDefault(slot) is ToolTarget)
+                {
+                    // 今の下書きで外部ツールに割り当たっている枠は、値の中身を見ずに捨てる（Q9）。
+                    // 先に文字列として解釈すると、数値や知らないコマンドの文字列を UnknownCommand に
+                    // 誤って数えてしまう
+                    tool++;
+                    continue;
+                }
+
                 var text = property.Value.ValueKind == JsonValueKind.String ? property.Value.GetString()! : null;
                 if (text is null)
                 {
@@ -131,7 +140,6 @@ public static class KeyBindingFile
                 if (now is ToolTarget)
                 {
                     // 今の下書きで外部ツールに割り当たっている枠は、ファイルの値を捨ててそのまま残す（Q9）
-                    if (fromFile.ContainsKey(slot)) tool++;
                     assignments[slot] = now;
                     continue;
                 }
@@ -155,7 +163,7 @@ public static class KeyBindingFile
     }
 
     /// <summary>
-    /// インポート結果を「N 件を読み込みました。」の通知文にする（R-103-2 §4.3-4）。
+    /// インポート結果を「N 件を読み込みました。」の通知文にする（R-103-2）。
     /// 捨てた件数が 0 の分類は内訳に出さない。
     /// </summary>
     public static string FormatMessage(ImportResult result)

@@ -2186,7 +2186,7 @@ public sealed class MainForm : Form, IBookmarkHost
     }
 
     /// <summary>
-    /// 下書きの確定（R-102-3・§2.5）。実体への書き込みは <see cref="SettingsDraft.CommitTo"/> がまとめて行うので、
+    /// 下書きの確定（R-102-3）。実体への書き込みは <see cref="SettingsDraft.CommitTo"/> がまとめて行うので、
     /// ここは画面への反映（配色・フォント・ドライブバー・キーマップ）と保存・メニューの作り直しだけを行う。
     /// </summary>
     private bool ApplySettings(SettingsDraft draft)

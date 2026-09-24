@@ -18,7 +18,7 @@ namespace ReTAC.App;
 /// 名前の一部で絞り込める。割り当ては<b>ダブルクリック</b>で確定する。
 /// 選ぶだけで割り当たると、誤クリックで設定が変わってしまうため（実機指摘）。
 /// F-06: 登録した外部ツールは「登録した外部ツール」の分類に並ぶ。外部ツールページでの追加・改名・削除は
-/// <see cref="SettingsDraft.ToolsChanged"/> で拾い、コマンドの一覧と枠の表示を作り直す（§2.4）。
+/// <see cref="SettingsDraft.ToolsChanged"/> で拾い、コマンドの一覧と枠の表示を作り直す。
 /// </summary>
 public sealed class KeyAssignPage : UserControl
 {

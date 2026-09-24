@@ -82,6 +82,7 @@ public sealed class SettingsDialog : Form
         applyButton.Click += (_, _) => TryApply();
         AcceptButton = ok;   // R-102: キー割り当てページは Enter を自分で使うので、そちらが先に拾う
         CancelButton = cancel;
+        ShowValidationMessage = message => MessageBox.Show(this, message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
         // C-1: 6 ページすべてを Controls に入れてから AutoScaleMode を代入する。後から足したページは
         // PerformAutoScale の対象にならず、150% で切れる
@@ -106,8 +107,7 @@ public sealed class SettingsDialog : Form
 
         FormClosing += (_, e) =>
         {
-            if (DialogResult != DialogResult.OK) return;   // キャンセル・Esc・閉じるボタン: 何もせず閉じる
-            if (!TryApply()) e.Cancel = true;
+            if (!RaiseClosing(DialogResult)) e.Cancel = true;
         };
 
 #if DEBUG
@@ -119,9 +119,19 @@ public sealed class SettingsDialog : Form
     /// <inheritdoc/>
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
+        if (TryHandleCmdKey(keyData)) return true;
+        return base.ProcessCmdKey(ref msg, keyData);
+    }
+
+    /// <summary>
+    /// <see cref="ProcessCmdKey"/> の判定本体。ProcessCmdKey 自体は <see cref="Message"/> を引数に取り
+    /// ShowDialog なしのテストから呼びにくいので、判定だけ internal に分けてある。
+    /// </summary>
+    internal bool TryHandleCmdKey(Keys keyData)
+    {
         if (keyData == (Keys.Control | Keys.Tab)) { CyclePage(1); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.Tab)) { CyclePage(-1); return true; }
-        return base.ProcessCmdKey(ref msg, keyData);
+        return false;
     }
 
     private void CyclePage(int delta)
@@ -133,23 +143,43 @@ public sealed class SettingsDialog : Form
     private void SelectPage(SettingsPage page) =>
         _sidebar.SelectedIndex = Array.FindIndex(Sidebar, s => s.Page == page);
 
+    /// <summary>テストが初期ページの選択・ページ巡回・検証失敗時の切り替えを確かめるための入口。</summary>
+    internal SettingsPage SelectedPage => Sidebar[_sidebar.SelectedIndex].Page;
+
     private void ShowSelectedPage()
     {
         var page = Sidebar[_sidebar.SelectedIndex].Page;
         foreach (var (key, control) in _pages) control.Visible = key == page;
     }
 
-    /// <summary>外部ツールだけ確定前検証がある（§2.3）。不備があればそのページを出してメッセージを見せる。</summary>
-    private bool TryApply()
+    /// <summary>
+    /// 検証に失敗したときの知らせ方。既定は MessageBox だが、ShowDialog を使わないテストでは
+    /// 表示せずに横取りできるよう、差し替え可能にしてある。プロパティにするとデザイナ用の
+    /// 直列化属性を求められる（WFO1000。designer からは使わないので欄で持つ）。
+    /// </summary>
+    internal Action<string> ShowValidationMessage = _ => { };
+
+    /// <summary>
+    /// 外部ツールだけ確定前検証がある（R-102-3）。不備があればそのページを出してメッセージを見せる。
+    /// 適用ボタンの処理そのものなので、ShowDialog なしのテストから直接呼べるよう internal にしてある。
+    /// </summary>
+    internal bool TryApply()
     {
         if (_externalToolPage.Validate() is { } message)
         {
             SelectPage(SettingsPage.ExternalTool);
-            MessageBox.Show(this, message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            ShowValidationMessage(message);
             return false;
         }
         return _apply(_draft);
     }
+
+    /// <summary>
+    /// OK・キャンセル・Esc・閉じるボタンいずれで閉じようとしたかは <see cref="DialogResult"/> に出る。
+    /// FormClosing の判定本体を internal に分け、ShowDialog を使わないテストから直接呼べるようにする。
+    /// OK 以外は確定処理を通さずそのまま閉じてよい。
+    /// </summary>
+    internal bool RaiseClosing(DialogResult result) => result != DialogResult.OK || TryApply();
 
 #if DEBUG
     private void CheckLayout()

@@ -4239,7 +4239,7 @@
       },
       {
         "file": "src/ReTAC.App/SettingsDialog.cs",
-        "line": 92
+        "line": 93
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
@@ -4349,7 +4349,7 @@
       },
       {
         "file": "src/ReTAC.App/SettingsDialog.cs",
-        "line": 86
+        "line": 87
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
@@ -4395,6 +4395,10 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 181
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
         "line": 204
       },
       {
@@ -4404,6 +4408,10 @@
       {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 2211
+      },
+      {
+        "file": "src/ReTAC.App/SettingsDraft.cs",
+        "line": 53
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
@@ -5376,6 +5384,10 @@
         "line": 8
       },
       {
+        "file": "src/ReTAC.App/SettingsDialog.cs",
+        "line": 163
+      },
+      {
         "file": "src/ReTAC.App/SettingsDraft.cs",
         "line": 10
       },
@@ -5423,7 +5435,7 @@
       },
       {
         "file": "src/ReTAC.App/KeyBindingFile.cs",
-        "line": 158
+        "line": 166
       }
     ],
     "R-104": [
@@ -6025,7 +6037,7 @@
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
-        "line": 166
+        "line": 170
       }
     ],
     "R-37-3": [
