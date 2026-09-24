@@ -27,13 +27,59 @@ public class LeftPanelCommandsTests
     }
 
     [Fact]
-    public void 表示中に同じビューの個別表示コマンドは何もしない()
+    public void 表示中に同じビューの個別表示コマンドは非表示にする()
     {
+        // R-96-3: 個別表示コマンド1つでトグルできるようにする。ビューは変えない（R-96: ラジオは最後のビューに残す）。
         var result = LeftPanelCommands.Apply(CommandId.ShowDriveTree, shown: true, view: LeftPanelViewKind.DriveTree);
+
+        Assert.True(result.Changed);
+        Assert.False(result.Shown);
+        Assert.Equal(LeftPanelViewKind.DriveTree, result.View);
+    }
+
+    [Fact]
+    public void 上端のビュー選択欄から同じビューを選んでも何もしない()
+    {
+        // R-96-3: 上端の欄はビューの選択だけで、閉じる操作を置かない（Phase 10 の決定）。
+        var result = LeftPanelCommands.Apply(CommandId.ShowDriveTree, shown: true, view: LeftPanelViewKind.DriveTree, fromSelector: true);
 
         Assert.False(result.Changed);
         Assert.True(result.Shown);
         Assert.Equal(LeftPanelViewKind.DriveTree, result.View);
+    }
+
+    [Fact]
+    public void 上端のビュー選択欄から非表示のときは表示してそのビューへ切り替える()
+    {
+        var result = LeftPanelCommands.Apply(CommandId.ShowPreview, shown: false, view: LeftPanelViewKind.DriveTree, fromSelector: true);
+
+        Assert.True(result.Changed);
+        Assert.True(result.Shown);
+        Assert.Equal(LeftPanelViewKind.Preview, result.View);
+    }
+
+    [Fact]
+    public void 上端のビュー選択欄から別ビューを選ぶと切り替える()
+    {
+        var result = LeftPanelCommands.Apply(CommandId.ShowBookmarksView, shown: true, view: LeftPanelViewKind.DriveTree, fromSelector: true);
+
+        Assert.True(result.Changed);
+        Assert.True(result.Shown);
+        Assert.Equal(LeftPanelViewKind.Bookmarks, result.View);
+    }
+
+    [Theory]
+    [InlineData(CommandId.ShowDriveTree, LeftPanelViewKind.DriveTree)]
+    [InlineData(CommandId.ShowDesktopTree, LeftPanelViewKind.DesktopTree)]
+    [InlineData(CommandId.ShowBookmarksView, LeftPanelViewKind.Bookmarks)]
+    [InlineData(CommandId.ShowPreview, LeftPanelViewKind.Preview)]
+    public void 表示中に同じビューの個別表示コマンドはどのビューでも非表示にする(CommandId command, LeftPanelViewKind view)
+    {
+        var result = LeftPanelCommands.Apply(command, shown: true, view: view);
+
+        Assert.True(result.Changed);
+        Assert.False(result.Shown);
+        Assert.Equal(view, result.View);
     }
 
     [Fact]

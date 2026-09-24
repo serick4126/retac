@@ -132,7 +132,7 @@ public sealed class MainForm : Form, IBookmarkHost
         _driveTree.FilesDropped += (_, e) => TransferDropped(e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
         _desktopTree.FilesDropped += (_, e) => TransferDropped(e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
         // R-96-2: 上端の選択欄もメニューと同じ入口を通す（表示・保存・ラジオ印の反映を 1 か所にする）
-        _leftPanel.ViewRequested += (_, kind) => ExecuteLeftPanelCommand(LeftPanel.CommandOf(kind));
+        _leftPanel.ViewRequested += (_, kind) => ExecuteLeftPanelCommand(LeftPanel.CommandOf(kind), fromSelector: true);
 
         Text = "ReTAC";
         // H-14: Form の既定アイコンは exe のアイコンではないので、埋め込んだ .ico を明示的に渡す
@@ -1586,9 +1586,9 @@ public sealed class MainForm : Form, IBookmarkHost
         && LeftPanelCommands.IsLeftPanelCommand(command)
         && ExecuteLeftPanelCommand(command);
 
-    private bool ExecuteLeftPanelCommand(CommandId command)
+    private bool ExecuteLeftPanelCommand(CommandId command, bool fromSelector = false)
     {
-        var result = LeftPanelCommands.Apply(command, _leftPanelShown, _leftPanel.ViewKind);
+        var result = LeftPanelCommands.Apply(command, _leftPanelShown, _leftPanel.ViewKind, fromSelector);
         if (result.Changed) ApplyLeftPanelState(result.Shown, result.View);
         return true;
     }

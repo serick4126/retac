@@ -7954,6 +7954,10 @@
         "line": 68
       },
       {
+        "file": "src/ReTAC.App/LeftPanelCommands.cs",
+        "line": 14
+      },
+      {
         "file": "src/ReTAC.App/LeftPanelViewKind.cs",
         "line": 3
       },
@@ -8042,6 +8046,28 @@
       {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 2168
+      }
+    ],
+    "R-96-3": [
+      {
+        "file": "src/ReTAC.App/LeftPanelCommands.cs",
+        "line": 13
+      },
+      {
+        "file": "src/ReTAC.Domain/Commands/CommandId.cs",
+        "line": 85
+      },
+      {
+        "file": "src/ReTAC.Domain/Commands/CommandId.cs",
+        "line": 87
+      },
+      {
+        "file": "src/ReTAC.Domain/Commands/CommandId.cs",
+        "line": 89
+      },
+      {
+        "file": "src/ReTAC.Domain/Commands/CommandId.cs",
+        "line": 91
       }
     ],
     "R-97": [
@@ -8389,7 +8415,7 @@
       },
       {
         "file": "src/ReTAC.App/LeftPanelCommands.cs",
-        "line": 25
+        "line": 28
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",

@@ -82,13 +82,13 @@ public enum CommandId
     BookmarkAddCurrentFolder = 0x900A,
     /// <summary>R-89: カーソル位置の項目（親フォルダ項目なら今のフォルダ）をブックマークバーの末尾に足す。</summary>
     BookmarkAddCursorItem = 0x900B,
-    /// <summary>R-96: 左パネルを表示してドライブツリーへ切り替える。</summary>
+    /// <summary>R-96 / R-96-3: 左パネルを表示してドライブツリーへ切り替える。既にドライブツリーを表示中なら非表示にする。</summary>
     ShowDriveTree = 0x900C,
-    /// <summary>R-96: 左パネルを表示してデスクトップツリーへ切り替える。</summary>
+    /// <summary>R-96 / R-96-3: 左パネルを表示してデスクトップツリーへ切り替える。既にデスクトップツリーを表示中なら非表示にする。</summary>
     ShowDesktopTree = 0x900D,
-    /// <summary>R-96: 左パネルを表示してブックマークへ切り替える。</summary>
+    /// <summary>R-96 / R-96-3: 左パネルを表示してブックマークへ切り替える。既にブックマークを表示中なら非表示にする。</summary>
     ShowBookmarksView = 0x900E,
-    /// <summary>R-96: 左パネルを表示してプレビューへ切り替える。</summary>
+    /// <summary>R-96 / R-96-3: 左パネルを表示してプレビューへ切り替える。既にプレビューを表示中なら非表示にする。</summary>
     ShowPreview = 0x900F,
     /// <summary>R-96: 左パネルの表示を切り替える。</summary>
     ToggleLeftPanel = 0x9010,
