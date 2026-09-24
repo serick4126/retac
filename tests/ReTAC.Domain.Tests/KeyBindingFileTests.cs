@@ -122,6 +122,21 @@ public class KeyBindingFileTests
     }
 
     [Fact]
+    public void 同じ枠の2件目以降は先に出た方が無効でも先勝ちで重複扱いになる()
+    {
+        // 先の F5 が知らないコマンドで捨てられても、後の F5 は「2件目」として重複で捨てる。
+        // 位置だけで決める（先のものを採る）。有効な値まで遡って先勝ちにはしない
+        var json = "{\"format\":\"ReTAC.KeyBindings\",\"keyBindings\":{\"F5\":\"NoSuchCommand\",\"F5\":\"GoBack\"}}";
+        var result = KeyBindingFile.Import(json, DefaultAssignments(), AllToolIds);
+
+        Assert.NotNull(result);
+        Assert.Equal(1, result!.UnknownCommand);
+        Assert.Equal(1, result.Duplicate);
+        var f5 = new KeyBinding(Vk.Function(5));
+        Assert.Equal(new BuiltinTarget(CommandId.Refresh), result.Assignments[f5]); // どちらも通らず既定に戻る
+    }
+
+    [Fact]
     public void 今ツールが割り当たっている枠への値は捨てて数える()
     {
         var current = DefaultAssignments(); // E は既定でエディタ（Tool:1）
