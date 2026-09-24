@@ -23,7 +23,7 @@ public sealed record ImportResult(
     int Tool);
 
 /// <summary>
-/// キー割り当てのエクスポート・インポート（§4 / R-103）。ここはファイルの中身の変換だけを持つ
+/// キー割り当てのエクスポート・インポート（R-103）。ここはファイルの中身の変換だけを持つ
 /// 純粋な関数で、ディスクの読み書き（一時ファイル経由の置換・V-07 と同じ理由）は呼び出し側が行う。
 /// </summary>
 public static class KeyBindingFile

@@ -25,4 +25,19 @@ public class KeySlotsTests
         Assert.Equal("マウスボタン4", KeySlots.Display(new KeyBinding(Vk.XButton1)));
         Assert.Equal("マウスボタン5", KeySlots.Display(new KeyBinding(Vk.XButton2)));
     }
+
+    // R-103: キー割り当てのインポートは手で書いたファイルを相手にするので、Ctrl+/Shift+ の
+    // 接頭辞だけでなくキー名の大文字小文字も無視する。正規の表記は Label が決めるので、
+    // 崩れた表記を読んでも書き戻すときは揺れが戻らない
+    [Theory]
+    [InlineData("ctrl+e", "Ctrl+E")]
+    [InlineData("shift+f3", "Shift+F3")]
+    [InlineData("e", "E")]
+    public void キー名の大文字小文字が違っても同じ枠になる(string lenient, string canonical)
+    {
+        var canonicalSlot = KeySlots.Parse(canonical);
+        Assert.NotNull(canonicalSlot);
+        Assert.Equal(canonicalSlot, KeySlots.Parse(lenient));
+        Assert.Equal(canonical, KeySlots.Label(canonicalSlot!.Value));
+    }
 }

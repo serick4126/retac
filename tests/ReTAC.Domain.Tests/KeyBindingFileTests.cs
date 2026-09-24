@@ -5,7 +5,7 @@ using ReTAC.Domain.Tools;
 
 namespace ReTAC.Domain.Tests;
 
-/// <summary>キー割り当てのエクスポート・インポート（§4 / R-103）</summary>
+/// <summary>キー割り当てのエクスポート・インポート（R-103）</summary>
 public class KeyBindingFileTests
 {
     private static readonly int[] AllToolIds =
@@ -111,8 +111,8 @@ public class KeyBindingFileTests
     [Fact]
     public void 表記の揺れは同じ枠として重複で数える()
     {
-        // Ctrl+ の大小文字は KeySlots.Parse が吸収する。先に出てきた方（IncrementalSearch）を採る
-        var json = "{\"format\":\"ReTAC.KeyBindings\",\"keyBindings\":{\"Ctrl+E\":\"IncrementalSearch\",\"ctrl+E\":\"GoBack\"}}";
+        // Ctrl+ の接頭辞もキー名も大小文字を KeySlots.Parse が吸収する。先に出てきた方（IncrementalSearch）を採る
+        var json = "{\"format\":\"ReTAC.KeyBindings\",\"keyBindings\":{\"Ctrl+E\":\"IncrementalSearch\",\"ctrl+e\":\"GoBack\"}}";
         var result = KeyBindingFile.Import(json, DefaultAssignments(), AllToolIds);
 
         Assert.NotNull(result);

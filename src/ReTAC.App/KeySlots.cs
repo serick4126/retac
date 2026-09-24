@@ -38,6 +38,12 @@ public static class KeySlots
         return Prefix(binding) + name;
     }
 
+    /// <summary>
+    /// 大文字小文字は無視する（Ctrl+/Shift+ の接頭辞だけでなくキー名も）。手で書き換える設定ファイルと
+    /// インポートするキー割り当てファイルの両方がこの経路を通るため、"ctrl+e" のような崩れた表記も
+    /// "Ctrl+E" と同じ枠として読めないと、表記揺れが「読めないキー」に化けてしまう。
+    /// 正規の表記は変わらず <see cref="Label"/> が決める（Parse は入力の大小文字をそのまま返さない）。
+    /// </summary>
     public static KeyBinding? Parse(string label)
     {
         var ctrl = label.StartsWith("Ctrl+", StringComparison.OrdinalIgnoreCase);
@@ -48,7 +54,7 @@ public static class KeySlots
         // 設定ファイルは手で直せることを柱にしているので、打ち間違いが
         // 黙って別のキーに化けないようにする（V-15）
         if (name.Length == 0 || char.IsAsciiDigit(name[0]) || name[0] == '-') return null;
-        return Enum.TryParse<Keys>(name, out var key) ? new KeyBinding((ushort)key, shift, ctrl) : null;
+        return Enum.TryParse<Keys>(name, ignoreCase: true, out var key) ? new KeyBinding((ushort)key, shift, ctrl) : null;
     }
 
     private static string Prefix(KeyBinding binding) =>
