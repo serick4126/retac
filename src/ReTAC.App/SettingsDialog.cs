@@ -5,8 +5,7 @@ namespace ReTAC.App;
 
 /// <summary>
 /// 統合した設定画面の枠（R-102）。左のサイドバーで 6 ページを切り替え、下端の OK / キャンセル / 適用で
-/// 下書き（<see cref="SettingsDraft"/>）をまとめて確定する（R-102-3）。旧来の 6 つの個別ダイアログは
-/// 呼び出し側（MainForm）の配線が済むまで残す。
+/// 下書き（<see cref="SettingsDraft"/>）をまとめて確定する（R-102-3）。
 /// </summary>
 public sealed class SettingsDialog : Form
 {
@@ -21,7 +20,7 @@ public sealed class SettingsDialog : Form
     ];
 
     // もっとも大きいページ（配色・キー割り当て・外部ツール）が幅 754、キー割り当てが高さ 496。
-    // 余白は他のダイアログと合わせて 14px（ExternalToolDialog 等）。
+    // 余白は他の単発ダイアログと合わせて 14px（ExternalToolPage 等）。
     private const int Pad = 14;
     private const int SidebarWidth = 160;
     private const int PageWidth = 754;

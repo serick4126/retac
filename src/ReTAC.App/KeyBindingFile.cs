@@ -51,7 +51,7 @@ public static class KeyBindingFile
     /// <param name="current">今の下書き。外部ツールに割り当たっている枠はそのまま残す（Q9）。</param>
     /// <param name="existingToolIds">
     /// 今登録されている外部ツールの Id。ファイルに無い枠を既定で埋めるとき、既定が外部ツールを指し、
-    /// かつそのツールが無ければ未割り当てにする（既定に戻す・KeyAssignDialog と同じ扱い）。
+    /// かつそのツールが無ければ未割り当てにする（既定に戻す・KeyAssignPage と同じ扱い）。
     /// </param>
     public static ImportResult? Import(
         string json,

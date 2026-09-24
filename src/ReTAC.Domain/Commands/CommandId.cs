@@ -94,6 +94,8 @@ public enum CommandId
     ToggleLeftPanel = 0x9010,
 
     // --- 設定・ウィンドウ ---
+    /// <summary>R-102-2: 統合した設定画面を「動作環境」ページで開く。既定のキーは無い。</summary>
+    OpenSettings = 0x9011,
     ColorAndFontSettings = 0x8151,
     KeyAssignSettings = 0x8155,
     VisibleDriveSettings = 0x814C,

@@ -17,7 +17,7 @@ namespace ReTAC.App;
 /// </summary>
 public sealed class SettingsDraft
 {
-    // --- 動作環境（EnvironmentDialog） -------------------------------------
+    // --- 動作環境（EnvironmentPage） -------------------------------------
     public bool Resident { get; set; } = true;
     public bool StartMinimized { get; set; }
     public bool KeepLastFolder { get; set; } = true;
@@ -38,14 +38,14 @@ public sealed class SettingsDraft
         }
     }
 
-    // --- 配色・フォント（ColorFontDialog） ----------------------------------
+    // --- 配色・フォント（ColorFontPage） ----------------------------------
     public Theme Theme { get; set; } = Theme.Default;
 
-    // --- キー割り当て（KeyAssignDialog） ------------------------------------
-    /// <summary>枠ごとの今の割り当て。値が null なら「割り当てなし」（KeyAssignDialog の内部表現と同じ形）。</summary>
+    // --- キー割り当て（KeyAssignPage） ------------------------------------
+    /// <summary>枠ごとの今の割り当て。値が null なら「割り当てなし」（KeyAssignPage の内部表現と同じ形）。</summary>
     public Dictionary<KeyBinding, CommandTarget?> KeyBindings { get; set; } = [];
 
-    // --- 外部ツール（ExternalToolDialog） -----------------------------------
+    // --- 外部ツール（ExternalToolPage） -----------------------------------
     private List<ExternalTool> _externalTools = [];
     /// <summary>
     /// 一覧をまるごと差し替える形（プロジェクト全体の慣習。<c>_settings.ExternalTools = [.. tools]</c> と同じ）。
@@ -80,11 +80,11 @@ public sealed class SettingsDraft
         ExternalTools = [.. ExternalTools.Where(t => t.Id != id)];
     }
 
-    // --- 表示するドライブ（DriveVisibilityDialog） --------------------------
+    // --- 表示するドライブ（DriveVisibilityPage） --------------------------
     public HashSet<char> HiddenDrives { get; set; } = [];
     public bool ShowDesktopButton { get; set; } = true;
 
-    // --- クイックアクセス（QuickAccessDialog） ------------------------------
+    // --- クイックアクセス（QuickAccessPage） ------------------------------
     /// <summary>共有の実体とは別のインスタンス（INV-QUICKACCESS-SHARED）。確定時に <see cref="QuickAccessList.ReplaceAll"/> で書き戻す。</summary>
     public QuickAccessList QuickAccess { get; set; } = new();
 
@@ -147,7 +147,7 @@ public sealed class SettingsDraft
         settings.HiddenDrives = [.. HiddenDrives.Select(c => c.ToString())];
         settings.ShowDesktopButton = ShowDesktopButton;
 
-        // ブックマークは統合画面に入らないが、消したツールを指す項目は確定のときに外す（§2.4。今の ShowExternalToolSettings と同じ）
+        // ブックマークは統合画面に入らないが、消したツールを指す項目は確定のときにここで外す（§2.4）
         BookmarkRules.DropUnknownTools(settings.Bookmarks, ExternalTools.Select(t => t.Id));
 
         quickAccess.ShowTitles = QuickAccess.ShowTitles;

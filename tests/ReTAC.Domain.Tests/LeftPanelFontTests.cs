@@ -64,15 +64,16 @@ public class LeftPanelFontTests
     public void 一覧と同じ大きさにしてもプレビューのフォントが壊れない()
     {
         var theme = Theme.Default with { LeftPanelFontFamily = "メイリオ", LeftPanelFontSize = Theme.Default.FontSize };
-        using var dialog = new ColorFontDialog(theme);
-        var targets = dialog.Controls.OfType<ListBox>().Single();
+        var draft = new SettingsDraft { Theme = theme };
+        using var page = new ColorFontPage(draft);
+        var targets = page.Controls.OfType<ListBox>().Single();
 
         targets.SelectedIndex = 1;   // 左パネル（一覧と同じ メイリオ 16pt）
         targets.SelectedIndex = 0;   // ファイル一覧
         targets.SelectedIndex = 1;
 
         // 捨てたフォントを使っていると、ここで ArgumentException("Parameter is not valid") になる
-        var preview = dialog.Controls.OfType<Control>().Single(c => c.GetType().Name == "PreviewBox");
+        var preview = page.Controls.OfType<Control>().Single(c => c.GetType().Name == "PreviewBox");
         Assert.True(preview.Font.Height > 0);
     }
 }

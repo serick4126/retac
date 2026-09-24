@@ -72,6 +72,7 @@ public static class CommandLabels
         ("外部ツール", CommandId.RunCommandLine, "名前を指定し実行"),
         ("外部ツール", CommandId.ExternalToolQueue, "外部ツールキュー"),
 
+        ("設定", CommandId.OpenSettings, "設定"),
         ("設定", CommandId.SortSettings, "ソートの設定"),
         ("設定", CommandId.FileTypeSettings, "表示するファイルタイプの設定"),
         ("設定", CommandId.QuickAccessSettings, "クイックアクセスの設定"),

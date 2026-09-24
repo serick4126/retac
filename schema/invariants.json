@@ -87,7 +87,7 @@
         "settings:Bookmarks"
       ],
       "rule": "ToolTarget.ToolId は存在する ExternalTool.Id を必ず指す。存在しないツールを指す割り当て・クイックアクセス・ブックマーク（Kind が Command のもの）は、読み込み時とツールを削除したときに落とす。既定のキー（Tool:1〜3）も例外にしない。",
-      "enforcedBy": "domain:KeyMap.DropUnknownTools（AppSettings.ToKeyMap が読み込み時に通す）/ QuickAccessList.DropUnknownTools / BookmarkRules.DropUnknownTools（AppSettings.Normalize が読み込み時に通す。ツールの削除は MainForm.ShowExternalToolSettings）",
+      "enforcedBy": "domain:KeyMap.DropUnknownTools（AppSettings.ToKeyMap が読み込み時に通す）/ QuickAccessList.DropUnknownTools / BookmarkRules.DropUnknownTools（AppSettings.Normalize が読み込み時に通す。ツールの削除は SettingsDraft.CommitTo が確定時に外し、MainForm.ApplySettings から呼ぶ）",
       "testedBy": "tests/ReTAC.Domain.Tests/KeyMapToolRefTests.cs / tests/ReTAC.Domain.Tests/BookmarkTests.cs",
       "note": "Q10: 読み込み時の正規化はメモリ上だけで行い、ファイルへは次の通常の保存で書く。起動直後に保存しない・通知しない。正規化の失敗で起動を止めない。"
     },

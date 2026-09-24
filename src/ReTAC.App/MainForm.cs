@@ -600,12 +600,13 @@ public sealed class MainForm : Form, IBookmarkHost
         CommandId.FileTypeSettings => ShowFileTypeSettings(),
         CommandId.ShowPopupMenu => ShowCommandPopup(),
         CommandId.ExternalToolQueue => ShowToolQueue(),
-        CommandId.ExternalToolSettings => ShowExternalToolSettings(),
-        CommandId.EnvironmentSettings => ShowEnvironmentSettings(),
+        CommandId.OpenSettings => ShowSettings(SettingsPage.Environment),
+        CommandId.ExternalToolSettings => ShowSettings(SettingsPage.ExternalTool),
+        CommandId.EnvironmentSettings => ShowSettings(SettingsPage.Environment),
         CommandId.About => ShowAbout(),
-        CommandId.ColorAndFontSettings => ShowColorFontSettings(),
-        CommandId.KeyAssignSettings => ShowKeyAssignSettings(),
-        CommandId.VisibleDriveSettings => ShowDriveVisibilitySettings(),
+        CommandId.ColorAndFontSettings => ShowSettings(SettingsPage.ColorFont),
+        CommandId.KeyAssignSettings => ShowSettings(SettingsPage.KeyAssign),
+        CommandId.VisibleDriveSettings => ShowSettings(SettingsPage.DriveVisibility),
         CommandId.RunCommandLine => RunCommandLine(),
         CommandId.CopyToFolder => Recording(() => Transfer(moving: false)),
         CommandId.MoveToFolder => Recording(() => Transfer(moving: true)),
@@ -637,7 +638,7 @@ public sealed class MainForm : Form, IBookmarkHost
         CommandId.ShowContextMenu => ShowShellContextMenu(_list.PointToScreen(_list.PopupAnchor())),
         CommandId.ShowFolderBackgroundMenu => ShowFolderBackgroundMenu(_list.PointToScreen(_list.PopupAnchor())),
         CommandId.Refresh => Reload(),
-        CommandId.QuickAccessSettings => ShowQuickAccessSettings(),
+        CommandId.QuickAccessSettings => ShowSettings(SettingsPage.QuickAccess),
         CommandId.QuickAccessAdd => AddCurrentToQuickAccess(),
         CommandId.GoBack => GoHistory(_history.Back(_currentFolder), record: false),
         CommandId.GoForward => GoHistory(_history.Forward(_currentFolder), record: false),
@@ -2102,41 +2103,32 @@ public sealed class MainForm : Form, IBookmarkHost
             "ReTAC", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK;
     }
 
-    /// <summary>外部ツールの設定（0x815A / F-04）。</summary>
-    private bool ShowExternalToolSettings()
+    /// <summary>統合した設定画面（R-102-2）。6 つの旧コマンドと新しい「設定」コマンドの、共通の入口。</summary>
+    private bool ShowSettings(SettingsPage page)
     {
-        using var dialog = new ExternalToolDialog(_settings.ExternalTools, _settings.NextExternalToolId, _settings.SuppressMultipleToolLaunch);
-        if (dialog.ShowDialog(this) != DialogResult.OK) return true;
-
-        _settings.ExternalTools = [.. dialog.Tools];
-        _settings.NextExternalToolId = dialog.NextId;
-        // R-36: 複数ウィンドウが同じ AppSettings を共有している。この窓の _keyMap は
-        // 他の窓での割り当て変更を反映していない古いものかもしれない。設定を元に作り直してから
-        // 削除したツールの割り当てだけを外し、それを書き戻す（F-01）
-        var map = _settings.ToKeyMap();
-        foreach (var id in dialog.RemovedToolIds) map.ReleaseTool(id);
-        _settings.FromKeyMap(map);
-        // Q4: 消したツールを指すクイックアクセスとブックマークも外す（キー割り当てと同じ扱い）
-        var ids = _settings.ExternalTools.Select(t => t.Id).ToList();
-        _quickAccess.DropUnknownTools(ids);
-        BookmarkRules.DropUnknownTools(_settings.Bookmarks, ids);
-
-        SaveSettings();   // V-13
-        RebuildMenus();
+        var draft = SettingsDraft.From(_settings, _keyMap, _list.Theme, _quickAccess);
+        using var dialog = new SettingsDialog(draft, page, _currentFolder, ApplySettings);
+        dialog.ShowDialog(this);
         return true;
     }
 
-    /// <summary>キー割り当ての設定（0x8155）。5-2 節。</summary>
-    private bool ShowKeyAssignSettings()
+    /// <summary>
+    /// 下書きの確定（R-102-3・§2.5）。実体への書き込みは <see cref="SettingsDraft.CommitTo"/> がまとめて行うので、
+    /// ここは画面への反映（配色・フォント・ドライブバー・キーマップ）と保存・メニューの作り直しだけを行う。
+    /// </summary>
+    private bool ApplySettings(SettingsDraft draft)
     {
-        using var dialog = new KeyAssignDialog(_keyMap, _settings.ExternalTools);
-        if (dialog.ShowDialog(this) != DialogResult.OK) return true;
+        var result = draft.CommitTo(_settings, _quickAccess);
 
-        _keyMap = dialog.Result;
-        _settings.FromKeyMap(_keyMap);
-        SaveSettings();
-        // R-36: 設定は全ウィンドウ共有。この窓の変更を他の窓にも反映する（RebuildMenus が各窓の _keyMap を読み直す）
-        RebuildMenus();
+        _list.Theme = draft.Theme;   // 行の高さと列幅はフォントから再計算される（R-66-3）
+        ApplyLeftPanelFont(draft.Theme);   // R-101
+        _driveBar.SetVisibility(draft.HiddenDrives, draft.ShowDesktopButton);
+        // R-36: 複数ウィンドウが同じ AppSettings を共有している。この窓の _keyMap は
+        // 他の窓での変更を反映していない古いものかもしれないので、保存前の設定から作り直す
+        _keyMap = _settings.ToKeyMap();
+
+        SaveSettings();   // V-13
+        if (result.ExternalToolsChanged || result.KeyBindingsChanged) RebuildMenus();
         return true;
     }
 
@@ -2188,19 +2180,6 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>R-82: 「編集」メニューの「元に戻す」に出す、最新の記録の説明。無ければ null</summary>
     private static string? UndoDescription() => UndoHost.History.Peek() is { } record ? UndoText.Describe(record) : null;
 
-    /// <summary>配色・フォントの設定（0x8151）。5-1 節。</summary>
-    private bool ShowColorFontSettings()
-    {
-        using var dialog = new ColorFontDialog(_list.Theme);
-        if (dialog.ShowDialog(this) != DialogResult.OK) return true;
-
-        _list.Theme = dialog.Result;   // 行の高さと列幅はフォントから再計算される（R-66-3）
-        ApplyLeftPanelFont(dialog.Result);
-        _settings.FromTheme(dialog.Result);
-        SaveSettings();
-        return true;
-    }
-
     /// <summary>R-101: 左パネルのフォントを、欄と 4 つのビューすべてに配る。
     /// 表示していないビューは _leftPanel の子ではないので、親からの継承では届かない。
     /// 行の高さは LeftPanel の選択欄・プレビューのファイル名欄が FontChanged で測り直す（R-96 / R-66）。</summary>
@@ -2220,32 +2199,11 @@ public sealed class MainForm : Form, IBookmarkHost
         old?.Dispose();   // 差し替えてから捨てる。先に捨てると、まだ描いている途中の再描画が落ちる
     }
 
-    /// <summary>表示するドライブの設定（0x814C）。16.7 節。</summary>
-    private bool ShowDriveVisibilitySettings()
-    {
-        using var dialog = new DriveVisibilityDialog(_settings.ToHiddenDrives(), _settings.ShowDesktopButton);
-        if (dialog.ShowDialog(this) != DialogResult.OK) return true;
-
-        _settings.HiddenDrives = [.. dialog.Hidden.Select(c => c.ToString())];
-        _settings.ShowDesktopButton = dialog.ShowDesktop;
-        _driveBar.SetVisibility(dialog.Hidden, dialog.ShowDesktop);
-        SaveSettings();
-        return true;
-    }
-
-    /// <summary>動作環境の設定（0x8318）。変更はその場で JSON に落とす。</summary>
     /// <summary>バージョン情報（0xE140）。アイコンと版を出すだけ。</summary>
     private bool ShowAbout()
     {
         using var dialog = new AboutDialog();
         dialog.ShowDialog(this);
-        return true;
-    }
-
-    private bool ShowEnvironmentSettings()
-    {
-        using var dialog = new EnvironmentDialog(_settings);
-        if (dialog.ShowDialog(this) == DialogResult.OK) SaveSettings();
         return true;
     }
 
@@ -2283,7 +2241,7 @@ public sealed class MainForm : Form, IBookmarkHost
             ("", () => { }),
             ("ソートの設定...", () => ShowSortSettings()),
             ("表示するファイルタイプの設定...", () => ShowFileTypeSettings()),
-            ("外部ツールの設定...", () => ShowExternalToolSettings()),
+            ("外部ツールの設定...", () => ShowSettings(SettingsPage.ExternalTool)),
         ];
         NumberedPopup.Show(_list, at, items);
         return true;
@@ -2429,7 +2387,7 @@ public sealed class MainForm : Form, IBookmarkHost
         // 直接選ぶ手段はニーモニック（S / A）が受け持つ
         NumberedPopup.Show(_list, _list.PopupAnchor(), items, footer:
         [
-            ("クイックアクセスの設定(&S)...", () => ShowQuickAccessSettings()),
+            ("クイックアクセスの設定(&S)...", () => ShowSettings(SettingsPage.QuickAccess)),
             ("このフォルダを追加(&A)", () => AddCurrentToQuickAccess()),
         ]);
         return true;
@@ -2464,22 +2422,6 @@ public sealed class MainForm : Form, IBookmarkHost
             return;
         }
         MessageBox.Show(this, $"{entry.Path} は見つかりません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-    }
-
-    /// <summary>クイックアクセスの設定・編集（0x82FA）。</summary>
-    private bool ShowQuickAccessSettings()
-    {
-        using var dialog = new QuickAccessDialog(_quickAccess, _currentFolder, _settings.ExternalTools);
-        var result = dialog.ShowDialog(this);
-
-        // V-13: このダイアログはキャンセルを持たない。追加・変更・削除・並べ替えはその場で
-        // _quickAccess を書き換えるので、閉じ方によらず保存する。OK 限定にすると
-        // 「閉じる」(Cancel) で抜けたときにアプリ内だけ消えて JSON に残る
-        SaveSettings();
-        if (result != DialogResult.OK) return true;
-
-        if (dialog.Chosen is { } entry) GoQuickAccess(entry);
-        return true;
     }
 
     /// <summary>クイックアクセスに追加（0x832C）。カーソルがフォルダならそれを、でなければカレントフォルダを。</summary>
