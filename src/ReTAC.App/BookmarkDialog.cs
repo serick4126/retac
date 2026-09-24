@@ -174,7 +174,7 @@ public sealed class BookmarkDialog : Form
 
     private void AddCommand()
     {
-        // 名前はコマンドの名前で埋める（コマンドのブックマークは名前が要る。BookmarkRules.Validate）
+        // R-106-2: 名前は空でも登録できるが、編集しやすいようコマンドの名前を初期値として入れる
         if (CommandPickerDialog.Pick(this, _settings.ExternalTools) is { } target)
             Insert(new Bookmark(Label(target), BookmarkKind.Command, target.Serialize()));
     }

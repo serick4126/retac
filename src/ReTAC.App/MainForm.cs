@@ -113,7 +113,7 @@ public sealed class MainForm : Form, IBookmarkHost
         };
         _bookmarksView.FocusFileViewRequested += (_, _) => _list.Focus();
         _bookmarksView.CommandKeyRequested += (_, e) => e.Handled = ExecuteBookmarkViewKey(e);
-        _bookmarksView.ContextMenuRequested += (bookmark, into, screen) => ShowBookmarkMenu(bookmark, into, screen, closing: null);
+        _bookmarksView.ContextMenuRequested += (bookmark, into, screen) => ShowBookmarkMenu(bookmark, into, screen, onBar: false, closing: null);
         // 行の高さは DPI・フォントで変わる。上部の行が高さを決め直したら、ブックマークバーも揃える
         _topRow.SizeChanged += (_, _) => _bookmarkBar.SetRowHeight(_topRow.RowHeight, _topRow.SideMargin);
         _fileTypes = _settings.ToFileTypeFilter();
@@ -1823,7 +1823,9 @@ public sealed class MainForm : Form, IBookmarkHost
     /// フォルダ・ファイルはエクスプローラーのメニューの先頭に ReTAC の項目を差し込み、それ以外は ReTAC の項目だけで出す。
     /// </summary>
     void IBookmarkHost.ShowContextMenu(ToolStripItem? item, Point screen) =>
-        ShowBookmarkMenu(item?.Tag, into: null, screen, closing: () =>
+        // R-106-1: 「アイコンだけ表示」を出すのは、右クリックした項目がバーに直接置いたボタンのときだけ。
+        // グループの中・ブックマークメニューの項目は Owner がそのドロップダウンで、バー（ToolStrip）そのものではない
+        ShowBookmarkMenu(item?.Tag, into: null, screen, onBar: item?.Owner is BookmarkBar, closing: () =>
         {
             // 選んだ後は開いているメニューを親まで閉じる。ダイアログを出す前・バーを作り直す前に閉じておく
             var top = item;
@@ -1833,25 +1835,29 @@ public sealed class MainForm : Form, IBookmarkHost
 
     /// <summary>
     /// R-89 / R-98: ブックマークの右クリックメニューの中身。tag は Bookmark / Entry / null（空いた所）。
-    /// into は追加系の行で足す並び（R-98 のビューの固定ルート）。null ならバー。closing は取り消し以外で、選んだ処理の前に呼ぶ。
+    /// into は追加系の行で足す並び（R-98 のビューの固定ルート）。null ならバー。
+    /// onBar は右クリックした項目がバーに直接置いたボタンかどうか（R-106-1。「アイコンだけ表示」の出し分けに使う）。
+    /// closing は取り消し以外で、選んだ処理の前に呼ぶ。
     /// </summary>
-    internal void ShowBookmarkMenu(object? tag, List<Bookmark>? into, Point screen, Action? closing)
+    internal void ShowBookmarkMenu(object? tag, List<Bookmark>? into, Point screen, bool onBar, Action? closing)
     {
-        var rows = new List<(string Text, Action? Run)>();
+        var rows = new List<(string Text, Action? Run, bool Checked)>();
+        void Add(string text, Action? run, bool @checked = false) => rows.Add((text, run, @checked));
         var bookmark = tag as Bookmark;
         string[] shellPaths = [];
         switch (tag)
         {
             case Bookmark b:
-                if (b.Kind == BookmarkKind.Folder) rows.Add(("このフォルダへジャンプ(&J)", () => _ = OpenFolderAsync(b.Target)));
-                rows.Add(("ブックマークを編集(&E)...", () => EditBookmark(b)));
-                rows.Add(("ブックマークを削除(&X)", () => { if (BookmarkRules.Remove(_settings.Bookmarks, b)) BookmarkChanged(); }));
-                if (b.Kind != BookmarkKind.Group) rows.Add(("クイックアクセスにも追加(&Q)", () => AddToQuickAccess(b)));
+                if (b.Kind == BookmarkKind.Folder) Add("このフォルダへジャンプ(&J)", () => _ = OpenFolderAsync(b.Target));
+                Add("ブックマークを編集(&E)...", () => EditBookmark(b));
+                if (onBar) Add("アイコンだけ表示(&L)", () => ToggleIconOnly(b), b.IconOnly);
+                Add("ブックマークを削除(&X)", () => { if (BookmarkRules.Remove(_settings.Bookmarks, b)) BookmarkChanged(); });
+                if (b.Kind != BookmarkKind.Group) Add("クイックアクセスにも追加(&Q)", () => AddToQuickAccess(b));
                 if (b.Kind is BookmarkKind.Folder or BookmarkKind.File) shellPaths = [b.Target];
                 break;
             case Entry entry:
                 // 展開表示の中身はブックマークではないので、ジャンプとエクスプローラーのメニューだけ
-                if (entry.Kind == EntryKind.Folder) rows.Add(("このフォルダへジャンプ(&J)", () => _ = OpenFolderAsync(entry.FullPath)));
+                if (entry.Kind == EntryKind.Folder) Add("このフォルダへジャンプ(&J)", () => _ = OpenFolderAsync(entry.FullPath));
                 shellPaths = [entry.FullPath];
                 break;
         }
@@ -1859,19 +1865,20 @@ public sealed class MainForm : Form, IBookmarkHost
         {
             // 足した項目は右クリックした項目の後ろへ（空いた所なら末尾）。
             // アクセスキーはエクスプローラーのメニューでよく使われる字（O V F H W A S N T C D R P）を避ける（実機指摘）
-            if (rows.Count > 0) rows.Add(("", null));
-            rows.Add(("現在のフォルダを追加(&K)", () => AddBookmark(new Bookmark("", BookmarkKind.Folder, _currentFolder), bookmark, into)));
-            rows.Add(("カーソル位置の項目を追加(&I)", () => AddBookmark(CursorBookmark(), bookmark, into)));
-            rows.Add(("コマンドを追加(&M)...", () => AddCommandBookmark(bookmark, into)));
-            rows.Add(("グループを追加(&G)...", () => AddGroupBookmark(bookmark, into)));
-            rows.Add(("", null));
-            rows.Add(("ブックマークを管理(&B)...", () => Execute(new BuiltinTarget(CommandId.BookmarkManage), Keys.None)));
+            if (rows.Count > 0) Add("", null);
+            Add("現在のフォルダを追加(&K)", () => AddBookmark(new Bookmark("", BookmarkKind.Folder, _currentFolder), bookmark, into));
+            Add("カーソル位置の項目を追加(&I)", () => AddBookmark(CursorBookmark(), bookmark, into));
+            Add("コマンドを追加(&M)...", () => AddCommandBookmark(bookmark, into));
+            Add("グループを追加(&G)...", () => AddGroupBookmark(bookmark, into));
+            Add("", null);
+            Add("ブックマークを管理(&B)...", () => Execute(new BuiltinTarget(CommandId.BookmarkManage), Keys.None));
         }
 
         var texts = rows.Select(r => r.Text).ToList();
+        var checkedFlags = rows.Select(r => r.Checked).ToList();
         var result = SafeShellMenu.Run(this, () => shellPaths.Length > 0
-            ? ShellContextMenu.ShowWithItems(Handle, shellPaths, screen.X, screen.Y, texts)
-            : ShellContextMenu.ShowItems(Handle, screen.X, screen.Y, texts));
+            ? ShellContextMenu.ShowWithItems(Handle, shellPaths, screen.X, screen.Y, texts, checkedFlags)
+            : ShellContextMenu.ShowItems(Handle, screen.X, screen.Y, texts, checkedFlags));
         if (result.Outcome == ContextMenuOutcome.Cancelled) return;   // 取り消しなら元のメニューは開いたまま
 
         closing?.Invoke();
@@ -1915,17 +1922,25 @@ public sealed class MainForm : Form, IBookmarkHost
     private void EditBookmark(Bookmark bookmark)
     {
         using var dialog = new BookmarkEntryDialog(bookmark, _currentFolder, _settings.ExternalTools, ((IBookmarkHost)this).LabelOf);
-        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        if (dialog.ShowDialog(this) == DialogResult.OK) ReplaceBookmark(bookmark, dialog.Bookmark);
+    }
+
+    /// <summary>R-106-1: 右クリックの「アイコンだけ表示」。編集画面を経由せず、その場で切り替えて保存する。</summary>
+    private void ToggleIconOnly(Bookmark bookmark) => ReplaceBookmark(bookmark, bookmark with { IconOnly = !bookmark.IconOnly });
+
+    /// <summary>置き換えて保存し全ウィンドウのバーを作り直す、共通の経路（EditBookmark / ToggleIconOnly で使う）。</summary>
+    private void ReplaceBookmark(Bookmark original, Bookmark replacement)
+    {
         // 開いている間に別の窓で消されていたら何もしない
-        if (BookmarkRules.Locate(_settings.Bookmarks, bookmark) is not var (list, index)) return;
-        list[index] = dialog.Bookmark;
+        if (BookmarkRules.Locate(_settings.Bookmarks, original) is not var (list, index)) return;
+        list[index] = replacement;
         BookmarkChanged();
     }
 
     private void AddCommandBookmark(Bookmark? after, List<Bookmark>? into)
     {
         if (CommandPickerDialog.Pick(this, _settings.ExternalTools) is not { } target) return;
-        // 名前はコマンドの名前で埋める（コマンドのブックマークは名前が要る。BookmarkRules.Validate）
+        // R-106-2: 名前は空でも登録できるが、編集しやすいようコマンドの名前を初期値として入れる
         AddBookmark(new Bookmark(CommandLabels.Of(target, _settings.ExternalTools), BookmarkKind.Command, target.Serialize()), after, into);
     }
 

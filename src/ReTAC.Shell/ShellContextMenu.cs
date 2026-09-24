@@ -29,8 +29,9 @@ public static class ShellContextMenu
     /// </summary>
     /// <param name="items">先頭に並べる ReTAC の項目の文言（"" は区切り線）。空なら今までの Show と同じ。
     /// パスをシェルが扱えない（消えた・届かない）ときは、ReTAC の項目だけで出す</param>
+    /// <param name="isChecked">R-106-1: items と同じ添字でチェック状態を持たせたいとき（例: 「アイコンだけ表示」）。無ければ全部チェック無し</param>
     public static ContextMenuResult ShowWithItems(IntPtr ownerHandle, IReadOnlyList<string> paths, int screenX, int screenY,
-                                                 IReadOnlyList<string> items)
+                                                 IReadOnlyList<string> items, IReadOnlyList<bool>? isChecked = null)
     {
         if (paths.Count == 0) return ContextMenuResult.Cancelled;
 
@@ -53,18 +54,18 @@ public static class ShellContextMenu
                 else if (!ReferenceEquals(parent, folder)) Marshal.ReleaseComObject(folder);
                 childPidls.Add(child);
             }
-            if (parent is null || childPidls.Count == 0) return ShowItems(ownerHandle, screenX, screenY, items);
+            if (parent is null || childPidls.Count == 0) return ShowItems(ownerHandle, screenX, screenY, items, isChecked);
 
             var contextGuid = IID_IContextMenu;
             var children = childPidls.ToArray();
             var uiHr = parent.GetUIObjectOf(ownerHandle, (uint)children.Length, children, ref contextGuid, IntPtr.Zero, out var unknown);
-            if (uiHr != 0 || unknown == IntPtr.Zero) return ShowItems(ownerHandle, screenX, screenY, items);
+            if (uiHr != 0 || unknown == IntPtr.Zero) return ShowItems(ownerHandle, screenX, screenY, items, isChecked);
 
             contextMenu = Marshal.GetObjectForIUnknown(unknown);
             Marshal.Release(unknown);
             if (contextMenu is not IContextMenu shellMenu) return ContextMenuResult.Cancelled;
 
-            return TrackAndInvoke(ownerHandle, contextMenu, shellMenu, screenX, screenY, directory: null, items);
+            return TrackAndInvoke(ownerHandle, contextMenu, shellMenu, screenX, screenY, directory: null, items, isChecked);
         }
         finally
         {
@@ -77,13 +78,15 @@ public static class ShellContextMenu
 
     /// <summary>R-89: ReTAC の項目だけのメニュー（コマンド・グループのブックマーク、バーの空いた所）。選ばれた添字を返す。</summary>
     /// <param name="items">項目の文言（"" は区切り線）</param>
-    public static ContextMenuResult ShowItems(IntPtr ownerHandle, int screenX, int screenY, IReadOnlyList<string> items)
+    /// <param name="isChecked">R-106-1: items と同じ添字でチェック状態を持たせたいとき。無ければ全部チェック無し</param>
+    public static ContextMenuResult ShowItems(IntPtr ownerHandle, int screenX, int screenY, IReadOnlyList<string> items,
+                                             IReadOnlyList<bool>? isChecked = null)
     {
         if (items.Count == 0) return ContextMenuResult.Cancelled;
         var menu = CreatePopupMenu();
         try
         {
-            InsertItems(menu, items);
+            InsertItems(menu, items, isChecked);
             var command = TrackPopupMenuEx(menu, TPM_RETURNCMD | TPM_LEFTALIGN | TPM_RIGHTBUTTON, screenX, screenY, ownerHandle, IntPtr.Zero);
             return command >= AppIdFirst ? new ContextMenuResult(ContextMenuOutcome.AppItem, (int)(command - AppIdFirst)) : ContextMenuResult.Cancelled;
         }
@@ -94,12 +97,13 @@ public static class ShellContextMenu
     }
 
     /// <summary>ReTAC の項目を先頭に差し込む。番号は Shell に渡す範囲（IdCmdFirst〜IdCmdLast）の外。</summary>
-    private static void InsertItems(IntPtr menu, IReadOnlyList<string> items)
+    private static void InsertItems(IntPtr menu, IReadOnlyList<string> items, IReadOnlyList<bool>? isChecked)
     {
         for (var i = items.Count - 1; i >= 0; i--)
         {
-            if (items[i].Length == 0) InsertMenu(menu, 0, MF_BYPOSITION | MF_SEPARATOR, UIntPtr.Zero, null);
-            else InsertMenu(menu, 0, MF_BYPOSITION | MF_STRING, (UIntPtr)(AppIdFirst + (uint)i), items[i]);
+            if (items[i].Length == 0) { InsertMenu(menu, 0, MF_BYPOSITION | MF_SEPARATOR, UIntPtr.Zero, null); continue; }
+            var flags = MF_BYPOSITION | MF_STRING | (isChecked is { } c && i < c.Count && c[i] ? MF_CHECKED : 0);
+            InsertMenu(menu, 0, flags, (UIntPtr)(AppIdFirst + (uint)i), items[i]);
         }
     }
 
@@ -132,7 +136,7 @@ public static class ShellContextMenu
             Marshal.Release(menuUnknown);
 
             if (contextMenu is IContextMenu shellMenu)
-                TrackAndInvoke(ownerHandle, contextMenu, shellMenu, screenX, screenY, folderPath, []);
+                TrackAndInvoke(ownerHandle, contextMenu, shellMenu, screenX, screenY, folderPath, [], null);
         }
         finally
         {
@@ -146,7 +150,8 @@ public static class ShellContextMenu
     /// <summary>メニューを出し、選ばれた項目を実行する。項目のメニューと背景のメニューで共通。</summary>
     /// <param name="directory">作業フォルダを使う項目（「ターミナルで開く」など）に渡すフォルダ。項目のメニューでは null</param>
     private static ContextMenuResult TrackAndInvoke(IntPtr ownerHandle, object contextMenu, IContextMenu shellMenu,
-                                                    int screenX, int screenY, string? directory, IReadOnlyList<string> items)
+                                                    int screenX, int screenY, string? directory, IReadOnlyList<string> items,
+                                                    IReadOnlyList<bool>? isChecked)
     {
         var menu = CreatePopupMenu();
         try
@@ -155,7 +160,7 @@ public static class ShellContextMenu
             if (shellMenu.QueryContextMenu(menu, 0, IdCmdFirst, IdCmdLast, CMF_NORMAL | CMF_EXPLORE) < 0) return ContextMenuResult.Cancelled;
 
             // R-89: ReTAC の項目は Shell の項目の前に並べる
-            InsertItems(menu, items);
+            InsertItems(menu, items, isChecked);
             if (items.Count > 0) InsertMenu(menu, (uint)items.Count, MF_BYPOSITION | MF_SEPARATOR, UIntPtr.Zero, null);
 
             // 拡張の項目はオーナードローのことがあり、メニュー用のメッセージを
@@ -236,6 +241,7 @@ public static class ShellContextMenu
     private const uint MF_BYPOSITION = 0x0400;
     private const uint MF_STRING = 0x0000;
     private const uint MF_SEPARATOR = 0x0800;
+    private const uint MF_CHECKED = 0x0008;
     private const uint CMF_NORMAL = 0x00000000;
     private const uint CMF_EXPLORE = 0x00000004;
     private const uint TPM_LEFTALIGN = 0x0000;

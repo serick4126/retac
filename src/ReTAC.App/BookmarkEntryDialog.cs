@@ -16,6 +16,7 @@ public sealed class BookmarkEntryDialog : Form
     private readonly TextBox _title = new();
     private readonly TextBox _path = new();
     private readonly Label _command = new() { AutoEllipsis = true, BorderStyle = BorderStyle.Fixed3D, TextAlign = ContentAlignment.MiddleLeft };
+    private readonly CheckBox _iconOnly = new() { Text = "バーではアイコンだけ表示(&L)", AutoSize = true };
     private readonly Bookmark _preset;
     private readonly string _currentFolder;
     private readonly IReadOnlyList<ExternalTool> _tools;
@@ -44,23 +45,29 @@ public sealed class BookmarkEntryDialog : Form
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = MaximizeBox = false;
-        ClientSize = new Size(440, 150);
+        ClientSize = new Size(440, 180);
 
         _title.Text = preset.Title;
-        // 題名が空なら、バーには末尾の名前が出る（DisplayName）。グループ・コマンドは名前が要る（Validate）
+        // 題名が空なら、バーには末尾の名前（フォルダ・ファイル）かコマンドの名前が出る（DisplayName）。
+        // 名前が要るのはグループだけ（R-106-2。グループには名前の代わりが無い）
         if (preset.Kind is BookmarkKind.Folder or BookmarkKind.File) _title.PlaceholderText = "空ならフォルダ名・ファイル名";
         var titleLabel = new Label { Text = "名前(&T):", AutoSize = true, Location = new Point(12, 18) };
         _title.SetBounds(110, 15, 310, 23);
         Controls.AddRange([titleLabel, _title]);
 
-        var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Bounds = new Rectangle(110, 108, 90, 28) };
-        var cancel = new Button { Text = "キャンセル", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(210, 108, 90, 28) };
+        // R-106-1: 種類を問わず出す（バーに直接置いていない項目でも、グループからバーへ移したときに効く）
+        _iconOnly.Checked = preset.IconOnly;
+        _iconOnly.Location = new Point(12, 98);
+        Controls.Add(_iconOnly);
+
+        var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Bounds = new Rectangle(110, 138, 90, 28) };
+        var cancel = new Button { Text = "キャンセル", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(210, 138, 90, 28) };
         Controls.AddRange([ok, cancel]);
 
         if (preset.Kind != BookmarkKind.Group)
         {
             var targetLabel = new Label { Text = $"{kindText}(&F):", AutoSize = true, Location = new Point(12, 50) };
-            var browse = new Button { Text = preset.Kind == BookmarkKind.Command ? "選び直す(&B)..." : "参照(&B)...", Bounds = new Rectangle(320, 108, 100, 28) };
+            var browse = new Button { Text = preset.Kind == BookmarkKind.Command ? "選び直す(&B)..." : "参照(&B)...", Bounds = new Rectangle(320, 138, 100, 28) };
             browse.Click += (_, _) => Browse();
             Controls.AddRange([targetLabel, browse]);
             if (preset.Kind == BookmarkKind.Command)
@@ -98,7 +105,7 @@ public sealed class BookmarkEntryDialog : Form
         AutoScaleMode = AutoScaleMode.Dpi;   // R-66
     }
 
-    public Bookmark Bookmark => _preset with { Title = InputText.TrimEdge(_title.Text), Target = _target };
+    public Bookmark Bookmark => _preset with { Title = InputText.TrimEdge(_title.Text), Target = _target, IconOnly = _iconOnly.Checked };
 
     private string CommandText() => CommandTarget.Parse(_target) is { } target ? _label(target) : "";
 
