@@ -4244,6 +4244,10 @@
         "line": 52
       },
       {
+        "file": "src/ReTAC.App/SettingsDialog.cs",
+        "line": 90
+      },
+      {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
         "line": 46
       },
@@ -4372,6 +4376,10 @@
       {
         "file": "src/ReTAC.App/RunDialog.cs",
         "line": 50
+      },
+      {
+        "file": "src/ReTAC.App/SettingsDialog.cs",
+        "line": 84
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
@@ -5382,6 +5390,20 @@
       {
         "file": "src/ReTAC.App/QuickAccessPage.cs",
         "line": 11
+      },
+      {
+        "file": "src/ReTAC.App/SettingsDialog.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.App/SettingsDialog.cs",
+        "line": 81
+      }
+    ],
+    "R-102-1": [
+      {
+        "file": "src/ReTAC.App/SettingsPage.cs",
+        "line": 4
       }
     ],
     "R-102-3": [
@@ -5416,6 +5438,10 @@
       {
         "file": "src/ReTAC.App/QuickAccessPage.cs",
         "line": 40
+      },
+      {
+        "file": "src/ReTAC.App/SettingsDialog.cs",
+        "line": 8
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
