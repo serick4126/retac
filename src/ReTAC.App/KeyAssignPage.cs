@@ -97,7 +97,12 @@ public sealed class KeyAssignPage : UserControl
 
         Controls.AddRange([_slots, _commands, _filter, reset]);
 
-        _draft.ToolsChanged += (_, _) => BuildCommandList();
+        // 外部ツールの改名・削除は、コマンド一覧だけでなく枠一覧の表示（ラベル・未割り当ての灰色）にも出ている
+        _draft.ToolsChanged += (_, _) =>
+        {
+            BuildCommandList();
+            ReloadSlots(_slots.SelectedIndices.Count > 0 ? _slots.SelectedIndices[0] : 0);
+        };
     }
 
     /// <summary>枠が <see cref="AutoScaleMode"/> を当てた直後・<see cref="Form.DpiChanged"/> のたびに枠から呼ぶ。</summary>
