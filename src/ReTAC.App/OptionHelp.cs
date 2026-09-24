@@ -13,7 +13,8 @@ public static class OptionHelp
     private const int Delay = 400;
     private const int Show = 30000;
 
-    public static void Attach(Form form, ToolTip tips, params (Control Target, string Text)[] items)
+    // R-102-3: 統合設定画面のページは Form でなく UserControl（Control）なので、Form 限定にしない
+    public static void Attach(Control owner, ToolTip tips, params (Control Target, string Text)[] items)
     {
         tips.InitialDelay = Delay;
         tips.ReshowDelay = Delay / 4;
@@ -38,7 +39,7 @@ public static class OptionHelp
                 e.Graphics.DrawString("?", font, Brushes.White, circle, format);
             };
             tips.SetToolTip(mark, text);
-            form.Controls.Add(mark);
+            owner.Controls.Add(mark);
         }
     }
 }

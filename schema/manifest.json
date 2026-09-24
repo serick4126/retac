@@ -4416,8 +4416,16 @@
         "line": 112
       },
       {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 204
+      },
+      {
         "file": "src/ReTAC.App/KeyAssignDialog.cs",
         "line": 93
+      },
+      {
+        "file": "src/ReTAC.App/KeyAssignPage.cs",
+        "line": 92
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -4455,6 +4463,10 @@
     "F-02": [
       {
         "file": "src/ReTAC.App/ExternalToolDialog.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
         "line": 10
       },
       {
@@ -4554,6 +4566,10 @@
         "line": 9
       },
       {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 9
+      },
+      {
         "file": "src/ReTAC.App/MacroReferenceDialog.cs",
         "line": 8
       },
@@ -4642,6 +4658,10 @@
         "line": 18
       },
       {
+        "file": "src/ReTAC.App/KeyAssignPage.cs",
+        "line": 19
+      },
+      {
         "file": "src/ReTAC.App/KeySlots.cs",
         "line": 7
       },
@@ -4708,8 +4728,20 @@
         "line": 107
       },
       {
+        "file": "src/ReTAC.App/EnvironmentPage.cs",
+        "line": 49
+      },
+      {
         "file": "src/ReTAC.App/ExternalToolDialog.cs",
         "line": 46
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 15
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 100
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
@@ -4800,6 +4832,10 @@
       {
         "file": "src/ReTAC.App/ExternalToolDialog.cs",
         "line": 59
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 39
       },
       {
         "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
@@ -4908,7 +4944,15 @@
         "line": 29
       },
       {
+        "file": "src/ReTAC.App/DriveVisibilityPage.cs",
+        "line": 28
+      },
+      {
         "file": "src/ReTAC.App/ExternalToolDialog.cs",
+        "line": 220
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
         "line": 220
       },
       {
@@ -5258,6 +5302,18 @@
         "line": 193
       },
       {
+        "file": "src/ReTAC.App/ColorFontPage.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/ColorFontPage.cs",
+        "line": 36
+      },
+      {
+        "file": "src/ReTAC.App/ColorFontPage.cs",
+        "line": 188
+      },
+      {
         "file": "src/ReTAC.App/DriveTreeView.cs",
         "line": 208
       },
@@ -5302,7 +5358,65 @@
         "line": 313
       }
     ],
+    "R-102": [
+      {
+        "file": "src/ReTAC.App/ColorFontPage.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.App/DriveVisibilityPage.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.App/EnvironmentPage.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/KeyAssignPage.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessPage.cs",
+        "line": 11
+      }
+    ],
     "R-102-3": [
+      {
+        "file": "src/ReTAC.App/ColorFontPage.cs",
+        "line": 58
+      },
+      {
+        "file": "src/ReTAC.App/DriveVisibilityPage.cs",
+        "line": 21
+      },
+      {
+        "file": "src/ReTAC.App/EnvironmentPage.cs",
+        "line": 29
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 56
+      },
+      {
+        "file": "src/ReTAC.App/KeyAssignPage.cs",
+        "line": 56
+      },
+      {
+        "file": "src/ReTAC.App/OptionHelp.cs",
+        "line": 16
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessPage.cs",
+        "line": 13
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessPage.cs",
+        "line": 40
+      },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
         "line": 10
@@ -5461,6 +5575,10 @@
       },
       {
         "file": "src/ReTAC.App/KeyAssignDialog.cs",
+        "line": 11
+      },
+      {
+        "file": "src/ReTAC.App/KeyAssignPage.cs",
         "line": 11
       },
       {
@@ -6420,8 +6538,16 @@
         "line": 146
       },
       {
+        "file": "src/ReTAC.App/ColorFontPage.cs",
+        "line": 139
+      },
+      {
         "file": "src/ReTAC.App/ExternalToolDialog.cs",
         "line": 50
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 52
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -6688,6 +6814,10 @@
         "line": 63
       },
       {
+        "file": "src/ReTAC.App/KeyAssignPage.cs",
+        "line": 62
+      },
+      {
         "file": "src/ReTAC.App/LeftPanel.cs",
         "line": 68
       },
@@ -6708,6 +6838,10 @@
         "line": 70
       },
       {
+        "file": "src/ReTAC.App/QuickAccessPage.cs",
+        "line": 44
+      },
+      {
         "file": "src/ReTAC.App/StatusBar.cs",
         "line": 213
       }
@@ -6725,6 +6859,10 @@
     "R-66-3": [
       {
         "file": "src/ReTAC.App/ColorFontDialog.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.App/ColorFontPage.cs",
         "line": 10
       },
       {
@@ -7668,6 +7806,30 @@
       {
         "file": "src/ReTAC.App/QuickAccessDialog.cs",
         "line": 214
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessPage.cs",
+        "line": 47
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessPage.cs",
+        "line": 55
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessPage.cs",
+        "line": 56
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessPage.cs",
+        "line": 136
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessPage.cs",
+        "line": 144
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessPage.cs",
+        "line": 207
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
