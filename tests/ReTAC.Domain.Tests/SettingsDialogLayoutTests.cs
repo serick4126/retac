@@ -8,7 +8,7 @@ namespace ReTAC.Domain.Tests;
 /// <summary>
 /// R-102: 統合設定画面の枠を作り（表示はしない）、6 ページがそれぞれ枠のページ領域に収まり、
 /// ページの子コントロールがページの <see cref="Control.ClientRectangle"/> の中に収まることを確かめる。
-/// テスト実行環境の DPI（通常 100%）での検査であり、150% での確認は実機で行う（Task 8）。
+/// テスト実行環境の DPI（通常 100%）での検査であり、150% での確認は実機で行う。
 /// </summary>
 public class SettingsDialogLayoutTests
 {

@@ -6,7 +6,7 @@ namespace ReTAC.App;
 /// <summary>
 /// 統合した設定画面の枠（R-102）。左のサイドバーで 6 ページを切り替え、下端の OK / キャンセル / 適用で
 /// 下書き（<see cref="SettingsDraft"/>）をまとめて確定する（R-102-3）。旧来の 6 つの個別ダイアログは
-/// 呼び出し側（MainForm、Task 5）の配線が済むまで残す。
+/// 呼び出し側（MainForm）の配線が済むまで残す。
 /// </summary>
 public sealed class SettingsDialog : Form
 {
@@ -20,7 +20,7 @@ public sealed class SettingsDialog : Form
         (SettingsPage.QuickAccess, "クイックアクセス"),
     ];
 
-    // もっとも大きいページ（配色・キー割り当て・外部ツール）が幅 754、キー割り当てが高さ 496（Task 3）。
+    // もっとも大きいページ（配色・キー割り当て・外部ツール）が幅 754、キー割り当てが高さ 496。
     // 余白は他のダイアログと合わせて 14px（ExternalToolDialog 等）。
     private const int Pad = 14;
     private const int SidebarWidth = 160;
@@ -76,8 +76,9 @@ public sealed class SettingsDialog : Form
         var applyRight = clientWidth - Pad;
         var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Bounds = new Rectangle(applyRight - ButtonWidth * 3 - ButtonGap * 2, buttonTop, ButtonWidth, ButtonHeight) };
         var cancel = new Button { Text = "キャンセル", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(applyRight - ButtonWidth * 2 - ButtonGap, buttonTop, ButtonWidth, ButtonHeight) };
-        // 6 ページの (&x) と衝突しない文字を選ぶ（既に A は ExternalToolPage の「追加」・QuickAccessPage の
-        // 「フォルダを追加」と、E・I は Task 6 で足す KeyAssignPage のエクスポート・インポートと衝突する）
+        // 6 ページの (&x) と衝突しない文字を選ぶ。A は ExternalToolPage の「追加」・QuickAccessPage の
+        // 「フォルダを追加」と衝突する。E・I は、キー割り当てページにエクスポート・インポートのボタンを
+        // 足す予定があるため、今は使っていなくても避ける
         var applyButton = new Button { Text = "適用(&S)", Bounds = new Rectangle(applyRight - ButtonWidth, buttonTop, ButtonWidth, ButtonHeight) };
         applyButton.Click += (_, _) => TryApply();
         AcceptButton = ok;   // R-102: キー割り当てページは Enter を自分で使うので、そちらが先に拾う
@@ -93,7 +94,7 @@ public sealed class SettingsDialog : Form
         AutoScaleMode = AutoScaleMode.Dpi;
 
         // ListView の列幅は PerformAutoScale では拡大されないため、AutoScaleMode を当てた直後と
-        // DpiChanged のたびに決め直す（Task 3。モニターをまたいで移動したときのため）
+        // DpiChanged のたびに決め直す（モニターをまたいで移動したときのため）
         keyAssignPage.ApplyDpi(DeviceDpi);
         quickAccessPage.ApplyDpi(DeviceDpi);
         DpiChanged += (_, _) =>
@@ -111,7 +112,7 @@ public sealed class SettingsDialog : Form
         };
 
 #if DEBUG
-        // 実機の 150% で見落とさないための最終確認（実際の検査は Task 8）
+        // 開発機の DPI では収まっていても、実機の 150% では切れることがあるための最終確認
         Shown += (_, _) => CheckLayout();
 #endif
     }
