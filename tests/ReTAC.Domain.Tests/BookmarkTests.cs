@@ -50,11 +50,46 @@ public class BookmarkTests
     [InlineData("仕事", BookmarkKind.Group, "", true)]
     [InlineData("", BookmarkKind.Folder, "", false)]
     [InlineData("", BookmarkKind.Folder, @"C:\a", true)]
-    [InlineData("", BookmarkKind.Command, "Refresh", false)]
+    [InlineData("", BookmarkKind.Command, "Refresh", true)]
     [InlineData("更新", BookmarkKind.Command, "NoSuchCommand", false)]
     [InlineData("更新", BookmarkKind.Command, "Refresh", true)]
     public void ブックマークの検証(string title, BookmarkKind kind, string target, bool valid) =>
         Assert.Equal(valid, BookmarkRules.Validate(new Bookmark(title, kind, target)) is null);
+
+    [Theory]
+    // IconOnly なし: アイコンがあれば全体どおり、無ければ「アイコンだけ」だけ名前へ落ちる
+    [InlineData(false, BookmarkBarStyle.IconAndText, false, BookmarkBarStyle.IconAndText)]
+    [InlineData(false, BookmarkBarStyle.IconAndText, true, BookmarkBarStyle.IconAndText)]
+    [InlineData(false, BookmarkBarStyle.IconOnly, false, BookmarkBarStyle.TextOnly)]
+    [InlineData(false, BookmarkBarStyle.IconOnly, true, BookmarkBarStyle.IconOnly)]
+    [InlineData(false, BookmarkBarStyle.TextOnly, false, BookmarkBarStyle.TextOnly)]
+    [InlineData(false, BookmarkBarStyle.TextOnly, true, BookmarkBarStyle.TextOnly)]
+    // IconOnly あり: アイコンがあれば全体が何であれ「アイコンだけ」（項目の指定が優先）。アイコンが無ければ全体どおり
+    [InlineData(true, BookmarkBarStyle.IconAndText, false, BookmarkBarStyle.IconAndText)]
+    [InlineData(true, BookmarkBarStyle.IconAndText, true, BookmarkBarStyle.IconOnly)]
+    [InlineData(true, BookmarkBarStyle.IconOnly, false, BookmarkBarStyle.TextOnly)]
+    [InlineData(true, BookmarkBarStyle.IconOnly, true, BookmarkBarStyle.IconOnly)]
+    [InlineData(true, BookmarkBarStyle.TextOnly, false, BookmarkBarStyle.TextOnly)]
+    [InlineData(true, BookmarkBarStyle.TextOnly, true, BookmarkBarStyle.IconOnly)]
+    public void バーのボタンの表示の形(bool iconOnly, BookmarkBarStyle global, bool hasIcon, BookmarkBarStyle expected)
+    {
+        var b = new Bookmark("x", BookmarkKind.Command, "Refresh") { IconOnly = iconOnly };
+        Assert.Equal(expected, BookmarkRules.BarStyleOf(b, global, hasIcon));
+    }
+
+    [Fact]
+    public void IconOnlyはwithで保たれ_JSONの往復でも残り_欄が無ければfalseで埋まる()
+    {
+        var b = new Bookmark("a", BookmarkKind.Folder, @"C:\a") { IconOnly = true };
+        Assert.True((b with { Title = "z" }).IconOnly);
+
+        var set = new BookmarkSet { Bar = [b] };
+        var back = JsonSerializer.Deserialize<BookmarkSet>(JsonSerializer.Serialize(set, Json), Json)!;
+        Assert.True(back.Bar[0].IconOnly);
+
+        var noField = JsonSerializer.Deserialize<BookmarkSet>("""{"Bar":[{"Title":"x","Kind":"Folder","Target":"C:\\a"}]}""", Json)!;
+        Assert.False(noField.Bar[0].IconOnly);
+    }
 
     [Fact]
     public void ブックマークから消えたツールを入れ子の中まで落とす()

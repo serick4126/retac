@@ -22,6 +22,13 @@ public sealed record Bookmark(string Title, BookmarkKind Kind, string Target = "
     /// </summary>
     public string Id { get; init; } = NewId();
 
+    /// <summary>
+    /// R-106: バーに直接置いたボタンだけに効く「アイコンだけ表示」。グループの中・ブックマークメニュー・
+    /// 左パネルのビューでは指定があっても名前を出す（BookmarkRules.BarStyleOf で判定に使うのはバーだけ）。
+    /// 種類を問わず持てる。既定 false。`required` を付けない（S-14。欠けた設定は false で埋まる）。
+    /// </summary>
+    public bool IconOnly { get; init; }
+
     internal static string NewId() => Guid.NewGuid().ToString("N");
 }
 
@@ -40,10 +47,20 @@ public static class BookmarkRules
         BookmarkKind.Group when string.IsNullOrWhiteSpace(b.Title) => "グループの名前を入れてください。",
         BookmarkKind.Group => null,
         _ when string.IsNullOrWhiteSpace(b.Target) => "登録先を入れてください。",
-        BookmarkKind.Command when string.IsNullOrWhiteSpace(b.Title) => "名前を入れてください。",
+        // R-106-2: コマンドの名前は任意。空なら DisplayName がコマンドの名前で表示する。グループには名前の代わりが無いので必須のまま
         BookmarkKind.Command when CommandTarget.Parse(b.Target) is null => "コマンドを読み取れません。",
         _ => null,
     };
+
+    /// <summary>
+    /// R-106: バーのボタンの表示の形。項目の IconOnly（アイコンがある場合）が全体の BookmarkBarStyle より優先する。
+    /// アイコンの無い項目を「アイコンだけ」にすると空のボタンになるので、そのときは名前を出す（全体の IconOnly と同じ扱い）。
+    /// </summary>
+    public static BookmarkBarStyle BarStyleOf(Bookmark b, BookmarkBarStyle global, bool hasIcon)
+    {
+        if (b.IconOnly && hasIcon) return BookmarkBarStyle.IconOnly;
+        return global == BookmarkBarStyle.IconOnly && !hasIcon ? BookmarkBarStyle.TextOnly : global;
+    }
 
     /// <summary>
     /// Q4 / Q10: 消した外部ツールを指す項目と、読めないコマンドを落とす。入れ子の中も落とす。
