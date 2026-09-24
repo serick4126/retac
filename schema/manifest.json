@@ -4390,7 +4390,7 @@
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
-        "line": 92
+        "line": 93
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -4604,7 +4604,7 @@
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
-        "line": 19
+        "line": 20
       },
       {
         "file": "src/ReTAC.App/KeySlots.cs",
@@ -5294,7 +5294,7 @@
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
-        "line": 10
+        "line": 11
       },
       {
         "file": "src/ReTAC.App/QuickAccessPage.cs",
@@ -5344,7 +5344,7 @@
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
-        "line": 56
+        "line": 57
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -5387,11 +5387,23 @@
     ],
     "R-103-1": [
       {
+        "file": "src/ReTAC.App/KeyAssignPage.cs",
+        "line": 195
+      },
+      {
         "file": "src/ReTAC.App/KeyBindingFile.cs",
         "line": 33
       }
     ],
     "R-103-2": [
+      {
+        "file": "src/ReTAC.App/KeyAssignPage.cs",
+        "line": 219
+      },
+      {
+        "file": "src/ReTAC.App/KeyAssignPage.cs",
+        "line": 222
+      },
       {
         "file": "src/ReTAC.App/KeyBindingFile.cs",
         "line": 9
@@ -5399,6 +5411,10 @@
       {
         "file": "src/ReTAC.App/KeyBindingFile.cs",
         "line": 49
+      },
+      {
+        "file": "src/ReTAC.App/KeyBindingFile.cs",
+        "line": 158
       }
     ],
     "R-11": [
@@ -5524,7 +5540,7 @@
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
-        "line": 11
+        "line": 12
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -6744,7 +6760,7 @@
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
-        "line": 62
+        "line": 63
       },
       {
         "file": "src/ReTAC.App/LeftPanel.cs",
@@ -8553,6 +8569,10 @@
       {
         "file": "src/ReTAC.App/AppSettings.cs",
         "line": 188
+      },
+      {
+        "file": "src/ReTAC.App/KeyAssignPage.cs",
+        "line": 195
       },
       {
         "file": "src/ReTAC.App/KeyBindingFile.cs",

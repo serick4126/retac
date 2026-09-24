@@ -151,6 +151,21 @@ public class KeyBindingFileTests
     }
 
     [Fact]
+    public void 通知文は読み込み件数だけを出す()
+    {
+        var message = KeyBindingFile.FormatMessage(new ImportResult([], 3, 0, 0, 0, 0));
+        Assert.Equal("3 件を読み込みました。", message);
+    }
+
+    [Fact]
+    public void 通知文は捨てた分類だけを内訳に出す()
+    {
+        // Duplicate は 0 なので内訳から抜ける。0 件の分類を並べると何を捨てたか読み取りづらい
+        var message = KeyBindingFile.FormatMessage(new ImportResult([], 3, 2, 1, 0, 4));
+        Assert.Equal("3 件を読み込みました。\n使えないため捨てたもの: 解釈できないキー 2 件・知らないコマンド 1 件・外部ツール 4 件", message);
+    }
+
+    [Fact]
     public void 今のツールに無ければ既定は空になる()
     {
         var current = DefaultAssignments();

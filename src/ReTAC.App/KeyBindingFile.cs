@@ -153,4 +153,21 @@ public static class KeyBindingFile
             return new ImportResult(assignments, loaded, unknownKey, unknownCommand, duplicate, tool);
         }
     }
+
+    /// <summary>
+    /// インポート結果を「N 件を読み込みました。」の通知文にする（R-103-2 §4.3-4）。
+    /// 捨てた件数が 0 の分類は内訳に出さない。
+    /// </summary>
+    public static string FormatMessage(ImportResult result)
+    {
+        var discarded = new List<string>();
+        if (result.UnknownKey > 0) discarded.Add($"解釈できないキー {result.UnknownKey} 件");
+        if (result.UnknownCommand > 0) discarded.Add($"知らないコマンド {result.UnknownCommand} 件");
+        if (result.Duplicate > 0) discarded.Add($"重複 {result.Duplicate} 件");
+        if (result.Tool > 0) discarded.Add($"外部ツール {result.Tool} 件");
+
+        var message = $"{result.Loaded} 件を読み込みました。";
+        if (discarded.Count > 0) message += $"\n使えないため捨てたもの: {string.Join("・", discarded)}";
+        return message;
+    }
 }

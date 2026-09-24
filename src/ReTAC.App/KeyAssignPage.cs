@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Windows.Forms;
+using System.IO;
 using ReTAC.Domain.Commands;
 using ReTAC.Domain.Keys;
 using ReTAC.Domain.Tools;
@@ -95,7 +96,13 @@ public sealed class KeyAssignPage : UserControl
             ReloadSlots(_slots.SelectedIndices.Count > 0 ? _slots.SelectedIndices[0] : 0);
         };
 
-        Controls.AddRange([_slots, _commands, _filter, reset]);
+        var export = new Button { Text = "エクスポート(&E)...", Bounds = new Rectangle(154, 468, 110, 28) };
+        export.Click += (_, _) => ExportKeyBindings();
+
+        var import = new Button { Text = "インポート(&I)...", Bounds = new Rectangle(274, 468, 110, 28) };
+        import.Click += (_, _) => ImportKeyBindings();
+
+        Controls.AddRange([_slots, _commands, _filter, reset, export, import]);
 
         // 外部ツールの改名・削除は、コマンド一覧だけでなく枠一覧の表示（ラベル・未割り当ての灰色）にも出ている
         _draft.ToolsChanged += (_, _) =>
@@ -183,5 +190,64 @@ public sealed class KeyAssignPage : UserControl
         _slots.Items[index].SubItems[1].Text = CommandLabels.Of(_assignments[slot], _draft.ExternalTools);
         _slots.Items[index].ForeColor = _assignments[slot] is null ? SystemColors.GrayText : _slots.ForeColor;
         RefreshAssignedKeys();
+    }
+
+    /// <summary>R-103-1: 下書きの割り当てをファイルに書き出す。書き込みは一時ファイル経由（V-07 と同じ理由）。</summary>
+    private void ExportKeyBindings()
+    {
+        using var dialog = new SaveFileDialog
+        {
+            FileName = "retac.keys.json",
+            Filter = "JSON ファイル (*.json)|*.json",
+            DefaultExt = "json",
+        };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+        try
+        {
+            var json = KeyBindingFile.Export(_assignments);
+            var temp = dialog.FileName + ".tmp";
+            File.WriteAllText(temp, json);
+            File.Move(temp, dialog.FileName, overwrite: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show(this, "書き出せませんでした。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    /// <summary>1 MB を超えるファイルは読む前に弾く。読み込んだファイルの内容自体は信用しない入力（R-103-2）。</summary>
+    private const long MaxImportFileBytes = 1_000_000;
+
+    /// <summary>R-103-2: ファイルを読んで下書きの割り当てを丸ごと差し替える。壊れていれば何も変えない。</summary>
+    private void ImportKeyBindings()
+    {
+        using var dialog = new OpenFileDialog { Filter = "JSON ファイル (*.json)|*.json", CheckFileExists = true };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+        string json;
+        try
+        {
+            if (new FileInfo(dialog.FileName).Length > MaxImportFileBytes)
+                throw new IOException("too large"); // メッセージは使わない。大きすぎる場合も「読み込めませんでした」に合流させる
+            json = File.ReadAllText(dialog.FileName);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show(this, "読み込めませんでした。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        var result = KeyBindingFile.Import(json, _assignments, _draft.ExternalTools.Select(t => t.Id));
+        if (result is null)
+        {
+            MessageBox.Show(this, "読み込めませんでした。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        foreach (var slot in KeySlots.All) _assignments[slot] = result.Assignments[slot];
+        ReloadSlots(_slots.SelectedIndices.Count > 0 ? _slots.SelectedIndices[0] : 0);
+
+        MessageBox.Show(this, KeyBindingFile.FormatMessage(result), "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 }
