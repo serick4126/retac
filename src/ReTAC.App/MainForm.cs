@@ -604,6 +604,7 @@ public sealed class MainForm : Form, IBookmarkHost
         CommandId.ExternalToolSettings => ShowSettings(SettingsPage.ExternalTool),
         CommandId.EnvironmentSettings => ShowSettings(SettingsPage.Environment),
         CommandId.About => ShowAbout(),
+        CommandId.OpenGitHub => OpenGitHub(),
         CommandId.ColorAndFontSettings => ShowSettings(SettingsPage.ColorFont),
         CommandId.KeyAssignSettings => ShowSettings(SettingsPage.KeyAssign),
         CommandId.VisibleDriveSettings => ShowSettings(SettingsPage.DriveVisibility),
@@ -679,14 +680,67 @@ public sealed class MainForm : Form, IBookmarkHost
         return true;
     }
 
+    /// <summary>M4: 「フォルダ ＞ フォルダ履歴」サブメニュー。新しい順・最大 16 件（FolderHistory.Capacity）。</summary>
+    private IReadOnlyList<ToolStripItem> FolderHistoryMenuItems()
+    {
+        if (_history.Recent.Count == 0)
+            return [new ToolStripMenuItem("（履歴なし）") { Enabled = false }];
+
+        return _history.Recent.Select(path =>
+        {
+            var item = new ToolStripMenuItem(path.Replace("&", "&&"));
+            item.Click += (_, _) => GoHistory(path);
+            return item;
+        }).ToList();
+    }
+
     /// <summary>ソートの設定（`S` / 0x8300）。選び直したら並べ直して即座に反映する。</summary>
     private bool ShowSortSettings()
     {
         using var dialog = new SortDialog(_sortOrder);
         if (dialog.ShowDialog(this) != DialogResult.OK) return true;
-        _sortOrder = dialog.Result;
+        return ApplySortOrder(dialog.Result);
+    }
+
+    /// <summary>M2: ダイアログの OK と並べ替えサブメニューのラジオが共有する反映処理。</summary>
+    private bool ApplySortOrder(SortOrder order)
+    {
+        _sortOrder = order;
         SaveSettings();   // V-13: 設定画面の変更はその場で JSON に落とす（異常終了で失わない）
         return Reload();
+    }
+
+    /// <summary>M2: 「表示 ＞ 並べ替え」サブメニュー。開くたびに今の設定でラジオの印を作り直す。</summary>
+    private IReadOnlyList<ToolStripItem> SortMenuItems()
+    {
+        List<ToolStripItem> items =
+        [
+            SortKeyRadio("名前でソート(&N)", SortKey.Name),
+            SortKeyRadio("拡張子でソート(&X)", SortKey.Extension),
+            SortKeyRadio("時刻でソート(&T)", SortKey.Date),
+            SortKeyRadio("ファイルサイズでソート(&S)", SortKey.Size),
+            SortKeyRadio("ソートはしない(&U)", SortKey.None),
+            new ToolStripSeparator(),
+            SortMethodRadio("昇順で並べる(&P)", SortDirection.Ascending, ComparisonMode.Strict),
+            SortMethodRadio("降順で並べる(&D)", SortDirection.Descending, ComparisonMode.Strict),
+            SortMethodRadio("自然な昇順で並べる(&A)", SortDirection.Ascending, ComparisonMode.Natural),
+            SortMethodRadio("自然な降順で並べる(&E)", SortDirection.Descending, ComparisonMode.Natural),
+        ];
+        return items;
+
+        ToolStripMenuItem SortKeyRadio(string text, SortKey key)
+        {
+            var item = new RadioToolStripMenuItem(text) { Checked = _sortOrder.Key == key };
+            item.Click += (_, _) => ApplySortOrder(_sortOrder with { Key = key });
+            return item;
+        }
+
+        ToolStripMenuItem SortMethodRadio(string text, SortDirection direction, ComparisonMode mode)
+        {
+            var item = new RadioToolStripMenuItem(text) { Checked = _sortOrder.Direction == direction && _sortOrder.Mode == mode };
+            item.Click += (_, _) => ApplySortOrder(_sortOrder with { Direction = direction, Mode = mode });
+            return item;
+        }
     }
 
     /// <summary>
@@ -1608,7 +1662,8 @@ public sealed class MainForm : Form, IBookmarkHost
         _leftPanelShown = shown;
         _settings.ShowLeftPanel = shown;
         _settings.LeftPanelView = view;
-        _leftPanelMenuItems.Toggle.Checked = shown;
+        // Q10: 表示中かどうかのチェックは親項目に付ける（ドライブバー・アドレスバー・ブックマークバーと同じ見え方）
+        _leftPanelMenuItems.Root.Checked = shown;
         // R-96: 非表示中も最後のビューへラジオ印を残す（Views は RadioToolStripMenuItem で相互排他）
         _leftPanelMenuItems.Views[view].Checked = true;
         SaveSettings();   // V-13
@@ -1913,6 +1968,18 @@ public sealed class MainForm : Form, IBookmarkHost
         return true;
     }
 
+    /// <summary>M5: 「フォルダ ＞ ドライブの選択」サブメニュー。表示・行き先はドライブバーのボタンと同じ計算を使い回す。</summary>
+    private IReadOnlyList<ToolStripItem> DriveMenuItems()
+    {
+        return _driveBar.Entries().Select(entry =>
+        {
+            var text = entry.DriveLetter is { } letter ? $"&{letter}:" : entry.Label.Replace("&", "&&");
+            var item = new ToolStripMenuItem(text);
+            item.Click += (_, _) => OnDriveChosen(entry.Path);
+            return item;
+        }).ToList();
+    }
+
     /// <summary>
     /// ドロップされたファイルをフォルダへ入れる（T8-2 / T8-3）。
     /// コピーか移動かは Windows の作法に合わせて <see cref="DropRules"/> が決める。
@@ -2160,13 +2227,16 @@ public sealed class MainForm : Form, IBookmarkHost
     [MemberNotNull(nameof(_menu), nameof(_driveBarMenuItem), nameof(_addressBarMenuItem), nameof(_bookmarkBarMenuItem), nameof(_leftPanelMenuItems))]
     private void CreateMenu()
     {
-        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools,
+        var dynamicContent = new MenuDynamicContent(
+            SortMenuItems, FileTypeMenuItems, QuickAccessMenuItems, FolderHistoryMenuItems,
+            () => _history.Clear(), DriveMenuItems);
+        _menu = MenuBar.Create(target => Execute(target, Keys.None), _keyMap, _settings.ExternalTools, dynamicContent,
             out _driveBarMenuItem, out _addressBarMenuItem, out _bookmarkBarMenuItem, out _leftPanelMenuItems, UndoDescription);
         _driveBarMenuItem.Checked = _driveBarShown;
         _addressBarMenuItem.Checked = _addressBarShown;
         _bookmarkBarMenuItem.Checked = _bookmarkBarShown;
         // R-96-2: RebuildMenu は項目を作り直すので、このウィンドウの状態を毎回このメニューへ映す
-        _leftPanelMenuItems.Toggle.Checked = _leftPanelShown;
+        _leftPanelMenuItems.Root.Checked = _leftPanelShown;
         _leftPanelMenuItems.Views[_leftPanel.ViewKind].Checked = true;
         // R-90: 「ツール」の前に「ブックマーク」。中身は MainForm の状態（ブックマーク・今のフォルダ）に依るのでここで足す
         var tools = _menu.Items.Cast<ToolStripItem>().First(item => item.Text == "ツール(&T)");
@@ -2212,8 +2282,37 @@ public sealed class MainForm : Form, IBookmarkHost
     {
         using var dialog = new FileTypeDialog(_fileTypes);
         if (dialog.ShowDialog(this) != DialogResult.OK) return true;
+        return ApplyFileTypeChange();
+    }
+
+    /// <summary>M3: ダイアログの OK とファイルタイプサブメニューのチェックが共有する反映処理。
+    /// _fileTypes 自体は呼び出し側が先に書き換えてから呼ぶ。</summary>
+    private bool ApplyFileTypeChange()
+    {
         SaveSettings();   // V-13
         return Reload();
+    }
+
+    /// <summary>M3: 「表示 ＞ 表示するファイルタイプ」サブメニュー。開くたびに今の設定でチェックを作り直す。</summary>
+    private IReadOnlyList<ToolStripItem> FileTypeMenuItems()
+    {
+        return
+        [
+            FileTypeCheck("フォルダ(&D)", () => _fileTypes.Folders, v => _fileTypes.Folders = v),
+            FileTypeCheck("プログラム(&P)", () => _fileTypes.Programs, v => _fileTypes.Programs = v),
+            FileTypeCheck("関連付けファイル(&A)", () => _fileTypes.Associated, v => _fileTypes.Associated = v),
+            FileTypeCheck("書庫ファイル(&R)", () => _fileTypes.Archives, v => _fileTypes.Archives = v),
+            FileTypeCheck("その他のファイル(&O)", () => _fileTypes.Others, v => _fileTypes.Others = v),
+            FileTypeCheck("システムファイル(&S)", () => _fileTypes.SystemFiles, v => _fileTypes.SystemFiles = v),
+            FileTypeCheck("隠しファイル(&H)", () => _fileTypes.HiddenFiles, v => _fileTypes.HiddenFiles = v),
+        ];
+
+        ToolStripMenuItem FileTypeCheck(string text, Func<bool> get, Action<bool> set)
+        {
+            var item = new ToolStripMenuItem(text) { Checked = get() };
+            item.Click += (_, _) => { set(!get()); ApplyFileTypeChange(); };
+            return item;
+        }
     }
 
     /// <summary>
@@ -2362,6 +2461,20 @@ public sealed class MainForm : Form, IBookmarkHost
         else _ = OpenFolderAsync(target.Folder, target.SelectName);
     }
 
+    /// <summary>R-105: ヘルプ「GitHub のページを開く」。既定のキーは無い。</summary>
+    private bool OpenGitHub()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("https://github.com/serick4126/retac/releases") { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is Win32Exception or IOException)
+        {
+            MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        return true;
+    }
+
     /// <summary>D-08:「開く」＝ 指定フォルダをエクスプローラーで開く。</summary>
     private void OpenInExplorer(string folder)
     {
@@ -2391,6 +2504,20 @@ public sealed class MainForm : Form, IBookmarkHost
             ("このフォルダを追加(&A)", () => AddCurrentToQuickAccess()),
         ]);
         return true;
+    }
+
+    /// <summary>M4: 「フォルダ ＞ クイックアクセス」サブメニュー。表示名・動作は `J` のポップアップと同じ。</summary>
+    private IReadOnlyList<ToolStripItem> QuickAccessMenuItems()
+    {
+        if (_quickAccess.Items.Count == 0)
+            return [new ToolStripMenuItem("（登録なし）") { Enabled = false }];
+
+        return _quickAccess.Items.Select(entry =>
+        {
+            var item = new ToolStripMenuItem(QuickAccessLabel(entry).Replace("&", "&&"));
+            item.Click += (_, _) => GoQuickAccess(entry);
+            return item;
+        }).ToList();
     }
 
     /// <summary>R-92: 題名の無いコマンドは、コマンドの名前（外部ツールはツールの名前）で出す。</summary>

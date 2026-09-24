@@ -184,7 +184,7 @@
       "specIds": ["R-105"],
       "applies": ["command:OpenGitHub"],
       "rule": "OpenGitHub（0x9012）はキー割り当ての対象にしない。",
-      "reason": "利用者が開くだけの項目でキーに割り当てる理由がない（About と同じ）。ヘルプメニューへの配線は 11.2 で行うため、CommandLabels にはまだ載せていない。"
+      "reason": "利用者が開くだけの項目でキーに割り当てる理由がない（About と同じ）。ヘルプメニューの配線はコマンドの実行経路（Execute）で行い、CommandLabels には載せない。"
     },
     {
       "id": "INV-EXTERNALTOOL-ID-UNIQUE",

@@ -12,7 +12,8 @@ public static class LeftPanelCommands
     /// 個別表示は非表示なら表示して対象ビューへ切り替え、表示中で別ビューならそのビューへ切り替える。
     /// 表示中で既に同じビューなら非表示にする（R-96-3。ビューは変えないので、次に表示したときのラジオは
     /// 最後のビューに残る＝R-96）。ただし <paramref name="fromSelector"/> が true（左パネル上端のビュー選択欄
-    /// から呼ばれた場合）は何もしない。上端はビューの選択だけで、閉じる操作を置かない（Phase 10 の決定）。
+    /// から呼ばれた場合）は何もしない。上端の欄はビューを選ぶだけの場所とし、閉じる操作は持たせない
+    /// （同じビューを選び直しただけで左パネルが消えると、選ぶための操作と紛れる）。
     /// トグルは表示中なら隠し（ビューは変えない）、非表示なら最後のビューのまま表示する。
     /// </summary>
     public static Result Apply(CommandId command, bool shown, LeftPanelViewKind view, bool fromSelector = false) => command switch

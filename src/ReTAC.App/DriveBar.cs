@@ -64,6 +64,13 @@ public sealed class DriveBar : Control
     /// </summary>
     public event EventHandler<(string Path, Point ScreenPoint)>? RightClicked;
 
+    /// <summary>
+    /// M5: 「フォルダ ＞ ドライブの選択」サブメニュー用に、ボタンと同じ絞り込み・並びを公開する。
+    /// アイコンを持たないメニュー項目でも見分けが付くよう、デスクトップの文字はアイコンの有無に関わらず出す。
+    /// </summary>
+    public IReadOnlyList<(char? DriveLetter, string Label, string Path)> Entries() =>
+        _buttons.Select(b => (b.DriveLetter, b.DriveLetter is null ? DesktopLabel : b.Label, b.Path)).ToList();
+
     /// <summary>16.7 節: 表示するドライブの設定。</summary>
     public void SetVisibility(IReadOnlySet<char> hiddenDrives, bool showDesktop)
     {

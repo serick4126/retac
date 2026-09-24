@@ -70,7 +70,7 @@ public class CommandLabelsTests
     {
         var rows = CommandLabels.Grouped.ToList();
         var context = rows.FindIndex(r => r.Command == CommandId.ShowContextMenu);
-        Assert.Equal((CommandId.ShowFolderBackgroundMenu, "表示", "フォルダのコンテキストメニューの表示"),
+        Assert.Equal((CommandId.ShowFolderBackgroundMenu, "表示", "現在のフォルダの右クリックメニューの表示"),
             (rows[context + 1].Command, rows[context + 1].Category, rows[context + 1].Label));
     }
 

@@ -77,7 +77,7 @@ public class LeftPanelTests
         Assert.Equal("", preview.ShortcutKeyDisplayString);
 
         CommandTarget? dispatched = null;
-        using var menu = MenuBar.Create(target => dispatched = target, map, [], out _, out _, out _, out var leftPanel, () => null);
+        using var menu = MenuBar.Create(target => dispatched = target, map, [], NoDynamicContent(), out _, out _, out _, out var leftPanel, () => null);
         Assert.Equal("P", leftPanel.Views[LeftPanelViewKind.Preview].ShortcutKeyDisplayString);
         leftPanel.Views[LeftPanelViewKind.Preview].PerformClick();
         Assert.Equal(new BuiltinTarget(CommandId.ShowPreview), dispatched);
@@ -86,9 +86,9 @@ public class LeftPanelTests
     [Fact]
     public void 表示メニューの左パネルはチェック項目と4個のラジオ項目を持つ()
     {
-        using var menu = MenuBar.Create(_ => { }, new KeyMap([]), [], out _, out _, out _, out var leftPanel, () => null);
+        using var menu = MenuBar.Create(_ => { }, new KeyMap([]), [], NoDynamicContent(), out _, out _, out _, out var leftPanel, () => null);
 
-        Assert.Equal(CommandId.ToggleLeftPanel, leftPanel.Toggle.Tag);
+        Assert.Equal(CommandId.ToggleLeftPanel, leftPanel.Root.DropDownItems[0].Tag);
         Assert.Equal(6, leftPanel.Root.DropDownItems.Count);
         Assert.IsType<ToolStripSeparator>(leftPanel.Root.DropDownItems[1]);
         Assert.Equal(Kinds, leftPanel.Views.Keys);
@@ -98,4 +98,8 @@ public class LeftPanelTests
         Assert.False(leftPanel.Views[LeftPanelViewKind.DriveTree].Checked);
         Assert.True(leftPanel.Views[LeftPanelViewKind.Preview].Checked);
     }
+
+    /// <summary>M2〜M5 のサブメニューはこのテストの対象外なので、中身を持たない関数の束を渡す。</summary>
+    private static MenuDynamicContent NoDynamicContent() =>
+        new(() => [], () => [], () => [], () => [], () => { }, () => []);
 }
