@@ -4245,7 +4245,7 @@
       },
       {
         "file": "src/ReTAC.App/SettingsDialog.cs",
-        "line": 90
+        "line": 92
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
@@ -4379,7 +4379,7 @@
       },
       {
         "file": "src/ReTAC.App/SettingsDialog.cs",
-        "line": 84
+        "line": 86
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
@@ -5397,7 +5397,7 @@
       },
       {
         "file": "src/ReTAC.App/SettingsDialog.cs",
-        "line": 81
+        "line": 83
       }
     ],
     "R-102-1": [

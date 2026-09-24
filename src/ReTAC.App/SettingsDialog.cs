@@ -76,7 +76,9 @@ public sealed class SettingsDialog : Form
         var applyRight = clientWidth - Pad;
         var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Bounds = new Rectangle(applyRight - ButtonWidth * 3 - ButtonGap * 2, buttonTop, ButtonWidth, ButtonHeight) };
         var cancel = new Button { Text = "キャンセル", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(applyRight - ButtonWidth * 2 - ButtonGap, buttonTop, ButtonWidth, ButtonHeight) };
-        var applyButton = new Button { Text = "適用(&A)", Bounds = new Rectangle(applyRight - ButtonWidth, buttonTop, ButtonWidth, ButtonHeight) };
+        // 6 ページの (&x) と衝突しない文字を選ぶ（既に A は ExternalToolPage の「追加」・QuickAccessPage の
+        // 「フォルダを追加」と、E・I は Task 6 で足す KeyAssignPage のエクスポート・インポートと衝突する）
+        var applyButton = new Button { Text = "適用(&S)", Bounds = new Rectangle(applyRight - ButtonWidth, buttonTop, ButtonWidth, ButtonHeight) };
         applyButton.Click += (_, _) => TryApply();
         AcceptButton = ok;   // R-102: キー割り当てページは Enter を自分で使うので、そちらが先に拾う
         CancelButton = cancel;
@@ -90,9 +92,15 @@ public sealed class SettingsDialog : Form
         AutoScaleDimensions = new SizeF(96F, 96F);   // B-16: 座標と大きさは 96 DPI（100%）で書いてある
         AutoScaleMode = AutoScaleMode.Dpi;
 
-        // ListView の列幅は PerformAutoScale では拡大されないため、AutoScaleMode を当てた直後に決める（Task 3）
+        // ListView の列幅は PerformAutoScale では拡大されないため、AutoScaleMode を当てた直後と
+        // DpiChanged のたびに決め直す（Task 3。モニターをまたいで移動したときのため）
         keyAssignPage.ApplyDpi(DeviceDpi);
         quickAccessPage.ApplyDpi(DeviceDpi);
+        DpiChanged += (_, _) =>
+        {
+            keyAssignPage.ApplyDpi(DeviceDpi);
+            quickAccessPage.ApplyDpi(DeviceDpi);
+        };
 
         SelectPage(initial);
 
