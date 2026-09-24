@@ -19,6 +19,7 @@ retac.settings.json
 # --- ツールが生成するメタデータ ---
 /.claude
 /.agents
+/skills-lock.json
 /.worktrees/
 
 # --- .NET ビルド生成物 ---
