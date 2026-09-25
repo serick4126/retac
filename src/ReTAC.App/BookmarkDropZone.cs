@@ -434,6 +434,53 @@ internal static class BarKeyboardNav
         var candidates = items.Cast<ToolStripItem>().Where(i => i.Enabled && i is not ToolStripSeparator);
         (first ? candidates.FirstOrDefault() : candidates.LastOrDefault())?.Select();
     }
+
+    /// <summary>
+    /// 「»」の一覧に回っている、キーボードで選べる項目（並び順）。「»」の DropDownItems は常に空を返す
+    /// （ToolStripOverflow.Items は空の読み取り専用の集まりで、中身は ToolStrip の internal な OverflowItems）ので、
+    /// バー本体の Items から IsOnOverflow で拾う。OverflowItems も Items の順に積まれるので並びは同じ。
+    /// </summary>
+    internal static List<ToolStripItem> OverflowSelectable(ToolStrip bar) =>
+        bar.Items.Cast<ToolStripItem>().Where(i => i.IsOnOverflow && i.Available && i.Enabled && i is not ToolStripSeparator).ToList();
+
+    /// <summary>
+    /// R-107: 1 段目の一覧を閉じて、開いたボタンを選んだ状態へ戻す（Esc と同じ効果）。
+    /// ToolStripDropDown.SelectPreviousToolStrip（Esc の実装）は internal で呼べないので、公開 API だけで
+    /// 閉じる・バーへ焦点を戻す・ボタンを選ぶ、を組み立てる。
+    /// </summary>
+    internal static void ReturnToOwner(ToolStripDropDown dropDown, ToolStripItem ownerItem, ToolStrip bar)
+    {
+        dropDown.Visible = false;
+        bar.Focus();
+        ownerItem.Select();
+    }
+
+    /// <summary>
+    /// R-107: 「»」の一覧の中の項目（BarButton・BarDropDownButton）へ来たキー。処理したら true。
+    /// 標準では「»」の中の項目はバー直下と同じ扱いで（ToolStripDropDownItem.ProcessDialogKey の isTopLevel）、
+    /// ↑/↓ でフォルダを開いてしまい、←/→ は横に詰めた並びの中を移り、端から「»」へは Esc でしか戻れない。
+    /// 利用者の決定で「»」の一覧も 1 段目として扱う: ↑/↓ は並び順で移り端で「»」へ戻る、← は何もしない、
+    /// → は開けるものだけ開く（open）。Enter・Esc は標準のまま。
+    /// </summary>
+    internal static bool ProcessOverflowKey(ToolStripItem item, Keys keyData, bool canOpen, Action? open)
+    {
+        if (!item.IsOnOverflow || item.Owner is not { } bar) return false;
+        switch (keyData)
+        {
+            case Keys.Left or Keys.Right:
+                if (!BookmarkRules.SwallowArrowKey(level: 1, canOpen, forward: keyData == Keys.Right)) open?.Invoke();
+                return true;
+            case Keys.Up or Keys.Down:
+                var list = OverflowSelectable(bar);
+                if (BookmarkRules.OverflowListStep(list.IndexOf(item), list.Count, down: keyData == Keys.Down) is { } next)
+                    list[next].Select();
+                else if (item.GetCurrentParent() is ToolStripDropDown overflow)
+                    ReturnToOwner(overflow, bar.OverflowButton, bar);
+                return true;
+            default:
+                return false;
+        }
+    }
 }
 
 /// <summary>
@@ -469,6 +516,13 @@ internal sealed class BarDropDownButton : ToolStripDropDownButton
     /// </summary>
     protected override bool ProcessDialogKey(Keys keyData)
     {
+        if (IsOnOverflow)
+            return BarKeyboardNav.ProcessOverflowKey(this, keyData, canOpen: Enabled && HasDropDownItems, open: () =>
+            {
+                ShowDropDown();
+                BarKeyboardNav.SelectEdge(DropDownItems, first: true);
+            }) || base.ProcessDialogKey(keyData);
+
         if (Enabled && keyData == Keys.Up && HasDropDownItems
             && BookmarkRules.BarVerticalKey(canOpen: true, down: false) == BookmarkRules.BarVerticalKeyAction.OpenSelectLast)
         {
@@ -537,6 +591,19 @@ internal sealed class BarButton : ToolStripButton
 
     protected override bool ProcessDialogKey(Keys keyData)
     {
+        // 「»」の一覧の中は 1 段目の一覧として扱う。Space も開いた一覧の中と同じく何もしない（標準の ToolStripButton のまま）
+        if (IsOnOverflow)
+            return BarKeyboardNav.ProcessOverflowKey(this, keyData, canOpen: false, open: null) || base.ProcessDialogKey(keyData);
+
+        // ↑/↓ はここで呑み込む。横並びの ToolStrip は ↑/↓ を自分では使わず（ProcessArrowKey は縦並びか
+        // ドロップダウンのときだけ動く）、Control.ProcessDialogKey で親へ流す。行き着いたフォームの
+        // ContainerControl.ProcessDialogKey が矢印キーとして SelectNextControl で別のコントロールへ焦点を移し、
+        // バーの選択が消える（B で入った直後に起きた）。フォルダ・グループのボタンは ToolStripDropDownItem が
+        // ↑/↓ を自分で処理する（開けないときも呑み込む）ので、漏れていたのはこのボタンだけ
+        if (keyData is Keys.Up or Keys.Down
+            && BookmarkRules.BarVerticalKey(canOpen: false, down: keyData == Keys.Down) == BookmarkRules.BarVerticalKeyAction.None)
+            return true;
+
         if (Enabled && keyData == Keys.Space)
         {
             IsSpaceActivation = true;
@@ -564,9 +631,8 @@ internal sealed class ConfinedMenuItem(int level) : ToolStripMenuItem
         if ((forward || keyData == Keys.Left) && BookmarkRules.SwallowArrowKey(level, HasDropDownItems, forward))
             return true;   // 呑み込むだけ。バー本体の ProcessDialogKey（ボタン間の移動）まで渡さない
 
-        // R-107 fix round 3: 1 段目の端（先頭で ↑・末尾で ↓）は、Esc と同じくバーのボタンへ戻す。
-        // ToolStripDropDown.SelectPreviousToolStrip（Esc の実装）は internal で呼べないので、
-        // 公開 API だけで同じ効果（閉じる・ボタンを選ぶ・バーへ焦点を戻す）を組み立てる。
+        // R-107: 1 段目の端（先頭で ↑・末尾で ↓）は、Esc と同じくバーのボタンへ戻す。
+        // 「»」の一覧から開いたときは、ボタン（ownerItem）は「»」の一覧の中の項目で、そこへ選択が戻る。
         if (keyData is Keys.Up or Keys.Down
             && Owner is ToolStripDropDown dropDown && dropDown.OwnerItem is { } ownerItem && ownerItem.Owner is { } bar)
         {
@@ -575,9 +641,7 @@ internal sealed class ConfinedMenuItem(int level) : ToolStripMenuItem
             var isLast = selectable.Count > 0 && ReferenceEquals(selectable[^1], this);
             if (BookmarkRules.ReturnsToBarButton(level, isFirst, isLast, down: keyData == Keys.Down))
             {
-                dropDown.Visible = false;
-                bar.Focus();
-                ownerItem.Select();
+                BarKeyboardNav.ReturnToOwner(dropDown, ownerItem, bar);
                 return true;
             }
         }

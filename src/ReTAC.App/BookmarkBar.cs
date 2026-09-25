@@ -49,14 +49,15 @@ public sealed class BookmarkBar : ToolStrip
     /// R-107: 入りきらない項目をまとめる「»」（ToolStripOverflowButton）は ToolStrip が自前で作る組み込みの型で、
     /// 継承して独自の ProcessDialogKey を持たせられない。バー本体でこの 1 件だけ横取りする
     /// （BarDropDownButton と同じ「↑ は末尾を選んで開く」を、こちらにも揃えるため）。
+    /// 末尾は OverflowButton.DropDownItems からは取れない（常に空）ので、BarKeyboardNav.OverflowSelectable で拾う。
     /// </summary>
     protected override bool ProcessDialogKey(Keys keyData)
     {
-        if (keyData == Keys.Up && OverflowButton.Selected && OverflowButton.HasDropDownItems
+        if (keyData == Keys.Up && OverflowButton.Selected && OverflowButton.Enabled && OverflowButton.HasDropDownItems
             && BookmarkRules.BarVerticalKey(canOpen: true, down: false) == BookmarkRules.BarVerticalKeyAction.OpenSelectLast)
         {
             OverflowButton.ShowDropDown();
-            BarKeyboardNav.SelectEdge(OverflowButton.DropDownItems, first: false);
+            BarKeyboardNav.OverflowSelectable(this).LastOrDefault()?.Select();
             return true;
         }
         return base.ProcessDialogKey(keyData);

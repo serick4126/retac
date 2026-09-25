@@ -62,7 +62,7 @@ public static class FolderExpansion
         ToolStripExtras.EnableWheel(item.DropDown);   // 数百件を ▲▼ だけで送らせない（実機指摘）
         ExpansionDropZone.Attach(item.DropDown, folder, host);   // R-93: 中へファイルを落として転送する
 
-        // R-107 fix round 3: ↑ で開いたときは中身が届くまで本当の末尾が分からない（フォルダは非同期に読む）。
+        // R-107: ↑ で開いたときは中身が届くまで本当の末尾が分からない（フォルダは非同期に読む）。
         // BarDropDownButton（バー直下だけ）に「読み込み後に末尾を選び直す」引き金を渡しておく
         var pendingSelectLast = false;
         if (item is BarDropDownButton barButton) barButton.RequestSelectLastOnReady = () => pendingSelectLast = true;
@@ -128,7 +128,7 @@ public static class FolderExpansion
                             break;
                         default:
                             items.LoadIcons(Fill(item, index, entries, folder, items, level));
-                            // R-107 fix round 3: ↑ で開いた直後に選んだ「このフォルダへジャンプ」が、読み込みが
+                            // R-107: ↑ で開いた直後に選んだ「このフォルダへジャンプ」が、読み込みが
                             // 終わった今も選ばれたままなら（＝利用者がその間に選択を動かしていなければ）、
                             // 本当の末尾へ選び直す。動かしていれば、その選択を横取りしない
                             if (wantsLast && jump.Selected) BarKeyboardNav.SelectEdge(item.DropDownItems, first: false);

@@ -309,4 +309,21 @@ public class BookmarkTests
     [InlineData(2, false, true, true, false)]
     public void 一段目の端だけバーのボタンへ戻る(int level, bool isFirst, bool isLast, bool down, bool expected) =>
         Assert.Equal(expected, BookmarkRules.ReturnsToBarButton(level, isFirst, isLast, down));
+
+    [Theory]
+    // 途中は並び順で隣へ
+    [InlineData(1, 3, true, 2)]
+    [InlineData(1, 3, false, 0)]
+    [InlineData(0, 3, true, 1)]
+    [InlineData(2, 3, false, 1)]
+    // 先頭で ↑・末尾で ↓ は「»」のボタンへ戻る（null）
+    [InlineData(0, 3, false, null)]
+    [InlineData(2, 3, true, null)]
+    // 1 件だけなら ↑↓ とも戻る
+    [InlineData(0, 1, true, null)]
+    [InlineData(0, 1, false, null)]
+    // 一覧に見つからないときも戻る
+    [InlineData(-1, 3, true, null)]
+    public void オーバーフローの一覧の上下は並び順で移り端でボタンへ戻る(int index, int count, bool down, int? expected) =>
+        Assert.Equal(expected, BookmarkRules.OverflowListStep(index, count, down));
 }

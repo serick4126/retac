@@ -202,6 +202,16 @@ public static class BookmarkRules
     public static bool ReturnsToBarButton(int level, bool isFirst, bool isLast, bool down) =>
         level <= 1 && (down ? isLast : isFirst);
 
+    /// <summary>
+    /// R-107: 「»」の一覧（入りきらない項目）の中で ↑/↓ を押したとき、次に選ぶ項目の位置。null は一覧を閉じて
+    /// 「»」のボタンへ戻す。「»」の一覧は 1 段目として扱うので、端では ReturnsToBarButton と同じくボタンへ戻る。
+    /// 見た目の上下ではなく並び順で隣へ移るのは、「»」の一覧が項目を横に詰めて折り返す並べ方で、アイコンだけの
+    /// 項目（R-106）が 1 行に何個も並ぶと、見た目の上下だけでは同じ行の項目へ届かないため（←/→ はここでは何もしない）。
+    /// index は選べる項目だけの並びでの位置。見つからない（負）ときは、迷わせないようボタンへ戻す。
+    /// </summary>
+    public static int? OverflowListStep(int index, int count, bool down) =>
+        index < 0 || ReturnsToBarButton(1, isFirst: index == 0, isLast: index == count - 1, down) ? null : index + (down ? 1 : -1);
+
     /// <summary>表示名。題名が空の Folder / File はパスの末尾の名前（ルートはパスそのもの）。</summary>
     public static string DisplayName(Bookmark b, Func<CommandTarget, string> commandLabel) => b switch
     {

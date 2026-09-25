@@ -5593,6 +5593,10 @@
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
         "line": 56
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
+        "line": 209
       }
     ],
     "R-106-1": [
@@ -5658,23 +5662,31 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 457
+        "line": 447
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 466
+        "line": 459
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 523
+        "line": 504
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 552
+        "line": 513
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 567
+        "line": 577
+      },
+      {
+        "file": "src/ReTAC.App/BookmarkDropZone.cs",
+        "line": 619
+      },
+      {
+        "file": "src/ReTAC.App/BookmarkDropZone.cs",
+        "line": 634
       },
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
@@ -5767,6 +5779,10 @@
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
         "line": 198
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
+        "line": 206
       }
     ],
     "R-11": [
@@ -7810,11 +7826,11 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkBar.cs",
-        "line": 66
+        "line": 67
       },
       {
         "file": "src/ReTAC.App/BookmarkBar.cs",
-        "line": 84
+        "line": 85
       },
       {
         "file": "src/ReTAC.App/BookmarkDialog.cs",
@@ -8076,15 +8092,15 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 442
+        "line": 489
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 453
+        "line": 500
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 507
+        "line": 561
       },
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
