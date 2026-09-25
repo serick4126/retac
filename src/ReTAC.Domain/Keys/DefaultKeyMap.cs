@@ -33,8 +33,9 @@ public static class Vk
 /// R-14: 現行の TACKEY.KFM 全 65 件を初期キーマップとして組み込む。
 /// スコープ外の 6 件（F=内蔵検索 / P=圧縮 / U=書庫復元 / Y=絞込み / F2=CTRL+キー実行 / F10=サブ関連付け）は
 /// 未割り当てとする（X-01・X-03）。
-/// 結果: ReTAC では Esc を割り当て枠に含めないため、修飾なし・Shift の 64 枠のうち 39 枠が有効、25 枠が空。
-/// Ctrl の 47 枠（F-06。Ctrl+Z は R-83 で枠から外した）には、Ctrl+F（B-18）と Ctrl+L（B-19）を除いて既定の割り当てを付けない。
+/// 結果: ReTAC では Esc を割り当て枠に含めないため、修飾なし・Shift の 64 枠のうち 40 枠が有効、24 枠が空。
+/// Ctrl の 47 枠（F-06。Ctrl+Z は R-83 で枠から外した）には、Ctrl+F（B-18）・Ctrl+L（B-19）・Ctrl+B（B-21）を
+/// 除いて既定の割り当てを付けない。
 /// B-17: マウスの 3 枠（R-73）はボタン4/5 の 2 枠が有効。ボタン3 は空。
 /// F-01: E / Shift+Enter / V / Z / F3 は、初期登録の外部ツール（<see cref="DefaultExternalTools"/>）を指す。
 /// </summary>
@@ -44,8 +45,10 @@ public static class DefaultKeyMap
 
     private static IEnumerable<KeyValuePair<KeyBinding, CommandTarget>> Bindings()
     {
-        // 英字キー（B / F / P / U / Y は未割り当て）
+        // 英字キー（F / P / U / Y は未割り当て）
         yield return Letter('A', CommandId.ChangeAttributes);
+        // B-21: ブックマークバーへ移動。R-107
+        yield return Letter('B', CommandId.FocusBookmarkBar);
         yield return Letter('C', CommandId.CopyToFolder);
         yield return Letter('D', CommandId.Delete);
         yield return Tool(new KeyBinding(Vk.Letter('E')), DefaultExternalTools.EditorId);
@@ -91,13 +94,17 @@ public static class DefaultKeyMap
         yield return Key(new KeyBinding(Vk.XButton2), CommandId.GoForward);
 
         // B-18: Ctrl+F は Windows 全体で「検索」の標準キー。INV-NO-PREFERENCE-DEFAULTS の例外条項に当たる。
-        // Ctrl の枠で既定を持つのは Ctrl+F と Ctrl+L だけ。便利だからという理由で Ctrl の枠に既定を足さない
+        // Ctrl の枠で既定を持つのは Ctrl+F・Ctrl+L・Ctrl+B だけ。便利だからという理由で Ctrl の枠に既定を足さない
         yield return Key(new KeyBinding(Vk.Letter('F'), Ctrl: true), CommandId.IncrementalSearch);
 
         // B-19: Ctrl+L はブラウザ共通の「アドレスバーへ」。INV-NO-PREFERENCE-DEFAULTS の例外条項に当たる。
         // 新しいコマンドは作らず T と同じ DirectJump にする（アドレスバーが出ていればそこへ、無ければダイアログ）。
         // Alt+D（エクスプローラー）は使わない。キー割り当ては Alt を持たず（F-06）、メニューの「フォルダ(&D)」とも衝突する
         yield return Key(new KeyBinding(Vk.Letter('L'), Ctrl: true), CommandId.DirectJump);
+
+        // B-21: Ctrl+B は Firefox のブックマークサイドバーと同じ意味。INV-NO-PREFERENCE-DEFAULTS の例外条項に当たる。
+        // B キーを修飾キーによらずブックマークにまとめる（無印はバーへフォーカス）。ほかの Ctrl の枠を埋める前例にしない
+        yield return Key(new KeyBinding(Vk.Letter('B'), Ctrl: true), CommandId.ShowBookmarksView);
     }
 
     private static KeyValuePair<KeyBinding, CommandTarget> Letter(char c, CommandId id) =>

@@ -41,7 +41,8 @@ public class LeftPanelSettingsTests
     public void 左パネルコマンドは既定キーを持たない()
     {
         var defaults = DefaultKeyMap.Create().Bindings.Values;
-        Assert.All(Commands, id => Assert.DoesNotContain(new BuiltinTarget(id), defaults));
+        // B-21: ShowBookmarksView だけ Ctrl+B の既定を持つ（Firefox のブックマークサイドバーと同じキー）。他はそのまま
+        Assert.All(Commands.Except([CommandId.ShowBookmarksView]), id => Assert.DoesNotContain(new BuiltinTarget(id), defaults));
     }
 
     [Fact]

@@ -52,6 +52,12 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>R-89: このウィンドウでブックマークバーを出しているか（_driveBarShown と同じ理由でフィールドで持つ）。</summary>
     private bool _bookmarkBarShown;
     private ToolStripMenuItem _bookmarkBarMenuItem;
+    /// <summary>
+    /// R-107: `B` でバーへフォーカスしている間だけ true。File/Command のブックマークは実行しても
+    /// フォーカスを自分では動かさないので、ここが立っていたら実行後にファイル一覧へ戻す。
+    /// バーが実際にフォーカスを失ったら（Esc・他の操作）LostFocus で必ず false に戻る。
+    /// </summary>
+    private bool _bookmarkBarKeyboard;
     /// <summary>R-96-2: このウィンドウで左パネルを出しているか。設定はコンストラクタで一度読むだけで、
     /// 以後は他ウィンドウの変更を読まない（表示ビューは _leftPanel.ViewKind、幅は _centralDisplay が持つ）。</summary>
     private bool _leftPanelShown;
@@ -194,6 +200,9 @@ public sealed class MainForm : Form, IBookmarkHost
         // R-39-3 の「明示的なドライブ変更」。相対移動とは別経路
         _driveBar.PathSelected += (_, path) => OnDriveChosen(path);
         _driveBar.Cancelled += (_, _) => _list.Focus();
+        // R-107: Esc でバーを離れる動きは ToolStrip 自身が持つ（TabStop=false の間、フォーカスを渡す前の
+        // コントロールへ自動で戻す）。ここではマウスでボタンを実行した場合に備えてフラグだけ管理する
+        _bookmarkBar.LostFocus += (_, _) => _bookmarkBarKeyboard = false;
         // R-32-3: subst は WM_DEVICECHANGE を出さないので、前面に戻ったときにも確かめる
         Activated += (_, _) => _driveBar.RefreshDrives();
         // 入りきらないドライブは既存のモーダルから選ぶ。マウスで押したので「»」の直下に出す
@@ -584,6 +593,7 @@ public sealed class MainForm : Form, IBookmarkHost
         CommandId.ToggleDriveBar => ToggleDriveBar(),
         CommandId.ToggleAddressBar => ToggleAddressBar(),
         CommandId.ToggleBookmarkBar => ToggleBookmarkBar(),
+        CommandId.FocusBookmarkBar => FocusBookmarkBar(),
         CommandId.ShowDriveTree => ExecuteLeftPanelCommand(CommandId.ShowDriveTree),
         CommandId.ShowDesktopTree => ExecuteLeftPanelCommand(CommandId.ShowDesktopTree),
         CommandId.ShowBookmarksView => ExecuteLeftPanelCommand(CommandId.ShowBookmarksView),
@@ -1635,6 +1645,17 @@ public sealed class MainForm : Form, IBookmarkHost
         return true;
     }
 
+    /// <summary>
+    /// R-107: バーが非表示・空（案内の文だけ）なら何もしない（Q17。ドライブバーの R-77 とは違う扱い）。
+    /// そうでなければ先頭のボタンを選んだ状態でバーへフォーカスする。
+    /// </summary>
+    private bool FocusBookmarkBar()
+    {
+        if (!BookmarkRules.CanFocusBar(_bookmarkBarShown, _settings.Bookmarks.Bar.Count)) return true;
+        _bookmarkBarKeyboard = true;
+        return _bookmarkBar.EnterKeyboardSelection();
+    }
+
     /// <summary>R-96-2: 5コマンドの入口。判定は LeftPanelCommands（純粋関数）へ出し、ここは副作用だけを持つ。</summary>
     /// <summary>
     /// R-98 / Q63: ブックマークビューのキー。割り当てが左パネルの 5 コマンドのときだけ実行する。
@@ -1762,6 +1783,9 @@ public sealed class MainForm : Form, IBookmarkHost
             // R-12-2: バーの右クリックからは届くが、メニューバー側に直接の項目が無かった
             var addCursor = new ToolStripMenuItem("カーソル位置の項目を追加(&I)");
             addCursor.Click += (_, _) => Execute(new BuiltinTarget(CommandId.BookmarkAddCursorItem), Keys.None);
+            // R-12-2 / R-107: メニューからの経路。アクセスキーは M / A / I と重ならない字にする
+            var focusBar = new ToolStripMenuItem("ブックマークバーへ移動(&F)");
+            focusBar.Click += (_, _) => Execute(new BuiltinTarget(CommandId.FocusBookmarkBar), Keys.None);
             var bar = new ToolStripMenuItem("ブックマークバー");
             bar.DropDownItems.AddRange(_settings.Bookmarks.Bar.Count == 0
                 ? [BookmarkItems.EmptySlot()]
@@ -1769,7 +1793,7 @@ public sealed class MainForm : Form, IBookmarkHost
             MenuSpacing.Apply(bar.DropDownItems, DeviceDpi);   // グループのメニューと同じ行間・ホイールにそろえる
             ToolStripExtras.EnableWheel(bar.DropDown);
             BookmarkDropZone.Attach(bar.DropDown, _settings.Bookmarks.Bar, this, vertical: true);
-            menu.DropDownItems.AddRange([manage, add, addCursor, new ToolStripSeparator(), bar]);
+            menu.DropDownItems.AddRange([manage, add, addCursor, new ToolStripSeparator(), focusBar, new ToolStripSeparator(), bar]);
             if (_settings.Bookmarks.Other.Count > 0)
             {
                 menu.DropDownItems.Add(new ToolStripSeparator());
@@ -1785,9 +1809,20 @@ public sealed class MainForm : Form, IBookmarkHost
     // R-98 / Q52: ブックマークビューから実行したときはフォーカスをビューに残す
     void IBookmarkHost.JumpTo(string folder) => _ = OpenFolderAsync(folder, keepFocus: _bookmarksView.ContainsFocus);
 
-    void IBookmarkHost.OpenFile(string path) => OpenWithAssociation(path);
+    void IBookmarkHost.OpenFile(string path)
+    {
+        // R-107: 実行が焦点を動かすことがある（別の窓を前面に出す等）ので、判定は実行前に取っておく
+        var wasBarKeyboard = _bookmarkBarKeyboard;
+        OpenWithAssociation(path);
+        if (wasBarKeyboard) _list.Focus();
+    }
 
-    void IBookmarkHost.Execute(CommandTarget target) => Execute(target, Keys.None);
+    void IBookmarkHost.Execute(CommandTarget target)
+    {
+        var wasBarKeyboard = _bookmarkBarKeyboard;
+        Execute(target, Keys.None);
+        if (wasBarKeyboard) _list.Focus();
+    }
 
     void IBookmarkHost.BookmarkMissing(Bookmark bookmark)
     {

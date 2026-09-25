@@ -67,7 +67,8 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
     {
         var items = bookmarks.Select(b =>
         {
-            ToolStripItem item = b.Kind is BookmarkKind.Folder or BookmarkKind.Group ? new BarDropDownButton() : new ToolStripButton();
+            // R-107: ファイル・コマンドは BarButton（Enter / Space で Click を呼ぶ）。フォルダ・グループは BarDropDownButton
+            ToolStripItem item = b.Kind is BookmarkKind.Folder or BookmarkKind.Group ? new BarDropDownButton() : new BarButton();
             var hasIcon = IconPath(b) is not null || HasGlyph(b);
             // R-106: 項目ごとの IconOnly は全体の BookmarkBarStyle より優先する（バーに直接置いたボタンだけ）
             item.DisplayStyle = BookmarkRules.BarStyleOf(b, style, hasIcon) switch

@@ -161,6 +161,12 @@ public static class BookmarkRules
         _ => true,
     };
 
+    /// <summary>
+    /// R-107: 「ブックマークバーへ移動」を実行してよいか。バーが非表示、または項目が無い（案内の文だけ）なら
+    /// 何もしない（Q17）。ドライブバーの「非表示ならポップアップ」（R-77）とは違う扱い。
+    /// </summary>
+    public static bool CanFocusBar(bool shown, int barCount) => shown && barCount > 0;
+
     /// <summary>表示名。題名が空の Folder / File はパスの末尾の名前（ルートはパスそのもの）。</summary>
     public static string DisplayName(Bookmark b, Func<CommandTarget, string> commandLabel) => b switch
     {

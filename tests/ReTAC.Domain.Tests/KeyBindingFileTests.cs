@@ -59,15 +59,16 @@ public class KeyBindingFileTests
     public void ファイルに無い枠は既定に戻る()
     {
         var current = DefaultAssignments();
-        // B は既定では未割り当て。手で割り当てておいても、ファイルに書かれていなければ既定（未割り当て）に戻る
-        var bSlot = new KeyBinding(Vk.Letter('B'));
-        current[bSlot] = new BuiltinTarget(CommandId.Refresh);
+        // P は既定では未割り当て（B-21 で B は既定を持つようになったので、まだ空いている枠を使う）。
+        // 手で割り当てておいても、ファイルに書かれていなければ既定（未割り当て）に戻る
+        var pSlot = new KeyBinding(Vk.Letter('P'));
+        current[pSlot] = new BuiltinTarget(CommandId.Refresh);
 
         var json = "{\"format\":\"ReTAC.KeyBindings\",\"keyBindings\":{\"F5\":\"Refresh\"}}";
         var result = KeyBindingFile.Import(json, current, AllToolIds);
 
         Assert.NotNull(result);
-        Assert.Null(result!.Assignments[bSlot]);
+        Assert.Null(result!.Assignments[pSlot]);
         var aSlot = new KeyBinding(Vk.Letter('A'));
         Assert.Equal(new BuiltinTarget(CommandId.ChangeAttributes), result.Assignments[aSlot]);
         Assert.Equal(1, result.Loaded);

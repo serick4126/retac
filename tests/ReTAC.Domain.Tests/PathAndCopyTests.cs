@@ -171,7 +171,7 @@ public class KeyMapTests
     }
 
     [Theory]
-    [InlineData('B')]   // 卓駆でも未割り当て
+    // B-21 で B（無印）に既定を足したので、ここには無い（DefaultKeyMapのB-21向けテストを参照）
     [InlineData('F')]   // 内蔵検索はスコープ外
     [InlineData('P')]   // 書庫はスコープ外
     [InlineData('U')]   // 同上
@@ -190,13 +190,14 @@ public class KeyMapTests
     }
 
     [Fact]
-    public void 有効な割り当ては43件でCtrlはFとL()
+    public void 有効な割り当ては45件でCtrlはFとLとB()
     {
         // 卓駆の 65 枠のうち、元から未割り当て 20 枠 ＋ スコープ外 6 枠を除いた 39 枠
         // ＋ マウスボタンの既定 2 枠（B-17）＋ Ctrl+F（B-18）＋ Ctrl+L（B-19）
-        Assert.Equal(43, Map.Bindings.Count);
+        // ＋ B（無印。B-21）＋ Ctrl+B（B-21）
+        Assert.Equal(45, Map.Bindings.Count);
         Assert.Equal(
-            [new KeyBinding(Vk.Letter('F'), Ctrl: true), new KeyBinding(Vk.Letter('L'), Ctrl: true)],
+            [new KeyBinding(Vk.Letter('B'), Ctrl: true), new KeyBinding(Vk.Letter('F'), Ctrl: true), new KeyBinding(Vk.Letter('L'), Ctrl: true)],
             Map.Bindings.Keys.Where(key => key.Ctrl).OrderBy(key => key.VirtualKey));
     }
 

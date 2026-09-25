@@ -260,4 +260,12 @@ public class BookmarkTests
     [InlineData("書類", @"C:\Work\Docs", "書類")]
     public void 表示名は題名か末尾の名前(string title, string target, string expected) =>
         Assert.Equal(expected, BookmarkRules.DisplayName(new Bookmark(title, BookmarkKind.Folder, target), _ => ""));
+
+    [Theory]
+    [InlineData(true, 1, true)]
+    [InlineData(true, 0, false)]   // 案内の文だけ（R-107）
+    [InlineData(false, 1, false)]  // 非表示（R-107）
+    [InlineData(false, 0, false)]
+    public void バーへフォーカスしてよいのは表示中かつ項目があるときだけ(bool shown, int barCount, bool expected) =>
+        Assert.Equal(expected, BookmarkRules.CanFocusBar(shown, barCount));
 }

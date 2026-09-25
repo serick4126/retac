@@ -98,6 +98,8 @@ public enum CommandId
     OpenSettings = 0x9011,
     /// <summary>R-105: GitHub の Releases ページを既定のブラウザーで開く。既定のキーは無い。</summary>
     OpenGitHub = 0x9012,
+    /// <summary>R-107: ブックマークバーへフォーカスを移す。バーが非表示・空（案内の文だけ）なら何もしない。既定は B（B-21）。</summary>
+    FocusBookmarkBar = 0x9013,
     ColorAndFontSettings = 0x8151,
     KeyAssignSettings = 0x8155,
     VisibleDriveSettings = 0x814C,

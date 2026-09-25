@@ -477,3 +477,22 @@ internal sealed class BarDropDownButton : ToolStripDropDownButton
         _doubleClick.Forget();
     }
 }
+
+/// <summary>
+/// R-107: バーのファイル・コマンドのボタン。素の ToolStripItem は Enter では Click を呼ぶが
+/// （ToolStripItem.ProcessDialogKey。フォーカスを渡す前のコントロールへ戻す処理も一緒に行う）、
+/// Space はその対象にならない（SupportsSpaceKey が既定 false で、外から立てられない内部プロパティ）。
+/// Space のときだけここで同じ Click を呼ぶ。Enter は素の実装に任せる（二重に呼ばれることはない）。
+/// </summary>
+internal sealed class BarButton : ToolStripButton
+{
+    protected override bool ProcessDialogKey(Keys keyData)
+    {
+        if (Enabled && keyData == Keys.Space)
+        {
+            OnClick(EventArgs.Empty);
+            return true;
+        }
+        return base.ProcessDialogKey(keyData);
+    }
+}

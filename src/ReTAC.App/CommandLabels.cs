@@ -44,6 +44,7 @@ public static class CommandLabels
         ("ブックマーク", CommandId.BookmarkManage, "ブックマークの管理"),
         ("ブックマーク", CommandId.BookmarkAddCurrentFolder, "現在のフォルダをブックマークに追加"),
         ("ブックマーク", CommandId.BookmarkAddCursorItem, "カーソル位置の項目をブックマークに追加"),
+        ("ブックマーク", CommandId.FocusBookmarkBar, "ブックマークバーへ移動"),
 
         ("表示", CommandId.Refresh, "最新の情報に更新"),
         ("表示", CommandId.ToggleDriveBar, "ドライブバーの表示切り替え"),

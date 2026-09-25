@@ -25,6 +25,7 @@ public class MenuReachabilityTests
         // 右クリックの「カーソル位置の項目を追加」からは AddBookmark を直接呼んでいて Execute を経由しない
         // 別経路で、BookmarkMenu に直接の項目が無かった。項目を足して届くようにした（R-12-2）
         CommandId.BookmarkAddCursorItem,
+        CommandId.FocusBookmarkBar,          // 「ブックマークバーへ移動」（R-107）
     ];
 
     /// <summary>
