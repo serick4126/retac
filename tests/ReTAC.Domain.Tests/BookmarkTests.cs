@@ -268,4 +268,20 @@ public class BookmarkTests
     [InlineData(false, 0, false)]
     public void バーへフォーカスしてよいのは表示中かつ項目があるときだけ(bool shown, int barCount, bool expected) =>
         Assert.Equal(expected, BookmarkRules.CanFocusBar(shown, barCount));
+
+    [Theory]
+    // → は段数を問わず、開けるものがあれば呑み込まない（標準どおり開く）
+    [InlineData(1, true, true, false)]
+    [InlineData(2, true, true, false)]
+    // → は開けるものが無ければ、段数を問わず呑み込む（バーの次のボタンへ漏らさない）
+    [InlineData(1, false, true, true)]
+    [InlineData(2, false, true, true)]
+    // ← は 1 段目だけ呑み込む（バーの前のボタンへ漏らさない）。has-submenu は ← の判定に関係しない
+    [InlineData(1, true, false, true)]
+    [InlineData(1, false, false, true)]
+    // ← は 2 段目以降なら呑み込まない（標準どおり 1 段閉じて戻る）
+    [InlineData(2, true, false, false)]
+    [InlineData(2, false, false, false)]
+    public void ドロップダウン内の矢印キーは段数と開けるかどうかで呑み込むかが決まる(int level, bool hasSubmenu, bool forward, bool expected) =>
+        Assert.Equal(expected, BookmarkRules.SwallowArrowKey(level, hasSubmenu, forward));
 }

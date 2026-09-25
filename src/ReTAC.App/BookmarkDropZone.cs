@@ -483,16 +483,45 @@ internal sealed class BarDropDownButton : ToolStripDropDownButton
 /// （ToolStripItem.ProcessDialogKey。フォーカスを渡す前のコントロールへ戻す処理も一緒に行う）、
 /// Space はその対象にならない（SupportsSpaceKey が既定 false で、外から立てられない内部プロパティ）。
 /// Space のときだけここで同じ Click を呼ぶ。Enter は素の実装に任せる（二重に呼ばれることはない）。
+/// 利用者の実機確認により、Enter は一覧へ戻り、Space は続けて押せるようバーに留まる、という違いにした。
 /// </summary>
 internal sealed class BarButton : ToolStripButton
 {
+    /// <summary>
+    /// 今の Click が Space キー経由かどうか。OnClick の中でしか意味を持たない値なので、UI スレッドだけで
+    /// 同期的に読み書きする（WinForms はシングルスレッドなので、static でも競合しない）。
+    /// MainForm 側はこれを見て、Space のときだけファイル一覧への焦点の戻しを省く。
+    /// </summary>
+    public static bool IsSpaceActivation { get; private set; }
+
     protected override bool ProcessDialogKey(Keys keyData)
     {
         if (Enabled && keyData == Keys.Space)
         {
-            OnClick(EventArgs.Empty);
+            IsSpaceActivation = true;
+            try { OnClick(EventArgs.Empty); }
+            finally { IsSpaceActivation = false; }
             return true;
         }
+        return base.ProcessDialogKey(keyData);
+    }
+}
+
+/// <summary>
+/// R-107: ブックマークバーのボタンから開いたドロップダウンの中の項目。←/→ をバーのボタン間の移動へ
+/// 漏らさない（今までは、フォルダを何段も掘っている途中で →/← を押すと、開いたドロップダウンごと閉じて
+/// 隣のバーのボタンへ移ってしまっていた）。判定そのものは BookmarkRules.SwallowArrowKey（純粋関数）に置く。
+/// バー直下のボタン自身（BarDropDownButton）はこの対象に入れない（ボタン間の移動は標準のまま）。
+/// 「ブックマーク」メニュー・ブックマークビューの項目も対象に入れない（バーと同じ機能だが別経路であり、
+/// そちらは標準の Windows の挙動のままにする）。
+/// </summary>
+internal sealed class ConfinedMenuItem(int level) : ToolStripMenuItem
+{
+    protected override bool ProcessDialogKey(Keys keyData)
+    {
+        var forward = keyData == Keys.Right;
+        if ((forward || keyData == Keys.Left) && BookmarkRules.SwallowArrowKey(level, HasDropDownItems, forward))
+            return true;   // 呑み込むだけ。バー本体の ProcessDialogKey（ボタン間の移動）まで渡さない
         return base.ProcessDialogKey(keyData);
     }
 }

@@ -16,6 +16,10 @@ public static class FolderExpansion
 
     internal enum LoadOutcome { Loaded, Missing, Failed }
 
+    /// <summary>R-107: level が付いていれば ConfinedMenuItem（←/→ をバーの項目間の移動へ漏らさない）。</summary>
+    private static ToolStripMenuItem NewItem(int? level, string text) =>
+        level is { } l ? new ConfinedMenuItem(l) { Text = text } : new ToolStripMenuItem(text);
+
     /// <summary>
     /// フォルダの中身を裏で読み、待つ上限までに読めた結果を UI スレッドで渡す。展開表示とパンくずの ▸ の一覧（R-94）で共通の<b>機構だけ</b>。
     /// 何を出すか（ファイルも出すか、太字にするか）は呼び出し側が決める。
@@ -45,7 +49,11 @@ public static class FolderExpansion
     }
 
     /// <param name="onMissing">開こうとしたフォルダ自体が無いとき</param>
-    public static void Attach(ToolStripDropDownItem item, string folder, BookmarkItems items, Action onMissing)
+    /// <param name="level">
+    /// R-107: item の中に並べる項目（「このフォルダへジャンプ」・中身）に付ける段数。バーのボタンから
+    /// 開いたドロップダウンの中でなければ null（「ブックマーク」メニュー・ブックマークビューなど、標準の挙動のまま）。
+    /// </param>
+    public static void Attach(ToolStripDropDownItem item, string folder, BookmarkItems items, Action onMissing, int? level = null)
     {
         var host = items.Host;
         // 開くたびに進める。裏の列挙の結果が、閉じた後や開き直した後に届いたら捨てる
@@ -84,7 +92,8 @@ public static class FolderExpansion
             var mine = ++generation;
             BookmarkItems.Clear(item.DropDownItems);
             // 存在の確認も裏で行う。止まった HDD や届かないネットワークでは、確認だけで UI が止まる（R-91）
-            var jump = new ToolStripMenuItem("このフォルダへジャンプ(&J)");
+            // R-107: 「このフォルダへジャンプ」は開くものを持たない項目なので、confined なら → を呑み込む対象
+            var jump = NewItem(level, "このフォルダへジャンプ(&J)");
             jump.Click += (_, _) => host.JumpTo(folder);
             var loading = BookmarkItems.Placeholder("読み込み中…");
             item.DropDownItems.AddRange([jump, new ToolStripSeparator(), loading]);
@@ -110,7 +119,7 @@ public static class FolderExpansion
                             items.Invoker.BeginInvoke(onMissing);
                             break;
                         default:
-                            items.LoadIcons(Fill(item, index, entries, folder, items));
+                            items.LoadIcons(Fill(item, index, entries, folder, items, level));
                             break;
                     }
                 });
@@ -138,18 +147,20 @@ public static class FolderExpansion
     }
 
     private static List<ToolStripItem> Fill(ToolStripDropDownItem parent, int index, IReadOnlyList<Entry> entries,
-                                            string folder, BookmarkItems items)
+                                            string folder, BookmarkItems items, int? level)
     {
         var host = items.Host;
         var shown = entries.Where(e => !e.IsParent).ToList();
         var added = new List<ToolStripItem>();
         foreach (var entry in shown.Take(MaxItems))
         {
-            var menu = new ToolStripMenuItem(entry.Name.Replace("&", "&&")) { Tag = entry };
+            var menu = NewItem(level, entry.Name.Replace("&", "&&"));
+            menu.Tag = entry;
             items.AttachContextMenu(menu);
             if (entry.Kind == EntryKind.Folder)
             {
-                Attach(menu, entry.FullPath, items, onMissing: () => host.PathMissing(entry.FullPath));
+                // R-107: フォルダの中はさらに 1 段深い
+                Attach(menu, entry.FullPath, items, onMissing: () => host.PathMissing(entry.FullPath), level is { } l ? l + 1 : null);
             }
             else
             {
@@ -165,7 +176,7 @@ public static class FolderExpansion
         if (shown.Count == 0) added.Add(BookmarkItems.Placeholder("（空）"));
         if (shown.Count > MaxItems)
         {
-            var more = new ToolStripMenuItem($"ほか {shown.Count - MaxItems} 件 — このフォルダへジャンプ");
+            var more = NewItem(level, $"ほか {shown.Count - MaxItems} 件 — このフォルダへジャンプ");
             more.Click += (_, _) => host.JumpTo(folder);
             added.Add(more);
         }

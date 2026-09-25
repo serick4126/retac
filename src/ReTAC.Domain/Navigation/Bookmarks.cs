@@ -167,6 +167,16 @@ public static class BookmarkRules
     /// </summary>
     public static bool CanFocusBar(bool shown, int barCount) => shown && barCount > 0;
 
+    /// <summary>
+    /// R-107: ブックマークバーから開いたドロップダウンの中で ←/→ を呑み込むか（バーの項目間の移動へ漏らさないため）。
+    /// level はドロップダウンの深さ（バーの項目から直接開いた 1 段目 = 1、その中のグループ・フォルダの中は 2 以降）。
+    /// hasSubmenu は選んだ項目がさらに開けるか（サブフォルダ・サブグループ）。forward は → なら true、← なら false。
+    /// → は「開けるものが無ければ何もしない」で段数を問わない。← は 1 段目だけ何もしない
+    /// （2 段目以降は標準どおり 1 段閉じて戻る。バーの項目間の移動は Esc で抜けてから行う）。
+    /// </summary>
+    public static bool SwallowArrowKey(int level, bool hasSubmenu, bool forward) =>
+        forward ? !hasSubmenu : level <= 1;
+
     /// <summary>表示名。題名が空の Folder / File はパスの末尾の名前（ルートはパスそのもの）。</summary>
     public static string DisplayName(Bookmark b, Func<CommandTarget, string> commandLabel) => b switch
     {

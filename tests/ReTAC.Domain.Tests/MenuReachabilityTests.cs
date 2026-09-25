@@ -25,7 +25,6 @@ public class MenuReachabilityTests
         // 右クリックの「カーソル位置の項目を追加」からは AddBookmark を直接呼んでいて Execute を経由しない
         // 別経路で、BookmarkMenu に直接の項目が無かった。項目を足して届くようにした（R-12-2）
         CommandId.BookmarkAddCursorItem,
-        CommandId.FocusBookmarkBar,          // 「ブックマークバーへ移動」（R-107）
     ];
 
     /// <summary>
@@ -46,6 +45,9 @@ public class MenuReachabilityTests
         CommandId.SelectDrive,
         // R-12-2 の例示そのもの: 数字キーでのドライブ移動も「ドライブの選択▸」から同じ切り替えができる
         CommandId.DriveByNumberKey,
+        // R-107: バーへフォーカスして項目をたどるのと、「ブックマーク」メニューの「ブックマークバー」▸
+        // をたどるのは、同じ並び・同じ項目をキーボードで選ぶという同じ機能なので、直接の項目は持たない
+        CommandId.FocusBookmarkBar,
     ];
 
     [Fact]

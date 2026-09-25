@@ -54,8 +54,10 @@ public sealed class MainForm : Form, IBookmarkHost
     private ToolStripMenuItem _bookmarkBarMenuItem;
     /// <summary>
     /// R-107: `B` でバーへフォーカスしている間だけ true。File/Command のブックマークは実行しても
-    /// フォーカスを自分では動かさないので、ここが立っていたら実行後にファイル一覧へ戻す。
-    /// バーが実際にフォーカスを失ったら（Esc・他の操作）LostFocus で必ず false に戻る。
+    /// フォーカスを自分では動かさないので、ここが立っていたら実行後にファイル一覧へ戻す
+    /// （利用者の実機確認により、Space のときだけは戻さずバーに留める。BarButton.IsSpaceActivation で見分ける。
+    /// 親フォルダに戻る等を Space で連打できるようにするため）。
+    /// バーが実際にフォーカスを失ったら（Esc・他の操作）LostFocus で必ず false に戻るので、立ったままにはならない。
     /// </summary>
     private bool _bookmarkBarKeyboard;
     /// <summary>R-96-2: このウィンドウで左パネルを出しているか。設定はコンストラクタで一度読むだけで、
@@ -1652,8 +1654,8 @@ public sealed class MainForm : Form, IBookmarkHost
     private bool FocusBookmarkBar()
     {
         if (!BookmarkRules.CanFocusBar(_bookmarkBarShown, _settings.Bookmarks.Bar.Count)) return true;
-        _bookmarkBarKeyboard = true;
-        return _bookmarkBar.EnterKeyboardSelection();
+        // レビュー指摘: EnterKeyboardSelection が失敗したとき（例えば項目が 0 件）にフラグだけ立ったままにしない
+        return _bookmarkBarKeyboard = _bookmarkBar.EnterKeyboardSelection();
     }
 
     /// <summary>R-96-2: 5コマンドの入口。判定は LeftPanelCommands（純粋関数）へ出し、ここは副作用だけを持つ。</summary>
@@ -1783,9 +1785,6 @@ public sealed class MainForm : Form, IBookmarkHost
             // R-12-2: バーの右クリックからは届くが、メニューバー側に直接の項目が無かった
             var addCursor = new ToolStripMenuItem("カーソル位置の項目を追加(&I)");
             addCursor.Click += (_, _) => Execute(new BuiltinTarget(CommandId.BookmarkAddCursorItem), Keys.None);
-            // R-12-2 / R-107: メニューからの経路。アクセスキーは M / A / I と重ならない字にする
-            var focusBar = new ToolStripMenuItem("ブックマークバーへ移動(&F)");
-            focusBar.Click += (_, _) => Execute(new BuiltinTarget(CommandId.FocusBookmarkBar), Keys.None);
             var bar = new ToolStripMenuItem("ブックマークバー");
             bar.DropDownItems.AddRange(_settings.Bookmarks.Bar.Count == 0
                 ? [BookmarkItems.EmptySlot()]
@@ -1793,7 +1792,9 @@ public sealed class MainForm : Form, IBookmarkHost
             MenuSpacing.Apply(bar.DropDownItems, DeviceDpi);   // グループのメニューと同じ行間・ホイールにそろえる
             ToolStripExtras.EnableWheel(bar.DropDown);
             BookmarkDropZone.Attach(bar.DropDown, _settings.Bookmarks.Bar, this, vertical: true);
-            menu.DropDownItems.AddRange([manage, add, addCursor, new ToolStripSeparator(), focusBar, new ToolStripSeparator(), bar]);
+            // R-107: 「ブックマークバーへ移動」の直接の項目は置かない。バーへフォーカスして項目をたどるのと、
+            // この「ブックマークバー」の中身をたどるのは同じ機能（並びも項目も同じ）なので、そこから届く（R-12-2）
+            menu.DropDownItems.AddRange([manage, add, addCursor, new ToolStripSeparator(), bar]);
             if (_settings.Bookmarks.Other.Count > 0)
             {
                 menu.DropDownItems.Add(new ToolStripSeparator());
@@ -1811,17 +1812,18 @@ public sealed class MainForm : Form, IBookmarkHost
 
     void IBookmarkHost.OpenFile(string path)
     {
-        // R-107: 実行が焦点を動かすことがある（別の窓を前面に出す等）ので、判定は実行前に取っておく
-        var wasBarKeyboard = _bookmarkBarKeyboard;
+        // R-107: 実行が焦点を動かすことがある（別の窓を前面に出す等）ので、判定は実行前に取っておく。
+        // Space は連打できるようバーに留める（利用者の実機確認による決定）ので、戻さない
+        var returnToList = _bookmarkBarKeyboard && !BarButton.IsSpaceActivation;
         OpenWithAssociation(path);
-        if (wasBarKeyboard) _list.Focus();
+        if (returnToList) _list.Focus();
     }
 
     void IBookmarkHost.Execute(CommandTarget target)
     {
-        var wasBarKeyboard = _bookmarkBarKeyboard;
+        var returnToList = _bookmarkBarKeyboard && !BarButton.IsSpaceActivation;
         Execute(target, Keys.None);
-        if (wasBarKeyboard) _list.Focus();
+        if (returnToList) _list.Focus();
     }
 
     void IBookmarkHost.BookmarkMissing(Bookmark bookmark)

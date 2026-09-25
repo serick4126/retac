@@ -54,13 +54,23 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
     /// <summary>裏で取った結果を UI スレッドへ戻す窓（MainForm）。</summary>
     internal Control Invoker => invoker;
 
-    /// <summary>メニューの中に並べる項目（グループは ▶ で入れ子、フォルダは展開表示）。</summary>
-    public ToolStripItem[] MenuItems(IReadOnlyList<Bookmark> bookmarks)
+    /// <summary>
+    /// メニューの中に並べる項目（グループは ▶ で入れ子、フォルダは展開表示）。
+    /// R-107: confinedLevel が付いていれば（バーのボタンから開いたドロップダウンの中）、この並びの項目は
+    /// ConfinedMenuItem になり ←/→ をバーの項目間の移動へ漏らさない。null（既定）なら今までどおりの
+    /// 標準の挙動（「ブックマーク」メニュー・ブックマークビューなど、バーとは別の経路）。
+    /// </summary>
+    public ToolStripItem[] MenuItems(IReadOnlyList<Bookmark> bookmarks, int? confinedLevel = null)
     {
-        var items = bookmarks.Select(b => Configure(new ToolStripMenuItem(), b)).ToArray();
+        // 項目自身はこの並びの段（confinedLevel）。その項目が開く中身はさらに 1 段深い
+        var childLevel = confinedLevel is { } level ? level + 1 : (int?)null;
+        var items = bookmarks.Select(b => Configure(NewMenuItem(confinedLevel), b, childLevel)).ToArray();
         LoadIcons(items);
         return items;
     }
+
+    private static ToolStripMenuItem NewMenuItem(int? confinedLevel) =>
+        confinedLevel is { } level ? new ConfinedMenuItem(level) : new ToolStripMenuItem();
 
     /// <summary>バーのボタン（フォルダ・グループは押すと開く、ファイル・コマンドは押すと実行）。</summary>
     public ToolStripItem[] BarItems(IReadOnlyList<Bookmark> bookmarks, BookmarkBarStyle style)
@@ -79,13 +89,18 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
             };
             // 隣のボタンとの間を左右 1px ずつ空ける（並ぶと 2px。詰まって見えるという実機指摘）
             item.Margin = new Padding(item.Margin.Left + 1, item.Margin.Top, item.Margin.Right + 1, item.Margin.Bottom);
-            return Configure(item, b);
+            // R-107: バーのボタン自身の ←/→（ボタン間の移動）は標準のまま。開くドロップダウンの中身が 1 段目
+            return Configure(item, b, childLevel: 1);
         }).ToArray();
         LoadIcons(items);
         return items;
     }
 
-    private ToolStripItem Configure(ToolStripItem item, Bookmark b)
+    /// <summary>
+    /// childLevel は「この項目が開くドロップダウンの中身」に付ける段数（R-107）。項目自身が確定した並び
+    /// （ConfinedMenuItem かどうか）に対応する呼び出し元がすでに決めているので、ここでは中身へ渡すだけ。
+    /// </summary>
+    private ToolStripItem Configure(ToolStripItem item, Bookmark b, int? childLevel)
     {
         var name = BookmarkRules.DisplayName(b, host.LabelOf);
         item.Text = name.Replace("&", "&&");
@@ -97,12 +112,12 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
         switch (b.Kind)
         {
             case BookmarkKind.Folder:
-                FolderExpansion.Attach((ToolStripDropDownItem)item, b.Target, this, onMissing: () => host.BookmarkMissing(b));
+                FolderExpansion.Attach((ToolStripDropDownItem)item, b.Target, this, onMissing: () => host.BookmarkMissing(b), childLevel);
                 // R-91-2: バー直下のフォルダのダブルクリック。Group には繋がない（Group はこの分岐に来ない）
                 if (item is BarDropDownButton bar) bar.DoubleClicked += (_, _) => host.JumpTo(b.Target);
                 break;
             case BookmarkKind.Group:
-                AttachGroup((ToolStripDropDownItem)item, b);
+                AttachGroup((ToolStripDropDownItem)item, b, childLevel);
                 break;
             case BookmarkKind.File:
                 item.Click += (_, e) =>
@@ -135,8 +150,11 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
         return string.Join(Environment.NewLine, lines);
     }
 
-    /// <summary>グループの中身は開くたびに組み直す（入れ子は何段でも）。</summary>
-    private void AttachGroup(ToolStripDropDownItem item, Bookmark group)
+    /// <summary>
+    /// グループの中身は開くたびに組み直す（入れ子は何段でも）。level は R-107 の段数（バーから開いた
+    /// ドロップダウンの中でなければ null。バーからなら MenuItems へそのまま渡し、ConfinedMenuItem にする）。
+    /// </summary>
+    private void AttachGroup(ToolStripDropDownItem item, Bookmark group, int? level)
     {
         item.DropDownItems.Add(EmptySlot());   // 項目が無いと ▶ が出ず、開けない
         ToolStripExtras.EnableWheel(item.DropDown);
@@ -146,7 +164,7 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
             Clear(item.DropDownItems);
             var children = group.Children ?? [];
             if (children.Count == 0) item.DropDownItems.Add(EmptySlot());
-            else item.DropDownItems.AddRange(MenuItems(children));
+            else item.DropDownItems.AddRange(MenuItems(children, level));
             MenuSpacing.Apply(item.DropDownItems, invoker.DeviceDpi);   // R-88
         };
     }
