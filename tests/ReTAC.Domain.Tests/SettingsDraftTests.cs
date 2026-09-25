@@ -183,6 +183,8 @@ public class SettingsDraftTests
     public void CommitToは消したツールを指すブックマークも外す()
     {
         var (settings, keyMap, quickAccess) = Baseline();
+        // B-22 の初期のブックマークと混ざらないよう、この項目だけの状態にする
+        settings.Bookmarks.Bar.Clear();
         settings.Bookmarks.Bar.Add(new Bookmark("エディタ起動", BookmarkKind.Command,
             new ToolTarget(DefaultExternalTools.EditorId).Serialize()));
         var draft = SettingsDraft.From(settings, keyMap, Theme.Default, quickAccess);

@@ -1,5 +1,6 @@
 using System.IO;
 using ReTAC.Domain.Commands;
+using ReTAC.Domain.Tools;
 
 namespace ReTAC.Domain.Navigation;
 
@@ -37,6 +38,30 @@ public sealed class BookmarkSet
 {
     public List<Bookmark> Bar { get; set; } = [];
     public List<Bookmark> Other { get; set; } = [];
+}
+
+/// <summary>
+/// B-22: 設定ファイルが無いとき（Bookmarks の欄が無いとき）にバーへ置く初期の 6 件（<see cref="DefaultExternalTools"/>
+/// と同じ置き方）。エクスプローラーの戻る・進む・上へ（1〜3）はアイコンだけ、更新（4）は名前も出し、外部ツール（5）と
+/// フォルダ（6）を加えることで、コマンド・外部ツール・フォルダのどれもバーに置けることが初めての利用者に伝わる。
+/// 名前はすべて空にする（R-106-2 の表示名に任せる。表示名が多言語化で変わっても初期のブックマークはそのまま追従する）。
+/// </summary>
+public static class DefaultBookmarks
+{
+    public static BookmarkSet Create(string appFolder) => new()
+    {
+        Bar =
+        [
+            new Bookmark("", BookmarkKind.Command, new BuiltinTarget(CommandId.GoBack).Serialize()) { IconOnly = true },
+            new Bookmark("", BookmarkKind.Command, new BuiltinTarget(CommandId.GoForward).Serialize()) { IconOnly = true },
+            new Bookmark("", BookmarkKind.Command, new BuiltinTarget(CommandId.GoParent).Serialize()) { IconOnly = true },
+            new Bookmark("", BookmarkKind.Command, new BuiltinTarget(CommandId.Refresh).Serialize()),
+            new Bookmark("", BookmarkKind.Command, new ToolTarget(DefaultExternalTools.EditorId).Serialize()),
+            // ReTAC のフォルダを後で動かすと、ほかの見つからないブックマークと同じ扱いになるだけで起動は止めない。
+            // 末尾の区切りは、現在のフォルダを追加する既存の経路（MainForm の現在のフォルダを追加）と同じく持たせない
+            new Bookmark("", BookmarkKind.Folder, Path.TrimEndingDirectorySeparator(appFolder)),
+        ],
+    };
 }
 
 public static class BookmarkRules

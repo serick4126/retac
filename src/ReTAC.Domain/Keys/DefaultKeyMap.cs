@@ -34,8 +34,8 @@ public static class Vk
 /// スコープ外の 6 件（F=内蔵検索 / P=圧縮 / U=書庫復元 / Y=絞込み / F2=CTRL+キー実行 / F10=サブ関連付け）は
 /// 未割り当てとする（X-01・X-03）。
 /// 結果: ReTAC では Esc を割り当て枠に含めないため、修飾なし・Shift の 64 枠のうち 40 枠が有効、24 枠が空。
-/// Ctrl の 47 枠（F-06。Ctrl+Z は R-83 で枠から外した）には、Ctrl+F（B-18）・Ctrl+L（B-19）・Ctrl+B（B-21）を
-/// 除いて既定の割り当てを付けない。
+/// Ctrl の 47 枠（F-06。Ctrl+Z は R-83 で枠から外した）には、Ctrl+F（B-18）・Ctrl+L（B-19）・Ctrl+B（B-21）・
+/// Ctrl+A（B-23）を除いて既定の割り当てを付けない。
 /// B-17: マウスの 3 枠（R-73）はボタン4/5 の 2 枠が有効。ボタン3 は空。
 /// F-01: E / Shift+Enter / V / Z / F3 は、初期登録の外部ツール（<see cref="DefaultExternalTools"/>）を指す。
 /// </summary>
@@ -85,7 +85,8 @@ public static class DefaultKeyMap
         yield return Key(new KeyBinding(Vk.Enter), CommandId.OpenFile);
         yield return Tool(new KeyBinding(Vk.Enter, Shift: true), DefaultExternalTools.EditorId);
         yield return Key(new KeyBinding(Vk.Back), CommandId.GoParent);
-        yield return Key(new KeyBinding(Vk.Delete), CommandId.ToggleAllMarks);
+        // B-23: 卓駆の利用者の設定を引き継いだ全選択／選択解除は、一般の利用者が期待する削除と食い違っていた
+        yield return Key(new KeyBinding(Vk.Delete), CommandId.Delete);
 
         // B-17 / R-73: マウスのサイドボタン。エクスプローラー・ブラウザを含め Windows 全体で
         // 「戻る」「進む」が標準なので、INV-NO-PREFERENCE-DEFAULTS の例外条項に当たる。
@@ -105,6 +106,10 @@ public static class DefaultKeyMap
         // B-21: Ctrl+B は Firefox のブックマークサイドバーと同じ意味。INV-NO-PREFERENCE-DEFAULTS の例外条項に当たる。
         // B キーを修飾キーによらずブックマークにまとめる（無印はバーへフォーカス）。ほかの Ctrl の枠を埋める前例にしない
         yield return Key(new KeyBinding(Vk.Letter('B'), Ctrl: true), CommandId.ShowBookmarksView);
+
+        // B-23: Ctrl+A は Windows 全体で「すべて選択」の標準キー。INV-NO-PREFERENCE-DEFAULTS の例外条項に当たる。
+        // ToggleAllMarks はトグルなので 2 回目の動きは Windows の Ctrl+A と違うが、専用のコマンドは作らず既定を移すだけにする
+        yield return Key(new KeyBinding(Vk.Letter('A'), Ctrl: true), CommandId.ToggleAllMarks);
     }
 
     private static KeyValuePair<KeyBinding, CommandTarget> Letter(char c, CommandId id) =>

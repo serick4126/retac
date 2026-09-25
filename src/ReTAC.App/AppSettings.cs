@@ -79,8 +79,12 @@ public sealed class AppSettings
     /// <summary>ブックマークビューで展開しているグループの安定 ID。</summary>
     public List<string> ExpandedBookmarkGroupIds { get; set; } = [];
 
-    /// <summary>R-89: ブックマーク。初期登録は 0 件（B-05）。置き場は「バー」と「その他」の 2 つで固定。</summary>
-    public BookmarkSet Bookmarks { get; set; } = new();
+    /// <summary>
+    /// R-89: ブックマーク。置き場は「バー」と「その他」の 2 つで固定。
+    /// B-22: 設定ファイルが無いときだけ、使い方を見せる初期の 6 件をバーに置く（INV-NO-PREFERENCE-DEFAULTS の例外）。
+    /// 欄があれば（空でも）その値をそのまま使う。移行コードは書かない。
+    /// </summary>
+    public BookmarkSet Bookmarks { get; set; } = DefaultBookmarks.Create(AppContext.BaseDirectory);
 
     /// <summary>R-89: ブックマークバーの表示の形。</summary>
     public BookmarkBarStyle BookmarkBarStyle { get; set; } = BookmarkBarStyle.IconAndText;

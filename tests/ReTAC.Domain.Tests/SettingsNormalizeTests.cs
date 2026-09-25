@@ -98,9 +98,22 @@ public class SettingsNormalizeTests
     [Fact]
     public void ブックマークの設定の既定()
     {
+        // B-22: Bookmarks の欄が無ければ初期の 6 件をバーに置く
         var settings = JsonSerializer.Deserialize<AppSettings>("{}", Json)!;
         Assert.True(settings.ShowBookmarkBar);
-        Assert.Empty(settings.Bookmarks.Bar);
+        Assert.Equal(6, settings.Bookmarks.Bar.Count);
+        Assert.Empty(settings.Bookmarks.Other);
         Assert.Equal(BookmarkBarStyle.IconAndText, settings.BookmarkBarStyle);
+    }
+
+    [Fact]
+    public void Bookmarksの欄が空で入っていれば増やさない()
+    {
+        // B-22: 利用者がブックマークを全部消した状態を、初期の 6 件で埋め戻さない（移行コードは書かない）
+        var settings = JsonSerializer.Deserialize<AppSettings>("""
+            { "Bookmarks": { "Bar": [], "Other": [] } }
+            """, Json)!;
+        Assert.Empty(settings.Bookmarks.Bar);
+        Assert.Empty(settings.Bookmarks.Other);
     }
 }

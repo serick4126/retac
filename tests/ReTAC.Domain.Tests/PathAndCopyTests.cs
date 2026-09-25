@@ -149,10 +149,10 @@ public class KeyMapTests
     }
 
     [Fact]
-    public void Deleteは削除ではなく全選択全解除である()
+    public void Deleteは削除でDと同じ()
     {
-        // 5-2 節: 工場出荷時からの意図的な変更
-        Assert.Equal(new BuiltinTarget(CommandId.ToggleAllMarks), Map.Resolve(new KeyBinding(Vk.Delete)));
+        // B-23: 卓駆の利用者の設定を引き継いだ全選択／選択解除は、一般の利用者が期待する削除と食い違っていた
+        Assert.Equal(new BuiltinTarget(CommandId.Delete), Map.Resolve(new KeyBinding(Vk.Delete)));
         Assert.Equal(new BuiltinTarget(CommandId.Delete), Map.Resolve(new KeyBinding(Vk.Letter('D'))));
     }
 
@@ -190,14 +190,15 @@ public class KeyMapTests
     }
 
     [Fact]
-    public void 有効な割り当ては45件でCtrlはFとLとB()
+    public void 有効な割り当ては46件でCtrlはAとBとFとL()
     {
         // 卓駆の 65 枠のうち、元から未割り当て 20 枠 ＋ スコープ外 6 枠を除いた 39 枠
         // ＋ マウスボタンの既定 2 枠（B-17）＋ Ctrl+F（B-18）＋ Ctrl+L（B-19）
-        // ＋ B（無印。B-21）＋ Ctrl+B（B-21）
-        Assert.Equal(45, Map.Bindings.Count);
+        // ＋ B（無印。B-21）＋ Ctrl+B（B-21）＋ Ctrl+A（B-23。Delete → Delete への変更は枠数を変えない）
+        Assert.Equal(46, Map.Bindings.Count);
         Assert.Equal(
-            [new KeyBinding(Vk.Letter('B'), Ctrl: true), new KeyBinding(Vk.Letter('F'), Ctrl: true), new KeyBinding(Vk.Letter('L'), Ctrl: true)],
+            [new KeyBinding(Vk.Letter('A'), Ctrl: true), new KeyBinding(Vk.Letter('B'), Ctrl: true),
+             new KeyBinding(Vk.Letter('F'), Ctrl: true), new KeyBinding(Vk.Letter('L'), Ctrl: true)],
             Map.Bindings.Keys.Where(key => key.Ctrl).OrderBy(key => key.VirtualKey));
     }
 

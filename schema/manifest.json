@@ -898,7 +898,7 @@
       "id": "type:ReTAC.Domain.Keys.DefaultKeyMap",
       "kind": "static class",
       "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
-      "doc": "R-14: 現行の TACKEY.KFM 全 65 件を初期キーマップとして組み込む。 スコープ外の 6 件（F=内蔵検索 / P=圧縮 / U=書庫復元 / Y=絞込み / F2=CTRL+キー実行 / F10=サブ関連付け）は 未割り当てとする（X-01・X-03）。 結果: ReTAC では Esc を割り当て枠に含めないため、修飾なし・Shift の 64 枠のうち 40 枠が有効、24 枠が空。 Ctrl の 47 枠（F-06。Ctrl+Z は R-83 で枠から外した）には、Ctrl+F（B-18）・Ctrl+L（B-19）・Ctrl+B（B-21）を 除いて既定の割り当てを付けない。 B-17: マウスの 3 枠（R-73）はボタン4/5 の 2 枠が有効。ボタン3 は空。 F-01: E / Shift+Enter / V / Z / F3 は、初期登録の外部ツール（）を指す。"
+      "doc": "R-14: 現行の TACKEY.KFM 全 65 件を初期キーマップとして組み込む。 スコープ外の 6 件（F=内蔵検索 / P=圧縮 / U=書庫復元 / Y=絞込み / F2=CTRL+キー実行 / F10=サブ関連付け）は 未割り当てとする（X-01・X-03）。 結果: ReTAC では Esc を割り当て枠に含めないため、修飾なし・Shift の 64 枠のうち 40 枠が有効、24 枠が空。 Ctrl の 47 枠（F-06。Ctrl+Z は R-83 で枠から外した）には、Ctrl+F（B-18）・Ctrl+L（B-19）・Ctrl+B（B-21）・ Ctrl+A（B-23）を除いて既定の割り当てを付けない。 B-17: マウスの 3 枠（R-73）はボタン4/5 の 2 枠が有効。ボタン3 は空。 F-01: E / Shift+Enter / V / Z / F3 は、初期登録の外部ツール（）を指す。"
     },
     "ReTAC.Domain.Keys.KeyBinding": {
       "id": "type:ReTAC.Domain.Keys.KeyBinding",
@@ -1335,6 +1335,12 @@
           "mutability": "init"
         }
       ]
+    },
+    "ReTAC.Domain.Navigation.DefaultBookmarks": {
+      "id": "type:ReTAC.Domain.Navigation.DefaultBookmarks",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
+      "doc": "B-22: 設定ファイルが無いとき（Bookmarks の欄が無いとき）にバーへ置く初期の 6 件（ と同じ置き方）。エクスプローラーの戻る・進む・上へ（1〜3）はアイコンだけ、更新（4）は名前も出し、外部ツール（5）と フォルダ（6）を加えることで、コマンド・外部ツール・フォルダのどれもバーに置けることが初めての利用者に伝わる。 名前はすべて空にする（R-106-2 の表示名に任せる。表示名が多言語化で変わっても初期のブックマークはそのまま追従する）。"
     },
     "ReTAC.Domain.Navigation.DropSpot": {
       "id": "type:ReTAC.Domain.Navigation.DropSpot",
@@ -2692,7 +2698,8 @@
         "category": "ファイル操作",
         "assignable": true,
         "defaultKeys": [
-          "D"
+          "D",
+          "Delete"
         ]
       },
       {
@@ -3092,7 +3099,7 @@
         "category": "選択",
         "assignable": true,
         "defaultKeys": [
-          "Delete"
+          "Ctrl+A"
         ]
       },
       {
@@ -3583,14 +3590,14 @@
         "vk": 46,
         "shift": false,
         "ctrl": false,
-        "defaultTarget": "ToggleAllMarks"
+        "defaultTarget": "Delete"
       },
       {
         "label": "Ctrl+A",
         "vk": 65,
         "shift": false,
         "ctrl": true,
-        "defaultTarget": null
+        "defaultTarget": "ToggleAllMarks"
       },
       {
         "label": "Ctrl+B",
@@ -4084,15 +4091,11 @@
     "B-05": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 82
+        "line": 117
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 113
-      },
-      {
-        "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 272
+        "line": 276
       },
       {
         "file": "src/ReTAC.App/IncrementalSearchBar.cs",
@@ -4292,7 +4295,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
-        "line": 90
+        "line": 91
       }
     ],
     "B-18": [
@@ -4310,7 +4313,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
-        "line": 96
+        "line": 97
       }
     ],
     "B-19": [
@@ -4320,7 +4323,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
-        "line": 100
+        "line": 101
       }
     ],
     "B-20": [
@@ -4344,7 +4347,31 @@
       },
       {
         "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
-        "line": 105
+        "line": 106
+      }
+    ],
+    "B-22": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 84
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
+        "line": 44
+      }
+    ],
+    "B-23": [
+      {
+        "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+        "line": 38
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+        "line": 88
+      },
+      {
+        "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
+        "line": 110
       }
     ],
     "C-1": [
@@ -4440,7 +4467,7 @@
     "F-01": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 112
+        "line": 116
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
@@ -4694,7 +4721,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
-        "line": 102
+        "line": 103
       },
       {
         "file": "src/ReTAC.Domain/Keys/KeyMap.cs",
@@ -4736,7 +4763,7 @@
     "F-09": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 107
+        "line": 111
       },
       {
         "file": "src/ReTAC.App/EnvironmentPage.cs",
@@ -4868,7 +4895,7 @@
     "N-02": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 124
+        "line": 128
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -5278,7 +5305,7 @@
     "R-101": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 94
+        "line": 98
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -5588,15 +5615,15 @@
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 26
+        "line": 27
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 56
+        "line": 81
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 209
+        "line": 234
       }
     ],
     "R-106-1": [
@@ -5640,7 +5667,11 @@
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 50
+        "line": 47
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
+        "line": 75
       }
     ],
     "R-107": [
@@ -5762,27 +5793,27 @@
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 165
+        "line": 190
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 171
+        "line": 196
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 180
+        "line": 205
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 192
+        "line": 217
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 198
+        "line": 223
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 206
+        "line": 231
       }
     ],
     "R-11": [
@@ -5966,7 +5997,7 @@
     "R-14": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 232
+        "line": 236
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -6038,7 +6069,7 @@
     "R-20-3": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 124
+        "line": 128
       }
     ],
     "R-22": [
@@ -6084,7 +6115,7 @@
     "R-25": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 238
+        "line": 242
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -6870,7 +6901,7 @@
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 131
+        "line": 135
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -6888,11 +6919,11 @@
     "R-55-3": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 136
+        "line": 140
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 165
+        "line": 169
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -7304,7 +7335,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
-        "line": 90
+        "line": 91
       },
       {
         "file": "src/ReTAC.Domain/Keys/KeySlotList.cs",
@@ -7416,7 +7447,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 166
+        "line": 191
       }
     ],
     "R-78": [
@@ -7610,7 +7641,7 @@
     "R-83": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 238
+        "line": 242
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -7814,11 +7845,11 @@
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 82
+        "line": 83
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 85
+        "line": 89
       },
       {
         "file": "src/ReTAC.App/BookmarkBar.cs",
@@ -7986,19 +8017,19 @@
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 6
+        "line": 7
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 9
+        "line": 10
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 13
+        "line": 14
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 35
+        "line": 36
       },
       {
         "file": "src/ReTAC.Shell/ShellContextMenu.cs",
@@ -8166,7 +8197,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 6
+        "line": 7
       },
       {
         "file": "src/ReTAC.Domain/Navigation/QuickAccessList.cs",
@@ -8794,7 +8825,7 @@
     "R-98": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 304
+        "line": 308
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
@@ -8854,11 +8885,11 @@
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 19
+        "line": 20
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 87
+        "line": 112
       }
     ],
     "R-99": [
@@ -8946,7 +8977,7 @@
     "S-14": [
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
-        "line": 28
+        "line": 29
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
@@ -9022,7 +9053,7 @@
     "V-07": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 188
+        "line": 192
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
