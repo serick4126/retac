@@ -294,4 +294,19 @@ public class BookmarkTests
     [InlineData(true, false, BookmarkRules.BarVerticalKeyAction.OpenSelectLast)]
     public void バーのボタンの上下キーは開けるかどうかと方向で決まる(bool canOpen, bool down, BookmarkRules.BarVerticalKeyAction expected) =>
         Assert.Equal(expected, BookmarkRules.BarVerticalKey(canOpen, down));
+
+    [Theory]
+    // 1 段目: ↑ は先頭のときだけ、↓ は末尾のときだけバーへ戻る
+    [InlineData(1, true, false, false, true)]
+    [InlineData(1, false, false, false, false)]
+    [InlineData(1, false, true, true, true)]
+    [InlineData(1, false, false, true, false)]
+    // 先頭かつ末尾（項目が 1 件だけ）でも、方向に応じて戻る
+    [InlineData(1, true, true, false, true)]
+    [InlineData(1, true, true, true, true)]
+    // 2 段目以降は対象外（標準の折り返しのまま。先頭・末尾でも戻らない）
+    [InlineData(2, true, false, false, false)]
+    [InlineData(2, false, true, true, false)]
+    public void 一段目の端だけバーのボタンへ戻る(int level, bool isFirst, bool isLast, bool down, bool expected) =>
+        Assert.Equal(expected, BookmarkRules.ReturnsToBarButton(level, isFirst, isLast, down));
 }

@@ -194,6 +194,14 @@ public static class BookmarkRules
     public static BarVerticalKeyAction BarVerticalKey(bool canOpen, bool down) =>
         !canOpen ? BarVerticalKeyAction.None : down ? BarVerticalKeyAction.OpenSelectFirst : BarVerticalKeyAction.OpenSelectLast;
 
+    /// <summary>
+    /// R-107: 1 段目のドロップダウンの端で ↑/↓ が来たとき、バーのボタンへ戻ってよいか（Esc と同じ、
+    /// バーがキーボード操作を持ち続ける形）。2 段目以降は対象外（標準の折り返しのまま）。
+    /// isFirst/isLast は区切り線・無効な項目を除いた並びでの位置。↑ は先頭のときだけ、↓ は末尾のときだけ戻る。
+    /// </summary>
+    public static bool ReturnsToBarButton(int level, bool isFirst, bool isLast, bool down) =>
+        level <= 1 && (down ? isLast : isFirst);
+
     /// <summary>表示名。題名が空の Folder / File はパスの末尾の名前（ルートはパスそのもの）。</summary>
     public static string DisplayName(Bookmark b, Func<CommandTarget, string> commandLabel) => b switch
     {

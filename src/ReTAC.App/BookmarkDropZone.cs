@@ -454,6 +454,15 @@ internal sealed class BarDropDownButton : ToolStripDropDownButton
     public event EventHandler? DoubleClicked;
 
     /// <summary>
+    /// R-107: フォルダは中身を非同期に読むため、開いた直後（DropDownOpening が返った時点）ではまだ本当の
+    /// 末尾が分からない（「このフォルダへジャンプ」しか無い）。FolderExpansion.Attach がここへ「読み込み終わり後に
+    /// 末尾を選び直す」処理を登録する（グループは同期的に子が分かるので登録されない。null のままなら何もしない）。
+    /// </summary>
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    internal Action? RequestSelectLastOnReady { get; set; }
+
+    /// <summary>
     /// R-107: ↓ で開いて先頭を選ぶのは素の ToolStripDropDownItem の動きのままだが、↑ でも同じく先頭を選んでしまう
     /// （ToolStripDropDownItem.ProcessDialogKey は Up も Down も forward: true で開く）。↑ のときだけ末尾を選び直す
     /// （判定は BookmarkRules.BarVerticalKey。ここは開けるボタンなので結果は常に OpenSelectLast）。
@@ -463,6 +472,7 @@ internal sealed class BarDropDownButton : ToolStripDropDownButton
         if (Enabled && keyData == Keys.Up && HasDropDownItems
             && BookmarkRules.BarVerticalKey(canOpen: true, down: false) == BookmarkRules.BarVerticalKeyAction.OpenSelectLast)
         {
+            RequestSelectLastOnReady?.Invoke();   // フォルダなら、読み込み後に選び直してもらう
             ShowDropDown();   // DropDownOpening が同期的に中身を組み立てる（Configure/AttachGroup/FolderExpansion）
             BarKeyboardNav.SelectEdge(DropDownItems, first: false);
             return true;
@@ -553,6 +563,25 @@ internal sealed class ConfinedMenuItem(int level) : ToolStripMenuItem
         var forward = keyData == Keys.Right;
         if ((forward || keyData == Keys.Left) && BookmarkRules.SwallowArrowKey(level, HasDropDownItems, forward))
             return true;   // 呑み込むだけ。バー本体の ProcessDialogKey（ボタン間の移動）まで渡さない
+
+        // R-107 fix round 3: 1 段目の端（先頭で ↑・末尾で ↓）は、Esc と同じくバーのボタンへ戻す。
+        // ToolStripDropDown.SelectPreviousToolStrip（Esc の実装）は internal で呼べないので、
+        // 公開 API だけで同じ効果（閉じる・ボタンを選ぶ・バーへ焦点を戻す）を組み立てる。
+        if (keyData is Keys.Up or Keys.Down
+            && Owner is ToolStripDropDown dropDown && dropDown.OwnerItem is { } ownerItem && ownerItem.Owner is { } bar)
+        {
+            var selectable = dropDown.Items.Cast<ToolStripItem>().Where(i => i.Enabled && i is not ToolStripSeparator).ToList();
+            var isFirst = selectable.Count > 0 && ReferenceEquals(selectable[0], this);
+            var isLast = selectable.Count > 0 && ReferenceEquals(selectable[^1], this);
+            if (BookmarkRules.ReturnsToBarButton(level, isFirst, isLast, down: keyData == Keys.Down))
+            {
+                dropDown.Visible = false;
+                bar.Focus();
+                ownerItem.Select();
+                return true;
+            }
+        }
+
         return base.ProcessDialogKey(keyData);
     }
 }

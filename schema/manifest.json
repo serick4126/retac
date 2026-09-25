@@ -5662,11 +5662,19 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 513
+        "line": 466
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 542
+        "line": 523
+      },
+      {
+        "file": "src/ReTAC.App/BookmarkDropZone.cs",
+        "line": 552
+      },
+      {
+        "file": "src/ReTAC.App/BookmarkDropZone.cs",
+        "line": 567
       },
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
@@ -5698,11 +5706,19 @@
       },
       {
         "file": "src/ReTAC.App/FolderExpansion.cs",
-        "line": 95
+        "line": 65
       },
       {
         "file": "src/ReTAC.App/FolderExpansion.cs",
-        "line": 162
+        "line": 103
+      },
+      {
+        "file": "src/ReTAC.App/FolderExpansion.cs",
+        "line": 131
+      },
+      {
+        "file": "src/ReTAC.App/FolderExpansion.cs",
+        "line": 174
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -5747,6 +5763,10 @@
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
         "line": 192
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
+        "line": 198
       }
     ],
     "R-11": [
@@ -7748,11 +7768,11 @@
       },
       {
         "file": "src/ReTAC.App/FolderExpansion.cs",
-        "line": 100
+        "line": 108
       },
       {
         "file": "src/ReTAC.App/FolderExpansion.cs",
-        "line": 184
+        "line": 196
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -8038,7 +8058,7 @@
       },
       {
         "file": "src/ReTAC.App/FolderExpansion.cs",
-        "line": 94
+        "line": 102
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -8064,7 +8084,7 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 497
+        "line": 507
       },
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
@@ -8076,7 +8096,7 @@
       },
       {
         "file": "src/ReTAC.App/FolderExpansion.cs",
-        "line": 65
+        "line": 70
       }
     ],
     "R-92": [

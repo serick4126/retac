@@ -62,6 +62,11 @@ public static class FolderExpansion
         ToolStripExtras.EnableWheel(item.DropDown);   // 数百件を ▲▼ だけで送らせない（実機指摘）
         ExpansionDropZone.Attach(item.DropDown, folder, host);   // R-93: 中へファイルを落として転送する
 
+        // R-107 fix round 3: ↑ で開いたときは中身が届くまで本当の末尾が分からない（フォルダは非同期に読む）。
+        // BarDropDownButton（バー直下だけ）に「読み込み後に末尾を選び直す」引き金を渡しておく
+        var pendingSelectLast = false;
+        if (item is BarDropDownButton barButton) barButton.RequestSelectLastOnReady = () => pendingSelectLast = true;
+
         // R-91-2: バーのボタンは自分の開閉で判定する（Configure 側で配線）。ここはホバーで開くメニュー項目
         // （グループの中・ブックマークメニュー・展開した中のサブフォルダ）だけを対象に、押下どうしの間隔で自前判定する
         if (item is not BarDropDownButton)
@@ -90,6 +95,9 @@ public static class FolderExpansion
         item.DropDownOpening += (_, _) =>
         {
             var mine = ++generation;
+            // 開いた瞬間の要求だけを持ち越す。次に普通に（マウスで）開いたときまで持ち越して誤発火しないように
+            var wantsLast = pendingSelectLast;
+            pendingSelectLast = false;
             BookmarkItems.Clear(item.DropDownItems);
             // 存在の確認も裏で行う。止まった HDD や届かないネットワークでは、確認だけで UI が止まる（R-91）
             // R-107: 「このフォルダへジャンプ」は開くものを持たない項目なので、confined なら → を呑み込む対象
@@ -120,6 +128,10 @@ public static class FolderExpansion
                             break;
                         default:
                             items.LoadIcons(Fill(item, index, entries, folder, items, level));
+                            // R-107 fix round 3: ↑ で開いた直後に選んだ「このフォルダへジャンプ」が、読み込みが
+                            // 終わった今も選ばれたままなら（＝利用者がその間に選択を動かしていなければ）、
+                            // 本当の末尾へ選び直す。動かしていれば、その選択を横取りしない
+                            if (wantsLast && jump.Selected) BarKeyboardNav.SelectEdge(item.DropDownItems, first: false);
                             break;
                     }
                 });
