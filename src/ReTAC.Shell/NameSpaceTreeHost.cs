@@ -813,7 +813,7 @@ public sealed class NameSpaceTreeHost : IDisposable
     }
 
     /// <summary>
-    /// F1: 命じ直し（AdvanceTo の 1 回きりの再送）と、初回の展開（EnsureItemVisible の後）が共有する送信部分。
+    /// R-97-2: 命じ直し（AdvanceTo の 1 回きりの再送）と、初回の展開（EnsureItemVisible の後）が共有する送信部分。
     /// 命じ直しの側は項目が既に表示されているはずなので、ここでは EnsureItemVisible を呼ばない
     /// （呼ぶと毎回スクロール位置を合わせ直してちらつく）。
     /// </summary>
@@ -827,7 +827,7 @@ public sealed class NameSpaceTreeHost : IDisposable
     /// <summary>
     /// GetItemRect が返すのは画面座標（中のツリーのクライアント座標ではない。そのまま当てると項目の外になる。実測）。
     /// TVM_EXPAND の戻り値は、展開が行われたときでも 0 のことがあった（実測）ので見ない。展開の成否は状態と通知で確かめる。
-    /// F2: TVM_HITTEST の Flags が項目の行（アイコン・ラベル・インデント・展開ボタン・右側・状態アイコン）を
+    /// R-97-2: TVM_HITTEST の Flags が項目の行（アイコン・ラベル・インデント・展開ボタン・右側・状態アイコン）を
     /// 指していない場合は hItem を信用しない。画面座標の前提が崩れたときに別の行を誤って展開しないための保険。
     /// </summary>
     private bool SendTreeViewExpand(INameSpaceTreeControl tree, IShellItem item)
@@ -850,7 +850,7 @@ public sealed class NameSpaceTreeHost : IDisposable
     private const uint TVM_EXPAND = 0x1102;
     private const uint TVM_HITTEST = 0x1111;
     private static readonly IntPtr TVE_EXPAND = 2;
-    /// <summary>F2: TVM_HITTEST の結果が項目の行のどこかを指しているかの判定に使うビットの合成
+    /// <summary>R-97-2: TVM_HITTEST の結果が項目の行のどこかを指しているかの判定に使うビットの合成
     /// （TVHT_ONITEMICON | LABEL | INDENT | BUTTON | RIGHT | STATEICON）。</summary>
     private const uint TVHT_ONITEM = 0x2 | 0x4 | 0x8 | 0x10 | 0x20 | 0x40;
 
