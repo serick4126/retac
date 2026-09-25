@@ -123,6 +123,9 @@ public sealed class NameSpaceTreeHost : IDisposable
     private int _runDepth;
     /// <summary>R-97-2: いちばん深く着いた段へ最後に展開を命じた時刻。0 は命じていない（着いたとき既に開いていた）。</summary>
     private long _expandRequestedAt;
+    /// <summary>R-97-2: いちばん深く着いた段への命じ直しを、もう行ったか。段が進んだら（PrepareSelection でも）false に戻す。
+    /// 命じ直しは 1 回きりにする（際限なく命じ直すと、止まったままの枝が見張りの期限までスクロールを繰り返す）。</summary>
+    private bool _expandReissued;
     private string[] _dropSources = [];
     /// <summary>R-97: デスクトップツリー(PC全体で単一・固定のルート)かどうか。SelectItem の辿り方を変える。</summary>
     private bool _desktopMode;
@@ -500,6 +503,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         _pendingSelectionPath = path;
         _reachedDepth = 0;
         _expandRequestedAt = 0;
+        _expandReissued = false;
         LastSelectionProgress = Environment.TickCount64;
         _expansionRestoreDeadline = 0;
         _selectedPath = null;
@@ -764,10 +768,16 @@ public sealed class NameSpaceTreeHost : IDisposable
         var expanded = (state & ItemState.Expanded) != 0;
         if (depth == _reachedDepth)
         {
-            // 命じ直しは進んだことにしない。開かないままなら、見張りが最後に進んでからの期限で失敗を知らせる
+            // 命じ直しは進んだことにしない。開かないままなら、見張りが最後に進んでからの期限で失敗を知らせる。
+            // 1 回だけ（_expandReissued）: 項目は最初の命令で既に表示済みのはずなので EnsureItemVisible は呼ばない
+            // （毎回呼ぶとスクロールバーがちらつく。ReissueExpand を参照）。
             if (NameSpaceTreePolicy.ShouldReissueExpand(expanded, _expandRequestedAt, Environment.TickCount64,
-                    SelectionFallbackMilliseconds) && ExpandItem(tree, item))
+                    SelectionFallbackMilliseconds, _expandReissued))
+            {
+                ReissueExpand(tree, item);
                 _expandRequestedAt = Environment.TickCount64;
+                _expandReissued = true;
+            }
             return true;
         }
 
@@ -775,6 +785,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         if (!ready) return false;
         _reachedDepth = depth;
         _expandRequestedAt = expanded ? 0 : Environment.TickCount64;
+        _expandReissued = false;
         LastSelectionProgress = Environment.TickCount64;
         return true;
     }
@@ -797,15 +808,27 @@ public sealed class NameSpaceTreeHost : IDisposable
     private bool ExpandItem(INameSpaceTreeControl tree, IShellItem item)
     {
         if (!Reveal(tree, item)) return false;
+        ReissueExpand(tree, item);
+        return true;
+    }
+
+    /// <summary>
+    /// F1: 命じ直し（AdvanceTo の 1 回きりの再送）と、初回の展開（EnsureItemVisible の後）が共有する送信部分。
+    /// 命じ直しの側は項目が既に表示されているはずなので、ここでは EnsureItemVisible を呼ばない
+    /// （呼ぶと毎回スクロール位置を合わせ直してちらつく）。
+    /// </summary>
+    private void ReissueExpand(INameSpaceTreeControl tree, IShellItem item)
+    {
         if (!SendTreeViewExpand(tree, item))
             Check(tree.SetItemState(item, ItemState.Expanded, ItemState.Expanded),
                 "名前空間ツリーの枝を展開できません。");
-        return true;
     }
 
     /// <summary>
     /// GetItemRect が返すのは画面座標（中のツリーのクライアント座標ではない。そのまま当てると項目の外になる。実測）。
     /// TVM_EXPAND の戻り値は、展開が行われたときでも 0 のことがあった（実測）ので見ない。展開の成否は状態と通知で確かめる。
+    /// F2: TVM_HITTEST の Flags が項目の行（アイコン・ラベル・インデント・展開ボタン・右側・状態アイコン）を
+    /// 指していない場合は hItem を信用しない。画面座標の前提が崩れたときに別の行を誤って展開しないための保険。
     /// </summary>
     private bool SendTreeViewExpand(INameSpaceTreeControl tree, IShellItem item)
     {
@@ -819,7 +842,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         };
         if (!ScreenToClient(inner, ref hit.Point)) return false;
         SendMessage(inner, TVM_HITTEST, IntPtr.Zero, ref hit);
-        if (hit.Item == IntPtr.Zero) return false;
+        if (hit.Item == IntPtr.Zero || (hit.Flags & TVHT_ONITEM) == 0) return false;
         SendMessage(inner, TVM_EXPAND, TVE_EXPAND, hit.Item);
         return true;
     }
@@ -827,6 +850,9 @@ public sealed class NameSpaceTreeHost : IDisposable
     private const uint TVM_EXPAND = 0x1102;
     private const uint TVM_HITTEST = 0x1111;
     private static readonly IntPtr TVE_EXPAND = 2;
+    /// <summary>F2: TVM_HITTEST の結果が項目の行のどこかを指しているかの判定に使うビットの合成
+    /// （TVHT_ONITEMICON | LABEL | INDENT | BUTTON | RIGHT | STATEICON）。</summary>
+    private const uint TVHT_ONITEM = 0x2 | 0x4 | 0x8 | 0x10 | 0x20 | 0x40;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct TreeViewHitTestInfo

@@ -69,9 +69,11 @@ public static class NameSpaceTreePolicy
     /// （AppData\Local\Temp で実測。手でのクリックと同じ経路でも止まり、少し後に命じ直すと開く）。
     /// 間隔を空けるのは、中身の多い枝が普通に読み込み中のときに命じ直しを重ねないため。
     /// requestedAt が 0 なら命じていない（着いたとき既に開いていた）ので命じ直さない。
+    /// alreadyReissued が true なら、この段への命じ直しは既に 1 回行った後なので命じ直さない
+    /// （命じ直すたびに interval が延びると、止まったままの枝に見張りの期限まで送り続けてしまう）。
     /// </summary>
-    internal static bool ShouldReissueExpand(bool expanded, long requestedAt, long now, long interval) =>
-        !expanded && requestedAt != 0 && now - requestedAt >= interval;
+    internal static bool ShouldReissueExpand(bool expanded, long requestedAt, long now, long interval, bool alreadyReissued) =>
+        !expanded && !alreadyReissued && requestedAt != 0 && now - requestedAt >= interval;
 
     private static string Normalize(string path)
     {

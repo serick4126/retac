@@ -94,13 +94,14 @@ public class NameSpaceTreePolicyTests
     }
 
     [Theory]
-    [InlineData("開いた", true, 1_000, 5_000, false)]
-    [InlineData("命じていない", false, 0, 5_000, false)]
-    [InlineData("間隔の手前", false, 1_000, 2_499, false)]
-    [InlineData("間隔を過ぎても開かない", false, 1_000, 2_500, true)]
+    [InlineData("開いた", true, 1_000, 5_000, false, false)]
+    [InlineData("命じていない", false, 0, 5_000, false, false)]
+    [InlineData("間隔の手前", false, 1_000, 2_499, false, false)]
+    [InlineData("間隔を過ぎても開かない", false, 1_000, 2_500, false, true)]
+    [InlineData("命じ直しは 1 回だけ", false, 1_000, 2_500, true, false)]
     public void 開かない枝には間隔を空けて展開を命じ直す(
-        string _, bool expanded, long requestedAt, long now, bool expected)
+        string _, bool expanded, long requestedAt, long now, bool alreadyReissued, bool expected)
     {
-        Assert.Equal(expected, NameSpaceTreePolicy.ShouldReissueExpand(expanded, requestedAt, now, 1_500));
+        Assert.Equal(expected, NameSpaceTreePolicy.ShouldReissueExpand(expanded, requestedAt, now, 1_500, alreadyReissued));
     }
 }
