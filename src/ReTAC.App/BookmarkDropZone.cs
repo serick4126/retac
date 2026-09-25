@@ -423,6 +423,20 @@ internal sealed class ExpansionDropZone
 }
 
 /// <summary>
+/// R-107: バーのボタンから開いたドロップダウンの、選べる項目の先頭・末尾を選ぶ。
+/// ToolStrip.SelectNextToolStripItem・CanKeyboardSelect は internal でアセンブリの外から呼べないため、
+/// 区切り線を除く・有効な項目という近い条件（このバーの中身は自分で組み立てているので実害は無い）で代える。
+/// </summary>
+internal static class BarKeyboardNav
+{
+    internal static void SelectEdge(ToolStripItemCollection items, bool first)
+    {
+        var candidates = items.Cast<ToolStripItem>().Where(i => i.Enabled && i is not ToolStripSeparator);
+        (first ? candidates.FirstOrDefault() : candidates.LastOrDefault())?.Select();
+    }
+}
+
+/// <summary>
 /// バーのフォルダ・グループのボタン。押したときではなく離したときに開く（押した時点で開くと、ドラッグを始められない）。
 /// 開いているときに押したら、今までどおり閉じる。ただしフォルダは、その 2 回目の押下が直前に開いた時刻・位置の
 /// ダブルクリックの範囲内なら「閉じてジャンプ」（R-91-2）にする。標準の DoubleClick はここには届かない
@@ -438,6 +452,23 @@ internal sealed class BarDropDownButton : ToolStripDropDownButton
 
     /// <summary>フォルダのダブルクリック（R-91-2）。グループには繋がない（呼び出し側の判断）。</summary>
     public event EventHandler? DoubleClicked;
+
+    /// <summary>
+    /// R-107: ↓ で開いて先頭を選ぶのは素の ToolStripDropDownItem の動きのままだが、↑ でも同じく先頭を選んでしまう
+    /// （ToolStripDropDownItem.ProcessDialogKey は Up も Down も forward: true で開く）。↑ のときだけ末尾を選び直す
+    /// （判定は BookmarkRules.BarVerticalKey。ここは開けるボタンなので結果は常に OpenSelectLast）。
+    /// </summary>
+    protected override bool ProcessDialogKey(Keys keyData)
+    {
+        if (Enabled && keyData == Keys.Up && HasDropDownItems
+            && BookmarkRules.BarVerticalKey(canOpen: true, down: false) == BookmarkRules.BarVerticalKeyAction.OpenSelectLast)
+        {
+            ShowDropDown();   // DropDownOpening が同期的に中身を組み立てる（Configure/AttachGroup/FolderExpansion）
+            BarKeyboardNav.SelectEdge(DropDownItems, first: false);
+            return true;
+        }
+        return base.ProcessDialogKey(keyData);
+    }
 
     protected override void OnMouseDown(MouseEventArgs e)
     {

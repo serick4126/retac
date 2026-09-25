@@ -45,6 +45,23 @@ public sealed class BookmarkBar : ToolStrip
         Padding = new Padding(sideMargin, 0, sideMargin, 0);
     }
 
+    /// <summary>
+    /// R-107: 入りきらない項目をまとめる「»」（ToolStripOverflowButton）は ToolStrip が自前で作る組み込みの型で、
+    /// 継承して独自の ProcessDialogKey を持たせられない。バー本体でこの 1 件だけ横取りする
+    /// （BarDropDownButton と同じ「↑ は末尾を選んで開く」を、こちらにも揃えるため）。
+    /// </summary>
+    protected override bool ProcessDialogKey(Keys keyData)
+    {
+        if (keyData == Keys.Up && OverflowButton.Selected && OverflowButton.HasDropDownItems
+            && BookmarkRules.BarVerticalKey(canOpen: true, down: false) == BookmarkRules.BarVerticalKeyAction.OpenSelectLast)
+        {
+            OverflowButton.ShowDropDown();
+            BarKeyboardNav.SelectEdge(OverflowButton.DropDownItems, first: false);
+            return true;
+        }
+        return base.ProcessDialogKey(keyData);
+    }
+
     private BookmarkItems? _items;
     /// <summary>R-89: 項目の無い所の右クリック。項目の上は項目の MouseUp が受ける。</summary>
     protected override void OnMouseUp(MouseEventArgs e)

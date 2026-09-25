@@ -177,6 +177,23 @@ public static class BookmarkRules
     public static bool SwallowArrowKey(int level, bool hasSubmenu, bool forward) =>
         forward ? !hasSubmenu : level <= 1;
 
+    /// <summary>R-107: バーのボタン自身（バー直下、まだ何も開いていない状態）に ↑/↓ が来たときにすること。</summary>
+    public enum BarVerticalKeyAction
+    {
+        /// <summary>開けないボタン（ファイル・コマンド）。何もしない（横並びのバーで上下移動に使わせない）。</summary>
+        None,
+        /// <summary>↓: 開いて先頭の項目を選ぶ（フォルダ・グループ・オーバーフロー「»」の今までの動き）。</summary>
+        OpenSelectFirst,
+        /// <summary>↑: 開いて末尾の項目を選ぶ。</summary>
+        OpenSelectLast,
+    }
+
+    /// <summary>
+    /// R-107: canOpen はそのボタンが開けるか（フォルダ・グループ・「»」）。down は ↓ なら true、↑ なら false。
+    /// </summary>
+    public static BarVerticalKeyAction BarVerticalKey(bool canOpen, bool down) =>
+        !canOpen ? BarVerticalKeyAction.None : down ? BarVerticalKeyAction.OpenSelectFirst : BarVerticalKeyAction.OpenSelectLast;
+
     /// <summary>表示名。題名が空の Folder / File はパスの末尾の名前（ルートはパスそのもの）。</summary>
     public static string DisplayName(Bookmark b, Func<CommandTarget, string> commandLabel) => b switch
     {

@@ -284,4 +284,14 @@ public class BookmarkTests
     [InlineData(2, false, false, false)]
     public void ドロップダウン内の矢印キーは段数と開けるかどうかで呑み込むかが決まる(int level, bool hasSubmenu, bool forward, bool expected) =>
         Assert.Equal(expected, BookmarkRules.SwallowArrowKey(level, hasSubmenu, forward));
+
+    [Theory]
+    // 開けないボタン（ファイル・コマンド）は ↑↓ とも何もしない
+    [InlineData(false, true, BookmarkRules.BarVerticalKeyAction.None)]
+    [InlineData(false, false, BookmarkRules.BarVerticalKeyAction.None)]
+    // 開けるボタン（フォルダ・グループ・»）は ↓ で先頭、↑ で末尾を選んで開く
+    [InlineData(true, true, BookmarkRules.BarVerticalKeyAction.OpenSelectFirst)]
+    [InlineData(true, false, BookmarkRules.BarVerticalKeyAction.OpenSelectLast)]
+    public void バーのボタンの上下キーは開けるかどうかと方向で決まる(bool canOpen, bool down, BookmarkRules.BarVerticalKeyAction expected) =>
+        Assert.Equal(expected, BookmarkRules.BarVerticalKey(canOpen, down));
 }
