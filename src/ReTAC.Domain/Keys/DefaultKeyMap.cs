@@ -95,7 +95,7 @@ public static class DefaultKeyMap
         yield return Key(new KeyBinding(Vk.XButton2), CommandId.GoForward);
 
         // B-18: Ctrl+F は Windows 全体で「検索」の標準キー。INV-NO-PREFERENCE-DEFAULTS の例外条項に当たる。
-        // Ctrl の枠で既定を持つのは Ctrl+F・Ctrl+L・Ctrl+B だけ。便利だからという理由で Ctrl の枠に既定を足さない
+        // Ctrl の枠で既定を持つのは Ctrl+F・Ctrl+L・Ctrl+B・Ctrl+A だけ。便利だからという理由で Ctrl の枠に既定を足さない
         yield return Key(new KeyBinding(Vk.Letter('F'), Ctrl: true), CommandId.IncrementalSearch);
 
         // B-19: Ctrl+L はブラウザ共通の「アドレスバーへ」。INV-NO-PREFERENCE-DEFAULTS の例外条項に当たる。

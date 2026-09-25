@@ -1654,7 +1654,7 @@ public sealed class MainForm : Form, IBookmarkHost
     private bool FocusBookmarkBar()
     {
         if (!BookmarkRules.CanFocusBar(_bookmarkBarShown, _settings.Bookmarks.Bar.Count)) return true;
-        // レビュー指摘: EnterKeyboardSelection が失敗したとき（例えば項目が 0 件）にフラグだけ立ったままにしない
+        // EnterKeyboardSelection が失敗したとき（例えば項目が 0 件）にフラグだけ立ったままにしない
         return _bookmarkBarKeyboard = _bookmarkBar.EnterKeyboardSelection();
     }
 
