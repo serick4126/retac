@@ -113,6 +113,16 @@ public sealed class NameSpaceTreeHost : IDisposable
     private int _selectionVersion;
     private int _lifetime;
     private CancellationTokenSource? _selectionFallback;
+    /// <summary>
+    /// R-97-2: 今の選択で辿り着いた段の数と、今回の辿り直しで何段目にいるか。辿り直しはルートから毎回やるが、
+    /// 表示位置の合わせ直し（EnsureItemVisible）と展開の命令は、初めて辿り着いた段にだけ行う。
+    /// 見つからないまま辿り直すたびにスクロールするとスクロールバーがちらつき続け、読み込み中の枝へ
+    /// 辿り直しのたびに展開を命じ直しても速くはならないため（止まった枝の命じ直しは間隔を空けて別に行う）。
+    /// </summary>
+    private int _reachedDepth;
+    private int _runDepth;
+    /// <summary>R-97-2: いちばん深く着いた段へ最後に展開を命じた時刻。0 は命じていない（着いたとき既に開いていた）。</summary>
+    private long _expandRequestedAt;
     private string[] _dropSources = [];
     /// <summary>R-97: デスクトップツリー(PC全体で単一・固定のルート)かどうか。SelectItem の辿り方を変える。</summary>
     private bool _desktopMode;
@@ -365,6 +375,12 @@ public sealed class NameSpaceTreeHost : IDisposable
     public bool SelectionPending => _pendingSelectionPath is not null;
 
     /// <summary>
+    /// R-97-2: 現在位置への展開が最後に 1 段進んだ時刻（Environment.TickCount64）。選択を始めた時刻で初期化する。
+    /// 見張りの期限をここから数えるので、中身の多いフォルダを何段も辿る途中でも、進んでいる限り失敗にしない。
+    /// </summary>
+    public long LastSelectionProgress { get; private set; }
+
+    /// <summary>
     /// R-97-2: 利用者がツリーをキーで操作したら、現在位置への自動の展開・選択は捨てる。残すと、
     /// 利用者が動かした選択を自動の選択が奪い返したり、見張りが「展開の失敗」と取り違えたりする。
     /// OnItemClick はコードからの選択でも届くので、マウスはきっかけにしない（マウスの確定は新しい移動になる）。
@@ -482,6 +498,9 @@ public sealed class NameSpaceTreeHost : IDisposable
         _selectionSignalPending = false;
         CancelSelectionFallback();
         _pendingSelectionPath = path;
+        _reachedDepth = 0;
+        _expandRequestedAt = 0;
+        LastSelectionProgress = Environment.TickCount64;
         _expansionRestoreDeadline = 0;
         _selectedPath = null;
         _ignoreSelectionEvents = true;
@@ -583,10 +602,14 @@ public sealed class NameSpaceTreeHost : IDisposable
         _ = DelaySelectionContinuation(cancellation, lifetime, selectionVersion);
     }
 
+    private const int SelectionFallbackMilliseconds = 1500;
+
     private async Task DelaySelectionContinuation(
         CancellationTokenSource cancellation, int lifetime, int selectionVersion)
     {
-        try { await Task.Delay(250, cancellation.Token).ConfigureAwait(false); }
+        // R-97-2: 次の段へ進むきっかけは展開・追加の通知で、これは通知が来なかったときの保険。
+        // 短い間隔で回し続けると、中身の多いフォルダの子を探し直すたびに画面が止まる
+        try { await Task.Delay(SelectionFallbackMilliseconds, cancellation.Token).ConfigureAwait(false); }
         catch (OperationCanceledException) { return; }
 
         var context = _ownerContext;
@@ -622,6 +645,7 @@ public sealed class NameSpaceTreeHost : IDisposable
 
     private bool SelectItem(INameSpaceTreeControl tree, IShellItem root, string path)
     {
+        _runDepth = 0;
         if (!_desktopMode)
         {
             var rootPath = Path.TrimEndingDirectorySeparator(ShellItemPath.FileSystemPathOf(root) ?? "");
@@ -656,11 +680,7 @@ public sealed class NameSpaceTreeHost : IDisposable
             // This PC は Desktop 直下の仮想項目で RootStyle.Expanded の対象外なので、明示的に展開する。
             // 展開直後は子(ドライブ)がまだ列挙されていないことがあるが、それは false を返して既存の
             // OnAfterExpand / OnItemAdded 経由の再試行に任せる(SelectItem 全体が再実行される)。
-            Check(tree.SetItemState(computerInTree, ItemState.Expanded, ItemState.Expanded),
-                "名前空間ツリーの枝を展開できません。");
-            var visibleHr = tree.EnsureItemVisible(computerInTree);
-            if (visibleHr == E_INVALIDARG) return false;
-            Check(visibleHr, "名前空間ツリーの枝を表示できません。");
+            if (!AdvanceTo(tree, computerInTree)) return false;
 
             var driveRoot = ShellItemPath.RootOf(path);
             driveInTree = FindChild(tree, computerInTree, driveRoot);
@@ -670,8 +690,7 @@ public sealed class NameSpaceTreeHost : IDisposable
                 return SetSelected(tree, driveInTree);
             // ドライブツリーではルートのドライブが最初から展開されているが、PC の下のドライブは閉じたまま。
             // 開かないと子が列挙されず、DescendAndSelect が最初の段で見つけられずにやり直し続ける
-            Check(tree.SetItemState(driveInTree, ItemState.Expanded, ItemState.Expanded),
-                "名前空間ツリーの枝を展開できません。");
+            if (!AdvanceTo(tree, driveInTree)) return false;
             return DescendAndSelect(tree, driveInTree, ShellItemPath.ParentPathsFrom(driveRoot, path), path);
         }
         finally
@@ -715,15 +734,7 @@ public sealed class NameSpaceTreeHost : IDisposable
                 if (releaseCurrent) Marshal.ReleaseComObject(current);
                 current = child;
                 releaseCurrent = true;
-
-                Check(tree.GetItemState(current, ItemState.Expanded, out var state),
-                    "名前空間ツリーの展開状態を取得できません。");
-                if ((state & ItemState.Expanded) == 0)
-                    Check(tree.SetItemState(current, ItemState.Expanded, ItemState.Expanded),
-                        "名前空間ツリーの枝を展開できません。");
-                var visibleHr = tree.EnsureItemVisible(current);
-                if (visibleHr == E_INVALIDARG) return false;
-                Check(visibleHr, "名前空間ツリーの枝を表示できません。");
+                if (!AdvanceTo(tree, current)) return false;
             }
 
             var target = FindChild(tree, current, targetPath);
@@ -735,6 +746,94 @@ public sealed class NameSpaceTreeHost : IDisposable
         {
             if (releaseCurrent) Marshal.ReleaseComObject(current);
         }
+    }
+
+    /// <summary>
+    /// R-97-2: 辿り直しの中で次の段 item に着いた。初めて着いた段だけ、表示位置を合わせて（閉じていれば）展開を命じ、
+    /// 進んだ時刻を記録する。前の辿り直しで着いた段には、原則として何もしない（展開の完了は OnAfterExpand / OnItemAdded で知る）。
+    /// 例外は、いちばん深い段が命じてから一定時間たっても開いていないときの命じ直し（ShouldReissueExpand）。
+    /// false は、まだ表示できない項目なので後で辿り直す、の意味。
+    /// </summary>
+    private bool AdvanceTo(INameSpaceTreeControl tree, IShellItem item)
+    {
+        var depth = ++_runDepth;
+        if (depth < _reachedDepth) return true;
+
+        Check(tree.GetItemState(item, ItemState.Expanded, out var state),
+            "名前空間ツリーの展開状態を取得できません。");
+        var expanded = (state & ItemState.Expanded) != 0;
+        if (depth == _reachedDepth)
+        {
+            // 命じ直しは進んだことにしない。開かないままなら、見張りが最後に進んでからの期限で失敗を知らせる
+            if (NameSpaceTreePolicy.ShouldReissueExpand(expanded, _expandRequestedAt, Environment.TickCount64,
+                    SelectionFallbackMilliseconds) && ExpandItem(tree, item))
+                _expandRequestedAt = Environment.TickCount64;
+            return true;
+        }
+
+        var ready = expanded ? Reveal(tree, item) : ExpandItem(tree, item);
+        if (!ready) return false;
+        _reachedDepth = depth;
+        _expandRequestedAt = expanded ? 0 : Environment.TickCount64;
+        LastSelectionProgress = Environment.TickCount64;
+        return true;
+    }
+
+    private static bool Reveal(INameSpaceTreeControl tree, IShellItem item)
+    {
+        var hr = tree.EnsureItemVisible(item);
+        if (hr == E_INVALIDARG) return false;
+        Check(hr, "名前空間ツリーの枝を表示できません。");
+        return true;
+    }
+
+    /// <summary>
+    /// R-97-2: 自動展開はすべてここを通す。SetItemState(NSTCIS_EXPANDED) は S_OK を返しても完了しない項目がある
+    /// （AppData\Local で実測。OnBeforeExpand と列挙フラグの問い合わせの後に止まり、OnAfterExpand も子も来ない）。
+    /// 同じ項目でも、手で「＞」を押したときと同じく中の SysTreeView32 に TVM_EXPAND を送れば開く。
+    /// そのため項目の位置から中のツリーの項目を引いて TVM_EXPAND を送り、引けなかったときだけ SetItemState に戻す。
+    /// 位置を引くには項目が表示されている必要があるので、先に EnsureItemVisible する。
+    /// </summary>
+    private bool ExpandItem(INameSpaceTreeControl tree, IShellItem item)
+    {
+        if (!Reveal(tree, item)) return false;
+        if (!SendTreeViewExpand(tree, item))
+            Check(tree.SetItemState(item, ItemState.Expanded, ItemState.Expanded),
+                "名前空間ツリーの枝を展開できません。");
+        return true;
+    }
+
+    /// <summary>
+    /// GetItemRect が返すのは画面座標（中のツリーのクライアント座標ではない。そのまま当てると項目の外になる。実測）。
+    /// TVM_EXPAND の戻り値は、展開が行われたときでも 0 のことがあった（実測）ので見ない。展開の成否は状態と通知で確かめる。
+    /// </summary>
+    private bool SendTreeViewExpand(INameSpaceTreeControl tree, IShellItem item)
+    {
+        if (_treeHwnd == IntPtr.Zero) return false;
+        var inner = FindWindowEx(_treeHwnd, IntPtr.Zero, "SysTreeView32", null);
+        if (inner == IntPtr.Zero) return false;
+        if (((INameSpaceTreeControl2)tree).GetItemRect(item, out var rect) < 0) return false;
+        var hit = new TreeViewHitTestInfo
+        {
+            Point = new NativePoint { X = (rect.Left + rect.Right) / 2, Y = (rect.Top + rect.Bottom) / 2 },
+        };
+        if (!ScreenToClient(inner, ref hit.Point)) return false;
+        SendMessage(inner, TVM_HITTEST, IntPtr.Zero, ref hit);
+        if (hit.Item == IntPtr.Zero) return false;
+        SendMessage(inner, TVM_EXPAND, TVE_EXPAND, hit.Item);
+        return true;
+    }
+
+    private const uint TVM_EXPAND = 0x1102;
+    private const uint TVM_HITTEST = 0x1111;
+    private static readonly IntPtr TVE_EXPAND = 2;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct TreeViewHitTestInfo
+    {
+        public NativePoint Point;
+        public uint Flags;
+        public IntPtr Item;
     }
 
     private static IShellItem? FindChild(INameSpaceTreeControl tree, IShellItem parent, string path)
@@ -912,9 +1011,13 @@ public sealed class NameSpaceTreeHost : IDisposable
         return true;
     }
 
+    /// <summary>
+    /// R-97: 展開を命じた枝は復元待ちから外す。辿り直しのたびに命じ直すと、そのたびに EnsureItemVisible で
+    /// スクロールしてちらつくうえ、読み込み中の枝が速く開くわけでもない（R-97-2 の自動展開と同じ理由）。
+    /// </summary>
     private bool RestorePendingExpansion(INameSpaceTreeControl tree)
     {
-        foreach (var expandedPath in _pendingExpandedPaths.OrderBy(path => path.Length))
+        foreach (var expandedPath in _pendingExpandedPaths.OrderBy(path => path.Length).ToList())
         {
             var item = FindVisibleItem(tree, expandedPath);
             if (item is null)
@@ -923,15 +1026,13 @@ public sealed class NameSpaceTreeHost : IDisposable
             }
             try
             {
-                Check(tree.SetItemState(item, ItemState.Expanded, ItemState.Expanded),
-                    "名前空間ツリーの展開状態を復元できません。");
-                var visibleHr = tree.EnsureItemVisible(item);
-                if (visibleHr != E_INVALIDARG)
-                    Check(visibleHr, "名前空間ツリーの展開項目を表示できません。");
+                Check(tree.GetItemState(item, ItemState.Expanded, out var state),
+                    "名前空間ツリーの展開状態を取得できません。");
+                if ((state & ItemState.Expanded) == 0 && !ExpandItem(tree, item)) return false;
+                _pendingExpandedPaths.Remove(expandedPath);
             }
             finally { Marshal.ReleaseComObject(item); }
         }
-        _pendingExpandedPaths.Clear();
         return true;
     }
 
@@ -1276,6 +1377,13 @@ public sealed class NameSpaceTreeHost : IDisposable
 
     [DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hwnd, uint message, IntPtr wParam, ref TreeViewHitTestInfo lParam);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ScreenToClient(IntPtr hwnd, ref NativePoint point);
 
     [DllImport("gdi32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

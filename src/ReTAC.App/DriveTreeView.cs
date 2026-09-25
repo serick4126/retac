@@ -34,7 +34,7 @@ public sealed class DriveTreeView : Control, IMessageFilter
     private ShellTreeVisibility _appliedVisibility;
     private bool _resetPending = true;
     private bool _hostCreated;
-    private long _selectionDeadline;
+    private long _selectionWatchStarted;
     /// <summary>R-97-2: NSTC は別ウィンドウの子なので、押下位置は WM_PARENTNOTIFY で拾っておく。</summary>
     private Point? _pendingDownPoint;
     /// <summary>
@@ -373,7 +373,7 @@ public sealed class DriveTreeView : Control, IMessageFilter
             _selectionWatchdog.Stop();
             return;
         }
-        _selectionDeadline = Environment.TickCount64 + SelectionTimeoutMilliseconds;
+        _selectionWatchStarted = Environment.TickCount64;
         _selectionWatchdog.Start();
     }
 
@@ -391,7 +391,9 @@ public sealed class DriveTreeView : Control, IMessageFilter
             _selectionWatchdog.Stop();
             return;
         }
-        if (Environment.TickCount64 < _selectionDeadline) return;
+        // R-97-2: 期限は最後に 1 段進んでから数える（1 段も進まなければ見張りの開始から）
+        if (!NameSpaceTreePolicy.SelectionTimedOut(Environment.TickCount64, _selectionWatchStarted,
+                _host.LastSelectionProgress, SelectionTimeoutMilliseconds)) return;
 
         _selectionWatchdog.Stop();
         _host.CancelPendingSelection();

@@ -55,6 +55,24 @@ public static class NameSpaceTreePolicy
             && Math.Abs(upPoint.Y - pending.DownPoint.Y) < SystemInformation.DragSize.Height;
     }
 
+    /// <summary>
+    /// R-97-2: 現在位置への展開を失敗とみなすのは、見張りを始めてから、または最後に 1 段進んでから timeout たったとき。
+    /// 全体の時間で切ると、中身の多いフォルダを何段も辿る途中で、正常に進んでいるのに失敗扱いになる。
+    /// lastProgress が前の選択の時刻（見張りの開始より前）なら、見張りの開始から数える。
+    /// </summary>
+    internal static bool SelectionTimedOut(long now, long watchStarted, long lastProgress, long timeout) =>
+        now >= Math.Max(watchStarted, lastProgress) + timeout;
+
+    /// <summary>
+    /// R-97-2: 自動展開で命じた枝が、interval たっても開いていなければもう一度命じる。
+    /// デスクトップツリーでは、親が開き終わった直後に命じた展開が OnBeforeExpand の後に止まることがある
+    /// （AppData\Local\Temp で実測。手でのクリックと同じ経路でも止まり、少し後に命じ直すと開く）。
+    /// 間隔を空けるのは、中身の多い枝が普通に読み込み中のときに命じ直しを重ねないため。
+    /// requestedAt が 0 なら命じていない（着いたとき既に開いていた）ので命じ直さない。
+    /// </summary>
+    internal static bool ShouldReissueExpand(bool expanded, long requestedAt, long now, long interval) =>
+        !expanded && requestedAt != 0 && now - requestedAt >= interval;
+
     private static string Normalize(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path))

@@ -80,4 +80,27 @@ public class NameSpaceTreePolicyTests
         var upPoint = new Point(dx, dy);
         Assert.Equal(expected, NameSpaceTreePolicy.ShouldCommit(pending, upPoint, dragStarted, buttonReleased));
     }
+
+    [Theory]
+    [InlineData("見張りの開始から期限内", 14_999, 0, 0, false)]
+    [InlineData("1 段も進まず期限", 15_000, 0, 0, true)]
+    [InlineData("前の選択の進みは数えない", 15_000, 0, -5_000, true)]
+    [InlineData("進んでから期限内", 20_000, 0, 10_000, false)]
+    [InlineData("進んでから期限", 25_000, 0, 10_000, true)]
+    public void 展開の見張りの期限は最後に進んでから数える(
+        string _, long now, long watchStarted, long lastProgress, bool expected)
+    {
+        Assert.Equal(expected, NameSpaceTreePolicy.SelectionTimedOut(now, watchStarted, lastProgress, 15_000));
+    }
+
+    [Theory]
+    [InlineData("開いた", true, 1_000, 5_000, false)]
+    [InlineData("命じていない", false, 0, 5_000, false)]
+    [InlineData("間隔の手前", false, 1_000, 2_499, false)]
+    [InlineData("間隔を過ぎても開かない", false, 1_000, 2_500, true)]
+    public void 開かない枝には間隔を空けて展開を命じ直す(
+        string _, bool expanded, long requestedAt, long now, bool expected)
+    {
+        Assert.Equal(expected, NameSpaceTreePolicy.ShouldReissueExpand(expanded, requestedAt, now, 1_500));
+    }
 }
