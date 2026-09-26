@@ -92,6 +92,10 @@ public sealed class SettingsDialog : Form
 
         AutoScaleDimensions = new SizeF(96F, 96F);   // B-16: 座標と大きさは 96 DPI（100%）で書いてある
         AutoScaleMode = AutoScaleMode.Dpi;
+        // AutoSize のコントロールは作った時点の DPI で測られた大きさを、上でさらに拡大されている
+        // （150% で 1.5 倍が 2 回かかる）。測り直しは親の配置のときにしか起きず、隠れたページは表示される
+        // まで大きすぎるままになるので、ここで全ページの配置をやり直す
+        foreach (var page in _pages.Values) page.PerformLayout();
 
         // ListView の列幅は PerformAutoScale では拡大されないため、AutoScaleMode を当てた直後と
         // DpiChanged のたびに決め直す（モニターをまたいで移動したときのため）
