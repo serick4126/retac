@@ -151,7 +151,7 @@ public sealed class DriveTreeView : Control, IMessageFilter
         var icon = icons.ForPath(path);
         var text = Path.GetFileName(Path.TrimEndingDirectorySeparator(path));
         if (text.Length == 0) text = path;   // ドライブルート等は末尾が空になる
-        return DragImageRenderer.Render(icon, icons.Size, text, Font, SystemColors.WindowText, SystemColors.Window, Scaled(4));
+        return DragImageRenderer.Render(icon, icons.Size, text, Font, Program.StartupOs.WindowText, Program.StartupOs.Window, Scaled(4));   // R-108: 起動時の色
     }
 
     private int Scaled(int logical) => logical * DeviceDpi / 96;

@@ -33,6 +33,17 @@ public class ThemeResolveTests
     };
 
     [Fact]
+    public void 起動時に取った色はシステム色への参照ではなく値で持つ()
+    {
+        // KnownColor のままだと、実行中に OS を切り替えたとき値が変わってしまう（INV-THEME-STARTUP-OS-STATE）
+        var os = OsTheme.Capture();
+        Assert.False(os.Window.IsSystemColor);
+        Assert.False(os.WindowText.IsSystemColor);
+        Assert.False(os.Highlight.IsSystemColor);
+        Assert.False(os.HighlightText.IsSystemColor);
+    }
+
+    [Fact]
     public void 独自の配色は保存された色をそのまま使う()
     {
         var stored = Theme.Default with { Background = Color.Black, HiddenColor = Color.Orange };

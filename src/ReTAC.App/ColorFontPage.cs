@@ -267,11 +267,11 @@ public sealed class ColorFontPage : UserControl
                 new("desktop.ini", shown.HiddenColor, Color.Empty, 0),
             })
             // 左パネルは配色を持たず、選択の色も OS に従う。フォントだけを当てて行の詰まり方を見せる
-            : (SystemColors.Window, new PreviewRow[]
+            : (Program.StartupOs.Window, new PreviewRow[]
             {
-                new("PC", SystemColors.WindowText, Color.Empty, 0),
-                new("ローカル ディスク (C:)", SystemColors.WindowText, Color.Empty, 1),
-                new("Users", SystemColors.HighlightText, SystemColors.Highlight, 2),
+                new("PC", Program.StartupOs.WindowText, Color.Empty, 0),
+                new("ローカル ディスク (C:)", Program.StartupOs.WindowText, Color.Empty, 1),
+                new("Users", Program.StartupOs.HighlightText, Program.StartupOs.Highlight, 2),
                 new("Documents", SystemColors.WindowText, Color.Empty, 2),
             });
         _preview.Invalidate();

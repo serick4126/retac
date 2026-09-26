@@ -148,9 +148,13 @@ public sealed record OsTheme
     {
         Dark = Application.IsDarkModeEnabled,
         HighContrast = SystemInformation.HighContrast,
-        Window = SystemColors.Window,
-        WindowText = SystemColors.WindowText,
-        Highlight = SystemColors.Highlight,
-        HighlightText = SystemColors.HighlightText,
+        Window = Fixed(SystemColors.Window),
+        WindowText = Fixed(SystemColors.WindowText),
+        Highlight = Fixed(SystemColors.Highlight),
+        HighlightText = Fixed(SystemColors.HighlightText),
     };
+
+    // SystemColors の Color は KnownColor を持つだけで、値は読むたびに今のシステム色から引かれる。
+    // そのまま持っても起動時の色にならないので、ARGB に直して固定する
+    private static Color Fixed(Color color) => Color.FromArgb(color.ToArgb());
 }
