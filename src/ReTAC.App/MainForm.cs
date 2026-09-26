@@ -188,7 +188,7 @@ public sealed class MainForm : Form, IBookmarkHost
         };
         _previewView.FocusFileViewRequested += (_, _) => _list.Focus();
         _list.MarksChanged += (_, _) => RefreshStatus();
-        _list.Theme = _settings.ToTheme();                       // 5-1 節の配色とフォント
+        _list.Theme = Rendering.Theme.Resolve(_settings.ToTheme(), Program.StartupColorMode);   // 5-1 節・R-108
         ApplyLeftPanelFont(_list.Theme);                         // R-101: 左パネルは一覧とは別のフォント
         _driveBar.SetVisibility(_settings.ToHiddenDrives(), _settings.ShowDesktopButton);   // 16.7 節
         _list.CommandKey += (_, e) => OnCommandKey(e);
@@ -2234,7 +2234,8 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>統合した設定画面（R-102-2）。6 つの旧コマンドと新しい「設定」コマンドの、共通の入口。</summary>
     private bool ShowSettings(SettingsPage page)
     {
-        var draft = SettingsDraft.From(_settings, _keyMap, _list.Theme, _quickAccess);
+        // R-108: _list.Theme は OS の色で解決済み。それを渡すと OS の色が独自の配色として保存される
+        var draft = SettingsDraft.From(_settings, _keyMap, _settings.ToTheme(), _quickAccess);
         using var dialog = new SettingsDialog(draft, page, _currentFolder, ApplySettings);
         dialog.ShowDialog(this);
         return true;
@@ -2248,7 +2249,8 @@ public sealed class MainForm : Form, IBookmarkHost
     {
         var result = draft.CommitTo(_settings, _quickAccess);
 
-        _list.Theme = draft.Theme;   // 行の高さと列幅はフォントから再計算される（R-66-3）
+        // 行の高さと列幅はフォントから再計算される（R-66-3）。モードの切り替えは再起動で反映する（R-108）
+        _list.Theme = Rendering.Theme.Resolve(draft.Theme, Program.StartupColorMode);
         ApplyLeftPanelFont(draft.Theme);   // R-101
         _driveBar.SetVisibility(draft.HiddenDrives, draft.ShowDesktopButton);
         // R-36: 複数ウィンドウが同じ AppSettings を共有している。この窓の _keyMap は

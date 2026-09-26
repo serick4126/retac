@@ -90,7 +90,10 @@ public sealed class AppSettings
     public BookmarkBarStyle BookmarkBarStyle { get; set; } = BookmarkBarStyle.IconAndText;
 
     // --- 配色とフォント（5-1 節） ------------------------------------------
-    /// <summary>既定から変えた色だけを持つ。キーは <see cref="ThemeSlots"/> の Key。</summary>
+    /// <summary>R-108: 既定は Windows の設定に従う。キーが無い既存の設定もこれで起動する（移行はしない）。</summary>
+    public Rendering.ColorMode ColorMode { get; set; } = Rendering.ColorMode.System;
+
+    /// <summary>独自の配色で、既定から変えた色だけを持つ。キーは <see cref="ThemeSlots"/> の Key。</summary>
     public Dictionary<string, string> Colors { get; set; } = [];
     public string? FontFamily { get; set; }
     public float? FontSize { get; set; }

@@ -41,6 +41,7 @@
     "Bookmarks": "dialog:BookmarkDialog",
     "BookmarkBarStyle": "dialog:BookmarkDialog",
 
+    "ColorMode": "dialog:SettingsDialog#ColorFontPage",
     "Colors": "dialog:SettingsDialog#ColorFontPage",
     "FontFamily": "dialog:SettingsDialog#ColorFontPage",
     "FontSize": "dialog:SettingsDialog#ColorFontPage",
@@ -348,6 +349,19 @@
       "rule": "選択肢の中から 1 つを選ぶコマンドは、メニューバーではサブメニューに中身を展開する（開くたびに作り直す）。キー割り当て・`G` のポップアップ・ブックマーク・クイックアクセスから呼んだときは、今までどおりのモーダル・ポップアップのまま出す。メニューバーだけの扱いであり、ほかの呼び出し経路は変えない。",
       "enforcedBy": "app:MenuBar.DynamicSubmenu（並べ替え・表示するファイルタイプ・クイックアクセス・フォルダ履歴・ドライブの選択の 5 つを開くたびに作り直す）/ MainForm の各 *MenuItems メソッド（中身の組み立て。CommandId の実行経路（R-12）へ合流させる）",
       "note": "サブメニューの項目から実行するときも、既存のコマンドの実行経路を通す（R-12）。専用の処理を足すのは、1 つのコマンドの中の選択肢を直接選ぶ場合（履歴の 1 件・ドライブの 1 つなど）に限る。"
+    },
+    {
+      "id": "INV-THEME-STORED-NOT-RESOLVED",
+      "status": "enforced",
+      "specIds": [
+        "R-108"
+      ],
+      "applies": [
+        "settings:Colors",
+        "settings:ColorMode"
+      ],
+      "rule": "設定の Colors に書くのは独自の配色だけ。Windows の設定に従うときにファイルリストへ渡す配色（Theme.Resolve の結果。OS の背景・文字・カーソルを含む）を設定画面の下書きへ渡したり保存したりしない。渡すと OS の色が独自の配色として保存され、モードを戻したときに元の 12 色が失われる。",
+      "enforcedBy": "app:MainForm.ShowSettings（SettingsDraft.From に _settings.ToTheme() を渡す）/ MainForm.ApplySettings（Theme.Resolve は画面に当てるときだけ）"
     }
   ]
 }

@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Windows.Forms;
 using ReTAC.Domain.Entries;
 
 namespace ReTAC.App.Rendering;
@@ -40,6 +41,101 @@ public sealed record Theme
 
     public static readonly Theme Default = new();
 
+    /// <summary>
+    /// R-108-2: 「Windows の設定に従う」でダークのときの推奨値。5-1 節の既定値は暗い背景では読めない
+    /// （隠し属性の #000080 は #323232 との比が 1.2）。どれも #323232 との比を 4.5 以上にしてある。
+    /// 背景・文字・カーソルはここでは決めない（OS の色を使う）。
+    /// </summary>
+    public static readonly Theme DarkRecommended = Default with
+    {
+        SystemColor = ColorTranslator.FromHtml("#FF8A80"),
+        ReadOnlyColor = ColorTranslator.FromHtml("#7CD67C"),
+        HiddenColor = ColorTranslator.FromHtml("#8CB4FF"),
+        CompressedColor = ColorTranslator.FromHtml("#E09AE0"),
+        EncryptedColor = ColorTranslator.FromHtml("#FF80FF"),
+        MarkBackground = ColorTranslator.FromHtml("#1F6B6B"),
+        MarkForeground = ColorTranslator.FromHtml("#FFFFFF"),
+        MarkStarColor = ColorTranslator.FromHtml("#FF6B6B"),
+    };
+
+    /// <summary>
+    /// R-108: ファイルリストに実際に渡す配色。<paramref name="stored"/> は設定に保存されている独自の配色で、
+    /// フォントはどのモードでもここから取る。モードは起動時のものを渡す（切り替えは再起動で反映する）。
+    /// 設定画面へは <paramref name="stored"/> のほうを渡すこと。解決後の色を渡すと、OS の色が独自の配色として保存されてしまう。
+    /// </summary>
+    public static Theme Resolve(Theme stored, ColorMode mode)
+    {
+        // R-108-3: ハイコントラストでは利用者の色を使わない。属性による色分けもしない
+        if (SystemInformation.HighContrast)
+            return stored with
+            {
+                Background = SystemColors.Window,
+                Foreground = SystemColors.WindowText,
+                CursorBackground = SystemColors.Highlight,
+                CursorForeground = SystemColors.HighlightText,
+                MarkBackground = SystemColors.WindowText,
+                MarkForeground = SystemColors.Window,
+                SystemColor = SystemColors.WindowText,
+                ReadOnlyColor = SystemColors.WindowText,
+                HiddenColor = SystemColors.WindowText,
+                CompressedColor = SystemColors.WindowText,
+                EncryptedColor = SystemColors.WindowText,
+                MarkStarColor = SystemColors.WindowText,
+            };
+        if (mode == ColorMode.Custom) return stored;
+
+        // R-108-1: 背景と文字はツリー（NSTC・ブックマークビュー）と同じ SystemColors.Window / WindowText にする
+        var recommended = Application.IsDarkModeEnabled ? DarkRecommended : Default;
+        return stored with
+        {
+            Background = SystemColors.Window,
+            Foreground = SystemColors.WindowText,
+            CursorBackground = SystemColors.Highlight,
+            CursorForeground = CursorTextOn(SystemColors.Highlight, SystemColors.HighlightText),
+            MarkBackground = recommended.MarkBackground,
+            MarkForeground = recommended.MarkForeground,
+            SystemColor = recommended.SystemColor,
+            ReadOnlyColor = recommended.ReadOnlyColor,
+            HiddenColor = recommended.HiddenColor,
+            CompressedColor = recommended.CompressedColor,
+            EncryptedColor = recommended.EncryptedColor,
+            MarkStarColor = recommended.MarkStarColor,
+        };
+    }
+
+    /// <summary>
+    /// OS の組（<paramref name="osText"/>）を基本にし、白黒の読めるほうより明らかに劣るときだけ差し替える。
+    /// ダークの HighlightText は黒で、青地（#2864B4）との比は 3.6。白なら 5.9 あるので白にする。
+    /// 常に比の高いほうを選ぶと、ライトの #0078D7 では白 4.47 対 黒 4.6 の僅差で黒になり、見慣れた白抜きが崩れる。
+    /// 4.5 のような固定の閾値もこの白 4.47 を落とすので使えない。「8 割」はこの 2 例を分けるための値。
+    /// </summary>
+    public static Color CursorTextOn(Color background, Color osText)
+    {
+        var best = ReadableTextOn(background);
+        return Contrast(background, osText) >= Contrast(background, best) * 0.8 ? osText : best;
+    }
+
+    /// <summary>白と黒のうち、<paramref name="background"/> とのコントラスト比が高いほう。</summary>
+    public static Color ReadableTextOn(Color background) =>
+        Contrast(background, Color.White) >= Contrast(background, Color.Black) ? Color.White : Color.Black;
+
+    /// <summary>WCAG のコントラスト比（1〜21）。</summary>
+    public static double Contrast(Color a, Color b)
+    {
+        var (la, lb) = (Luminance(a), Luminance(b));
+        return (Math.Max(la, lb) + 0.05) / (Math.Min(la, lb) + 0.05);
+    }
+
+    private static double Luminance(Color c)
+    {
+        static double Channel(byte v)
+        {
+            var x = v / 255.0;
+            return x <= 0.03928 ? x / 12.92 : Math.Pow((x + 0.055) / 1.055, 2.4);
+        }
+        return 0.2126 * Channel(c.R) + 0.7152 * Channel(c.G) + 0.0722 * Channel(c.B);
+    }
+
     public Color ForAttribute(AttributeColor color) => color switch
     {
         AttributeColor.System => SystemColor,
@@ -49,4 +145,13 @@ public sealed record Theme
         AttributeColor.Encrypted => EncryptedColor,
         _ => Foreground,
     };
+}
+
+/// <summary>R-108: 配色モード。切り替えは再起動後に反映する。</summary>
+public enum ColorMode
+{
+    /// <summary>Windows の設定に従う。背景・文字・カーソルは OS の色、属性とマークは推奨値</summary>
+    System,
+    /// <summary>独自の配色。ファイルリストに 12 項目の色を当てる（ツリーなどは OS に従う）</summary>
+    Custom,
 }

@@ -39,7 +39,9 @@ public sealed class SettingsDraft
     }
 
     // --- 配色・フォント（ColorFontPage） ----------------------------------
+    /// <summary>保存される独自の配色とフォント。OS の色で解決したものは入れない（<see cref="Theme.Resolve"/>）。</summary>
     public Theme Theme { get; set; } = Theme.Default;
+    public ColorMode ColorMode { get; set; } = ColorMode.System;
 
     // --- キー割り当て（KeyAssignPage） ------------------------------------
     /// <summary>枠ごとの今の割り当て。値が null なら「割り当てなし」（KeyAssignPage の内部表現と同じ形）。</summary>
@@ -104,6 +106,7 @@ public sealed class SettingsDraft
             KeepLastFolder = settings.KeepLastFolder,
             SuppressMultipleToolLaunch = settings.SuppressMultipleToolLaunch,
             Theme = theme,
+            ColorMode = settings.ColorMode,
             // KeyBindings を先に代入する。ExternalTools のセッターが「存在しないツールを指す
             // 割り当てを落とす」処理を持つため、後から代入すると順序が入れ替わり効果が消える。
             KeyBindings = KeySlots.All.ToDictionary(slot => slot, slot => keyMap.Resolve(slot)),
@@ -138,6 +141,7 @@ public sealed class SettingsDraft
         settings.NextExternalToolId = NextExternalToolId;
 
         settings.FromTheme(Theme);
+        settings.ColorMode = ColorMode;
 
         var beforeKeyBindings = new Dictionary<string, string>(settings.KeyBindings);
         var keyMap = new KeyMap(KeyBindings

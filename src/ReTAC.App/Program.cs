@@ -9,6 +9,9 @@ namespace ReTAC.App;
 
 internal static class Program
 {
+    /// <summary>R-108: 起動時の配色モード。設定で切り替えても、再起動するまではこれで描く。</summary>
+    internal static Rendering.ColorMode StartupColorMode { get; private set; } = Rendering.ColorMode.System;
+
     [STAThread]
     private static int Main(string[] args)
     {
@@ -31,6 +34,11 @@ internal static class Program
         if (args is ["--bench", var benchPath, ..]) return Bench(benchPath);
 
         var settings = AppSettings.Load();
+        // R-108: 最初のウィンドウより前に決める。後から変えても、作ったコントロールの色は変わらない。
+        // 独自の配色でも呼ぶ。独自の配色が当たるのはファイルリストだけで、ほかは OS に従う（T2）。
+        // ハイコントラストでは WinForms の既定（OS の色そのもの）のままにする（R-108-3）
+        StartupColorMode = settings.ColorMode;
+        if (!SystemInformation.HighContrast) Application.SetColorMode(SystemColorMode.System);
         // Q10: 正規化の失敗で起動を止めない。null の補正は先に済むので、残るのは消えたツールの参照だけ
         try { settings.Normalize(); }
         catch (Exception ex) { Debug.WriteLine(ex); }

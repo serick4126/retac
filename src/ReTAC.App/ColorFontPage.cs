@@ -44,6 +44,16 @@ public sealed class ColorFontPage : UserControl
     };
     private readonly Button _reset = new() { Text = "この対象を既定に戻す(&D)", Bounds = new Rectangle(600, 434, 140, 28) };
     private readonly Dictionary<string, Button> _swatches = [];
+    /// <summary>独自の配色のときだけ出す、12 項目の欄（ラベルと色のボタン）。</summary>
+    private readonly List<Control> _customColorControls = [];
+    // R-108: 配色モード。欄の最上段に置く
+    private readonly RadioButton _followWindows = new() { Text = "Windows の設定に従う(&W)", AutoSize = true, Location = new Point(0, 2) };
+    private readonly RadioButton _customColors = new() { Text = "独自の配色(&C)", AutoSize = true, Location = new Point(190, 2) };
+    private readonly Label _systemNote = new()
+    {
+        Text = "背景・文字・カーソルは Windows の設定（ライト／ダーク）に従います。属性とマークは推奨の色で描きます。",
+        Bounds = new Rectangle(0, 30, 530, 40),
+    };
 
     private Theme _theme;
     private Font? _previewFont;
@@ -81,6 +91,9 @@ public sealed class ColorFontPage : UserControl
         _family.SelectedIndexChanged += (_, _) => CommitFont();
         _size.TextChanged += (_, _) => CommitFont();
         _reset.Click += (_, _) => ResetTarget();
+        _followWindows.Checked = draft.ColorMode == ColorMode.System;
+        _customColors.Checked = !_followWindows.Checked;
+        _followWindows.CheckedChanged += (_, _) => CommitColorMode();
 
         _targets.SelectedIndex = FileList;
     }
@@ -102,13 +115,21 @@ public sealed class ColorFontPage : UserControl
 
     private void BuildColorArea()
     {
-        _colorArea.Controls.Add(new Label { Text = "配色", AutoSize = true, Location = new Point(0, 4) });
+        // 切り替えは再起動で反映する（R-108）。実行中に変えても、作ってしまったコントロールの色は変わらない
+        _colorArea.Controls.AddRange(
+        [
+            _followWindows, _customColors,
+            new Label { Text = "切り替えは再起動後に反映されます。", AutoSize = true, Location = new Point(320, 5) },
+            _systemNote,
+        ]);
 
         var y = 26;
         var x = 0;
         foreach (var slot in ThemeSlots.All)
         {
-            _colorArea.Controls.Add(new Label { Text = slot.Label, AutoSize = true, Location = new Point(x, y + 5) });
+            var label = new Label { Text = slot.Label, AutoSize = true, Location = new Point(x, y + 5) };
+            _colorArea.Controls.Add(label);
+            _customColorControls.Add(label);
 
             var swatch = new Button
             {
@@ -120,6 +141,7 @@ public sealed class ColorFontPage : UserControl
             var captured = slot;
             swatch.Click += (_, _) => PickColor(captured);
             _colorArea.Controls.Add(swatch);
+            _customColorControls.Add(swatch);
             _swatches[slot.Key] = swatch;
 
             y += 28;
@@ -144,6 +166,20 @@ public sealed class ColorFontPage : UserControl
 
         _colorArea.Visible = FileListSelected;
         _colorNote.Visible = !FileListSelected;
+        ShowColorMode();
+    }
+
+    private void CommitColorMode()
+    {
+        _draft.ColorMode = _followWindows.Checked ? ColorMode.System : ColorMode.Custom;
+        ShowColorMode();
+    }
+
+    private void ShowColorMode()
+    {
+        var custom = _draft.ColorMode == ColorMode.Custom;
+        foreach (var control in _customColorControls) control.Visible = custom;
+        _systemNote.Visible = !custom;
         RefreshPreview();
     }
 
@@ -205,13 +241,15 @@ public sealed class ColorFontPage : UserControl
             wanted.Dispose();
         }
 
+        // 選んでいるモードで実際に描かれる色を見せる。Windows の設定に従うなら OS の色で解決する（R-108）
+        var shown = Theme.Resolve(_theme, _draft.ColorMode);
         (_preview.Surface, _preview.Rows) = FileListSelected
-            ? (_theme.Background, new PreviewRow[]
+            ? (shown.Background, new PreviewRow[]
             {
-                new("Documents", _theme.Foreground, Color.Empty, 0),
-                new("報告書_2026.xlsx", _theme.CursorForeground, _theme.CursorBackground, 0),
-                new("setup.log", _theme.MarkForeground, _theme.MarkBackground, 0),
-                new("desktop.ini", _theme.HiddenColor, Color.Empty, 0),
+                new("Documents", shown.Foreground, Color.Empty, 0),
+                new("報告書_2026.xlsx", shown.CursorForeground, shown.CursorBackground, 0),
+                new("setup.log", shown.MarkForeground, shown.MarkBackground, 0),
+                new("desktop.ini", shown.HiddenColor, Color.Empty, 0),
             })
             // 左パネルは配色を持たず、選択の色も OS に従う。フォントだけを当てて行の詰まり方を見せる
             : (SystemColors.Window, new PreviewRow[]

@@ -175,6 +175,7 @@ public sealed class NameSpaceTreeHost : IDisposable
             Check(((IOleWindow)_tree).GetWindow(out _treeHwnd), "名前空間ツリーのウィンドウを取得できません。");
             _acceptEvents = true;
             ApplyFont();   // R-101: 作り直しのたびに当て直す。既定のフォントに戻ってしまうため
+            ApplyDarkColors();
             SetBounds(bounds);
         }
         catch
@@ -355,6 +356,25 @@ public sealed class NameSpaceTreeHost : IDisposable
         SendMessage(target, TVM_SETITEMHEIGHT, height, IntPtr.Zero);
     }
 
+    /// <summary>
+    /// R-108-1: アプリがダークのとき、ツリーをファイルリスト・ブックマークビューと同じ色にする。
+    /// NSTC は Application.SetColorMode を見ない。DarkMode_Explorer（文書化されていないテーマ名。T5 で利用を決めた）を
+    /// 当てても暗くなるのはスクロールバーと矢印だけで、背景は白いまま。色は TVM_SETBKCOLOR / TVM_SETTEXTCOLOR で別に送る。
+    /// ライトのときは何もしない（今までの見た目のまま）。モードの切り替えは再起動で反映するので、戻す処理は持たない。
+    /// </summary>
+    private void ApplyDarkColors()
+    {
+        if (_treeHwnd == IntPtr.Zero || !Application.IsDarkModeEnabled) return;
+        var inner = FindWindowEx(_treeHwnd, IntPtr.Zero, "SysTreeView32", null);
+        var target = inner != IntPtr.Zero ? inner : _treeHwnd;
+
+        SetWindowTheme(target, "DarkMode_Explorer", null);
+        SendMessage(target, TVM_SETBKCOLOR, IntPtr.Zero, ColorTranslator.ToWin32(SystemColors.Window));
+        SendMessage(target, TVM_SETTEXTCOLOR, IntPtr.Zero, ColorTranslator.ToWin32(SystemColors.WindowText));
+    }
+
+    private const uint TVM_SETBKCOLOR = 0x111D;
+    private const uint TVM_SETTEXTCOLOR = 0x111E;
     private const uint WM_SETFONT = 0x0030;
     private const uint TVM_SETITEMHEIGHT = 0x111B;
 
@@ -1397,6 +1417,9 @@ public sealed class NameSpaceTreeHost : IDisposable
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr childAfter, string className, string? windowName);
+
+    [DllImport("uxtheme.dll", CharSet = CharSet.Unicode)]
+    private static extern int SetWindowTheme(IntPtr hwnd, string? subAppName, string? subIdList);
 
     [DllImport("user32.dll")]
     private static extern IntPtr SetFocus(IntPtr hwnd);
