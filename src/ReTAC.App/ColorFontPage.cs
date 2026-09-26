@@ -272,7 +272,7 @@ public sealed class ColorFontPage : UserControl
                 new("PC", Program.StartupOs.WindowText, Color.Empty, 0),
                 new("ローカル ディスク (C:)", Program.StartupOs.WindowText, Color.Empty, 1),
                 new("Users", Program.StartupOs.HighlightText, Program.StartupOs.Highlight, 2),
-                new("Documents", SystemColors.WindowText, Color.Empty, 2),
+                new("Documents", Program.StartupOs.WindowText, Color.Empty, 2),
             });
         _preview.Invalidate();
     }
@@ -290,7 +290,7 @@ public sealed class ColorFontPage : UserControl
 
         // プロパティにするとデザイナ用の直列化属性を求められる（WFO1000）。designer からは使わないので欄で持つ
         public IReadOnlyList<PreviewRow> Rows = [];
-        public Color Surface = SystemColors.Window;
+        public Color Surface = Program.StartupOs.Window;
 
         protected override void OnPaint(PaintEventArgs e)
         {
