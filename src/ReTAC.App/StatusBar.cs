@@ -203,8 +203,12 @@ public sealed class StatusBar : Control
         if (!marked) return;
 
         // ファイルリストの行と同じ作法で、アイコンの上に赤い★を重ねる（R-11-5 / R-34-3）。
-        // 形の定義は Rendering.MarkStar に 1 つだけ置く（V-12）
-        MarkStar.Draw(g, rect, Color.Red);
+        // 形の定義は Rendering.MarkStar に 1 つだけ置く（V-12）。
+        // R-108-4: ダークではダーク用の推奨の★と同じ色、ハイコントラストでは OS の文字色（色で区別しない）
+        var star = Program.StartupOs.HighContrast ? Program.StartupOs.WindowText
+            : Program.StartupOs.Dark ? Color.FromArgb(0xFF, 0x6B, 0x6B)
+            : Color.Red;
+        MarkStar.Draw(g, rect, star);
     }
 
     protected override void OnDpiChangedAfterParent(EventArgs e)

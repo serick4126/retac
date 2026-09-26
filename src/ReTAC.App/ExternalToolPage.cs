@@ -37,7 +37,12 @@ public sealed class ExternalToolPage : UserControl
     private readonly TextBox _arguments = new() { Bounds = new Rectangle(250, 138, 390, 23) };
     private readonly Button _macros = new() { Text = "マクロ(&R)...", Bounds = new Rectangle(648, 137, 92, 26) };
     // M-1: パス未検出・非実行種別・引数誤りが重なると 3 行以上になる。2 行分の 38 では欠ける
-    private readonly Label _warning = new() { Bounds = new Rectangle(250, 166, 490, 56), ForeColor = Color.Firebrick };
+    // R-108-4: Firebrick は暗い地では沈むので、ダークでは #FF8A80 にする
+    private readonly Label _warning = new()
+    {
+        Bounds = new Rectangle(250, 166, 490, 56),
+        ForeColor = Program.StartupOs.Dark ? Color.FromArgb(0xFF, 0x8A, 0x80) : Color.Firebrick,
+    };
     private readonly LinkLabel _scriptHelp = new() { Text = "実行できる書き方を見る(&H)", AutoSize = true, Location = new Point(250, 224), Visible = false };
     private readonly CheckBox _perItem = new() { Text = "マークした項目ごとに起動する(&L)", AutoSize = true, Location = new Point(250, 258) };
     private readonly CheckBox _popup = new() { Text = "ポップアップに表示する(&O)", AutoSize = true, Location = new Point(250, 286) };

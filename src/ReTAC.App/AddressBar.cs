@@ -74,7 +74,7 @@ public sealed class AddressBar : Control
                  | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
         // R-94: 段・▸・… のクリックでフォーカスを奪わない（ファイルリストのまま）。編集は入力欄がフォーカスを持つ
         SetStyle(ControlStyles.Selectable, false);
-        BackColor = SystemColors.Window;
+        BackColor = Program.StartupOs.Window;
         _input.Visible = false;   // 編集中だけ出す
         Controls.Add(_input);
         AllowDrop = true;   // R-94: 段へのドロップ
@@ -312,7 +312,7 @@ public sealed class AddressBar : Control
             if (i == _dropPart)
             {
                 var width = Math.Max(2, LogicalToDeviceUnits(2));
-                using var pen = new Pen(SystemColors.Highlight, width);
+                using var pen = new Pen(Program.StartupOs.Highlight, width);
                 g.DrawRectangle(pen, part.Bounds.X + 1, part.Bounds.Y + 1, part.Bounds.Width - 2, part.Bounds.Height - 2);
             }
             var text = part.Kind switch
@@ -321,7 +321,7 @@ public sealed class AddressBar : Control
                 PartKind.Arrow => ArrowText,
                 _ => EllipsisText,
             };
-            TextRenderer.DrawText(g, text, Font, part.Bounds, SystemColors.WindowText,
+            TextRenderer.DrawText(g, text, Font, part.Bounds, Program.StartupOs.WindowText,
                 CrumbFlags | TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
         }
     }
@@ -587,12 +587,13 @@ public sealed class AddressBar : Control
 
     protected override void OnPaint(PaintEventArgs e)
     {
-        e.Graphics.Clear(SystemColors.Window);
+        e.Graphics.Clear(Program.StartupOs.Window);
         _icon ??= LoadIcon();
         if (_icon is not null) e.Graphics.DrawImage(_icon, IconBounds);
         if (!_input.Visible) DrawCrumbs(e.Graphics);
-        // 赤は設定にしない（見つからないことを知らせる固定の表示）
-        ControlPaint.DrawBorder(e.Graphics, ClientRectangle, _notFound ? Color.Red : SystemColors.ControlDark, ButtonBorderStyle.Solid);
+        // 赤は設定にしない（見つからないことを知らせる固定の表示）。ダークでは暗い地で読める赤（#FF6B6B）にする（R-108-4）
+        var notFound = Program.StartupOs.Dark ? Color.FromArgb(0xFF, 0x6B, 0x6B) : Color.Red;
+        ControlPaint.DrawBorder(e.Graphics, ClientRectangle, _notFound ? notFound : SystemColors.ControlDark, ButtonBorderStyle.Solid);
     }
 
     protected override void OnLayout(LayoutEventArgs e)

@@ -53,10 +53,12 @@ public sealed class PreviewSession
     /// tabPressed はハンドラーが Tab / Shift+Tab を返してきたとき（Q22）に、COM の呼び出し元のスレッドから呼ぶ。
     /// </summary>
     /// <param name="host">ハンドラーの窓を置く子ウィンドウ。UI スレッドで作ったもの</param>
-    public static PreviewSession Start(Guid clsid, string path, IntPtr host, Size size, Action<bool> completed, Action tabPressed)
+    /// <param name="colors">R-108-4: ハンドラーに提案する背景色と文字色（起動時の OS の色）</param>
+    public static PreviewSession Start(Guid clsid, string path, IntPtr host, Size size, (Color Background, Color Foreground) colors,
+                                       Action<bool> completed, Action tabPressed)
     {
         var session = new PreviewSession();
-        session._queue.Add(() => completed(session.Load(clsid, path, host, size, new PreviewFrame(tabPressed))));
+        session._queue.Add(() => completed(session.Load(clsid, path, host, size, colors, new PreviewFrame(tabPressed))));
         session._thread.Start();
         return session;
     }
@@ -114,7 +116,7 @@ public sealed class PreviewSession
         }
     }
 
-    private bool Load(Guid clsid, string path, IntPtr host, Size size, PreviewFrame frame)
+    private bool Load(Guid clsid, string path, IntPtr host, Size size, (Color Background, Color Foreground) colors, PreviewFrame frame)
     {
         try
         {
@@ -145,6 +147,7 @@ public sealed class PreviewSession
             (instance as IObjectWithSite)?.SetSite(frame);
             var rect = new RECT { Right = size.Width, Bottom = size.Height };
             _handler.SetWindow(host, ref rect);
+            SuggestColors(instance, colors);
             _handler.DoPreview();
             return true;
         }
@@ -153,6 +156,25 @@ public sealed class PreviewSession
             System.Diagnostics.Debug.WriteLine(ex);
             ReleaseCore();
             return false;
+        }
+    }
+
+    /// <summary>
+    /// R-108-4: ハンドラーが IPreviewHandlerVisuals を持っていれば、背景色と文字色を伝える。色は提案で、従うかはハンドラー次第。
+    /// 持っていなければ何もしない。伝えるのに失敗しても、プレビュー本体は続ける（色が合わないだけで済む）。
+    /// DoPreview より前に、ハンドラーを作ったのと同じ STA で呼ぶこと。
+    /// </summary>
+    private static void SuggestColors(object instance, (Color Background, Color Foreground) colors)
+    {
+        try
+        {
+            if (instance is not IPreviewHandlerVisuals visuals) return;
+            visuals.SetBackgroundColor(ColorTranslator.ToWin32(colors.Background));
+            visuals.SetTextColor(ColorTranslator.ToWin32(colors.Foreground));
+        }
+        catch (Exception ex) when (ex is COMException or InvalidCastException)
+        {
+            System.Diagnostics.Debug.WriteLine(ex);
         }
     }
 
@@ -231,6 +253,15 @@ public interface IPreviewHandler
     void SetFocus();
     void QueryFocus(out IntPtr hwnd);
     [PreserveSig] int TranslateAccelerator(ref MSG msg);
+}
+
+/// <summary>R-108-4: プレビューの色とフォントの提案。戻り値の HRESULT は見ない（失敗しても表示は続ける）。</summary>
+[ComImport, Guid("196bf9a5-b346-4ef0-aa1e-5dcdb76768b1"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface IPreviewHandlerVisuals
+{
+    [PreserveSig] int SetBackgroundColor(int color);
+    [PreserveSig] int SetFont(IntPtr logFont);   // 使わない。vtable の順を保つためだけに置く
+    [PreserveSig] int SetTextColor(int color);
 }
 
 [ComImport, Guid("fec87aaf-35f9-447a-adb7-20234491401a"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

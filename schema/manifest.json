@@ -4103,7 +4103,7 @@
       },
       {
         "file": "src/ReTAC.App/IncrementalSearchBar.cs",
-        "line": 33
+        "line": 36
       }
     ],
     "B-05": [
@@ -4117,7 +4117,7 @@
       },
       {
         "file": "src/ReTAC.App/IncrementalSearchBar.cs",
-        "line": 13
+        "line": 14
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -4489,11 +4489,11 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 181
+        "line": 186
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 204
+        "line": 209
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
@@ -4793,7 +4793,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 100
+        "line": 105
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
@@ -4989,7 +4989,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 220
+        "line": 225
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -5451,7 +5451,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 56
+        "line": 61
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
@@ -5868,6 +5868,10 @@
         "line": 28
       },
       {
+        "file": "src/ReTAC.App/IncrementalSearchBar.cs",
+        "line": 144
+      },
+      {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 191
       },
@@ -5988,12 +5992,44 @@
     ],
     "R-108-4": [
       {
+        "file": "src/ReTAC.App/AddressBar.cs",
+        "line": 594
+      },
+      {
         "file": "src/ReTAC.App/DriveBar.cs",
         "line": 312
       },
       {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 40
+      },
+      {
         "file": "src/ReTAC.App/GroupedListView.cs",
         "line": 8
+      },
+      {
+        "file": "src/ReTAC.App/IncrementalSearchBar.cs",
+        "line": 15
+      },
+      {
+        "file": "src/ReTAC.App/PreviewView.cs",
+        "line": 203
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 207
+      },
+      {
+        "file": "src/ReTAC.Shell/PreviewSession.cs",
+        "line": 56
+      },
+      {
+        "file": "src/ReTAC.Shell/PreviewSession.cs",
+        "line": 163
+      },
+      {
+        "file": "src/ReTAC.Shell/PreviewSession.cs",
+        "line": 258
       }
     ],
     "R-11": [
@@ -7089,7 +7125,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 52
+        "line": 57
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -7377,7 +7413,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 213
+        "line": 217
       }
     ],
     "R-66-2": [
@@ -7945,11 +7981,11 @@
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 649
+        "line": 650
       },
       {
         "file": "src/ReTAC.App/IncrementalSearchBar.cs",
-        "line": 77
+        "line": 80
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -9187,7 +9223,7 @@
       },
       {
         "file": "src/ReTAC.Shell/PreviewSession.cs",
-        "line": 269
+        "line": 300
       },
       {
         "file": "src/ReTAC.Shell/TextPreviewInput.cs",

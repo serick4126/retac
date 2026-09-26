@@ -295,10 +295,10 @@ internal sealed class BookmarkDropZone
         if (_spot is not { } spot) return;
         var slots = Slots();
         var width = Math.Max(2, 2 * _strip.DeviceDpi / 96);
-        using var brush = new SolidBrush(SystemColors.Highlight);
+        using var brush = new SolidBrush(Program.StartupOs.Highlight);
         if (spot.Onto)
         {
-            using var pen = new Pen(SystemColors.Highlight, width);
+            using var pen = new Pen(Program.StartupOs.Highlight, width);
             var bounds = slots[spot.Index].Bounds;
             e.Graphics.DrawRectangle(pen, bounds.X + 1, bounds.Y + 1, bounds.Width - 2, bounds.Height - 2);
             return;
@@ -416,7 +416,7 @@ internal sealed class ExpansionDropZone
     {
         if (!_frame.Shown) return;
         var width = Math.Max(2, 2 * _menu.DeviceDpi / 96);
-        using var pen = new Pen(SystemColors.Highlight, width);
+        using var pen = new Pen(Program.StartupOs.Highlight, width);
         var bounds = _frame.Item?.Bounds ?? _menu.ClientRectangle;
         e.Graphics.DrawRectangle(pen, bounds.X + 1, bounds.Y + 1, bounds.Width - 2, bounds.Height - 2);
     }

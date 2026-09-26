@@ -200,6 +200,7 @@ public sealed class PreviewView : UserControl
         _pendingIsText = clsid == PreviewFallback.TextHandler;
         _pendingViewOnly = PreviewSession.IsViewOnly(clsid);
         var session = PreviewSession.Start(clsid, path, host.Handle, _area.ClientSize,
+            (Program.StartupOs.Window, Program.StartupOs.WindowText),   // R-108-4
             completed: ok => Post(() => Completed(generation, ok)),
             tabPressed: () => Post(() => FocusFileViewRequested?.Invoke(this, EventArgs.Empty)));
         _pending = (session, host, generation);

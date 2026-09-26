@@ -10,8 +10,11 @@ namespace ReTAC.App;
 /// </summary>
 public sealed class IncrementalSearchBar : FlowLayoutPanel
 {
-    /// <summary>一致が無いときの入力欄の背景。設定画面には置かない（B-05）。</summary>
-    private static readonly Color NoMatchBackground = Color.FromArgb(255, 224, 224);
+    /// <summary>
+    /// 一致が無いときの入力欄の背景。設定画面には置かない（B-05）。
+    /// R-108-4: ライトの薄い赤は暗い地では白く浮いて文字が読めないので、ダークでは暗い赤にする
+    /// </summary>
+    private static readonly Color NoMatchBackground = Program.StartupOs.Dark ? Color.FromArgb(0x5A, 0x1D, 0x1D) : Color.FromArgb(255, 224, 224);
 
     private readonly FileListView _list;
     private readonly SearchBox _input = new() { Width = 240, ImeMode = ImeMode.NoControl };
@@ -138,7 +141,8 @@ public sealed class IncrementalSearchBar : FlowLayoutPanel
     private void ShowResult()
     {
         var noMatch = _input.Text.Length > 0 && _matches.Count == 0;
-        _input.BackColor = noMatch ? NoMatchBackground : SystemColors.Window;
+        _input.BackColor = noMatch ? NoMatchBackground : Program.StartupOs.Window;   // R-108: 起動時の色
+        _input.ForeColor = Program.StartupOs.WindowText;
         var position = -1;
         for (var i = 0; i < _matches.Count; i++)
             if (_matches[i] == _list.State.CursorIndex) { position = i; break; }
