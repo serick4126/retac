@@ -43,6 +43,8 @@
 
     "ColorMode": "dialog:SettingsDialog#ColorFontPage",
     "Colors": "dialog:SettingsDialog#ColorFontPage",
+    "SystemLightColors": "dialog:SettingsDialog#ColorFontPage",
+    "SystemDarkColors": "dialog:SettingsDialog#ColorFontPage",
     "FontFamily": "dialog:SettingsDialog#ColorFontPage",
     "FontSize": "dialog:SettingsDialog#ColorFontPage",
     "LeftPanelFontFamily": "dialog:SettingsDialog#ColorFontPage",
@@ -318,7 +320,7 @@
       "specIds": ["R-102-3"],
       "applies": ["app:SettingsDraft", "type:ReTAC.Domain.Navigation.QuickAccessList"],
       "rule": "統合した設定画面の 6 ページは、共有の実体（AppSettings・キーマップ・共有の QuickAccessList）を直接編集しない。画面を開いたときに作る下書き（SettingsDraft）だけを編集し、外部ツール・クイックアクセスの列は下書きの中で独立した列を持つ（要素の record 自体は不変なので使い回してよいが、列を共有しない）。共有の実体が変わるのは CommitTo を呼んだときだけ。",
-      "enforcedBy": "app:SettingsDraft.From（KeyBindings は KeySlots.All を回して新しい Dictionary に、ExternalTools は新しい List に、QuickAccess は新しい QuickAccessList に写す）/ SettingsDraft.CommitTo（AppSettings への書き込みと、QuickAccessList.ReplaceAll による共有の実体への書き戻しをここでだけ行う）",
+      "enforcedBy": "app:SettingsDraft.From（KeyBindings は KeySlots.All を回して新しい Dictionary に、ExternalTools は新しい List に、QuickAccess は新しい QuickAccessList に写す）/ SettingsDraft.From（SystemLightColors / SystemDarkColors は不変の Theme に読み替えて持つ）/ SettingsDraft.CommitTo（AppSettings への書き込みと、QuickAccessList.ReplaceAll による共有の実体への書き戻しをここでだけ行う）",
       "testedBy": "tests/ReTAC.Domain.Tests/SettingsDraftTests.cs",
       "note": "浅いコピーが 1 つでも混ざると、画面では下書きに見えて編集の時点で共有の設定が変わる。実機確認では気づけない（下書きとの差分がその場の画面には出ない）ため、自動テストで押さえてある。"
     },
@@ -376,6 +378,20 @@
       ],
       "rule": "ライト／ダーク・ハイコントラストの描き分けは、起動時に取った OS の状態（Program.StartupOs）で判断する。Application.IsDarkModeEnabled・SystemInformation.HighContrast・SystemColors を描画のたびに読まない。これらは今の OS の設定を返すので、実行中に OS を切り替えてから設定を適用すると、起動時に作ったコントロールの色とダーク用の色が混ざる。切り替えは再起動で反映する。",
       "enforcedBy": "app:Program.Main（SetColorMode の直後に OsTheme.Capture）/ Theme.Resolve（OsTheme を引数で受ける）/ GroupedListView / DriveTreeView（NameSpaceTreeHost.DarkColors に渡す）/ ColorFontPage（ハイコントラストの案内）"
+    },
+    {
+      "id": "INV-THEME-SYSTEM-8-SLOTS",
+      "status": "enforced",
+      "specIds": [
+        "R-108-2"
+      ],
+      "applies": [
+        "settings:SystemLightColors",
+        "settings:SystemDarkColors"
+      ],
+      "rule": "SystemLightColors / SystemDarkColors に入るのは、ThemeSlots で SystemEditable の印が付いた 8 項目（属性 5 色とマーク 3 色）だけ。背景・文字・カーソルは OS に従うので保存しない。読むときは 8 項目以外のキー・null・読めない色を無視して推奨値にし、書くときは推奨値と違う色だけを書く。画面に当てるのは起動時の OS と同じ側の組だけで、反対側の組は保存と設定画面のプレビューにしか使わない。",
+      "enforcedBy": "app:ThemeSlots.SystemMode（8 項目の一覧は印から作り、別の配列に書き写さない）/ AppSettings.ToSystemTheme・FromSystemTheme / AppSettings.ToScreenTheme（ToSystemTheme(os.Dark) だけを Theme.Resolve に渡す）",
+      "testedBy": "tests/ReTAC.Domain.Tests/SystemColorSetsTests.cs"
     }
   ]
 }

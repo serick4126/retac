@@ -42,6 +42,12 @@ public sealed class SettingsDraft
     /// <summary>保存される独自の配色とフォント。OS の色で解決したものは入れない（<see cref="Theme.Resolve"/>）。</summary>
     public Theme Theme { get; set; } = Theme.Default;
     public ColorMode ColorMode { get; set; } = ColorMode.System;
+    /// <summary>
+    /// R-108-2: 「Windows の設定に従う」のライト用・ダーク用の 8 色。設定の Dictionary は共有せず、
+    /// 読んだ結果を不変の <see cref="Theme"/> として持つ（使うのは <see cref="ThemeSlots.SystemMode"/> の項目だけ）。
+    /// </summary>
+    public Theme SystemLight { get; set; } = Theme.Recommended(dark: false);
+    public Theme SystemDark { get; set; } = Theme.Recommended(dark: true);
 
     // --- キー割り当て（KeyAssignPage） ------------------------------------
     /// <summary>枠ごとの今の割り当て。値が null なら「割り当てなし」（KeyAssignPage の内部表現と同じ形）。</summary>
@@ -107,6 +113,8 @@ public sealed class SettingsDraft
             SuppressMultipleToolLaunch = settings.SuppressMultipleToolLaunch,
             Theme = theme,
             ColorMode = settings.ColorMode,
+            SystemLight = settings.ToSystemTheme(dark: false),
+            SystemDark = settings.ToSystemTheme(dark: true),
             // KeyBindings を先に代入する。ExternalTools のセッターが「存在しないツールを指す
             // 割り当てを落とす」処理を持つため、後から代入すると順序が入れ替わり効果が消える。
             KeyBindings = KeySlots.All.ToDictionary(slot => slot, slot => keyMap.Resolve(slot)),
@@ -142,6 +150,8 @@ public sealed class SettingsDraft
 
         settings.FromTheme(Theme);
         settings.ColorMode = ColorMode;
+        settings.FromSystemTheme(dark: false, SystemLight);
+        settings.FromSystemTheme(dark: true, SystemDark);
 
         var beforeKeyBindings = new Dictionary<string, string>(settings.KeyBindings);
         var keyMap = new KeyMap(KeyBindings

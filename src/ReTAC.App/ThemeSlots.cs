@@ -9,23 +9,28 @@ namespace ReTAC.App;
 /// </summary>
 public static class ThemeSlots
 {
-    public sealed record Slot(string Key, string Label, Func<Theme, Color> Get, Func<Theme, Color, Theme> Set);
+    /// <param name="SystemEditable">R-108-2: 「Windows の設定に従う」でも変えられる項目（属性 5 色とマーク 3 色）。
+    /// 背景・文字・カーソルは OS に従うので false</param>
+    public sealed record Slot(string Key, string Label, Func<Theme, Color> Get, Func<Theme, Color, Theme> Set, bool SystemEditable = false);
 
     public static readonly Slot[] All =
     [
         new("Background", "背景", t => t.Background, (t, c) => t with { Background = c }),
         new("Foreground", "文字", t => t.Foreground, (t, c) => t with { Foreground = c }),
-        new("MarkBackground", "選択の背景", t => t.MarkBackground, (t, c) => t with { MarkBackground = c }),
-        new("MarkForeground", "選択の文字", t => t.MarkForeground, (t, c) => t with { MarkForeground = c }),
+        new("MarkBackground", "選択の背景", t => t.MarkBackground, (t, c) => t with { MarkBackground = c }, SystemEditable: true),
+        new("MarkForeground", "選択の文字", t => t.MarkForeground, (t, c) => t with { MarkForeground = c }, SystemEditable: true),
         new("CursorBackground", "カーソルの背景", t => t.CursorBackground, (t, c) => t with { CursorBackground = c }),
         new("CursorForeground", "カーソルの文字", t => t.CursorForeground, (t, c) => t with { CursorForeground = c }),
-        new("SystemColor", "システム属性", t => t.SystemColor, (t, c) => t with { SystemColor = c }),
-        new("ReadOnlyColor", "書込禁止属性", t => t.ReadOnlyColor, (t, c) => t with { ReadOnlyColor = c }),
-        new("HiddenColor", "隠し属性", t => t.HiddenColor, (t, c) => t with { HiddenColor = c }),
-        new("CompressedColor", "圧縮属性", t => t.CompressedColor, (t, c) => t with { CompressedColor = c }),
-        new("EncryptedColor", "暗号化属性", t => t.EncryptedColor, (t, c) => t with { EncryptedColor = c }),
-        new("MarkStarColor", "マークの★", t => t.MarkStarColor, (t, c) => t with { MarkStarColor = c }),
+        new("SystemColor", "システム属性", t => t.SystemColor, (t, c) => t with { SystemColor = c }, SystemEditable: true),
+        new("ReadOnlyColor", "書込禁止属性", t => t.ReadOnlyColor, (t, c) => t with { ReadOnlyColor = c }, SystemEditable: true),
+        new("HiddenColor", "隠し属性", t => t.HiddenColor, (t, c) => t with { HiddenColor = c }, SystemEditable: true),
+        new("CompressedColor", "圧縮属性", t => t.CompressedColor, (t, c) => t with { CompressedColor = c }, SystemEditable: true),
+        new("EncryptedColor", "暗号化属性", t => t.EncryptedColor, (t, c) => t with { EncryptedColor = c }, SystemEditable: true),
+        new("MarkStarColor", "マークの★", t => t.MarkStarColor, (t, c) => t with { MarkStarColor = c }, SystemEditable: true),
     ];
+
+    /// <summary>R-108-2: 「Windows の設定に従う」で変えられる 8 項目。別の配列に書き写さず、印から作る。</summary>
+    public static readonly Slot[] SystemMode = [.. All.Where(s => s.SystemEditable)];
 
     public static string ToHex(Color color) => $"#{color.R:X2}{color.G:X2}{color.B:X2}";
 

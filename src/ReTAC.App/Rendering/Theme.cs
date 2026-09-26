@@ -60,13 +60,20 @@ public sealed record Theme
         MarkStarColor = ColorTranslator.FromHtml("#FF6B6B"),
     };
 
+    /// <summary>R-108-2: 「Windows の設定に従う」の 8 色の推奨値。ライト用は 5-1 節の既定値そのもの。</summary>
+    public static Theme Recommended(bool dark) => dark ? DarkRecommended : Default;
+
     /// <summary>
     /// R-108: ファイルリストに実際に渡す配色。<paramref name="stored"/> は設定に保存されている独自の配色で、
     /// フォントはどのモードでもここから取る。モードと OS の状態は起動時のものを渡す（切り替えは再起動で反映する）。
     /// 今の OS の状態を読むと、実行中に OS をダークにしてから設定を適用したとき、白い地にダーク用の色が載る。
     /// 設定画面へは <paramref name="stored"/> のほうを渡すこと。解決後の色を渡すと、OS の色が独自の配色として保存されてしまう。
     /// </summary>
-    public static Theme Resolve(Theme stored, ColorMode mode, OsTheme os)
+    /// <param name="system">
+    /// R-108-2: <paramref name="os"/> の側（ライト／ダーク）の 8 色。使うのは <see cref="ThemeSlots.SystemMode"/> の項目だけ。
+    /// null なら推奨値。反対側の組は渡さない（実画面に出さない。§2.3）
+    /// </param>
+    public static Theme Resolve(Theme stored, ColorMode mode, OsTheme os, Theme? system = null)
     {
         // R-108-3: ハイコントラストでは利用者の色を使わない。属性による色分けもしない
         if (os.HighContrast)
@@ -88,8 +95,8 @@ public sealed record Theme
         if (mode == ColorMode.Custom) return stored;
 
         // R-108-1: 背景と文字はツリー（NSTC・ブックマークビュー）と同じ Window / WindowText にする
-        var recommended = os.Dark ? DarkRecommended : Default;
-        return stored with
+        var chosen = system ?? Recommended(os.Dark);
+        var resolved = stored with
         {
             Background = os.Window,
             Foreground = os.WindowText,
@@ -98,15 +105,9 @@ public sealed record Theme
             CursorBackground = os.Dark ? os.Highlight : Default.CursorBackground,
             // OS の組は使わない。ダークの HighlightText は黒で、青地（#2864B4）では読みにくい
             CursorForeground = Color.White,
-            MarkBackground = recommended.MarkBackground,
-            MarkForeground = recommended.MarkForeground,
-            SystemColor = recommended.SystemColor,
-            ReadOnlyColor = recommended.ReadOnlyColor,
-            HiddenColor = recommended.HiddenColor,
-            CompressedColor = recommended.CompressedColor,
-            EncryptedColor = recommended.EncryptedColor,
-            MarkStarColor = recommended.MarkStarColor,
         };
+        foreach (var slot in ThemeSlots.SystemMode) resolved = slot.Set(resolved, slot.Get(chosen));
+        return resolved;
     }
 
     public Color ForAttribute(AttributeColor color) => color switch
@@ -153,6 +154,24 @@ public sealed record OsTheme
         Highlight = Fixed(SystemColors.Highlight),
         HighlightText = Fixed(SystemColors.HighlightText),
     };
+
+    /// <summary>
+    /// R-108-2: 設定画面のプレビューで、起動時の OS と反対側の組を描くときの参照色。起動中の OS からは反対側の
+    /// 本当の色が取れないので、Windows の既定の値で代わりに描く（参考表示）。ダーク側は実測した値。
+    /// </summary>
+    public static OsTheme Reference(bool dark) => dark
+        ? new()
+        {
+            Dark = true, HighContrast = false,
+            Window = ColorTranslator.FromHtml("#323232"), WindowText = ColorTranslator.FromHtml("#F0F0F0"),
+            Highlight = ColorTranslator.FromHtml("#2864B4"), HighlightText = ColorTranslator.FromHtml("#000000"),
+        }
+        : new()
+        {
+            Dark = false, HighContrast = false,
+            Window = ColorTranslator.FromHtml("#FFFFFF"), WindowText = ColorTranslator.FromHtml("#000000"),
+            Highlight = ColorTranslator.FromHtml("#0078D7"), HighlightText = ColorTranslator.FromHtml("#FFFFFF"),
+        };
 
     // SystemColors の Color は KnownColor を持つだけで、値は読むたびに今のシステム色から引かれる。
     // そのまま持っても起動時の色にならないので、ARGB に直して固定する

@@ -35,7 +35,7 @@ public sealed class ColorFontPage : UserControl
     };
     // R-101: メイリオ 16pt は 1 行が約 37px。4 行とも見えるだけの高さを取る
     private readonly PreviewBox _preview = new() { Bounds = new Rectangle(210, 64, 530, 160) };
-    private readonly Panel _colorArea = new() { Bounds = new Rectangle(210, 234, 530, 192) };
+    private readonly Panel _colorArea = new() { Bounds = new Rectangle(210, 234, 530, 200) };
     /// <summary>配色欄が出ない対象で、無いことの理由を書いておく（空白だけだと設定漏れに見える）。</summary>
     private readonly Label _colorNote = new()
     {
@@ -49,14 +49,18 @@ public sealed class ColorFontPage : UserControl
     // R-108: 配色モード。欄の最上段に置く
     private readonly RadioButton _followWindows = new() { Text = "Windows の設定に従う(&W)", AutoSize = true, Location = new Point(0, 2) };
     private readonly RadioButton _customColors = new() { Text = "独自の配色(&C)", AutoSize = true, Location = new Point(190, 2) };
-    private readonly Label _systemNote = new()
-    {
-        // R-108-3: ハイコントラスト中は属性とマークも OS の色で描くので、推奨の色の話をしない
-        Text = Program.StartupOs.HighContrast
-            ? "背景と文字は Windows の設定に従います。"
-            : "背景と文字は Windows の設定（ライト／ダーク）に従います。カーソル・属性・マークは推奨の色で描きます。",
-        Bounds = new Rectangle(0, 30, 530, 40),
-    };
+    /// <summary>「Windows の設定に従う」のときの説明。選んでいる組が起動時の OS と反対側なら、プレビューが参考表示だと書く。</summary>
+    private readonly Label _systemNote = new() { Bounds = new Rectangle(0, 28, 530, 36) };
+    // R-108-2: 「Windows の設定に従う」で編集する組と、その 8 色の欄
+    // 組のラジオボタンは別の入れ物に入れる。モードのラジオボタンと同じ入れ物だと 1 つのグループになり、
+    // 組を選ぶとモードの選択が外れて「独自の配色」に切り替わってしまう
+    private readonly Panel _sides = new() { Bounds = new Rectangle(0, 64, 300, 28) };
+    private readonly RadioButton _lightSide = new() { Text = "ライト用(&L)", AutoSize = true, Location = new Point(0, 2) };
+    private readonly RadioButton _darkSide = new() { Text = "ダーク用(&K)", AutoSize = true, Location = new Point(110, 2) };
+    private readonly Button _resetSystem = new() { Text = "推奨値に戻す(&R)", Bounds = new Rectangle(400, 64, 130, 26) };
+    private readonly Dictionary<string, Button> _systemSwatches = [];
+    /// <summary>「Windows の設定に従う」のときだけ出す欄（組の切り替え・8 色・推奨値に戻す）。</summary>
+    private readonly List<Control> _systemColorControls = [];
     /// <summary>R-108-3: ハイコントラスト中は、どちらのモードでも配色の設定が画面に出ない。黙っていると設定が効かない不具合に見える。</summary>
     private readonly Label _highContrastNote = new()
     {
@@ -104,6 +108,11 @@ public sealed class ColorFontPage : UserControl
         _followWindows.Checked = draft.ColorMode == ColorMode.System;
         _customColors.Checked = !_followWindows.Checked;
         _followWindows.CheckedChanged += (_, _) => CommitColorMode();
+        // 開いたときは、今の OS の側を選んでおく（§4.3）
+        _darkSide.Checked = Program.StartupOs.Dark;
+        _lightSide.Checked = !_darkSide.Checked;
+        _darkSide.CheckedChanged += (_, _) => ShowSystemSide();
+        _resetSystem.Click += (_, _) => ResetSystemColors();
 
         _targets.SelectedIndex = FileList;
     }
@@ -115,6 +124,32 @@ public sealed class ColorFontPage : UserControl
     }
 
     private bool FileListSelected => _targets.SelectedIndex == FileList;
+
+    private bool DarkSideSelected => _darkSide.Checked;
+
+    /// <summary>選んでいる組の 8 色（下書きの値）。</summary>
+    private Theme SystemSide
+    {
+        get => DarkSideSelected ? _draft.SystemDark : _draft.SystemLight;
+        set
+        {
+            if (DarkSideSelected) _draft.SystemDark = value;
+            else _draft.SystemLight = value;
+        }
+    }
+
+    /// <summary>テストが組を選ぶための入口（ラジオボタンは表示しないと押せない）。</summary>
+    internal void SelectSystemSide(bool dark) => (dark ? _darkSide : _lightSide).Checked = true;
+
+    /// <summary>「推奨値に戻す」の本体。選んでいる組の 8 色だけを戻す。反対側の組・独自の配色・フォントには触れない（§4.1.1）。</summary>
+    internal void ResetSystemColors()
+    {
+        var recommended = Theme.Recommended(DarkSideSelected);
+        var side = SystemSide;
+        foreach (var slot in ThemeSlots.SystemMode) side = slot.Set(side, slot.Get(recommended));
+        SystemSide = side;
+        ShowSystemSide();
+    }
 
     /// <summary>下書きへ書きつつ、局所の作業用コピーも合わせる（with 式で作り直すたびに両方直す手間を1箇所にまとめる）。</summary>
     private void SetTheme(Theme theme)
@@ -132,6 +167,27 @@ public sealed class ColorFontPage : UserControl
             new Label { Text = "切り替えは再起動後に反映されます。", AutoSize = true, Location = new Point(320, 5) },
             _systemNote,
         ]);
+
+        _sides.Controls.AddRange([_lightSide, _darkSide]);
+        _colorArea.Controls.AddRange([_sides, _resetSystem]);
+        _systemColorControls.AddRange([_sides, _resetSystem]);
+        var sy = 96;
+        var sx = 0;
+        foreach (var slot in ThemeSlots.SystemMode)
+        {
+            var label = new Label { Text = slot.Label, AutoSize = true, Location = new Point(sx, sy + 5) };
+            var swatch = new Button { Bounds = new Rectangle(sx + 116, sy, 60, 24), FlatStyle = FlatStyle.Flat, Text = "" };
+            var captured = slot;
+            swatch.Click += (_, _) => PickSystemColor(captured);
+            _colorArea.Controls.AddRange([label, swatch]);
+            _systemColorControls.AddRange([label, swatch]);
+            _systemSwatches[slot.Key] = swatch;
+
+            sy += 26;
+            if (sy <= 174) continue;
+            sy = 96;
+            sx = 266;   // 2 列に折り返す
+        }
 
         var y = 26;
         var x = 0;
@@ -190,8 +246,31 @@ public sealed class ColorFontPage : UserControl
     {
         var custom = _draft.ColorMode == ColorMode.Custom;
         foreach (var control in _customColorControls) control.Visible = custom;
+        foreach (var control in _systemColorControls) control.Visible = !custom;
         _systemNote.Visible = !custom;
+        ShowSystemSide();
+    }
+
+    /// <summary>選んでいる組の 8 色を欄へ出し、説明とプレビューを合わせる。</summary>
+    private void ShowSystemSide()
+    {
+        foreach (var slot in ThemeSlots.SystemMode) _systemSwatches[slot.Key].BackColor = slot.Get(SystemSide);
+        // R-108-3: ハイコントラスト中は属性とマークも OS の色で描くので、組の話をしない
+        _systemNote.Text = Program.StartupOs.HighContrast
+            ? "背景と文字は Windows の設定に従います。"
+            : DarkSideSelected == Program.StartupOs.Dark
+                ? "背景と文字は Windows の設定（ライト／ダーク）に従います。属性とマークの色は、ライト用・ダーク用を別々に変えられます。"
+                // 起動中の OS からは反対側の本当の背景と文字が取れない（§4.3）
+                : "この組は Windows を" + (DarkSideSelected ? "ダーク" : "ライト") + "にして起動したときに使います。プレビューは参考表示です。実際の背景と文字は Windows の設定で決まります。";
         RefreshPreview();
+    }
+
+    private void PickSystemColor(ThemeSlots.Slot slot)
+    {
+        using var picker = new System.Windows.Forms.ColorDialog { Color = slot.Get(SystemSide), FullOpen = true };
+        if (picker.ShowDialog(this) != DialogResult.OK) return;
+        SystemSide = slot.Set(SystemSide, picker.Color);
+        ShowSystemSide();
     }
 
     private void CommitFont()
@@ -256,8 +335,12 @@ public sealed class ColorFontPage : UserControl
             wanted.Dispose();
         }
 
-        // 選んでいるモードで実際に描かれる色を見せる。Windows の設定に従うなら OS の色で解決する（R-108）
-        var shown = Theme.Resolve(_theme, _draft.ColorMode, Program.StartupOs);
+        // 選んでいるモードで実際に描かれる色を見せる。Windows の設定に従うなら、選んでいる組を OS の色で解決する（R-108）。
+        // 起動時の OS と反対側の組は、Windows の既定の色で代わりに描く（参考表示。ハイコントラスト中は OS の色のまま）
+        var os = Program.StartupOs.HighContrast || DarkSideSelected == Program.StartupOs.Dark
+            ? Program.StartupOs
+            : OsTheme.Reference(DarkSideSelected);
+        var shown = Theme.Resolve(_theme, _draft.ColorMode, os, SystemSide);
         (_preview.Surface, _preview.Rows) = FileListSelected
             ? (shown.Background, new PreviewRow[]
             {

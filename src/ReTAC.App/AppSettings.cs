@@ -95,6 +95,13 @@ public sealed class AppSettings
 
     /// <summary>独自の配色で、既定から変えた色だけを持つ。キーは <see cref="ThemeSlots"/> の Key。</summary>
     public Dictionary<string, string> Colors { get; set; } = [];
+
+    /// <summary>
+    /// R-108-2: 「Windows の設定に従う」でライト用・ダーク用の 8 色。推奨値から変えた色だけを持つ。
+    /// キーは <see cref="ThemeSlots.SystemMode"/> の Key。ほかのキー・読めない色は読むときに無視する。
+    /// </summary>
+    public Dictionary<string, string> SystemLightColors { get; set; } = [];
+    public Dictionary<string, string> SystemDarkColors { get; set; } = [];
     public string? FontFamily { get; set; }
     public float? FontSize { get; set; }
 
@@ -221,6 +228,42 @@ public sealed class AppSettings
         return theme;
     }
 
+    /// <summary>
+    /// R-108-2: その組の推奨値に、保存されている 8 色の変更を重ねる。8 項目以外のキー・null・読めない色は無視して
+    /// 推奨値のままにする（手で書いた設定ファイルで起動を止めない）。
+    /// </summary>
+    public Rendering.Theme ToSystemTheme(bool dark)
+    {
+        var theme = Rendering.Theme.Recommended(dark);
+        var colors = dark ? SystemDarkColors : SystemLightColors;
+        foreach (var slot in ThemeSlots.SystemMode)
+            if (colors.TryGetValue(slot.Key, out var hex) && ThemeSlots.FromHex(hex) is { } color)
+                theme = slot.Set(theme, color);
+        return theme;
+    }
+
+    /// <summary>R-108-2: その組の推奨値と違う色だけを書き出す。推奨値に戻した項目はキーごと消える。</summary>
+    public void FromSystemTheme(bool dark, Rendering.Theme theme)
+    {
+        var recommended = Rendering.Theme.Recommended(dark);
+        Dictionary<string, string> colors = [];
+        foreach (var slot in ThemeSlots.SystemMode)
+        {
+            // 名前付きの色（Color.Red）と同じ ARGB の色は == で等しくならないので、値で比べる
+            var color = slot.Get(theme);
+            if (color.ToArgb() != slot.Get(recommended).ToArgb()) colors[slot.Key] = ThemeSlots.ToHex(color);
+        }
+        if (dark) SystemDarkColors = colors;
+        else SystemLightColors = colors;
+    }
+
+    /// <summary>
+    /// R-108: ファイルリストに実際に当てる配色。起動時のモードと OS の状態で解決し、8 色は起動時の側の組だけを使う
+    /// （反対側の組は保存とプレビューだけで、実画面に出さない。§2.3）。
+    /// </summary>
+    public Rendering.Theme ToScreenTheme(Rendering.ColorMode startupMode, Rendering.OsTheme os) =>
+        Rendering.Theme.Resolve(ToTheme(), startupMode, os, ToSystemTheme(os.Dark));
+
     /// <summary>既定と違う色だけを書き出す。設定ファイルを読みやすく保つため。</summary>
     public void FromTheme(Rendering.Theme theme)
     {
@@ -293,6 +336,8 @@ public sealed class AppSettings
         ExpandedBookmarkGroupIds = [.. (ExpandedBookmarkGroupIds ?? []).OfType<string>()];
         DriveFolders = WithoutNulls(DriveFolders);
         Colors = WithoutNulls(Colors);
+        SystemLightColors = WithoutNulls(SystemLightColors);
+        SystemDarkColors = WithoutNulls(SystemDarkColors);
         KeyBindings = WithoutNulls(KeyBindings);
         ExternalTools = [.. (ExternalTools ?? DefaultExternalTools.Create()).OfType<ExternalTool>()
             .Select(t => t with { Name = t.Name ?? "", Path = t.Path ?? "", Arguments = t.Arguments ?? "" })];
