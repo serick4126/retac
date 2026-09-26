@@ -91,7 +91,9 @@ public sealed record Theme
             Background = SystemColors.Window,
             Foreground = SystemColors.WindowText,
             CursorBackground = SystemColors.Highlight,
-            CursorForeground = CursorTextOn(SystemColors.Highlight, SystemColors.HighlightText),
+            // OS の組は使わない。ダークの HighlightText は黒で、青地（#2864B4）との比が 3.6 しかない。
+            // 見やすさを最優先する（Q1）ので、僅差でも比の高いほうを毎回選ぶ（ライトの #0078D7 では黒 4.6 ＞ 白 4.47）
+            CursorForeground = ReadableTextOn(SystemColors.Highlight),
             MarkBackground = recommended.MarkBackground,
             MarkForeground = recommended.MarkForeground,
             SystemColor = recommended.SystemColor,
@@ -101,18 +103,6 @@ public sealed record Theme
             EncryptedColor = recommended.EncryptedColor,
             MarkStarColor = recommended.MarkStarColor,
         };
-    }
-
-    /// <summary>
-    /// OS の組（<paramref name="osText"/>）を基本にし、白黒の読めるほうより明らかに劣るときだけ差し替える。
-    /// ダークの HighlightText は黒で、青地（#2864B4）との比は 3.6。白なら 5.9 あるので白にする。
-    /// 常に比の高いほうを選ぶと、ライトの #0078D7 では白 4.47 対 黒 4.6 の僅差で黒になり、見慣れた白抜きが崩れる。
-    /// 4.5 のような固定の閾値もこの白 4.47 を落とすので使えない。「8 割」はこの 2 例を分けるための値。
-    /// </summary>
-    public static Color CursorTextOn(Color background, Color osText)
-    {
-        var best = ReadableTextOn(background);
-        return Contrast(background, osText) >= Contrast(background, best) * 0.8 ? osText : best;
     }
 
     /// <summary>白と黒のうち、<paramref name="background"/> とのコントラスト比が高いほう。</summary>

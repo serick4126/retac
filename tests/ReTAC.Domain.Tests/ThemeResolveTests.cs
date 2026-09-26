@@ -32,12 +32,12 @@ public class ThemeResolveTests
     }
 
     [Theory]
-    [InlineData("#2864B4", "#000000", "#FFFFFF")]   // ダークの組。OS の黒では比 3.6 しかない
-    [InlineData("#0078D7", "#FFFFFF", "#FFFFFF")]   // ライトの組は読めるのでそのまま（黒の 4.6 に僅差で負けても変えない）
-    [InlineData("#FFD700", "#FFFFFF", "#000000")]   // 明るいアクセントカラーでは黒のほうが読める
-    public void カーソルの文字は_OS_の組が読めればそれを使い読めなければ白黒の読めるほう(string background, string osText, string expected) =>
+    [InlineData("#2864B4", "#FFFFFF")]   // ダークの Highlight。白 5.9 ＞ 黒 3.6
+    [InlineData("#0078D7", "#000000")]   // ライトの Highlight。黒 4.6 ＞ 白 4.47 の僅差でも比の高いほう（Q1）
+    [InlineData("#FFD700", "#000000")]
+    public void カーソルの文字は白と黒のうちコントラスト比の高いほう(string background, string expected) =>
         Assert.Equal(ColorTranslator.FromHtml(expected).ToArgb(),
-                     Theme.CursorTextOn(ColorTranslator.FromHtml(background), ColorTranslator.FromHtml(osText)).ToArgb());
+                     Theme.ReadableTextOn(ColorTranslator.FromHtml(background)).ToArgb());
 
     [Fact]
     public void 配色モードは下書きを経て保存される()

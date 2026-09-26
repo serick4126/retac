@@ -51,8 +51,18 @@ public sealed class ColorFontPage : UserControl
     private readonly RadioButton _customColors = new() { Text = "独自の配色(&C)", AutoSize = true, Location = new Point(190, 2) };
     private readonly Label _systemNote = new()
     {
-        Text = "背景・文字・カーソルは Windows の設定（ライト／ダーク）に従います。属性とマークは推奨の色で描きます。",
+        // R-108-3: ハイコントラスト中は属性とマークも OS の色で描くので、推奨の色の話をしない
+        Text = SystemInformation.HighContrast
+            ? "背景・文字・カーソルは Windows の設定に従います。"
+            : "背景・文字・カーソルは Windows の設定（ライト／ダーク）に従います。属性とマークは推奨の色で描きます。",
         Bounds = new Rectangle(0, 30, 530, 40),
+    };
+    /// <summary>R-108-3: ハイコントラスト中は、どちらのモードでも配色の設定が画面に出ない。黙っていると設定が効かない不具合に見える。</summary>
+    private readonly Label _highContrastNote = new()
+    {
+        Text = "ハイコントラストが有効な間は、配色の設定は反映されません。",
+        Bounds = new Rectangle(210, 438, 380, 20),
+        Visible = false,
     };
 
     private Theme _theme;
@@ -84,7 +94,7 @@ public sealed class ColorFontPage : UserControl
             new Label { Text = "フォント(&F):", AutoSize = true, Location = new Point(210, 16) }, _family, _size,
             new Label { Text = "pt", AutoSize = true, Location = new Point(658, 16) },
             new Label { Text = "プレビュー", AutoSize = true, Location = new Point(210, 44) }, _preview,
-            _colorArea, _colorNote, _reset,
+            _colorArea, _colorNote, _highContrastNote, _reset,
         ]);
 
         _targets.SelectedIndexChanged += (_, _) => ShowTarget();
@@ -166,6 +176,7 @@ public sealed class ColorFontPage : UserControl
 
         _colorArea.Visible = FileListSelected;
         _colorNote.Visible = !FileListSelected;
+        _highContrastNote.Visible = FileListSelected && SystemInformation.HighContrast;
         ShowColorMode();
     }
 
