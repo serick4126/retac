@@ -31,13 +31,12 @@ public class ThemeResolveTests
         Assert.Equal(11f, resolved.FontSize);
     }
 
-    [Theory]
-    [InlineData("#2864B4", "#FFFFFF")]   // ダークの Highlight。白 5.9 ＞ 黒 3.6
-    [InlineData("#0078D7", "#000000")]   // ライトの Highlight。黒 4.6 ＞ 白 4.47 の僅差でも比の高いほう（Q1）
-    [InlineData("#FFD700", "#000000")]
-    public void カーソルの文字は白と黒のうちコントラスト比の高いほう(string background, string expected) =>
-        Assert.Equal(ColorTranslator.FromHtml(expected).ToArgb(),
-                     Theme.ReadableTextOn(ColorTranslator.FromHtml(background)).ToArgb());
+    [Fact]
+    public void Windowsの設定に従うときカーソルの文字は白()
+    {
+        if (SystemInformation.HighContrast) return;   // ハイコントラストでは常に OS の色（R-108-3）
+        Assert.Equal(Color.White.ToArgb(), Theme.Resolve(Theme.Default, ColorMode.System).CursorForeground.ToArgb());
+    }
 
     [Fact]
     public void 配色モードは下書きを経て保存される()

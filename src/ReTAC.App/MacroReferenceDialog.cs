@@ -11,7 +11,7 @@ namespace ReTAC.App;
 /// </summary>
 public sealed class MacroReferenceDialog : Form
 {
-    private readonly ListView _entries = new()
+    private readonly GroupedListView _entries = new()
     {
         View = View.Details,
         FullRowSelect = true,

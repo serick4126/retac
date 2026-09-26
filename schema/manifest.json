@@ -4205,7 +4205,7 @@
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 476
+        "line": 477
       },
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
@@ -5091,7 +5091,7 @@
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 476
+        "line": 477
       }
     ],
     "P-14": [
@@ -5861,17 +5861,17 @@
       },
       {
         "file": "src/ReTAC.App/Rendering/Theme.cs",
-        "line": 62
+        "line": 64
       },
       {
         "file": "src/ReTAC.App/Rendering/Theme.cs",
-        "line": 140
+        "line": 122
       }
     ],
     "R-108-1": [
       {
         "file": "src/ReTAC.App/Rendering/Theme.cs",
-        "line": 87
+        "line": 89
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
@@ -5899,7 +5899,17 @@
       },
       {
         "file": "src/ReTAC.App/Rendering/Theme.cs",
-        "line": 68
+        "line": 70
+      }
+    ],
+    "R-108-4": [
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 312
+      },
+      {
+        "file": "src/ReTAC.App/GroupedListView.cs",
+        "line": 8
       }
     ],
     "R-11": [
@@ -7251,7 +7261,7 @@
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 507
+        "line": 508
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
@@ -7539,7 +7549,7 @@
     "R-78": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 359
+        "line": 360
       },
       {
         "file": "src/ReTAC.App/DriveTreeView.cs",

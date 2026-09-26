@@ -10,7 +10,7 @@ namespace ReTAC.App;
 /// </summary>
 public sealed class CommandPickerDialog : Form
 {
-    private readonly ListView _commands = new()
+    private readonly GroupedListView _commands = new()
     {
         View = View.Details,
         FullRowSelect = true,

@@ -53,7 +53,9 @@ public sealed record Theme
         HiddenColor = ColorTranslator.FromHtml("#8CB4FF"),
         CompressedColor = ColorTranslator.FromHtml("#E09AE0"),
         EncryptedColor = ColorTranslator.FromHtml("#FF80FF"),
-        MarkBackground = ColorTranslator.FromHtml("#1F6B6B"),
+        // 暗い地では明るさで分ける余地が小さい。カーソル（OS の Highlight。#2864B4 など）と同じ明るさの青緑では
+        // マークした行の上のカーソルが埋もれ、暗くすると背景に沈んだ。色味を青の反対の暖色にして分ける
+        MarkBackground = ColorTranslator.FromHtml("#6B5418"),
         MarkForeground = ColorTranslator.FromHtml("#FFFFFF"),
         MarkStarColor = ColorTranslator.FromHtml("#FF6B6B"),
     };
@@ -90,10 +92,11 @@ public sealed record Theme
         {
             Background = SystemColors.Window,
             Foreground = SystemColors.WindowText,
-            CursorBackground = SystemColors.Highlight,
-            // OS の組は使わない。ダークの HighlightText は黒で、青地（#2864B4）との比が 3.6 しかない。
-            // 見やすさを最優先する（Q1）ので、僅差でも比の高いほうを毎回選ぶ（ライトの #0078D7 では黒 4.6 ＞ 白 4.47）
-            CursorForeground = ReadableTextOn(SystemColors.Highlight),
+            // ライトの Highlight（#0078D7）はマークの地（#408080）と明るさが近く、マークした行の上のカーソルが
+            // 埋もれる。黒い文字なら見分けられるが、実機では読みにくかった（Q1）。独自の配色の既定と同じ純粋な青にする
+            CursorBackground = Application.IsDarkModeEnabled ? SystemColors.Highlight : Default.CursorBackground,
+            // OS の組は使わない。ダークの HighlightText は黒で、青地（#2864B4）では読みにくい
+            CursorForeground = Color.White,
             MarkBackground = recommended.MarkBackground,
             MarkForeground = recommended.MarkForeground,
             SystemColor = recommended.SystemColor,
@@ -103,27 +106,6 @@ public sealed record Theme
             EncryptedColor = recommended.EncryptedColor,
             MarkStarColor = recommended.MarkStarColor,
         };
-    }
-
-    /// <summary>白と黒のうち、<paramref name="background"/> とのコントラスト比が高いほう。</summary>
-    public static Color ReadableTextOn(Color background) =>
-        Contrast(background, Color.White) >= Contrast(background, Color.Black) ? Color.White : Color.Black;
-
-    /// <summary>WCAG のコントラスト比（1〜21）。</summary>
-    public static double Contrast(Color a, Color b)
-    {
-        var (la, lb) = (Luminance(a), Luminance(b));
-        return (Math.Max(la, lb) + 0.05) / (Math.Min(la, lb) + 0.05);
-    }
-
-    private static double Luminance(Color c)
-    {
-        static double Channel(byte v)
-        {
-            var x = v / 255.0;
-            return x <= 0.03928 ? x / 12.92 : Math.Pow((x + 0.055) / 1.055, 2.4);
-        }
-        return 0.2126 * Channel(c.R) + 0.7152 * Channel(c.G) + 0.0722 * Channel(c.B);
     }
 
     public Color ForAttribute(AttributeColor color) => color switch

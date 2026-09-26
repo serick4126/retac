@@ -30,7 +30,7 @@ public sealed class KeyAssignPage : UserControl
         HideSelection = false,
         Bounds = new Rectangle(14, 40, 300, 380),
     };
-    private readonly ListView _commands = new()
+    private readonly GroupedListView _commands = new()
     {
         View = View.Details,
         FullRowSelect = true,

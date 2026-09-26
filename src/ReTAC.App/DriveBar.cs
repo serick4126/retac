@@ -308,13 +308,14 @@ public sealed class DriveBar : Control
             if (!IsShown(button)) continue;   // 「»」に隠れる
             if (i == _focusIndex && Focused)
             {
-                // フォーカスのあるドライブは卓駆と同じように凸型の枠で示す
-                ControlPaint.DrawButton(e.Graphics, button.Bounds, ButtonState.Normal);
+                // フォーカスのあるドライブは卓駆と同じように凸型の枠で示す。DrawButton はダークでも地を白く
+                // 塗って文字が消えるので、地は塗らず枠だけ描く（R-108-4）
+                ControlPaint.DrawBorder3D(e.Graphics, button.Bounds, Border3DStyle.Raised);
             }
             else if (i == _currentIndex)
             {
                 // 今いるドライブは凹ませる。卓駆はこれで現在地を示している
-                ControlPaint.DrawButton(e.Graphics, button.Bounds, ButtonState.Pushed);
+                ControlPaint.DrawBorder3D(e.Graphics, button.Bounds, Border3DStyle.Sunken);
             }
             else if (i == _hoverIndex)
             {
