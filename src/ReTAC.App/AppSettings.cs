@@ -259,7 +259,7 @@ public sealed class AppSettings
 
     /// <summary>
     /// R-108: ファイルリストに実際に当てる配色。起動時のモードと OS の状態で解決し、8 色は起動時の側の組だけを使う
-    /// （反対側の組は保存とプレビューだけで、実画面に出さない。§2.3）。
+    /// （反対側の組は保存とプレビューだけで、実画面に出さない。R-108-2）。
     /// </summary>
     public Rendering.Theme ToScreenTheme(Rendering.ColorMode startupMode, Rendering.OsTheme os) =>
         Rendering.Theme.Resolve(ToTheme(), startupMode, os, ToSystemTheme(os.Dark));

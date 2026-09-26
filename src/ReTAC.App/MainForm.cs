@@ -2250,7 +2250,7 @@ public sealed class MainForm : Form, IBookmarkHost
         var result = draft.CommitTo(_settings, _quickAccess);
 
         // 行の高さと列幅はフォントから再計算される（R-66-3）。モードの切り替えは再起動で反映する（R-108）。
-        // 確定後の設定から作るので、8 色は起動時の側の組だけが画面に出る（§2.3）
+        // 確定後の設定から作るので、8 色は起動時の側の組だけが画面に出る（R-108-2）
         _list.Theme = _settings.ToScreenTheme(Program.StartupColorMode, Program.StartupOs);
         ApplyLeftPanelFont(draft.Theme);   // R-101
         _driveBar.SetVisibility(draft.HiddenDrives, draft.ShowDesktopButton);

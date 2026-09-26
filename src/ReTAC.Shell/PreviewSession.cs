@@ -172,7 +172,7 @@ public sealed class PreviewSession
             visuals.SetBackgroundColor(ColorTranslator.ToWin32(colors.Background));
             visuals.SetTextColor(ColorTranslator.ToWin32(colors.Foreground));
         }
-        catch (Exception ex) when (ex is COMException or InvalidCastException)
+        catch (Exception ex)   // 第三者のハンドラーの境界。色のために DoPreview まで止めない
         {
             System.Diagnostics.Debug.WriteLine(ex);
         }

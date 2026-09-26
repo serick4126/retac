@@ -71,7 +71,7 @@ public sealed record Theme
     /// </summary>
     /// <param name="system">
     /// R-108-2: <paramref name="os"/> の側（ライト／ダーク）の 8 色。使うのは <see cref="ThemeSlots.SystemMode"/> の項目だけ。
-    /// null なら推奨値。反対側の組は渡さない（実画面に出さない。§2.3）
+    /// null なら推奨値。反対側の組は渡さない（実画面に出さない。R-108-2）
     /// </param>
     public static Theme Resolve(Theme stored, ColorMode mode, OsTheme os, Theme? system = null)
     {

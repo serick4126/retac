@@ -4489,11 +4489,11 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 186
+        "line": 188
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 209
+        "line": 211
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
@@ -4793,7 +4793,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 105
+        "line": 107
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
@@ -4989,7 +4989,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 225
+        "line": 227
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -5451,7 +5451,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 61
+        "line": 63
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
@@ -5940,8 +5940,28 @@
         "line": 245
       },
       {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 262
+      },
+      {
         "file": "src/ReTAC.App/ColorFontPage.cs",
         "line": 54
+      },
+      {
+        "file": "src/ReTAC.App/ColorFontPage.cs",
+        "line": 111
+      },
+      {
+        "file": "src/ReTAC.App/ColorFontPage.cs",
+        "line": 144
+      },
+      {
+        "file": "src/ReTAC.App/ColorFontPage.cs",
+        "line": 263
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 2253
       },
       {
         "file": "src/ReTAC.App/Rendering/Theme.cs",
@@ -5954,6 +5974,10 @@
       {
         "file": "src/ReTAC.App/Rendering/Theme.cs",
         "line": 73
+      },
+      {
+        "file": "src/ReTAC.App/Rendering/Theme.cs",
+        "line": 74
       },
       {
         "file": "src/ReTAC.App/Rendering/Theme.cs",
@@ -5974,12 +5998,24 @@
     ],
     "R-108-3": [
       {
+        "file": "src/ReTAC.App/AddressBar.cs",
+        "line": 595
+      },
+      {
         "file": "src/ReTAC.App/ColorFontPage.cs",
         "line": 64
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
         "line": 258
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 40
+      },
+      {
+        "file": "src/ReTAC.App/IncrementalSearchBar.cs",
+        "line": 144
       },
       {
         "file": "src/ReTAC.App/Program.cs",
@@ -5993,7 +6029,7 @@
     "R-108-4": [
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 594
+        "line": 595
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
@@ -7125,7 +7161,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 57
+        "line": 59
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -7981,7 +8017,7 @@
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 650
+        "line": 653
       },
       {
         "file": "src/ReTAC.App/IncrementalSearchBar.cs",

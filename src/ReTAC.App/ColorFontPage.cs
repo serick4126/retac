@@ -108,7 +108,7 @@ public sealed class ColorFontPage : UserControl
         _followWindows.Checked = draft.ColorMode == ColorMode.System;
         _customColors.Checked = !_followWindows.Checked;
         _followWindows.CheckedChanged += (_, _) => CommitColorMode();
-        // 開いたときは、今の OS の側を選んでおく（§4.3）
+        // 開いたときは、今の OS の側を選んでおく（R-108-2）
         _darkSide.Checked = Program.StartupOs.Dark;
         _lightSide.Checked = !_darkSide.Checked;
         _darkSide.CheckedChanged += (_, _) => ShowSystemSide();
@@ -141,7 +141,7 @@ public sealed class ColorFontPage : UserControl
     /// <summary>テストが組を選ぶための入口（ラジオボタンは表示しないと押せない）。</summary>
     internal void SelectSystemSide(bool dark) => (dark ? _darkSide : _lightSide).Checked = true;
 
-    /// <summary>「推奨値に戻す」の本体。選んでいる組の 8 色だけを戻す。反対側の組・独自の配色・フォントには触れない（§4.1.1）。</summary>
+    /// <summary>「推奨値に戻す」の本体。選んでいる組の 8 色だけを戻す。反対側の組・独自の配色・フォントには触れない（R-108-2）。</summary>
     internal void ResetSystemColors()
     {
         var recommended = Theme.Recommended(DarkSideSelected);
@@ -260,7 +260,7 @@ public sealed class ColorFontPage : UserControl
             ? "背景と文字は Windows の設定に従います。"
             : DarkSideSelected == Program.StartupOs.Dark
                 ? "背景と文字は Windows の設定（ライト／ダーク）に従います。属性とマークの色は、ライト用・ダーク用を別々に変えられます。"
-                // 起動中の OS からは反対側の本当の背景と文字が取れない（§4.3）
+                // 起動中の OS からは反対側の本当の背景と文字が取れない（R-108-2）
                 : "この組は Windows を" + (DarkSideSelected ? "ダーク" : "ライト") + "にして起動したときに使います。プレビューは参考表示です。実際の背景と文字は Windows の設定で決まります。";
         RefreshPreview();
     }

@@ -591,8 +591,11 @@ public sealed class AddressBar : Control
         _icon ??= LoadIcon();
         if (_icon is not null) e.Graphics.DrawImage(_icon, IconBounds);
         if (!_input.Visible) DrawCrumbs(e.Graphics);
-        // 赤は設定にしない（見つからないことを知らせる固定の表示）。ダークでは暗い地で読める赤（#FF6B6B）にする（R-108-4）
-        var notFound = Program.StartupOs.Dark ? Color.FromArgb(0xFF, 0x6B, 0x6B) : Color.Red;
+        // 赤は設定にしない（見つからないことを知らせる固定の表示）。ダークでは暗い地で読める赤（#FF6B6B）にする。
+        // ハイコントラストでは OS の色だけで描く（R-108-3・R-108-4）
+        var notFound = Program.StartupOs.HighContrast ? Program.StartupOs.Highlight
+            : Program.StartupOs.Dark ? Color.FromArgb(0xFF, 0x6B, 0x6B)
+            : Color.Red;
         ControlPaint.DrawBorder(e.Graphics, ClientRectangle, _notFound ? notFound : SystemColors.ControlDark, ButtonBorderStyle.Solid);
     }
 

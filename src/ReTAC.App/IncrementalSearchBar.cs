@@ -141,8 +141,11 @@ public sealed class IncrementalSearchBar : FlowLayoutPanel
     private void ShowResult()
     {
         var noMatch = _input.Text.Length > 0 && _matches.Count == 0;
-        _input.BackColor = noMatch ? NoMatchBackground : Program.StartupOs.Window;   // R-108: 起動時の色
-        _input.ForeColor = Program.StartupOs.WindowText;
+        // R-108: 起動時の色。ハイコントラストでは赤系の地を使わず、OS の選択色の組で不一致を示す（R-108-3）
+        var os = Program.StartupOs;
+        (_input.BackColor, _input.ForeColor) = !noMatch ? (os.Window, os.WindowText)
+            : os.HighContrast ? (os.Highlight, os.HighlightText)
+            : (NoMatchBackground, os.WindowText);
         var position = -1;
         for (var i = 0; i < _matches.Count; i++)
             if (_matches[i] == _list.State.CursorIndex) { position = i; break; }
