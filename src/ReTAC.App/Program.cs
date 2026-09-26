@@ -12,6 +12,9 @@ internal static class Program
     /// <summary>R-108: 起動時の配色モード。設定で切り替えても、再起動するまではこれで描く。</summary>
     internal static Rendering.ColorMode StartupColorMode { get; private set; } = Rendering.ColorMode.System;
 
+    /// <summary>R-108: 起動時の OS の配色の状態。テストなど Main を通らないときは、最初に読んだ時点の状態になる。</summary>
+    internal static Rendering.OsTheme StartupOs { get; private set; } = Rendering.OsTheme.Capture();
+
     [STAThread]
     private static int Main(string[] args)
     {
@@ -39,6 +42,7 @@ internal static class Program
         // ハイコントラストでは WinForms の既定（OS の色そのもの）のままにする（R-108-3）
         StartupColorMode = settings.ColorMode;
         if (!SystemInformation.HighContrast) Application.SetColorMode(SystemColorMode.System);
+        StartupOs = Rendering.OsTheme.Capture();
         // Q10: 正規化の失敗で起動を止めない。null の補正は先に済むので、残るのは消えたツールの参照だけ
         try { settings.Normalize(); }
         catch (Exception ex) { Debug.WriteLine(ex); }

@@ -188,7 +188,7 @@ public sealed class MainForm : Form, IBookmarkHost
         };
         _previewView.FocusFileViewRequested += (_, _) => _list.Focus();
         _list.MarksChanged += (_, _) => RefreshStatus();
-        _list.Theme = Rendering.Theme.Resolve(_settings.ToTheme(), Program.StartupColorMode);   // 5-1 節・R-108
+        _list.Theme = Rendering.Theme.Resolve(_settings.ToTheme(), Program.StartupColorMode, Program.StartupOs);   // 5-1 節・R-108
         ApplyLeftPanelFont(_list.Theme);                         // R-101: 左パネルは一覧とは別のフォント
         _driveBar.SetVisibility(_settings.ToHiddenDrives(), _settings.ShowDesktopButton);   // 16.7 節
         _list.CommandKey += (_, e) => OnCommandKey(e);
@@ -2250,7 +2250,7 @@ public sealed class MainForm : Form, IBookmarkHost
         var result = draft.CommitTo(_settings, _quickAccess);
 
         // 行の高さと列幅はフォントから再計算される（R-66-3）。モードの切り替えは再起動で反映する（R-108）
-        _list.Theme = Rendering.Theme.Resolve(draft.Theme, Program.StartupColorMode);
+        _list.Theme = Rendering.Theme.Resolve(draft.Theme, Program.StartupColorMode, Program.StartupOs);
         ApplyLeftPanelFont(draft.Theme);   // R-101
         _driveBar.SetVisibility(draft.HiddenDrives, draft.ShowDesktopButton);
         // R-36: 複数ウィンドウが同じ AppSettings を共有している。この窓の _keyMap は

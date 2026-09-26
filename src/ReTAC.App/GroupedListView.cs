@@ -25,9 +25,12 @@ public sealed class GroupedListView : ListView
     protected override void WndProc(ref Message m)
     {
         base.WndProc(ref m);
-        if (m.Msg != WM_REFLECT_NOTIFY || !Application.IsDarkModeEnabled) return;
+        // ダークかどうかは起動時の状態で決める（R-108。再起動で反映）
+        if (m.Msg != WM_REFLECT_NOTIFY || !Program.StartupOs.Dark) return;
+        // lParam の先の構造体は通知ごとに大きさが違う。先頭の NMHDR だけで種類を見てから全体を読む。
+        // 先に NMLVCUSTOMDRAW として読むと、短い通知では範囲外を読む
+        if (Marshal.PtrToStructure<NMHDR>(m.LParam).code != NM_CUSTOMDRAW) return;
         var draw = Marshal.PtrToStructure<NMLVCUSTOMDRAW>(m.LParam);
-        if (draw.nmcd.hdr.code != NM_CUSTOMDRAW) return;
 
         // 見出しの通知は、項目ごとの段階ではなく描き始め（CDDS_PREPAINT）の段階に dwItemType = LVCDI_GROUP を付けて来る
         if (draw.nmcd.dwDrawStage != CDDS_PREPAINT || draw.dwItemType != LVCDI_GROUP) return;
@@ -43,7 +46,7 @@ public sealed class GroupedListView : ListView
         using (var back = new SolidBrush(BackColor)) g.FillRectangle(back, bounds);
         var text = GroupHeader(groupId);
         var textBounds = Rectangle.FromLTRB(bounds.Left + LogicalToDeviceUnits(6), bounds.Top, bounds.Right, bounds.Bottom);
-        TextRenderer.DrawText(g, text, Font, textBounds, SystemColors.WindowText,
+        TextRenderer.DrawText(g, text, Font, textBounds, Program.StartupOs.WindowText,
             TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
         // 見出しの右に区切りの線を引く（コモンコントロールの見出しと同じ形）
         var lineLeft = textBounds.Left + TextRenderer.MeasureText(g, text, Font).Width + LogicalToDeviceUnits(4);

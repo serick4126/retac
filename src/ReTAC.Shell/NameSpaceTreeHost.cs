@@ -90,6 +90,12 @@ public sealed class NameSpaceTreeHost : IDisposable
     private INameSpaceTreeControl? _tree;
     /// <summary>R-101: 呼び出し側が所有するフォント。ツリーを作り直すたびに当て直す</summary>
     private Font? _font;
+
+    /// <summary>
+    /// R-108-1: ダークのときのツリーの背景と文字。null ならライトとして何もしない。
+    /// 今の OS の設定ではなく起動時の状態で決めたいので、枠（アプリ側）が起動時に取った色を渡す。
+    /// </summary>
+    public (Color Background, Color Foreground)? DarkColors { get; init; }
     /// <summary>R-101: WM_SETFONT で渡した HFONT。自分で作ったものなので自分で捨てる</summary>
     private IntPtr _fontHandle;
     private EventSink? _sink;
@@ -364,13 +370,13 @@ public sealed class NameSpaceTreeHost : IDisposable
     /// </summary>
     private void ApplyDarkColors()
     {
-        if (_treeHwnd == IntPtr.Zero || !Application.IsDarkModeEnabled) return;
+        if (_treeHwnd == IntPtr.Zero || DarkColors is not var (background, foreground)) return;
         var inner = FindWindowEx(_treeHwnd, IntPtr.Zero, "SysTreeView32", null);
         var target = inner != IntPtr.Zero ? inner : _treeHwnd;
 
         SetWindowTheme(target, "DarkMode_Explorer", null);
-        SendMessage(target, TVM_SETBKCOLOR, IntPtr.Zero, ColorTranslator.ToWin32(SystemColors.Window));
-        SendMessage(target, TVM_SETTEXTCOLOR, IntPtr.Zero, ColorTranslator.ToWin32(SystemColors.WindowText));
+        SendMessage(target, TVM_SETBKCOLOR, IntPtr.Zero, ColorTranslator.ToWin32(background));
+        SendMessage(target, TVM_SETTEXTCOLOR, IntPtr.Zero, ColorTranslator.ToWin32(foreground));
     }
 
     private const uint TVM_SETBKCOLOR = 0x111D;

@@ -52,9 +52,9 @@ public sealed class ColorFontPage : UserControl
     private readonly Label _systemNote = new()
     {
         // R-108-3: ハイコントラスト中は属性とマークも OS の色で描くので、推奨の色の話をしない
-        Text = SystemInformation.HighContrast
-            ? "背景・文字・カーソルは Windows の設定に従います。"
-            : "背景・文字・カーソルは Windows の設定（ライト／ダーク）に従います。属性とマークは推奨の色で描きます。",
+        Text = Program.StartupOs.HighContrast
+            ? "背景と文字は Windows の設定に従います。"
+            : "背景と文字は Windows の設定（ライト／ダーク）に従います。カーソル・属性・マークは推奨の色で描きます。",
         Bounds = new Rectangle(0, 30, 530, 40),
     };
     /// <summary>R-108-3: ハイコントラスト中は、どちらのモードでも配色の設定が画面に出ない。黙っていると設定が効かない不具合に見える。</summary>
@@ -176,7 +176,7 @@ public sealed class ColorFontPage : UserControl
 
         _colorArea.Visible = FileListSelected;
         _colorNote.Visible = !FileListSelected;
-        _highContrastNote.Visible = FileListSelected && SystemInformation.HighContrast;
+        _highContrastNote.Visible = FileListSelected && Program.StartupOs.HighContrast;
         ShowColorMode();
     }
 
@@ -205,13 +205,17 @@ public sealed class ColorFontPage : UserControl
         RefreshPreview();
     }
 
-    private void ResetTarget()
+    /// <summary>「この対象を既定に戻す」の本体。ボタンは表示しないと押せないので、テストから直接呼べるよう internal にしてある。</summary>
+    internal void ResetTarget()
     {
         var defaults = Theme.Default;
         if (FileListSelected)
         {
             var theme = _theme;
-            foreach (var slot in ThemeSlots.All) theme = slot.Set(theme, slot.Get(defaults));
+            // 12 色は独自の配色のときしか見えていない。Windows の設定に従うときに戻すと、見えないまま
+            // 独自の配色が消え、モードを戻したときに元の色が無い（R-108）
+            if (_draft.ColorMode == ColorMode.Custom)
+                foreach (var slot in ThemeSlots.All) theme = slot.Set(theme, slot.Get(defaults));
             theme = theme with { FontFamily = defaults.FontFamily, FontSize = defaults.FontSize };
             SetTheme(theme);
             foreach (var slot in ThemeSlots.All) _swatches[slot.Key].BackColor = slot.Get(_theme);
@@ -253,7 +257,7 @@ public sealed class ColorFontPage : UserControl
         }
 
         // 選んでいるモードで実際に描かれる色を見せる。Windows の設定に従うなら OS の色で解決する（R-108）
-        var shown = Theme.Resolve(_theme, _draft.ColorMode);
+        var shown = Theme.Resolve(_theme, _draft.ColorMode, Program.StartupOs);
         (_preview.Surface, _preview.Rows) = FileListSelected
             ? (shown.Background, new PreviewRow[]
             {

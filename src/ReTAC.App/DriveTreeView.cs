@@ -11,7 +11,11 @@ public sealed class DriveTreeView : Control, IMessageFilter
 {
     private const long SelectionTimeoutMilliseconds = 15_000;
     private readonly NameSpaceTreeRootKind _rootKind;
-    private readonly NameSpaceTreeHost _host = new();
+    // R-108-1: ツリーの色も起動時の OS の状態で決める（再起動で反映）
+    private readonly NameSpaceTreeHost _host = new()
+    {
+        DarkColors = Program.StartupOs.Dark ? (Program.StartupOs.Window, Program.StartupOs.WindowText) : null,
+    };
     private readonly System.Windows.Forms.Timer _selectionWatchdog = new() { Interval = 100 };
     private readonly Label _errorMessage = new()
     {

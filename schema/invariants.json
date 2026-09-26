@@ -362,6 +362,20 @@
       ],
       "rule": "設定の Colors に書くのは独自の配色だけ。Windows の設定に従うときにファイルリストへ渡す配色（Theme.Resolve の結果。OS の背景・文字・カーソルを含む）を設定画面の下書きへ渡したり保存したりしない。渡すと OS の色が独自の配色として保存され、モードを戻したときに元の 12 色が失われる。",
       "enforcedBy": "app:MainForm.ShowSettings（SettingsDraft.From に _settings.ToTheme() を渡す）/ MainForm.ApplySettings（Theme.Resolve は画面に当てるときだけ）"
+    },
+    {
+      "id": "INV-THEME-STARTUP-OS-STATE",
+      "status": "enforced",
+      "specIds": [
+        "R-108",
+        "R-108-1",
+        "R-108-3"
+      ],
+      "applies": [
+        "settings:ColorMode"
+      ],
+      "rule": "ライト／ダーク・ハイコントラストの描き分けは、起動時に取った OS の状態（Program.StartupOs）で判断する。Application.IsDarkModeEnabled・SystemInformation.HighContrast・SystemColors を描画のたびに読まない。これらは今の OS の設定を返すので、実行中に OS を切り替えてから設定を適用すると、起動時に作ったコントロールの色とダーク用の色が混ざる。切り替えは再起動で反映する。",
+      "enforcedBy": "app:Program.Main（SetColorMode の直後に OsTheme.Capture）/ Theme.Resolve（OsTheme を引数で受ける）/ GroupedListView / DriveTreeView（NameSpaceTreeHost.DarkColors に渡す）/ ColorFontPage（ハイコントラストの案内）"
     }
   ]
 }

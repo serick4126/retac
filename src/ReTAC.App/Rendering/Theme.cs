@@ -62,39 +62,40 @@ public sealed record Theme
 
     /// <summary>
     /// R-108: ファイルリストに実際に渡す配色。<paramref name="stored"/> は設定に保存されている独自の配色で、
-    /// フォントはどのモードでもここから取る。モードは起動時のものを渡す（切り替えは再起動で反映する）。
+    /// フォントはどのモードでもここから取る。モードと OS の状態は起動時のものを渡す（切り替えは再起動で反映する）。
+    /// 今の OS の状態を読むと、実行中に OS をダークにしてから設定を適用したとき、白い地にダーク用の色が載る。
     /// 設定画面へは <paramref name="stored"/> のほうを渡すこと。解決後の色を渡すと、OS の色が独自の配色として保存されてしまう。
     /// </summary>
-    public static Theme Resolve(Theme stored, ColorMode mode)
+    public static Theme Resolve(Theme stored, ColorMode mode, OsTheme os)
     {
         // R-108-3: ハイコントラストでは利用者の色を使わない。属性による色分けもしない
-        if (SystemInformation.HighContrast)
+        if (os.HighContrast)
             return stored with
             {
-                Background = SystemColors.Window,
-                Foreground = SystemColors.WindowText,
-                CursorBackground = SystemColors.Highlight,
-                CursorForeground = SystemColors.HighlightText,
-                MarkBackground = SystemColors.WindowText,
-                MarkForeground = SystemColors.Window,
-                SystemColor = SystemColors.WindowText,
-                ReadOnlyColor = SystemColors.WindowText,
-                HiddenColor = SystemColors.WindowText,
-                CompressedColor = SystemColors.WindowText,
-                EncryptedColor = SystemColors.WindowText,
-                MarkStarColor = SystemColors.WindowText,
+                Background = os.Window,
+                Foreground = os.WindowText,
+                CursorBackground = os.Highlight,
+                CursorForeground = os.HighlightText,
+                MarkBackground = os.WindowText,
+                MarkForeground = os.Window,
+                SystemColor = os.WindowText,
+                ReadOnlyColor = os.WindowText,
+                HiddenColor = os.WindowText,
+                CompressedColor = os.WindowText,
+                EncryptedColor = os.WindowText,
+                MarkStarColor = os.WindowText,
             };
         if (mode == ColorMode.Custom) return stored;
 
-        // R-108-1: 背景と文字はツリー（NSTC・ブックマークビュー）と同じ SystemColors.Window / WindowText にする
-        var recommended = Application.IsDarkModeEnabled ? DarkRecommended : Default;
+        // R-108-1: 背景と文字はツリー（NSTC・ブックマークビュー）と同じ Window / WindowText にする
+        var recommended = os.Dark ? DarkRecommended : Default;
         return stored with
         {
-            Background = SystemColors.Window,
-            Foreground = SystemColors.WindowText,
+            Background = os.Window,
+            Foreground = os.WindowText,
             // ライトの Highlight（#0078D7）はマークの地（#408080）と明るさが近く、マークした行の上のカーソルが
             // 埋もれる。黒い文字なら見分けられるが、実機では読みにくかった（Q1）。独自の配色の既定と同じ純粋な青にする
-            CursorBackground = Application.IsDarkModeEnabled ? SystemColors.Highlight : Default.CursorBackground,
+            CursorBackground = os.Dark ? os.Highlight : Default.CursorBackground,
             // OS の組は使わない。ダークの HighlightText は黒で、青地（#2864B4）では読みにくい
             CursorForeground = Color.White,
             MarkBackground = recommended.MarkBackground,
@@ -126,4 +127,30 @@ public enum ColorMode
     System,
     /// <summary>独自の配色。ファイルリストに 12 項目の色を当てる（ツリーなどは OS に従う）</summary>
     Custom,
+}
+
+/// <summary>
+/// R-108: 起動時の OS の配色の状態。WinForms の Application.IsDarkModeEnabled・SystemInformation.HighContrast は
+/// 今の OS の設定を読むので、実行中に OS を切り替えると、作ってあるコントロールの色と食い違う。
+/// 切り替えは再起動で反映する仕様なので、描き分けはすべて起動時に取ったこれで判断する。
+/// </summary>
+public sealed record OsTheme
+{
+    public required bool Dark { get; init; }
+    public required bool HighContrast { get; init; }
+    public required Color Window { get; init; }
+    public required Color WindowText { get; init; }
+    public required Color Highlight { get; init; }
+    public required Color HighlightText { get; init; }
+
+    /// <summary>Application.SetColorMode の後に呼ぶ。前に呼ぶと SystemColors がライトの値のまま取れる。</summary>
+    public static OsTheme Capture() => new()
+    {
+        Dark = Application.IsDarkModeEnabled,
+        HighContrast = SystemInformation.HighContrast,
+        Window = SystemColors.Window,
+        WindowText = SystemColors.WindowText,
+        Highlight = SystemColors.Highlight,
+        HighlightText = SystemColors.HighlightText,
+    };
 }
