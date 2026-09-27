@@ -60,7 +60,7 @@ public sealed record Theme
         MarkStarColor = ColorTranslator.FromHtml("#FF6B6B"),
     };
 
-    /// <summary>R-108-2: 「Windows の設定に従う」の 8 色の推奨値。ライト用は 5-1 節の既定値そのもの。</summary>
+    /// <summary>R-108-2: 「Windows の設定に従う」の 8 色の推奨値。ライト用は既定の配色（Default）そのもの。</summary>
     public static Theme Recommended(bool dark) => dark ? DarkRecommended : Default;
 
     /// <summary>
