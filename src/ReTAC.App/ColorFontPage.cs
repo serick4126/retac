@@ -55,8 +55,10 @@ public sealed class ColorFontPage : UserControl
     // 組のラジオボタンは別の入れ物に入れる。モードのラジオボタンと同じ入れ物だと 1 つのグループになり、
     // 組を選ぶとモードの選択が外れて「独自の配色」に切り替わってしまう
     private readonly Panel _sides = new() { Bounds = new Rectangle(0, 72, 230, 26) };
-    private readonly RadioButton _lightSide = new() { Text = "ライト用(&L)", AutoSize = true, Location = new Point(0, 2) };
-    private readonly RadioButton _darkSide = new() { Text = "ダーク用(&K)", AutoSize = true, Location = new Point(110, 2) };
+    // 大きさは固定する。AutoSize だと、別のページから設定画面を開いたとき（このページが隠れたまま）150% で
+    // 高さが 2 回拡大され（約 46）、入れ物からはみ出す。配色・フォントのページから開いたときは起きない
+    private readonly RadioButton _lightSide = new() { Text = "ライト用(&L)", Bounds = new Rectangle(0, 2, 100, 22) };
+    private readonly RadioButton _darkSide = new() { Text = "ダーク用(&K)", Bounds = new Rectangle(110, 2, 100, 22) };
     // 名前に選んでいる側を入れる（ShowSystemSide）。「推奨値に戻す」だけでは、どちらの色が戻るのかもフォントも戻るのかも読めない
     private readonly Button _resetSystem = new() { Bounds = new Rectangle(310, 72, 220, 26) };
     private readonly Dictionary<string, Button> _systemSwatches = [];
