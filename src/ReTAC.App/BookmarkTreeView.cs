@@ -171,17 +171,27 @@ public sealed class BookmarkTreeView : TreeView
                     path => icons?.ForPath(path) is { } b ? new Bitmap(b) : null);
         }).ContinueWith(task =>
         {
-            if (!task.IsCompletedSuccessfully || IsDisposed || !IsHandleCreated) return;
+            if (!task.IsCompletedSuccessfully) return;
+            // 載せなかった Bitmap は GC を待たずに捨てる（窓が閉じた・並行した読み込みが先に載せた）
+            static void DisposeAll(IEnumerable<(string, Bitmap? Image)> results) { foreach (var r in results) r.Image?.Dispose(); }
+            if (IsDisposed || !IsHandleCreated) { DisposeAll(task.Result); return; }
             try
             {
                 BeginInvoke(() =>
                 {
                     foreach (var (path, image) in task.Result)
-                        if (image is not null && !_images.Images.ContainsKey("path:" + path)) _images.Images.Add("path:" + path, image);
+                    {
+                        if (image is null) continue;
+                        if (_images.Images.ContainsKey("path:" + path)) image.Dispose();
+                        else _images.Images.Add("path:" + path, image);
+                    }
                     Apply();
                 });
             }
-            catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException) { }   // 読んでいる間に窓が閉じた
+            catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException)
+            {
+                DisposeAll(task.Result);   // 読んでいる間に窓が閉じた
+            }
         });
     }
 
