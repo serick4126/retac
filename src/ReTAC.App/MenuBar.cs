@@ -275,12 +275,15 @@ public static class MenuBar
     private static ToolStripMenuItem DynamicSubmenu(string text, Func<IReadOnlyList<ToolStripItem>> dynamicItems, params ToolStripItem[] tail)
     {
         var menu = new ToolStripMenuItem(text);
-        menu.DropDownItems.AddRange(tail);
+        // P11-2: WinForms は子の無いメニューをキーボードで開かない（DropDownOpening も起きない）。固定の末尾が無いと、
+        // マウスで一度開くまで Alt からたどれないので、無効な仮項目を置いて子があることにする。一覧が空のときも残す
+        menu.DropDownItems.AddRange(tail.Length > 0 ? tail : [BookmarkItems.Placeholder("（なし）")]);
         menu.DropDownOpening += (_, _) =>
         {
             var items = new List<ToolStripItem>(dynamicItems());
             if (items.Count > 0 && tail.Length > 0) items.Add(Separator());
             items.AddRange(tail);
+            if (items.Count == 0) items.Add(BookmarkItems.Placeholder("（なし）"));
             MenuSpacing.Apply(items, menu.Owner?.DeviceDpi ?? 96);
             menu.DropDownItems.Clear();
             menu.DropDownItems.AddRange([.. items]);
