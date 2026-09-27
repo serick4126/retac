@@ -222,8 +222,10 @@ public sealed class PreviewView : UserControl
         host.Visible = true;
         host.BringToFront();
         _shown = (session, host);
+        // 矩形ではなく、その位置にある窓で判定する。矩形だと、プレビューに重なったメニューや、ドラッグ中の境界線への
+        // クリックまで止めてしまう（プレビュー中に「完全に終了」が選べなかった）
         if (_pendingViewOnly) _blocker = new PreviewMouseBlocker(point => _shown?.Host == host && host.Visible
-                                                                  && host.RectangleToScreen(host.ClientRectangle).Contains(point));
+                                                                  && TextPreviewInput.IsInside(host.Handle, TextPreviewInput.WindowAt(point)));
         if (_pendingIsText)
             _textInput = new TextPreviewInput(isTextWindow: window => TextPreviewInput.IsInside(host.Handle, window),
                                               rightButtonUp: point => OnRightClick(host, point));

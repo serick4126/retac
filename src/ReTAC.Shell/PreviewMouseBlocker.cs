@@ -13,6 +13,7 @@ public sealed class PreviewMouseBlocker : IDisposable
     private readonly HookProc _proc;   // フックの間は GC に回収させない
     private readonly Func<Point, bool> _isOverPreview;
     private IntPtr _hook;
+    private int _blockedButtons;   // 押すのを止めたボタン（ビット）。離すのはこれだけ止める
 
     /// <param name="isOverPreview">画面上の位置がプレビューの上か。フックの中で呼ぶので軽くすること</param>
     public PreviewMouseBlocker(Func<Point, bool> isOverPreview)
@@ -31,17 +32,43 @@ public sealed class PreviewMouseBlocker : IDisposable
 
     private IntPtr OnMouse(int code, IntPtr message, IntPtr data)
     {
-        // 押すのも離すのも止める（片方だけ届くと、ハンドラー側がボタンを押したままだと思い込む）
-        if (code >= 0 && (int)message is >= WM_LBUTTONDOWN and <= WM_MBUTTONDBLCLK or >= WM_XBUTTONDOWN and <= WM_XBUTTONDBLCLK
-            && _isOverPreview(Marshal.PtrToStructure<Point>(data)))
-            return 1;
+        if (code >= 0 && Button((int)message) is var (bit, down) && bit != 0)
+        {
+            // 押すのを止めたら、離すのも止める（片方だけ届くと、ハンドラー側がボタンを押したままだと思い込む）。
+            // 押すのを止めていないボタンの離すは通す。境界線をドラッグしてプレビューの上で離したとき、
+            // 離すを止めると SplitContainer がドラッグを終えられない
+            if (down && _isOverPreview(Marshal.PtrToStructure<Point>(data)))
+            {
+                _blockedButtons |= bit;
+                return 1;
+            }
+            if (!down && (_blockedButtons & bit) != 0)
+            {
+                _blockedButtons &= ~bit;
+                return 1;
+            }
+        }
         return CallNextHookEx(_hook, code, message, data);
     }
+
+    /// <summary>ボタンのビットと、押したのか（true）離したのか。ボタンでなければビットは 0。</summary>
+    private static (int Bit, bool Down) Button(int message) => message switch
+    {
+        WM_LBUTTONDOWN or WM_LBUTTONDOWN + 2 => (1, true),
+        WM_LBUTTONDOWN + 1 => (1, false),
+        WM_RBUTTONDOWN or WM_RBUTTONDOWN + 2 => (2, true),
+        WM_RBUTTONDOWN + 1 => (2, false),
+        WM_MBUTTONDOWN or WM_MBUTTONDOWN + 2 => (4, true),
+        WM_MBUTTONDOWN + 1 => (4, false),
+        WM_XBUTTONDOWN or WM_XBUTTONDOWN + 2 => (8, true),
+        WM_XBUTTONDOWN + 1 => (8, false),
+        _ => (0, false),
+    };
 
     private delegate IntPtr HookProc(int code, IntPtr message, IntPtr data);
 
     private const int WH_MOUSE_LL = 14;
-    private const int WM_LBUTTONDOWN = 0x0201, WM_MBUTTONDBLCLK = 0x0209, WM_XBUTTONDOWN = 0x020B, WM_XBUTTONDBLCLK = 0x020D;
+    private const int WM_LBUTTONDOWN = 0x0201, WM_RBUTTONDOWN = 0x0204, WM_MBUTTONDOWN = 0x0207, WM_XBUTTONDOWN = 0x020B;
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr SetWindowsHookEx(int id, HookProc proc, IntPtr module, uint thread);
