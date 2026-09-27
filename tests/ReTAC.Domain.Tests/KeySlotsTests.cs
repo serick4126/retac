@@ -40,4 +40,13 @@ public class KeySlotsTests
         Assert.Equal(canonicalSlot, KeySlots.Parse(lenient));
         Assert.Equal(canonical, KeySlots.Label(canonicalSlot!.Value));
     }
+
+    // P11-1 と同じ系統: Enum.TryParse は "A,B" を OR した値で読む。Q(0x51) | W(0x57) は W と同じ値になり、
+    // 別のキーの割り当てとして黙って読まれる。先頭が空白の数字も読む
+    [Theory]
+    [InlineData("Q,W")]
+    [InlineData("Ctrl+Q,W")]
+    [InlineData(" 65")]
+    [InlineData("65")]
+    public void 複合値や数値のキー名は読まない(string label) => Assert.Null(KeySlots.Parse(label));
 }

@@ -38,6 +38,8 @@ public static class KeySlots
         return Prefix(binding) + name;
     }
 
+    private static readonly string[] KeyNames = Enum.GetNames<Keys>();
+
     /// <summary>
     /// 大文字小文字は無視する（Ctrl+/Shift+ の接頭辞だけでなくキー名も）。手で書き換える設定ファイルと
     /// インポートするキー割り当てファイルの両方がこの経路を通るため、"ctrl+e" のような崩れた表記も
@@ -50,11 +52,11 @@ public static class KeySlots
         var rest = ctrl ? label[5..] : label;
         var shift = rest.StartsWith("Shift+", StringComparison.OrdinalIgnoreCase);
         var name = shift ? rest[6..] : rest;
-        // Enum.TryParse は数値文字列も通してしまう（"65" が Keys.A になる）。
-        // 設定ファイルは手で直せることを柱にしているので、打ち間違いが
-        // 黙って別のキーに化けないようにする（V-15）
-        if (name.Length == 0 || char.IsAsciiDigit(name[0]) || name[0] == '-') return null;
-        return Enum.TryParse<Keys>(name, ignoreCase: true, out var key) ? new KeyBinding((ushort)key, shift, ctrl) : null;
+        // Enum.TryParse は数値文字列（先頭の空白も許す。"65" が Keys.A になる）と "Q,W" の複合値も通し、
+        // 複合値は OR した値になる（Q | W は W と同じ値）。設定ファイルは手で直せることを柱にしているので、
+        // 打ち間違いが黙って別のキーに化けないよう、宣言済みの名前 1 つと一致するときだけ読む（V-15・P11-1）
+        if (!Array.Exists(KeyNames, n => n.Equals(name, StringComparison.OrdinalIgnoreCase))) return null;
+        return new KeyBinding((ushort)Enum.Parse<Keys>(name, ignoreCase: true), shift, ctrl);
     }
 
     private static string Prefix(KeyBinding binding) =>
