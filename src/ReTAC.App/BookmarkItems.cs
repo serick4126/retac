@@ -206,8 +206,12 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
         var size = 16 * invoker.DeviceDpi / 96;
         Task.Run(() =>
         {
-            using var icons = new ShellIcons(size);
-            return jobs.Select(j => (j.item, image: icons.ForPath(j.path!) is { } b ? new Bitmap(b) : null)).ToList();
+            ShellIcons? icons = null;
+            try { icons = new ShellIcons(size); }
+            catch (Exception) { }   // 作れなければ全部アイコンなし（ApplyIcons が名前の表示に切り替える）
+            using (icons)
+                return LoadAll(jobs.Select(j => (j.item, j.path!)),
+                    path => icons?.ForPath(path) is { } b ? new Bitmap(b) : null);
         }).ContinueWith(task =>
         {
             if (!task.IsCompletedSuccessfully) return;
@@ -222,6 +226,24 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
                 DisposeImages(results);   // 確かめた直後に窓が閉じた。渡せなかった Bitmap は GC を待たずに捨てる
             }
         });
+    }
+
+    /// <summary>
+    /// 1 件ずつ取り、例外が出たらその項目だけアイコンなし（null）にして続ける。1 件の失敗で全体を捨てると、
+    /// 「アイコンだけ」のボタンが名前の表示に切り替わらず空のまま残り、取れた分の Bitmap も捨てられない（P11-3）。
+    /// シェルのアイコンの取得はハンドラー次第で何が起きるか分からないので、種類を問わず受け止める。
+    /// </summary>
+    internal static List<(T Item, Bitmap? Image)> LoadAll<T>(IEnumerable<(T Item, string Path)> jobs, Func<string, Bitmap?> load)
+    {
+        var results = new List<(T, Bitmap?)>();
+        foreach (var (item, path) in jobs)
+        {
+            Bitmap? image;
+            try { image = load(path); }
+            catch (Exception) { image = null; }
+            results.Add((item, image));
+        }
+        return results;
     }
 
     internal static void ApplyIcons(List<(ToolStripItem item, Bitmap? image)> results)

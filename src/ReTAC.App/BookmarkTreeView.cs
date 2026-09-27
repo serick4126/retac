@@ -162,8 +162,13 @@ public sealed class BookmarkTreeView : TreeView
         }
         Task.Run(() =>
         {
-            using var icons = new ShellIcons(size);
-            return missing.Select(p => (p, image: icons.ForPath(p) is { } b ? new Bitmap(b) : null)).ToList();
+            // バーと同じく 1 件ずつ受け止める。1 件の例外で全体を捨てると、取れた分の Bitmap が捨てられずに残る
+            ShellIcons? icons = null;
+            try { icons = new ShellIcons(size); }
+            catch (Exception) { }
+            using (icons)
+                return BookmarkItems.LoadAll(missing.Select(p => (p, p)),
+                    path => icons?.ForPath(path) is { } b ? new Bitmap(b) : null);
         }).ContinueWith(task =>
         {
             if (!task.IsCompletedSuccessfully || IsDisposed || !IsHandleCreated) return;

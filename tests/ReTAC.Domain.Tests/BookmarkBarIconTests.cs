@@ -47,4 +47,16 @@ public class BookmarkBarIconTests
         BookmarkItems.ApplyIcons([(item, (Bitmap?)null)]);
         Assert.Equal(ToolStripItemDisplayStyle.Text, item.DisplayStyle);
     }
+
+    [Fact]
+    public void アイコンの取得が例外を出してもその項目だけアイコンなしにしてほかは続ける()
+    {
+        using var ok = new Bitmap(16, 16);
+        var results = BookmarkItems.LoadAll([("a", "bad"), ("b", "good")],
+            path => path == "bad" ? throw new InvalidOperationException() : new Bitmap(ok));
+
+        Assert.Null(results[0].Image);
+        Assert.NotNull(results[1].Image);
+        results[1].Image!.Dispose();
+    }
 }

@@ -8177,7 +8177,7 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkTreeView.cs",
-        "line": 311
+        "line": 316
       },
       {
         "file": "src/ReTAC.App/CommandCatalog.cs",
@@ -8499,11 +8499,11 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkTreeView.cs",
-        "line": 311
+        "line": 316
       },
       {
         "file": "src/ReTAC.App/BookmarkTreeView.cs",
-        "line": 399
+        "line": 404
       },
       {
         "file": "src/ReTAC.App/FolderExpansion.cs",
