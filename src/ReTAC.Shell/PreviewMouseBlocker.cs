@@ -32,8 +32,10 @@ public sealed class PreviewMouseBlocker : IDisposable
 
     private IntPtr OnMouse(int code, IntPtr message, IntPtr data)
     {
-        // 位置は MSLLHOOKSTRUCT の先頭、どの X ボタンかは 8 バイト目からの mouseData の上位ワードにある
-        if (code >= 0 && ShouldBlock(ref _blockedButtons, (int)message, (uint)Marshal.ReadInt32(data, 8),
+        // 位置は MSLLHOOKSTRUCT の先頭、どの X ボタンかは 8 バイト目からの mouseData の上位ワードにある。
+        // フックは移動も含めて全部の通知を通るので、ボタンの通知でなければ判定の関数を作る前に抜ける
+        if (code >= 0 && (int)message is >= WM_LBUTTONDOWN and <= WM_XBUTTONDOWN + 2 && (int)message != WM_MOUSEWHEEL
+            && ShouldBlock(ref _blockedButtons, (int)message, (uint)Marshal.ReadInt32(data, 8),
                 () => _isOverPreview(Marshal.PtrToStructure<Point>(data))))
             return 1;
         return CallNextHookEx(_hook, code, message, data);
@@ -84,7 +86,7 @@ public sealed class PreviewMouseBlocker : IDisposable
     private delegate IntPtr HookProc(int code, IntPtr message, IntPtr data);
 
     private const int WH_MOUSE_LL = 14;
-    private const int WM_LBUTTONDOWN = 0x0201, WM_RBUTTONDOWN = 0x0204, WM_MBUTTONDOWN = 0x0207, WM_XBUTTONDOWN = 0x020B;
+    private const int WM_LBUTTONDOWN = 0x0201, WM_RBUTTONDOWN = 0x0204, WM_MBUTTONDOWN = 0x0207, WM_XBUTTONDOWN = 0x020B, WM_MOUSEWHEEL = 0x020A;
     private const uint XBUTTON1 = 1, XBUTTON2 = 2;
 
     [DllImport("user32.dll", SetLastError = true)]
