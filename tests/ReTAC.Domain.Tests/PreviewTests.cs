@@ -24,4 +24,28 @@ public class PreviewTests
     [InlineData(new byte[0], true)]                                   // 空のファイル
     public void 登録の無いファイルは先頭にNULが無ければテキストとみなす(byte[] head, bool text) =>
         Assert.Equal(text, ReTAC.Shell.PreviewFallback.IsText(head));
+
+    // WM_XBUTTONDOWN / UP と、mouseData の上位ワード（XBUTTON1 = 1, XBUTTON2 = 2）
+    private const int XDown = 0x020B, XUp = 0x020C, LDown = 0x0201, LUp = 0x0202;
+    private const uint X1 = 1u << 16, X2 = 2u << 16;
+
+    [Fact]
+    public void プレビューの上で押したX1を止めても外で押したX2の離すは止めない()
+    {
+        var blocked = 0;
+        Assert.True(ReTAC.Shell.PreviewMouseBlocker.ShouldBlock(ref blocked, XDown, X1, () => true));
+        Assert.False(ReTAC.Shell.PreviewMouseBlocker.ShouldBlock(ref blocked, XDown, X2, () => false));
+        Assert.False(ReTAC.Shell.PreviewMouseBlocker.ShouldBlock(ref blocked, XUp, X2, () => false));
+        Assert.True(ReTAC.Shell.PreviewMouseBlocker.ShouldBlock(ref blocked, XUp, X1, () => false));
+        Assert.Equal(0, blocked);
+    }
+
+    [Fact]
+    public void 外で押したボタンはプレビューの上で離しても止めない()
+    {
+        // 境界線のドラッグをプレビューの上で離したとき。止めると SplitContainer がドラッグを終えられない
+        var blocked = 0;
+        Assert.False(ReTAC.Shell.PreviewMouseBlocker.ShouldBlock(ref blocked, LDown, 0, () => false));
+        Assert.False(ReTAC.Shell.PreviewMouseBlocker.ShouldBlock(ref blocked, LUp, 0, () => true));
+    }
 }
