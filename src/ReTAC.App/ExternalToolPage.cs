@@ -37,10 +37,12 @@ public sealed class ExternalToolPage : UserControl
     private readonly TextBox _arguments = new() { Bounds = new Rectangle(250, 138, 390, 23) };
     private readonly Button _macros = new() { Text = "マクロ(&R)...", Bounds = new Rectangle(648, 137, 92, 26) };
     // M-1: パス未検出・非実行種別・引数誤りが重なると 3 行以上になる。2 行分の 38 では欠ける
-    // R-108-4: Firebrick は暗い地では沈むので、ダークでは #FF8A80 にする。ハイコントラストでは OS の文字色（R-108-3）
+    // R-108-4: Firebrick は暗い地では沈むので、ダークでは #FF8A80 にする。ハイコントラストでは OS の文字色（R-108-3）。
+    // そのときは地も OS の Window にする。WindowText はページの地（Control）と組になる色ではなく、独自のハイコントラスト配色では読めないことがある
     private readonly Label _warning = new()
     {
         Bounds = new Rectangle(250, 166, 490, 56),
+        BackColor = Program.StartupOs.HighContrast ? Program.StartupOs.Window : Color.Empty,   // Empty は親の地を引き継ぐ（今までどおり）
         ForeColor = Program.StartupOs.HighContrast ? Program.StartupOs.WindowText
             : Program.StartupOs.Dark ? Color.FromArgb(0xFF, 0x8A, 0x80)
             : Color.Firebrick,
