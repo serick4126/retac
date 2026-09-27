@@ -104,10 +104,15 @@ public class KeyBindingFileTests
     public void 複合値や数値のコマンドは捨てて数える(string command)
     {
         var json = "{\"format\":\"ReTAC.KeyBindings\",\"keyBindings\":{\"F5\":\"" + command + "\"}}";
-        var result = KeyBindingFile.Import(json, DefaultAssignments(), AllToolIds);
+        var defaults = DefaultAssignments();
+        var result = KeyBindingFile.Import(json, defaults, AllToolIds);
 
         Assert.NotNull(result);
         Assert.Equal(1, result!.UnknownCommand);
+        // 数えただけでなく捨てた（読み込み 0 件で、F5 は既定のまま）
+        Assert.Equal(0, result.Loaded);
+        var f5 = KeySlots.Parse("F5")!.Value;
+        Assert.Equal(defaults[f5], result.Assignments[f5]);
     }
 
     [Fact]
