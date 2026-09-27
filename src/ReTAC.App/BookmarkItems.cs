@@ -224,7 +224,7 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
         });
     }
 
-    private static void ApplyIcons(List<(ToolStripItem item, Bitmap? image)> results)
+    internal static void ApplyIcons(List<(ToolStripItem item, Bitmap? image)> results)
     {
         // 1 件ずつ差し替えるたびにメニュー全体を並べ直すと、数百件で固まる。並べ直しを止めてまとめて入れる
         var owners = results.Select(r => r.item.Owner).OfType<ToolStrip>().Where(o => !o.IsDisposed).Distinct().ToList();
@@ -233,7 +233,13 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
         {
             foreach (var (item, image) in results)
             {
-                if (image is null) continue;
+                if (image is null)
+                {
+                    // P11-3: 取れなかった。アイコンだけのボタンのままだと名前も画像も無い空のボタンになるので、名前を出す
+                    if (!item.IsDisposed && item.DisplayStyle == ToolStripItemDisplayStyle.Image)
+                        item.DisplayStyle = ToolStripItemDisplayStyle.Text;
+                    continue;
+                }
                 if (item.IsDisposed) image.Dispose();   // 読んでいる間にメニューを閉じた・バーを作り直した
                 else item.Image = image;
             }
@@ -265,11 +271,15 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
         };
     }
 
-    internal string? IconPath(object? tag) => tag switch
+    /// <summary>
+    /// P11-3: 空・空白だけのパスはアイコンなし（null）。外部ツールのパスは空でもよいので、そのまま返すと
+    /// バーが「アイコンあり」と判断して、アイコンだけの空のボタンを作ってしまう。
+    /// </summary>
+    internal string? IconPath(object? tag) => (tag switch
     {
         Bookmark { Kind: BookmarkKind.Folder or BookmarkKind.File } b => b.Target,
         Bookmark { Kind: BookmarkKind.Command } b when CommandTarget.Parse(b.Target) is { } t => host.IconPathOf(t),
         Entry entry => entry.FullPath,
         _ => null,
-    };
+    }) is { } path && !string.IsNullOrWhiteSpace(path) ? path : null;
 }
