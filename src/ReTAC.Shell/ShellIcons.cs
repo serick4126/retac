@@ -35,7 +35,16 @@ public sealed class ShellIcons : IDisposable
     /// （ドライブルートならディスク、デスクトップフォルダならデスクトップの絵。B-15）。
     /// 応答しないドライブで待たされることがあるので、UI スレッドから呼ばないこと（N-05）。
     /// </summary>
-    public Bitmap? ForPath(string path) => Get("path:" + path, path, 0, useFileAttributes: false);
+    /// <remarks>
+    /// 名前だけ（<c>notepad.exe</c>）は、外部ツールの起動と同じく PATH と App Paths から探す（<see cref="ExecutableResolver"/>）。
+    /// そのまま渡すとシェルは作業フォルダからの相対パスとして探し、アイコンが取れない。探すのでディスクに触れる。
+    /// 呼び出し側はどれも裏のスレッドで呼んでいる（N-05）
+    /// </remarks>
+    public Bitmap? ForPath(string path)
+    {
+        var target = path.Contains('\\') || path.Contains('/') ? path : ExecutableResolver.Resolve(path) ?? path;
+        return Get("path:" + path, target, 0, useFileAttributes: false);
+    }
 
     public Bitmap? ForFile(string fullPath)
     {

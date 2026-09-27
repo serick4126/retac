@@ -5017,7 +5017,11 @@
       },
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
-        "line": 45
+        "line": 41
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellIcons.cs",
+        "line": 54
       }
     ],
     "N-06": [
@@ -6219,7 +6223,7 @@
       },
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
-        "line": 50
+        "line": 59
       }
     ],
     "R-12-2": [
@@ -7459,7 +7463,7 @@
       },
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
-        "line": 83
+        "line": 92
       }
     ],
     "R-66-3": [

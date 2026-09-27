@@ -46,4 +46,15 @@ public class ShellIconsTests
 
         Assert.Same(first, again);
     }
+
+    /// <summary>
+    /// 外部ツールのパスは名前だけ（notepad.exe）でもよい。起動と同じく PATH から探さないと、
+    /// ブックマークバーのボタンにアイコンが出ない（「アイコンだけ」なら名前の表示に落ちる）。
+    /// </summary>
+    [Fact]
+    public void 名前だけの実行ファイルもPATHから探してアイコンを返す()
+    {
+        using var icons = new ShellIcons(16);
+        Assert.NotNull(icons.ForPath("notepad.exe"));
+    }
 }
