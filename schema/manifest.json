@@ -5335,7 +5335,7 @@
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
-        "line": 319
+        "line": 321
       },
       {
         "file": "src/ReTAC.App/DriveTreeView.cs",
@@ -5439,7 +5439,7 @@
     "R-102-3": [
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
-        "line": 82
+        "line": 83
       },
       {
         "file": "src/ReTAC.App/DriveVisibilityPage.cs",
@@ -5849,15 +5849,15 @@
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
-        "line": 163
+        "line": 164
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
-        "line": 296
+        "line": 298
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
-        "line": 339
+        "line": 341
       },
       {
         "file": "src/ReTAC.App/DriveTreeView.cs",
@@ -5949,15 +5949,15 @@
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
-        "line": 111
+        "line": 112
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
-        "line": 144
+        "line": 145
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
-        "line": 261
+        "line": 263
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -6003,11 +6003,11 @@
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
-        "line": 64
+        "line": 65
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
-        "line": 259
+        "line": 261
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
@@ -7157,7 +7157,7 @@
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
-        "line": 228
+        "line": 229
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",

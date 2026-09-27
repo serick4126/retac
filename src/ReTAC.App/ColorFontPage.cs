@@ -54,10 +54,11 @@ public sealed class ColorFontPage : UserControl
     // R-108-2: 「Windows の設定に従う」で編集する組と、その 8 色の欄
     // 組のラジオボタンは別の入れ物に入れる。モードのラジオボタンと同じ入れ物だと 1 つのグループになり、
     // 組を選ぶとモードの選択が外れて「独自の配色」に切り替わってしまう
-    private readonly Panel _sides = new() { Bounds = new Rectangle(0, 72, 300, 26) };
+    private readonly Panel _sides = new() { Bounds = new Rectangle(0, 72, 230, 26) };
     private readonly RadioButton _lightSide = new() { Text = "ライト用(&L)", AutoSize = true, Location = new Point(0, 2) };
     private readonly RadioButton _darkSide = new() { Text = "ダーク用(&K)", AutoSize = true, Location = new Point(110, 2) };
-    private readonly Button _resetSystem = new() { Text = "推奨値に戻す(&R)", Bounds = new Rectangle(400, 72, 130, 26) };
+    // 名前に選んでいる側を入れる（ShowSystemSide）。「推奨値に戻す」だけでは、どちらの色が戻るのかもフォントも戻るのかも読めない
+    private readonly Button _resetSystem = new() { Bounds = new Rectangle(310, 72, 220, 26) };
     private readonly Dictionary<string, Button> _systemSwatches = [];
     /// <summary>「Windows の設定に従う」のときだけ出す欄（組の切り替え・8 色・推奨値に戻す）。</summary>
     private readonly List<Control> _systemColorControls = [];
@@ -256,6 +257,7 @@ public sealed class ColorFontPage : UserControl
     private void ShowSystemSide()
     {
         foreach (var slot in ThemeSlots.SystemMode) _systemSwatches[slot.Key].BackColor = slot.Get(SystemSide);
+        _resetSystem.Text = (DarkSideSelected ? "ダーク用" : "ライト用") + "の色を推奨値に戻す(&R)";
         // R-108-3: ハイコントラスト中は属性とマークも OS の色で描くので、組の話をしない
         // 組を切り替えるたびに説明を差し替えると読み直しになるので、両方の組の話を 1 つの文にまとめる。
         // 起動中の OS からは反対側の本当の背景と文字が取れない（R-108-2）
