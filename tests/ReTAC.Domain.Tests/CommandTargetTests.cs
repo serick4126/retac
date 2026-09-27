@@ -36,6 +36,11 @@ public class CommandTargetTests
     [InlineData("Tool:0")]
     [InlineData("Tool:x")]
     [InlineData("Tool:+1")]
+    // P11-1: 複合値は OR した 1 つの値になる。OpenFile(0x82DC) | Delete(0x82DF) は Delete と同じ値
+    [InlineData("OpenFile,Delete")]
+    [InlineData("Refresh,Delete")]
+    [InlineData(" 33500")]      // 先頭が空白の数字も Enum.TryParse は読む
+    [InlineData("99999")]
     public void 読めない文字は割り当てなし(string text)
     {
         Assert.Null(CommandTarget.Parse(text));

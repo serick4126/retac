@@ -96,6 +96,19 @@ public class KeyBindingFileTests
         Assert.Equal(1, result!.UnknownCommand);
     }
 
+    [Theory]
+    [InlineData("OpenFile,Delete")]   // P11-1: OR すると Delete と同じ値になる複合値
+    [InlineData("Refresh,Delete")]
+    [InlineData("99999")]
+    public void 複合値や数値のコマンドは捨てて数える(string command)
+    {
+        var json = "{\"format\":\"ReTAC.KeyBindings\",\"keyBindings\":{\"F5\":\"" + command + "\"}}";
+        var result = KeyBindingFile.Import(json, DefaultAssignments(), AllToolIds);
+
+        Assert.NotNull(result);
+        Assert.Equal(1, result!.UnknownCommand);
+    }
+
     [Fact]
     public void 外部ツールを指す値は捨てて数える()
     {

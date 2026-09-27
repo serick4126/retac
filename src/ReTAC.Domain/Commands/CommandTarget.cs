@@ -22,9 +22,11 @@ public abstract record CommandTarget
                 : null;
         }
 
-        // V-15: Enum.TryParse は数値文字列も通す。打ち間違いが別のコマンドに化けないようにする
-        if (text.Length == 0 || char.IsAsciiDigit(text[0]) || text[0] == '-') return null;
-        return Enum.TryParse<CommandId>(text, out var command) ? new BuiltinTarget(command) : null;
+        // V-15 / P11-1: 宣言済みの名前 1 つと完全に一致するときだけ受理する。Enum.TryParse は数値文字列（先頭の空白も許す）と
+        // "A,B" の複合値も通し、複合値は OR した値になる。OpenFile,Delete は Delete と同じ値なので、解析後の値に
+        // IsDefined を当てても見分けられない。打ち間違いが別のコマンドに化けないよう、名前で確かめる
+        if (!Enum.IsDefined(typeof(CommandId), text)) return null;
+        return new BuiltinTarget(Enum.Parse<CommandId>(text));
     }
 }
 
