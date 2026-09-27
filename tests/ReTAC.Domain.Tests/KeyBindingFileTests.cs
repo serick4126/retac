@@ -100,6 +100,7 @@ public class KeyBindingFileTests
     [InlineData("OpenFile,Delete")]   // P11-1: OR すると Delete と同じ値になる複合値
     [InlineData("Refresh,Delete")]
     [InlineData("99999")]
+    [InlineData(" 33500")]         // 先頭が空白の数字も Enum.TryParse は読む
     public void 複合値や数値のコマンドは捨てて数える(string command)
     {
         var json = "{\"format\":\"ReTAC.KeyBindings\",\"keyBindings\":{\"F5\":\"" + command + "\"}}";
