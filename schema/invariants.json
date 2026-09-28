@@ -232,7 +232,7 @@
       "specIds": ["R-109"],
       "applies": ["app:ReTAC.Updater"],
       "rule": "公式のリリースの zip は、配布物の名前の 6 ファイルを 1 つずつ含み、ほかを含まない。2 つの exe の版が同じ（X.Y.Z.0）。",
-      "enforcedBy": "build/Test-ReleaseZip.ps1（リリースの手順で zip を作った後に実行し、失敗ならリリースを止める）。配布物の名前は zip の中の ReTAC.Updater.exe の --list-distribution（Distribution.Names）から読む",
+      "enforcedBy": "build/Test-ReleaseZip.ps1（リリースの手順で zip を作った後に実行し、失敗ならリリースを止める）。zip の中の exe は実行せず、版はファイルのバージョン情報から読む。配布物の名前はスクリプトに固定で書き、テストでアップデータの一覧（Distribution.Names）と固定の 6 つの名前の両方と突き合わせる",
       "testedBy": "tests/ReTAC.Domain.Tests/Updater/ReleaseZipCheckTests.cs"
     },
     {

@@ -17,15 +17,6 @@ internal static class Program
     private static int Main(string[] args)
     {
         if (args.Length > 0 && args[0] == Protocol.ReplaceSwitch) return ElevatedReplace.Run(args);
-
-        // INV-RELEASE-EXACT-SET: リリースの検査のスクリプトが、配布物の名前をこのコードの 1 か所から読むための指定。1 行に 1 つ書いて終わる
-        if (args.Length > 0 && args[0] == "--list-distribution")
-        {
-            foreach (var name in Distribution.Names) Console.Out.WriteLine(name);
-            Console.Out.Flush();
-            return 0;
-        }
-
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
