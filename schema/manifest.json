@@ -6207,6 +6207,10 @@
       {
         "file": "src/ReTAC.Updater/Program.cs",
         "line": 12
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 128
       }
     ],
     "R-109-2": [
@@ -6290,6 +6294,10 @@
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 191
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
         "line": 224
       },
       {
@@ -6340,6 +6348,10 @@
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 201
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
         "line": 338
       },
       {
@@ -6363,6 +6375,10 @@
       {
         "file": "src/ReTAC.Updater/ElevatedReplace.cs",
         "line": 10
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 201
       }
     ],
     "R-109-6": [
@@ -6385,6 +6401,10 @@
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
         "line": 115
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 128
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",

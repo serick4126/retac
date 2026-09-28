@@ -125,7 +125,7 @@ internal sealed class UpdaterForm : Form
         var reTacPath = Path.Combine(_install, Protocol.ReTacExe);
         Busy("ReTAC を確かめています", NoButtons);
 
-        // §3.3 の 4: OS から戻らない操作で止まったプロセスが置き換えの排他を持っていれば、ここで止まる
+        // R-109-1 / R-109-6: OS から戻らない操作で止まったプロセスが置き換えの排他を持っていれば、ここで止まる
         if (!await Io(() => NamedLock.IsFree(InstallFolder.ReplaceLockName(_normalized))))
         {
             Finish(Outcome.ReasonText(Reason.OtherUpdater) + "。");
@@ -188,7 +188,7 @@ internal sealed class UpdaterForm : Form
         }
         _link.Visible = false;
 
-        // ReTAC の終了（§5.2）
+        // ReTAC の終了（R-109-3）
         if (!await QuitReTacAsync())
         {
             LaunchIfNeeded(replaced: false);
@@ -198,7 +198,7 @@ internal sealed class UpdaterForm : Form
             return;
         }
 
-        // 置き換え（§6・§7）
+        // 置き換え（R-109-4 / R-109-5）
         Busy("準備しています", NoButtons);
         var writable = await Io(CanWrite);
         var (report, leftovers) = writable ? await ReplaceHereAsync(version) : await ReplaceElevatedAsync(version, latest);
