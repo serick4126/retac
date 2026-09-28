@@ -221,6 +221,14 @@ internal sealed class UpdaterForm : Form
         public Target(ReTacProcess process) => Process = process;
         public ReTacProcess Process { get; }
         public DateTime? AcceptedAt { get; set; }
+
+        /// <summary>
+        /// 終了依頼を送った（返事を待たずに立てる）。送っている最中に画面を閉じても、見届けの対象から漏らさないため。
+        /// </summary>
+        public bool Requested { get; set; }
+
+        /// <summary>送っている最中の依頼。見届けは、これの返事が返ってから始める（問い合わせが依頼を追い越さないように）。</summary>
+        public Task? InFlight { get; set; }
     }
 
     /// <summary>終了を頼んだ ReTAC。画面を閉じたときに、終了させたものがあれば起動し直すために持つ。</summary>
@@ -233,22 +241,25 @@ internal sealed class UpdaterForm : Form
     private Task? _following;
 
     /// <summary>
-    /// R-109-3 / R-109-6: 受け付けた ReTAC を見届ける。K-5 の確認を出している間にアップデータを中止・閉じても、利用者が後から
+    /// R-109-3 / R-109-6: 終了を頼んだ ReTAC を見届ける。K-5 の確認を出している間にアップデータを中止・閉じても、利用者が後から
     /// 「終了」を選べば ReTAC は終わる。終わったら起動し直す（ReTAC を使えない状態のまま残さない）。
-    /// ダイアログが閉じた後も生きていれば（取りやめた）、起動し直さずにやめる。照会はすべて作業側で行う。
+    /// 取りやめたかどうかは ReTAC に問い合わせて決める（時間やウィンドウの様子からは決めない）。照会はすべて作業側で行う。
     /// </summary>
     private async Task FollowQuitTargetsAsync()
     {
-        var accepted = _quitTargets.Where(t => t.AcceptedAt is not null).Select(t => t.Process.Id).ToList();
-        if (accepted.Count > 0)
+        var requested = _quitTargets.Where(t => t.Requested).ToList();
+        if (requested.Count > 0)
         {
-            await Task.Run(() =>
-            {
-                _options.SlowIo();
-                return PendingQuitWatch.Wait(
-                    () => accepted.Select(id => new PendingQuitState(ReTacProcesses.IsRunning(id), ReTacProcesses.IsIdle(id))).ToList(),
-                    () => Thread.Sleep(500));
-            });
+            // 送っている最中の依頼の返事を先に待ってから問い合わせる（PendingQuitWatch.FollowAsync）
+            var ids = requested.Select(t => t.Process.Id).ToList();
+            await PendingQuitWatch.FollowAsync(
+                requested.Select(t => t.InFlight).OfType<Task>(),
+                () =>
+                {
+                    _options.SlowIo();
+                    return ids.Select(ReTacProcesses.State).ToList();
+                },
+                () => Thread.Sleep(500));
         }
         if (await Background(AnyStopped))
         {
@@ -280,7 +291,10 @@ internal sealed class UpdaterForm : Form
             {
                 // [中止] の後に終了を頼まない（閉じたときは Io が打ち切っている）
                 if (_cancel.IsCancellationRequested) return false;
-                switch (await Task.Run(() => ReTacProcesses.RequestQuit(target.Process.Id)))
+                target.Requested = true;
+                var sending = Task.Run(() => ReTacProcesses.RequestQuit(target.Process.Id));
+                target.InFlight = sending;
+                switch (await sending)
                 {
                     case QuitReply.Accepted: target.AcceptedAt = DateTime.UtcNow; break;
                     case QuitReply.Refused: refused = true; break;

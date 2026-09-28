@@ -192,39 +192,76 @@ public sealed class UpdaterPathTests : IDisposable
         Assert.Equal("HTTP 403", end.File);
     }
 
-    // ---- 受け付けた ReTAC の見届け（R-109-3）----
+    // ---- 頼んだ ReTAC の見届け（R-109-3）----
+
+    private static readonly PendingQuitState Quitting = PendingQuitState.Quitting;
+    private static readonly PendingQuitState Stayed = PendingQuitState.NotQuitting;
+    private static readonly PendingQuitState Gone = PendingQuitState.Exited;
+    private static readonly PendingQuitState Silent = PendingQuitState.Unknown;
 
     private static PendingQuitEnd Watch(params PendingQuitState[][] steps)
     {
         var i = 0;
-        return PendingQuitWatch.Wait(() => steps[Math.Min(i++, steps.Length - 1)], () => { }, idleChecks: 3);
+        return PendingQuitWatch.Wait(() => steps[Math.Min(i++, steps.Length - 1)], () => { });
     }
 
-    private static readonly PendingQuitState Dialog = new(alive: true, idle: false);
-    private static readonly PendingQuitState Open = new(alive: true, idle: true);
-    private static readonly PendingQuitState Gone = new(alive: false, idle: false);
-
     [Fact]
-    public void アップデータを閉じた後にK5で終了を選べば起動し直す()
-    {
+    public void アップデータを閉じた後にK5で終了を選べば起動し直す() =>
         // 受け付け → K-5 の確認を出している間にアップデータを閉じる → 利用者が「終了」を選ぶ → ReTAC が終わる
-        Assert.Equal(PendingQuitEnd.AllExited, Watch([Dialog], [Dialog], [Dialog], [Dialog], [Gone]));
+        Assert.Equal(PendingQuitEnd.AllExited, Watch([Quitting], [Quitting], [Quitting], [Gone]));
+
+    [Fact]
+    public void K5で取りやめたと答えたらやめる() =>
+        Assert.Equal(PendingQuitEnd.SomeStayed, Watch([Quitting], [Quitting], [Stayed]));
+
+    [Fact]
+    public void 終わる途中が長く続いても時間では打ち切らない()
+    {
+        // 終了を選んだ後の設定の保存が長くかかる。ウィンドウの様子や時間では取りやめと決めない
+        var steps = Enumerable.Repeat(new[] { Quitting }, 50).Append([Silent]).Append([Gone]).ToArray();
+        Assert.Equal(PendingQuitEnd.AllExited, Watch(steps));
     }
 
     [Fact]
-    public void K5で取りやめたらダイアログが閉じた後も生きているので起動し直さない() =>
-        Assert.Equal(PendingQuitEnd.StayedOpen, Watch([Dialog], [Dialog], [Open], [Open], [Open]));
+    public void 答えが無い間は見届けを続ける() =>
+        // ウィンドウを閉じていく途中は問い合わせに答えられない
+        Assert.Equal(PendingQuitEnd.AllExited, Watch([Silent], [Silent], [Silent], [Gone]));
 
     [Fact]
-    public void 受け付けた直後に操作できる状態が少し続いてから終わっても起動し直す() =>
-        // ダイアログを出さずに閉じていく間は、少しの間は操作できる状態に見える
-        Assert.Equal(PendingQuitEnd.AllExited, Watch([Open], [Open], [Gone]));
-
-    [Fact]
-    public void 複数のうち1つでも取りやめて残ればやめる() =>
-        Assert.Equal(PendingQuitEnd.StayedOpen, Watch([Dialog, Dialog], [Gone, Open], [Gone, Open], [Gone, Open]));
+    public void 複数のうち1つでも取りやめて残れば起動し直しの判断は残りの様子で決まる() =>
+        Assert.Equal(PendingQuitEnd.SomeStayed, Watch([Quitting, Quitting], [Gone, Stayed]));
 
     [Fact]
     public void すべて終わるまで見届ける() =>
-        Assert.Equal(PendingQuitEnd.AllExited, Watch([Dialog, Dialog], [Gone, Dialog], [Gone, Gone]));
+        Assert.Equal(PendingQuitEnd.AllExited, Watch([Quitting, Quitting], [Gone, Quitting], [Gone, Gone]));
+
+    [Fact]
+    public async Task 送っている最中に閉じても返事を待ってから見届ける()
+    {
+        // 送信を保留 → アップデータを閉じる（見届けを始める）→ ReTAC が「受け付けた」と返す → ReTAC が終わる
+        var sending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var accepted = false;
+        var probes = 0;
+        var follow = PendingQuitWatch.FollowAsync([sending.Task], () =>
+        {
+            probes++;
+            // 受け付ける前に問い合わせると「受け付けていない」と答えられてしまう
+            if (!accepted) return [Stayed];
+            return probes < 4 ? [Quitting] : [Gone];
+        }, () => { });
+
+        await Task.Delay(100);
+        Assert.Equal(0, probes);   // 返事が返るまでは問い合わせない
+        accepted = true;
+        sending.SetResult(true);
+
+        Assert.Equal(PendingQuitEnd.AllExited, await follow);
+    }
+
+    [Fact]
+    public async Task 送れなかった依頼も様子の問い合わせで決める()
+    {
+        var failed = Task.FromException(new InvalidOperationException());
+        Assert.Equal(PendingQuitEnd.SomeStayed, await PendingQuitWatch.FollowAsync([failed], () => [Stayed], () => { }));
+    }
 }

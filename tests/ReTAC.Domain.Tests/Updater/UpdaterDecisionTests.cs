@@ -201,6 +201,10 @@ public class UpdaterDecisionTests
         Assert.Equal(UpdateProtocol.WindowPropName, Protocol.WindowPropName);
         Assert.Equal(UpdateProtocol.Accepted, Protocol.Accepted);
         Assert.Equal(UpdateProtocol.Refused, Protocol.Refused);
+        Assert.Equal(UpdateProtocol.StateMessageName, Protocol.StateMessageName);
+        Assert.Equal(UpdateProtocol.Quitting, Protocol.Quitting);
+        Assert.Equal(UpdateProtocol.NotQuitting, Protocol.NotQuitting);
+        Assert.Equal("ReTAC.QuitForUpdateState", Protocol.StateMessageName);
         // 値そのものも固定する（両方を同時に変えても通らないように）
         Assert.Equal("ReTAC.QuitForUpdate", Protocol.MessageName);
         Assert.Equal("ReTAC.MainWindow", Protocol.WindowPropName);

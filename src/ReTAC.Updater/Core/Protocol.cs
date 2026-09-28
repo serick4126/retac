@@ -18,6 +18,15 @@ public static class Protocol
     /// <summary>終了依頼を断った（ダイアログを開いている・ファイル操作の最中）。</summary>
     public const int Refused = 2;
 
+    /// <summary>終了依頼の様子の問い合わせのメッセージ名（RegisterWindowMessage）。</summary>
+    public const string StateMessageName = "ReTAC.QuitForUpdateState";
+
+    /// <summary>問い合わせの返事: 終了依頼を受け付けていて、終わる途中（K-5 の確認を出している間を含む）。</summary>
+    public const int Quitting = 1;
+
+    /// <summary>問い合わせの返事: 終了依頼を受け付けていない（K-5 の確認で取りやめたときを含む）。</summary>
+    public const int NotQuitting = 2;
+
     public const string ReTacExe = "ReTAC.exe";
     public const string UpdaterExe = "ReTAC.Updater.exe";
 

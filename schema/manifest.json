@@ -4050,15 +4050,15 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 950
+        "line": 956
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1194
+        "line": 1200
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2121
+        "line": 2130
       }
     ],
     "A-02": [
@@ -4130,7 +4130,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 800
+        "line": 806
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
@@ -4180,7 +4180,7 @@
     "B-09": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2826
+        "line": 2835
       },
       {
         "file": "src/ReTAC.Domain/Selection/CursorRestore.cs",
@@ -4480,15 +4480,15 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2546
+        "line": 2555
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2579
+        "line": 2588
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2627
+        "line": 2636
       }
     ],
     "F-01": [
@@ -4510,7 +4510,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2327
+        "line": 2336
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
@@ -4582,11 +4582,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 776
+        "line": 782
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 844
+        "line": 850
       },
       {
         "file": "src/ReTAC.App/OwnerModal.cs",
@@ -4670,11 +4670,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 837
+        "line": 843
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2484
+        "line": 2493
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -4732,11 +4732,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 441
+        "line": 447
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 589
+        "line": 595
       },
       {
         "file": "src/ReTAC.Domain/Commands/CommandTarget.cs",
@@ -4776,11 +4776,11 @@
     "F-08": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2457
+        "line": 2466
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2472
+        "line": 2481
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
@@ -4882,27 +4882,43 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1536
+        "line": 1542
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1550
+        "line": 1556
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1586
+        "line": 1595
       },
       {
         "file": "src/ReTAC.App/UpdateProtocol.cs",
-        "line": 25
+        "line": 24
       },
       {
         "file": "src/ReTAC.App/UpdateProtocol.cs",
-        "line": 58
+        "line": 28
       },
       {
         "file": "src/ReTAC.App/UpdateProtocol.cs",
-        "line": 67
+        "line": 31
+      },
+      {
+        "file": "src/ReTAC.App/UpdateProtocol.cs",
+        "line": 37
+      },
+      {
+        "file": "src/ReTAC.App/UpdateProtocol.cs",
+        "line": 70
+      },
+      {
+        "file": "src/ReTAC.App/UpdateProtocol.cs",
+        "line": 79
+      },
+      {
+        "file": "src/ReTAC.App/UpdateProtocol.cs",
+        "line": 86
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
@@ -4910,15 +4926,23 @@
       },
       {
         "file": "src/ReTAC.Updater/Core/PendingQuitWatch.cs",
-        "line": 19
+        "line": 13
       },
       {
         "file": "src/ReTAC.Updater/Core/PendingQuitWatch.cs",
-        "line": 29
+        "line": 16
       },
       {
         "file": "src/ReTAC.Updater/Core/PendingQuitWatch.cs",
         "line": 34
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/Protocol.cs",
+        "line": 24
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/Protocol.cs",
+        "line": 27
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
@@ -4926,11 +4950,11 @@
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 236
+        "line": 244
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 276
+        "line": 287
       }
     ],
     "M-1": [
@@ -4974,15 +4998,15 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 942
+        "line": 948
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1323
+        "line": 1329
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2849
+        "line": 2858
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
@@ -5050,7 +5074,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2803
+        "line": 2812
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -5088,15 +5112,15 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 692
+        "line": 698
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2447
+        "line": 2456
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2640
+        "line": 2649
       },
       {
         "file": "src/ReTAC.App/NumberedPopup.cs",
@@ -5126,7 +5150,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2546
+        "line": 2555
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
@@ -5356,15 +5380,15 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 876
+        "line": 882
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 880
+        "line": 886
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2194
+        "line": 2203
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListState.cs",
@@ -5420,11 +5444,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2313
+        "line": 2322
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2375
+        "line": 2384
       },
       {
         "file": "src/ReTAC.App/Rendering/Theme.cs",
@@ -5490,7 +5514,7 @@
     "R-102-2": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2292
+        "line": 2301
       },
       {
         "file": "src/ReTAC.Domain/Commands/CommandId.cs",
@@ -5520,7 +5544,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2303
+        "line": 2312
       },
       {
         "file": "src/ReTAC.App/OptionHelp.cs",
@@ -5614,31 +5638,31 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 706
+        "line": 712
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 728
+        "line": 734
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 736
+        "line": 742
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2090
+        "line": 2099
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2410
+        "line": 2419
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2418
+        "line": 2427
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2658
+        "line": 2667
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -5676,7 +5700,7 @@
     "R-105": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2613
+        "line": 2622
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -5712,15 +5736,15 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1921
+        "line": 1930
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1934
+        "line": 1943
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2023
+        "line": 2032
       },
       {
         "file": "src/ReTAC.Shell/ShellContextMenu.cs",
@@ -5742,7 +5766,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2038
+        "line": 2047
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
@@ -5852,15 +5876,15 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1709
+        "line": 1718
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1853
+        "line": 1862
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1873
+        "line": 1882
       },
       {
         "file": "src/ReTAC.Domain/Commands/CommandId.cs",
@@ -5938,11 +5962,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2295
+        "line": 2304
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2310
+        "line": 2319
       },
       {
         "file": "src/ReTAC.App/Program.cs",
@@ -6022,7 +6046,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2311
+        "line": 2320
       },
       {
         "file": "src/ReTAC.App/Rendering/Theme.cs",
@@ -6144,7 +6168,7 @@
       },
       {
         "file": "src/ReTAC.Updater/Core/Protocol.cs",
-        "line": 44
+        "line": 53
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
@@ -6154,7 +6178,7 @@
     "R-109-1": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2587
+        "line": 2596
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -6184,7 +6208,7 @@
       },
       {
         "file": "src/ReTAC.Updater/Core/Protocol.cs",
-        "line": 74
+        "line": 83
       },
       {
         "file": "src/ReTAC.Updater/Core/Versions.cs",
@@ -6214,23 +6238,31 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1163
+        "line": 329
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1549
+        "line": 1169
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1554
+        "line": 1555
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1558
+        "line": 1560
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1566
+        "line": 1563
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1567
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1575
       },
       {
         "file": "src/ReTAC.App/UpdateProtocol.cs",
@@ -6238,7 +6270,7 @@
       },
       {
         "file": "src/ReTAC.App/UpdateProtocol.cs",
-        "line": 40
+        "line": 52
       },
       {
         "file": "src/ReTAC.Updater/Core/PendingQuitWatch.cs",
@@ -6254,7 +6286,7 @@
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 236
+        "line": 244
       }
     ],
     "R-109-4": [
@@ -6272,7 +6304,7 @@
       },
       {
         "file": "src/ReTAC.Updater/Core/Protocol.cs",
-        "line": 31
+        "line": 40
       },
       {
         "file": "src/ReTAC.Updater/Core/Replacer.cs",
@@ -6300,11 +6332,11 @@
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 309
+        "line": 323
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 550
+        "line": 564
       }
     ],
     "R-109-5": [
@@ -6314,11 +6346,11 @@
       },
       {
         "file": "src/ReTAC.Updater/Core/Protocol.cs",
-        "line": 27
+        "line": 36
       },
       {
         "file": "src/ReTAC.Updater/Core/Protocol.cs",
-        "line": 93
+        "line": 102
       },
       {
         "file": "src/ReTAC.Updater/ElevatedReplace.cs",
@@ -6348,19 +6380,19 @@
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 236
+        "line": 244
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 464
+        "line": 478
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 527
+        "line": 541
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 641
+        "line": 655
       }
     ],
     "R-11": [
@@ -6390,7 +6422,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2516
+        "line": 2525
       },
       {
         "file": "src/ReTAC.Domain/Selection/IncrementalMatch.cs",
@@ -6444,7 +6476,7 @@
     "R-11-4": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2881
+        "line": 2890
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListState.cs",
@@ -6490,15 +6522,15 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 372
+        "line": 378
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 408
+        "line": 414
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 461
+        "line": 467
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -6520,11 +6552,11 @@
     "R-12-2": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1843
+        "line": 1852
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1854
+        "line": 1863
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -6558,7 +6590,7 @@
     "R-15": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 643
+        "line": 649
       }
     ],
     "R-18": [
@@ -6586,7 +6618,7 @@
     "R-19": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1130
+        "line": 1136
       },
       {
         "file": "src/ReTAC.Shell/ShellFileOperation.cs",
@@ -6636,11 +6668,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2232
+        "line": 2241
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2800
+        "line": 2809
       },
       {
         "file": "src/ReTAC.App/OwnerModal.cs",
@@ -6666,7 +6698,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 432
+        "line": 438
       },
       {
         "file": "src/ReTAC.Domain/Keys/KeyMap.cs",
@@ -6708,11 +6740,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 415
+        "line": 421
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2792
+        "line": 2801
       }
     ],
     "R-32-2": [
@@ -6726,7 +6758,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1505
+        "line": 1511
       }
     ],
     "R-32-3": [
@@ -6744,23 +6776,23 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 331
+        "line": 337
       }
     ],
     "R-33": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2780
+        "line": 2789
       }
     ],
     "R-33-2": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 339
+        "line": 345
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2861
+        "line": 2870
       }
     ],
     "R-34": [
@@ -6836,7 +6868,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1446
+        "line": 1452
       },
       {
         "file": "src/ReTAC.Domain/FileOps/FileConcat.cs",
@@ -6860,11 +6892,11 @@
     "R-36": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1603
+        "line": 1612
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2315
+        "line": 2324
       },
       {
         "file": "src/ReTAC.App/QuickAccessHost.cs",
@@ -6896,7 +6928,7 @@
     "R-38": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2441
+        "line": 2450
       }
     ],
     "R-39": [
@@ -6906,7 +6938,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2774
+        "line": 2783
       },
       {
         "file": "src/ReTAC.Domain/Listing/FolderEnumerator.cs",
@@ -6930,17 +6962,17 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 339
+        "line": 345
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1661
+        "line": 1670
       }
     ],
     "R-39-4": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2738
+        "line": 2747
       }
     ],
     "R-40": [
@@ -6958,7 +6990,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1520
+        "line": 1526
       }
     ],
     "R-40-2": [
@@ -6968,7 +7000,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1521
+        "line": 1527
       },
       {
         "file": "src/ReTAC.App/Program.cs",
@@ -6978,15 +7010,15 @@
     "R-40-4": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1529
+        "line": 1535
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1536
+        "line": 1542
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1549
+        "line": 1555
       }
     ],
     "R-40-5": [
@@ -7012,13 +7044,13 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1542
+        "line": 1548
       }
     ],
     "R-41": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 862
+        "line": 868
       },
       {
         "file": "src/ReTAC.Shell/ShellFileOperation.cs",
@@ -7034,33 +7066,33 @@
     "R-41-3": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1260
+        "line": 1266
       }
     ],
     "R-41-4": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1018
+        "line": 1024
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1035
+        "line": 1041
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1068
+        "line": 1074
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1156
+        "line": 1162
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2119
+        "line": 2128
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2161
+        "line": 2170
       },
       {
         "file": "src/ReTAC.Domain/FileOps/CopyPlan.cs",
@@ -7090,7 +7122,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1044
+        "line": 1050
       },
       {
         "file": "src/ReTAC.Domain/FileOps/CopyPlan.cs",
@@ -7104,7 +7136,7 @@
     "R-41-6": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 894
+        "line": 900
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
@@ -7130,13 +7162,13 @@
     "R-42": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 948
+        "line": 954
       }
     ],
     "R-44": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1130
+        "line": 1136
       },
       {
         "file": "src/ReTAC.Shell/ShellFileOperation.cs",
@@ -7146,11 +7178,11 @@
     "R-45": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1188
+        "line": 1194
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1218
+        "line": 1224
       }
     ],
     "R-46": [
@@ -7168,7 +7200,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 984
+        "line": 990
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
@@ -7202,7 +7234,7 @@
     "R-46-2": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1189
+        "line": 1195
       },
       {
         "file": "src/ReTAC.App/TextInputDialog.cs",
@@ -7212,21 +7244,21 @@
     "R-46-3": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1299
+        "line": 1305
       }
     ],
     "R-46-4": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 877
+        "line": 883
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 890
+        "line": 896
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2256
+        "line": 2265
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
@@ -7262,11 +7294,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1299
+        "line": 1305
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2571
+        "line": 2580
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
@@ -7304,7 +7336,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1232
+        "line": 1238
       }
     ],
     "R-49-2": [
@@ -7318,7 +7350,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1294
+        "line": 1300
       }
     ],
     "R-50": [
@@ -7336,11 +7368,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1044
+        "line": 1050
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1232
+        "line": 1238
       },
       {
         "file": "src/ReTAC.App/TextInputDialog.cs",
@@ -7350,11 +7382,11 @@
     "R-51": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 895
+        "line": 901
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1036
+        "line": 1042
       }
     ],
     "R-52": [
@@ -7434,11 +7466,11 @@
     "R-54-2": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 357
+        "line": 363
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2253
+        "line": 2262
       },
       {
         "file": "src/ReTAC.App/RunDialog.cs",
@@ -7468,7 +7500,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 807
+        "line": 813
       }
     ],
     "R-55-3": [
@@ -7482,7 +7514,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1649
+        "line": 1658
       }
     ],
     "R-56": [
@@ -7498,7 +7530,7 @@
     "R-56-2": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1428
+        "line": 1434
       },
       {
         "file": "src/ReTAC.Domain/Tools/LaunchTargets.cs",
@@ -7508,11 +7540,11 @@
     "R-56-3": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 844
+        "line": 850
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2284
+        "line": 2293
       },
       {
         "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
@@ -7530,7 +7562,7 @@
     "R-57": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1371
+        "line": 1377
       },
       {
         "file": "src/ReTAC.App/NumberedPopup.cs",
@@ -7540,7 +7572,7 @@
     "R-57-2": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1421
+        "line": 1427
       },
       {
         "file": "src/ReTAC.Domain/Formatting/NameFormats.cs",
@@ -7550,7 +7582,7 @@
     "R-58": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1338
+        "line": 1344
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
@@ -7572,13 +7604,13 @@
     "R-59": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 777
+        "line": 783
       }
     ],
     "R-60": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1603
+        "line": 1612
       }
     ],
     "R-60-3": [
@@ -7588,17 +7620,17 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1613
+        "line": 1622
       }
     ],
     "R-61": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 912
+        "line": 918
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2568
+        "line": 2577
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
@@ -7630,25 +7662,25 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 921
+        "line": 927
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 935
+        "line": 941
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 964
+        "line": 970
       }
     ],
     "R-63": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 902
+        "line": 908
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 984
+        "line": 990
       },
       {
         "file": "src/ReTAC.App/TextInputDialog.cs",
@@ -7662,11 +7694,11 @@
     "R-63-2": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 902
+        "line": 908
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 965
+        "line": 971
       }
     ],
     "R-65": [
@@ -7740,7 +7772,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2377
+        "line": 2386
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
@@ -7776,7 +7808,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2310
+        "line": 2319
       },
       {
         "file": "src/ReTAC.App/Rendering/EntryMetrics.cs",
@@ -7830,21 +7862,21 @@
     "R-7": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2762
+        "line": 2771
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2794
+        "line": 2803
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2821
+        "line": 2830
       }
     ],
     "R-70": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2826
+        "line": 2835
       },
       {
         "file": "src/ReTAC.Domain/Selection/CursorRestore.cs",
@@ -7874,7 +7906,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1905
+        "line": 1914
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -7912,7 +7944,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 461
+        "line": 467
       },
       {
         "file": "src/ReTAC.App/MouseButtonFilter.cs",
@@ -7922,7 +7954,7 @@
     "R-75": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 462
+        "line": 468
       }
     ],
     "R-76": [
@@ -7962,15 +7994,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 602
+        "line": 608
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 619
-      },
-      {
-        "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1661
+        "line": 625
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -7978,15 +8006,19 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1685
+        "line": 1679
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1696
+        "line": 1694
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1709
+        "line": 1705
+      },
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 1718
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -8044,11 +8076,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2112
+        "line": 2121
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2870
+        "line": 2879
       },
       {
         "file": "src/ReTAC.App/Rendering/DragImageRenderer.cs",
@@ -8082,15 +8114,15 @@
     "R-79": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2180
+        "line": 2189
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2446
+        "line": 2455
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2458
+        "line": 2467
       }
     ],
     "R-8": [
@@ -8110,15 +8142,15 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 674
+        "line": 680
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 681
+        "line": 687
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2873
+        "line": 2882
       },
       {
         "file": "src/ReTAC.Domain/Commands/CommandId.cs",
@@ -8136,11 +8168,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2181
+        "line": 2190
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2216
+        "line": 2225
       },
       {
         "file": "src/ReTAC.Domain/Commands/CommandId.cs",
@@ -8154,15 +8186,15 @@
     "R-82": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 472
+        "line": 478
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 486
+        "line": 492
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2372
+        "line": 2381
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -8200,7 +8232,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 438
+        "line": 444
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -8226,15 +8258,15 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1166
+        "line": 1172
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1325
+        "line": 1331
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2006
+        "line": 2015
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -8264,7 +8296,7 @@
     "R-85": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 486
+        "line": 492
       },
       {
         "file": "src/ReTAC.Domain/FileOps/Undo.cs",
@@ -8290,11 +8322,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 681
+        "line": 687
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1685
+        "line": 1694
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -8328,19 +8360,19 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 619
+        "line": 625
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2066
+        "line": 2075
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2568
+        "line": 2577
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2579
+        "line": 2588
       },
       {
         "file": "src/ReTAC.App/PathRecall.cs",
@@ -8378,7 +8410,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1861
+        "line": 1870
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -8504,39 +8536,39 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1696
+        "line": 1705
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1784
+        "line": 1793
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1790
+        "line": 1799
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1801
+        "line": 1810
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1833
+        "line": 1842
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1866
+        "line": 1875
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1889
+        "line": 1898
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1917
+        "line": 1926
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1932
+        "line": 1941
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -8618,11 +8650,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1827
+        "line": 1836
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2363
+        "line": 2372
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -8668,7 +8700,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1866
+        "line": 1875
       }
     ],
     "R-91-2": [
@@ -8712,15 +8744,15 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 348
+        "line": 354
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2672
+        "line": 2681
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2680
+        "line": 2689
       },
       {
         "file": "src/ReTAC.App/PathRecall.cs",
@@ -8810,27 +8842,27 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 872
+        "line": 878
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 876
+        "line": 882
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 890
+        "line": 896
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 903
+        "line": 909
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 986
+        "line": 992
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1996
+        "line": 2005
       },
       {
         "file": "src/ReTAC.Domain/FileOps/Undo.cs",
@@ -8956,15 +8988,15 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1754
+        "line": 1763
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1774
+        "line": 1783
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2377
+        "line": 2386
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
@@ -9026,15 +9058,15 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1719
+        "line": 1728
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1738
+        "line": 1747
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2360
+        "line": 2369
       }
     ],
     "R-96-3": [
@@ -9078,7 +9110,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 368
+        "line": 374
       },
       {
         "file": "src/ReTAC.Shell/CurrentPathShellItemFilter.cs",
@@ -9208,7 +9240,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2787
+        "line": 2796
       },
       {
         "file": "src/ReTAC.Shell/AssemblyInfo.cs",
@@ -9342,23 +9374,23 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 372
+        "line": 378
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 389
+        "line": 395
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 405
+        "line": 411
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 424
+        "line": 430
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 453
+        "line": 459
       },
       {
         "file": "src/ReTAC.App/ShellDrag.cs",
@@ -9476,27 +9508,27 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1721
+        "line": 1730
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1791
+        "line": 1800
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1818
+        "line": 1827
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1868
+        "line": 1877
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1932
+        "line": 1941
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1933
+        "line": 1942
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
@@ -9518,11 +9550,11 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1763
+        "line": 1772
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1767
+        "line": 1776
       },
       {
         "file": "src/ReTAC.App/PreviewTarget.cs",
@@ -9576,7 +9608,7 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2491
+        "line": 2500
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
@@ -9602,25 +9634,25 @@
     "S-19": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2442
+        "line": 2451
       }
     ],
     "V-01": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1291
+        "line": 1297
       }
     ],
     "V-02": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1154
+        "line": 1160
       }
     ],
     "V-03": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 787
+        "line": 793
       },
       {
         "file": "src/ReTAC.App/Program.cs",
@@ -9642,11 +9674,11 @@
     "V-04": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2208
+        "line": 2217
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2229
+        "line": 2238
       },
       {
         "file": "src/ReTAC.App/SafeShellMenu.cs",
@@ -9656,13 +9688,13 @@
     "V-05": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1027
+        "line": 1033
       }
     ],
     "V-06": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2838
+        "line": 2847
       }
     ],
     "V-07": [
@@ -9720,47 +9752,47 @@
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 732
+        "line": 738
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1681
+        "line": 1690
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1692
+        "line": 1701
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1704
+        "line": 1713
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1756
+        "line": 1765
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1801
+        "line": 1810
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 1811
+        "line": 1820
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2056
+        "line": 2065
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2319
+        "line": 2328
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2414
+        "line": 2423
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2718
+        "line": 2727
       }
     ],
     "V-14": [
@@ -9798,7 +9830,7 @@
     "X-02": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
-        "line": 2853
+        "line": 2862
       }
     ],
     "X-03": [

@@ -13,6 +13,34 @@ public class UpdateProtocolTests
         Assert.Equal("ReTAC.MainWindow", UpdateProtocol.WindowPropName);
         Assert.Equal(1, UpdateProtocol.Accepted);
         Assert.Equal(2, UpdateProtocol.Refused);
+        Assert.Equal("ReTAC.QuitForUpdateState", UpdateProtocol.StateMessageName);
+        Assert.Equal(1, UpdateProtocol.Quitting);
+        Assert.Equal(2, UpdateProtocol.NotQuitting);
+    }
+
+    [Fact]
+    public void 様子の問い合わせは受け付けの印をそのまま答える()
+    {
+        var gate = new QuitForUpdateGate();
+        Assert.Equal(UpdateProtocol.NotQuitting, gate.OnStateQuery());   // まだ頼まれていない
+
+        gate.OnRequest(false, () => { });
+        Assert.Equal(UpdateProtocol.Quitting, gate.OnStateQuery());      // 受け付けた（K-5 の確認の間も）
+
+        gate.OnQuitFinished(quit: false);
+        Assert.Equal(UpdateProtocol.NotQuitting, gate.OnStateQuery());   // K-5 の確認で取りやめた
+
+        gate.OnRequest(false, () => { });
+        gate.OnQuitFinished(quit: true);
+        Assert.Equal(UpdateProtocol.Quitting, gate.OnStateQuery());      // 終了を選んだ。プロセスが消えるまで立ったまま
+    }
+
+    [Fact]
+    public void 断った依頼の後の問い合わせは受け付けていないと答える()
+    {
+        var gate = new QuitForUpdateGate();
+        gate.OnRequest(anyWindowDisabled: true, () => { });
+        Assert.Equal(UpdateProtocol.NotQuitting, gate.OnStateQuery());
     }
 
     [Fact]

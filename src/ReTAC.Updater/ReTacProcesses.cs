@@ -75,14 +75,27 @@ internal static class ReTacProcesses
     }
 
     /// <summary>
-    /// 目印のウィンドウがあり、操作できる（ダイアログを出していない）。受け付けた後の見届けで「取りやめた」を見分けるのに使う。
-    /// ウィンドウが無い（閉じていく途中）ときは false。
+    /// 頼んだ ReTAC の様子。プロセスが終わっていれば Exited。生きていれば ReTAC に問い合わせる
+    /// （終わる途中か、取りやめたか）。答えが無ければ Unknown（閉じていく途中かもしれないので見届けを続ける）。
     /// </summary>
-    public static bool IsIdle(int id)
+    public static PendingQuitState State(int id)
     {
+        if (!IsRunning(id)) return PendingQuitState.Exited;
+        if (StateMessage == 0) return PendingQuitState.Unknown;
         var window = MarkedWindow(id);
-        return window != IntPtr.Zero && IsWindowEnabled(window);
+        if (window == IntPtr.Zero) return PendingQuitState.Unknown;
+
+        var sent = SendMessageTimeout(window, StateMessage, IntPtr.Zero, IntPtr.Zero, SMTO_ABORTIFHUNG, 5000, out var result);
+        if (sent == IntPtr.Zero) return PendingQuitState.Unknown;
+        return (long)result switch
+        {
+            Protocol.Quitting => PendingQuitState.Quitting,
+            Protocol.NotQuitting => PendingQuitState.NotQuitting,
+            _ => PendingQuitState.Unknown,
+        };
     }
+
+    private static readonly uint StateMessage = RegisterWindowMessage(Protocol.StateMessageName);
 
     public static QuitReply RequestQuit(int id)
     {
@@ -139,9 +152,6 @@ internal static class ReTacProcesses
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr window, out int processId);
-
-    [DllImport("user32.dll")]
-    private static extern bool IsWindowEnabled(IntPtr window);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetPropW")]
     private static extern IntPtr GetProp(IntPtr window, string name);

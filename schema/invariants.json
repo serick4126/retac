@@ -212,7 +212,7 @@
       "status": "enforced",
       "specIds": ["R-109", "R-109-4"],
       "applies": ["app:ReTAC.Updater"],
-      "rule": "配布物の名前は 6 つ（ReTAC.exe・ReTAC.Updater.exe・LICENSE・README.md・DOTNET-LICENSE.txt・DOTNET-ThirdPartyNotices.txt）に限る。実行されるのは単独で動く 2 つの exe だけなので、ファイルごとに新旧が混ざってもインストール先は使える。ReTAC とアップデータの間の約束（起動の引数・終了依頼のメッセージ名・返事・目印のプロパティ名）は版をまたいで変えない。",
+      "rule": "配布物の名前は 6 つ（ReTAC.exe・ReTAC.Updater.exe・LICENSE・README.md・DOTNET-LICENSE.txt・DOTNET-ThirdPartyNotices.txt）に限る。実行されるのは単独で動く 2 つの exe だけなので、ファイルごとに新旧が混ざってもインストール先は使える。ReTAC とアップデータの間の約束（起動の引数・終了依頼のメッセージ名・返事・目印のプロパティ名・終了依頼の様子の問い合わせのメッセージ名と返事）は版をまたいで変えない。",
       "enforcedBy": "updater:Distribution.Names・Distribution.Check（一覧の外を含む zip を拒否）／App:UpdateProtocol と updater:Protocol の定数",
       "testedBy": "tests/ReTAC.Domain.Tests/Updater/UpdaterDecisionTests.cs（約束の定数の一致）・UpdaterReplaceTests.cs（各境界で止めた状態）",
       "note": "DLL など組で動くファイルを配布物に足すと前提が崩れる。足すなら置き換えの方式を見直す。"

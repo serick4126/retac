@@ -20,6 +20,18 @@ public static class UpdateProtocol
     public const int Refused = 2;
 
     /// <summary>
+    /// 終了依頼の様子の問い合わせ（RegisterWindowMessage）。アップデータを閉じた後も、受け付けた ReTAC が本当に終わるのか、
+    /// K-5 の確認で取りやめたのかを見届けるために使う。ウィンドウの様子や時間からは取りやめを見分けられないため。
+    /// </summary>
+    public const string StateMessageName = "ReTAC.QuitForUpdateState";
+
+    /// <summary>問い合わせの返事: 終了依頼を受け付けていて、終わる途中（K-5 の確認を出している間を含む）。</summary>
+    public const int Quitting = 1;
+
+    /// <summary>問い合わせの返事: 終了依頼を受け付けていない（受けていない・断った・K-5 の確認で取りやめた）。</summary>
+    public const int NotQuitting = 2;
+
+    /// <summary>
     /// 終了依頼への返事を決める。<paramref name="quitRequested"/> はプロセスで 1 つの「受け付け済み」の印。
     /// 受け付けた後に届いた依頼には、ダイアログを開いていても <see cref="Accepted"/> を返し、終了処理は始めない
     /// （同じ依頼で 2 回始めない）。受け付けた後は K-5 の確認でウィンドウが無効になるので、先に印を見ないと
@@ -69,6 +81,12 @@ public sealed class QuitForUpdateGate
     {
         if (!quit) _quitRequested = false;
     }
+
+    /// <summary>
+    /// 終了依頼の様子の問い合わせへの返事。受け付けの印がそのまま答えになる（K-5 の確認の間は立ったまま、取りやめたら戻る。
+    /// 終了を選んだ後は、プロセスが消えるまで立ったまま）。
+    /// </summary>
+    public int OnStateQuery() => _quitRequested ? UpdateProtocol.Quitting : UpdateProtocol.NotQuitting;
 
     private sealed class Operation(QuitForUpdateGate gate) : IDisposable
     {

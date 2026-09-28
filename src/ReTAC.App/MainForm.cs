@@ -326,6 +326,12 @@ public sealed class MainForm : Form, IBookmarkHost
                 scheduleQuit: () => BeginInvoke(QuitForUpdate));
             return;
         }
+        // R-109-3: 終了依頼の様子の問い合わせ。アップデータを閉じた後の見届けで、終わる途中か取りやめたかを答える
+        if (m.Msg == QuitForUpdateStateMessage && QuitForUpdateStateMessage != 0)
+        {
+            m.Result = s_quitGate.OnStateQuery();
+            return;
+        }
 
         base.WndProc(ref m);
         // R-32-3: WM_DEVICECHANGE はトップレベルのウィンドウにだけ届く。子コントロールの DriveBar では受けられない。
@@ -1553,6 +1559,9 @@ public sealed class MainForm : Form, IBookmarkHost
 
     /// <summary>R-109-3: 終了依頼のメッセージ。RegisterWindowMessage が失敗したら 0 で、そのときは受け付けない。</summary>
     private static readonly int QuitForUpdateMessage = (int)RegisterWindowMessage(UpdateProtocol.MessageName);
+
+    /// <summary>R-109-3: 終了依頼の様子の問い合わせのメッセージ。</summary>
+    private static readonly int QuitForUpdateStateMessage = (int)RegisterWindowMessage(UpdateProtocol.StateMessageName);
 
     /// <summary>
     /// R-109-3: 終了依頼の受け口。どのウィンドウが受けてもプロセス全体への依頼なので、プロセスで 1 つ。
