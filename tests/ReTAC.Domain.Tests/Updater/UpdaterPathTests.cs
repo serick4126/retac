@@ -262,33 +262,54 @@ public sealed class UpdaterPathTests : IDisposable
     public void 答えが無い状態がずっと続けば上限で打ち切る()
     {
         // 応答しない ReTAC。見届けを無期限に続けない（INV-UPDATER-NO-DEADLOCK）
-        var probes = 0;
-        var end = PendingQuitWatch.Wait(() => { probes++; return [Silent]; }, () => { }, unknownLimit: 5);
+        var clock = TimeSpan.Zero;
+        var end = PendingQuitWatch.Wait(() => { clock += TimeSpan.FromSeconds(1); return [Silent]; },
+                                        () => clock += TimeSpan.FromSeconds(0.5), clock: () => clock);
         Assert.Equal(PendingQuitEnd.GaveUp, end);
-        Assert.Equal(5, probes);
+        Assert.InRange(clock.TotalSeconds, 60, 62);
     }
 
     [Fact]
-    public void 既定の上限は60秒() =>
-        Assert.Equal(60, PendingQuitWatch.DefaultUnknownLimit / 2);   // 0.5 秒ごとに調べる
+    public void 問い合わせが遅くても実際に経った時間で打ち切る()
+    {
+        // 応答しない ReTAC への問い合わせは、1 回に 5 秒（SendMessageTimeout）かかる。回数で数えると 120 回で 11 分になる
+        var clock = TimeSpan.Zero;
+        var probes = 0;
+        var end = PendingQuitWatch.Wait(() => { probes++; clock += TimeSpan.FromSeconds(5); return [Silent]; },
+                                        () => clock += TimeSpan.FromSeconds(0.5), clock: () => clock);
+        Assert.Equal(PendingQuitEnd.GaveUp, end);
+        Assert.InRange(clock.TotalSeconds, 60, 66);   // 上限に届いた問い合わせの分だけ超える
+        Assert.InRange(probes, 11, 13);
+    }
+
+    [Fact]
+    public void 既定の上限は60秒() => Assert.Equal(TimeSpan.FromSeconds(60), PendingQuitWatch.DefaultUnknownLimit);
 
     [Fact]
     public void 答えているReTACがあれば上限を数えない()
     {
-        // 片方は K-5 の確認を出している（終わる途中と答える）。もう片方は答えない
-        var steps = Enumerable.Repeat(new[] { Quitting, Silent }, 20).Append([Gone, Gone]).ToArray();
-        var i = 0;
-        Assert.Equal(PendingQuitEnd.AllExited,
-                     PendingQuitWatch.Wait(() => steps[Math.Min(i++, steps.Length - 1)], () => { }, unknownLimit: 5));
+        // 片方は K-5 の確認を出している（終わる途中と答える）。もう片方は答えない。10 分続いても打ち切らない
+        var clock = TimeSpan.Zero;
+        var end = PendingQuitWatch.Wait(() =>
+        {
+            clock += TimeSpan.FromSeconds(5);
+            return clock < TimeSpan.FromMinutes(10) ? [Quitting, Silent] : [Gone, Gone];
+        }, () => clock += TimeSpan.FromSeconds(0.5), clock: () => clock);
+        Assert.Equal(PendingQuitEnd.AllExited, end);
     }
 
     [Fact]
     public void 答えが途切れても答えが戻れば数え直す()
     {
-        var steps = new[] { [Silent], [Silent], [Quitting], [Silent], [Silent], [Quitting], new[] { Gone } };
-        var i = 0;
-        Assert.Equal(PendingQuitEnd.AllExited,
-                     PendingQuitWatch.Wait(() => steps[Math.Min(i++, steps.Length - 1)], () => { }, unknownLimit: 3));
+        // 答えない 50 秒 → 答える → 答えない 50 秒 → 終わる。どちらの区間も 60 秒に届かない
+        var clock = TimeSpan.Zero;
+        var end = PendingQuitWatch.Wait(() =>
+        {
+            clock += TimeSpan.FromSeconds(1);
+            var t = clock.TotalSeconds;
+            return t < 50 ? [Silent] : t < 52 ? [Quitting] : t < 100 ? [Silent] : [Gone];
+        }, () => { }, clock: () => clock);
+        Assert.Equal(PendingQuitEnd.AllExited, end);
     }
 
     // ---- 起動し直すか（頼んだ ReTAC だけで決める）----

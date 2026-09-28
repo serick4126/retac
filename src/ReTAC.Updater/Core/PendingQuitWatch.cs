@@ -44,40 +44,55 @@ public enum PendingQuitEnd
 /// </summary>
 public static class PendingQuitWatch
 {
-    /// <summary>答えが無い状態が続いてよい回数の既定（0.5 秒ごとに調べて 60 秒）。</summary>
-    public const int DefaultUnknownLimit = 120;
+    /// <summary>
+    /// 答えが無い状態が続いてよい時間の既定。<b>実際に経った時間で数える</b>（応答しない ReTAC への問い合わせは 1 回に最大 5 秒かかるので、
+    /// 回数で数えると実際の待ちが何倍にも延びる）。
+    /// </summary>
+    public static readonly TimeSpan DefaultUnknownLimit = TimeSpan.FromSeconds(60);
 
     /// <summary>
     /// 送っている最中の依頼の返事を先に待ってから、<see cref="Wait"/> で見届ける。
     /// 問い合わせが依頼を追い越すと、受け付ける前の ReTAC に「受け付けていない」と答えられて見届けをやめてしまうため。
     /// </summary>
-    public static async Task<PendingQuitEnd> FollowAsync(
-        IEnumerable<Task> inFlight, Func<IReadOnlyList<PendingQuitState>> probe, Action pause, int unknownLimit = DefaultUnknownLimit)
+    public static async Task<PendingQuitEnd> FollowAsync(IEnumerable<Task> inFlight, Func<IReadOnlyList<PendingQuitState>> probe, Action pause)
     {
         foreach (var sending in inFlight)
         {
             try { await sending.ConfigureAwait(false); }
             catch (Exception) { }   // 送れなかった依頼も、様子の問い合わせで決める
         }
-        return await Task.Run(() => Wait(probe, pause, unknownLimit)).ConfigureAwait(false);
+        return await Task.Run(() => Wait(probe, pause)).ConfigureAwait(false);
     }
 
-    /// <param name="probe">頼んだ ReTAC それぞれの様子を調べる</param>
+    /// <param name="probe">頼んだ ReTAC それぞれの様子を調べる（応答しない ReTAC には 1 回に数秒かかりうる）</param>
     /// <param name="pause">次に調べるまで待つ</param>
-    /// <param name="unknownLimit">まだ決まっていない ReTAC がどれも答えない状態が、この回数続いたら打ち切る</param>
-    public static PendingQuitEnd Wait(Func<IReadOnlyList<PendingQuitState>> probe, Action pause, int unknownLimit = DefaultUnknownLimit)
+    /// <param name="unknownLimit">まだ決まっていない ReTAC がどれも答えない状態が、実際にこの時間続いたら打ち切る。既定は 60 秒</param>
+    /// <param name="clock">経過時間を測る単調な時計。既定は Stopwatch（テストから差し替える）</param>
+    public static PendingQuitEnd Wait(Func<IReadOnlyList<PendingQuitState>> probe, Action pause,
+                                      TimeSpan? unknownLimit = null, Func<TimeSpan>? clock = null)
     {
-        var silent = 0;
+        var limit = unknownLimit ?? DefaultUnknownLimit;
+        if (clock is null)
+        {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            clock = () => stopwatch.Elapsed;
+        }
+
+        TimeSpan? silentSince = null;
         while (true)
         {
+            var asked = clock();
             var states = probe();
             var pending = states.Where(s => s is PendingQuitState.Quitting or PendingQuitState.Unknown).ToList();
             if (pending.Count == 0)
                 return states.All(s => s == PendingQuitState.Exited) ? PendingQuitEnd.AllExited : PendingQuitEnd.SomeStayed;
 
-            // 答えている ReTAC が 1 つでもあれば（K-5 の確認の間など）、上限は数えない
-            silent = pending.All(s => s == PendingQuitState.Unknown) ? silent + 1 : 0;
-            if (silent >= unknownLimit) return PendingQuitEnd.GaveUp;
+            // 答えている ReTAC が 1 つでもあれば（K-5 の確認の間など）、上限は数えない。答えが無くなった時刻から数える
+            if (pending.All(s => s == PendingQuitState.Unknown)) silentSince ??= asked;
+            else silentSince = null;
+
+            // 問い合わせにかかった時間も含めて、実際に経った時間で打ち切る
+            if (silentSince is { } since && clock() - since >= limit) return PendingQuitEnd.GaveUp;
             pause();
         }
     }

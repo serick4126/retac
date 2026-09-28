@@ -4942,7 +4942,7 @@
       },
       {
         "file": "src/ReTAC.Updater/Core/PendingQuitWatch.cs",
-        "line": 78
+        "line": 90
       },
       {
         "file": "src/ReTAC.Updater/Core/Protocol.cs",
