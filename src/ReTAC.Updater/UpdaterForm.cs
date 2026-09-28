@@ -104,13 +104,18 @@ internal sealed class UpdaterForm : Form
         {
             await FlowAsync();
         }
+        catch (ClosedByUser)
+        {
+            // 画面を閉じた後に、待っていた読み取りが戻ってきた。続き（終了の依頼・置き換え）は行わない
+        }
         catch (Exception ex)
         {
             // 画面を閉じた後に、待っていた処理が戻ってきた
-            if (IsDisposed || _exitWhenWorkDone) return;
+            if (IsDisposed || _exitWhenWorkDone || _closing) return;
             // R-109-6: 想定外の例外も画面に出して終わる。置き換えより前なら何も変わっていない
-            RefreshStopped();
+            _stoppedAnyReTac |= await Background(AnyStopped);
             LaunchIfNeeded(replaced: false);
+            _following ??= FollowQuitTargetsAsync();
             Finish(Outcome.Message(ReplaceResult.Unchanged, Reason.Unexpected, _launched, _launchOk, ""), ex.Message);
         }
     }
@@ -186,6 +191,8 @@ internal sealed class UpdaterForm : Form
         {
             LaunchIfNeeded(replaced: false);
             Finish(Outcome.Message(ReplaceResult.Unchanged, Reason.Cancelled, _launched, _launchOk, ""));
+            // 受け付けた ReTAC が K-5 の確認を出していれば、利用者が後から「終了」を選ぶかもしれない。見届けて起動し直す
+            _following ??= FollowQuitTargetsAsync();
             return;
         }
 
@@ -219,9 +226,36 @@ internal sealed class UpdaterForm : Form
     /// <summary>終了を頼んだ ReTAC。画面を閉じたときに、終了させたものがあれば起動し直すために持つ。</summary>
     private List<Target> _quitTargets = new();
 
-    /// <summary>頼んだ ReTAC のうち、終わったものがあるか。</summary>
-    private void RefreshStopped() =>
-        _stoppedAnyReTac |= _quitTargets.Any(t => !ReTacProcesses.IsRunning(t.Process.Id));
+    /// <summary>頼んだ ReTAC のうち、終わったものがあるか。プロセスを照会するので作業側で呼ぶ（<see cref="Io{T}"/>）。</summary>
+    private bool AnyStopped() => _quitTargets.Any(t => !ReTacProcesses.IsRunning(t.Process.Id));
+
+    /// <summary>受け付けた ReTAC の見届け。始めていなければ null。</summary>
+    private Task? _following;
+
+    /// <summary>
+    /// R-109-3 / R-109-6: 受け付けた ReTAC を見届ける。K-5 の確認を出している間にアップデータを中止・閉じても、利用者が後から
+    /// 「終了」を選べば ReTAC は終わる。終わったら起動し直す（ReTAC を使えない状態のまま残さない）。
+    /// ダイアログが閉じた後も生きていれば（取りやめた）、起動し直さずにやめる。照会はすべて作業側で行う。
+    /// </summary>
+    private async Task FollowQuitTargetsAsync()
+    {
+        var accepted = _quitTargets.Where(t => t.AcceptedAt is not null).Select(t => t.Process.Id).ToList();
+        if (accepted.Count > 0)
+        {
+            await Task.Run(() =>
+            {
+                _options.SlowIo();
+                return PendingQuitWatch.Wait(
+                    () => accepted.Select(id => new PendingQuitState(ReTacProcesses.IsRunning(id), ReTacProcesses.IsIdle(id))).ToList(),
+                    () => Thread.Sleep(500));
+            });
+        }
+        if (await Background(AnyStopped))
+        {
+            _stoppedAnyReTac = true;
+            Launch();
+        }
+    }
 
     /// <summary>インストール先の ReTAC をすべて終了させる。やめたら false。強制終了はしない。</summary>
     private async Task<bool> QuitReTacAsync()
@@ -244,6 +278,8 @@ internal sealed class UpdaterForm : Form
             var silent = false;
             foreach (var target in alive.Where(t => t.AcceptedAt is null))
             {
+                // [中止] の後に終了を頼まない（閉じたときは Io が打ち切っている）
+                if (_cancel.IsCancellationRequested) return false;
                 switch (await Task.Run(() => ReTacProcesses.RequestQuit(target.Process.Id)))
                 {
                     case QuitReply.Accepted: target.AcceptedAt = DateTime.UtcNow; break;
@@ -385,10 +421,9 @@ internal sealed class UpdaterForm : Form
                         {
                             lastRaw = raw;
                             lastProgress = DateTime.UtcNow;
-                            var parts = raw.Split('\t');
-                            if (parts.Length >= 3 && IsHandleCreated) BeginInvoke(new Action(() =>
+                            if (ProgressLine.Parse(raw) is { IsEnd: false } line && IsHandleCreated) BeginInvoke(new Action(() =>
                             {
-                                if (!_exitWhenWorkDone) Busy(StageText(parts[1], parts[2].Length == 0 ? null : parts[2]), NoButtons);
+                                if (!_exitWhenWorkDone) Busy(StageText(line.Stage, line.File), NoButtons);
                             }));
                         }
                         await Task.Delay(500).ConfigureAwait(false);
@@ -408,9 +443,9 @@ internal sealed class UpdaterForm : Form
             if (_exitWhenWorkDone) return (new ReplaceReport(ReplaceResult.Unchanged, Reason.None, 0, leftovers, null), leftovers);
 
             // 詳細とやり直せる時刻は、昇格したプロセスが最後に progress.txt に書いたもの（表示にだけ使う）
-            var end = (await Io(() => ReadProgress(progressFile))).Split('\t');
-            var detail = end.Length >= 3 && end[1] == "終わり" && end[2].Length > 0 ? end[2] : null;
-            var retryAt = end.Length >= 4 && end[1] == "終わり" && end[3].Length > 0 ? end[3] : null;
+            var end = ProgressLine.Parse(await Io(() => ReadProgress(progressFile)));
+            var detail = end is { IsEnd: true } ? end.File : null;
+            var retryAt = end is { IsEnd: true } ? end.RetryAt : null;
 
             if (ExitCodes.Decode(child.ExitCode) is { } decoded)
                 return (new ReplaceReport(decoded.Result, decoded.Reason, decoded.Result == ReplaceResult.Unchanged ? 0 : 1, leftovers,
@@ -465,7 +500,7 @@ internal sealed class UpdaterForm : Form
             base.OnFormClosing(e);
             return;
         }
-        RefreshStopped();
+        // ここではプロセスを照会しない（画面のスレッドで止まらないように）。ReTAC の終了の段は、そこで終わりを見届け済み
         var launch = Outcome.LaunchOnClose(_workRunning, _finished, _stoppedAnyReTac, _replacingStarted);
 
         if (_elevatedRunning)
@@ -489,10 +524,27 @@ internal sealed class UpdaterForm : Form
             _uiLock.Dispose();
             return;
         }
-        // 待っている処理（GitHub・ReTAC の終了待ち）を中止する。終了させた ReTAC があれば起動し直す（R-109-6）
+        // 待っている処理（GitHub・ReTAC の終了待ち）を中止し、流れの続きを打ち切る（R-109-6）。
+        // 作業が動いているとき（上の 2 つ）は印を立てない。作業の後の「プロセスを終える」まで打ち切ってしまうため
+        _closing = true;
         _cancel.Cancel();
-        if (launch) Launch();
-        base.OnFormClosing(e);
+        if (_quitTargets.Count == 0)
+        {
+            base.OnFormClosing(e);
+            return;
+        }
+        // 終了を頼んだ ReTAC がある。画面は閉じ、終わったものがあれば起動し直してから（受け付けたものは見届けてから）プロセスを終える
+        _exitWhenWorkDone = true;
+        e.Cancel = true;
+        Hide();
+        _uiLock.Dispose();
+        _ = ExitAfterFollowingAsync();
+    }
+
+    private async Task ExitAfterFollowingAsync()
+    {
+        try { await (_following ??= FollowQuitTargetsAsync()); }
+        finally { Application.ExitThread(); }
     }
 
     // ---- ReTAC の起動（R-109-4）----
@@ -589,11 +641,31 @@ internal sealed class UpdaterForm : Form
     /// R-109-6: ファイルやプロセスを調べる処理は、画面のスレッドではなく作業側で行う。ストレージやフィルタードライバーの都合で
     /// 戻らないことがあっても、画面は応答し、閉じられる（閉じればこの読み取りは置き去りにする。背景のスレッドなので終了を妨げない）。
     /// </summary>
-    private Task<T> Io<T>(Func<T> read) => Task.Run(() =>
+    /// <remarks>
+    /// 読み取りの間に画面が閉じられたら、戻ってきた後に流れを打ち切る（<see cref="ClosedByUser"/> を投げる）。
+    /// 閉じた後に ReTAC へ終了を頼んだり、置き換えに進んだりしないため。
+    /// </remarks>
+    private async Task<T> Io<T>(Func<T> read)
+    {
+        var result = await Background(read);
+        if (_closing) throw new ClosedByUser();
+        return result;
+    }
+
+    /// <summary>画面を閉じた後にも使う読み取り（見届け）。流れを打ち切らない。</summary>
+    private Task<T> Background<T>(Func<T> read) => Task.Run(() =>
     {
         _options.SlowIo();
         return read();
     });
+
+    /// <summary>画面が閉じられたので流れを打ち切る。</summary>
+    private sealed class ClosedByUser : Exception
+    {
+    }
+
+    /// <summary>利用者が画面を閉じた（[中止] とは違い、流れの続きは行わない）。</summary>
+    private bool _closing;
 
     private static string StageText(string stage, string? file) => stage switch
     {

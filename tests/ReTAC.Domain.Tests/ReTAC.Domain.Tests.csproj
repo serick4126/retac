@@ -31,6 +31,8 @@
     <Compile Include="..\..\src\ReTAC.Updater\Core\*.cs" Link="Updater\Core\%(Filename)%(Extension)" />
     <!-- 通信の部分は、偽の応答を返すハンドラーで確かめる（テストのアセンブリは INV-NO-INTERNET の対象外） -->
     <Compile Include="..\..\src\ReTAC.Updater\Net\GitHubReleases.cs" Link="Updater\Net\GitHubReleases.cs" />
+    <!-- 取得の失敗が、置き換えを通って表示まで届くことを確かめる -->
+    <Compile Include="..\..\src\ReTAC.Updater\Fetchers.cs" Link="Updater\Fetchers.cs" />
   </ItemGroup>
 
 </Project>

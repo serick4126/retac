@@ -74,6 +74,16 @@ internal static class ReTacProcesses
         catch (System.ComponentModel.Win32Exception) { return true; }   // 状態を読めないが、居る
     }
 
+    /// <summary>
+    /// 目印のウィンドウがあり、操作できる（ダイアログを出していない）。受け付けた後の見届けで「取りやめた」を見分けるのに使う。
+    /// ウィンドウが無い（閉じていく途中）ときは false。
+    /// </summary>
+    public static bool IsIdle(int id)
+    {
+        var window = MarkedWindow(id);
+        return window != IntPtr.Zero && IsWindowEnabled(window);
+    }
+
     public static QuitReply RequestQuit(int id)
     {
         if (QuitMessage == 0) return QuitReply.NoResponse;
@@ -129,6 +139,9 @@ internal static class ReTacProcesses
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr window, out int processId);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowEnabled(IntPtr window);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetPropW")]
     private static extern IntPtr GetProp(IntPtr window, string name);

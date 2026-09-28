@@ -14,11 +14,13 @@ namespace ReTAC.Updater;
 internal static class Fetchers
 {
     /// <param name="downloadFolder">zip を置く場所。昇格していなければ作業フォルダ、昇格していれば null（準備フォルダ＝保護されたインストール先の中）</param>
+    /// <param name="client">GitHub との通信を作る。テストから偽の応答を返すものを渡す</param>
     public static Func<StagingFolder, FetchFailure?> FromGitHub(string version, string? downloadFolder,
-                                                                Action<string, string?> progress, CancellationToken cancel) =>
+                                                                Action<string, string?> progress, CancellationToken cancel,
+                                                                Func<GitHubReleases>? client = null) =>
         staging =>
         {
-            using var github = new GitHubReleases();
+            using var github = client?.Invoke() ?? new GitHubReleases();
             var asset = github.AssetAsync(version, cancel).GetAwaiter().GetResult();
             if (!asset.Ok) return asset.Failure;
 

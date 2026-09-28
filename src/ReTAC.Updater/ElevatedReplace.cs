@@ -31,8 +31,7 @@ internal static class ElevatedReplace
         void Progress(string stage, string? file)
         {
             // 親は結果の判定には使わない（通常の権限から書き換えられるため）。進み具合の表示と、止まっていないかの判断だけ
-            try { File.WriteAllText(progressFile, $"{DateTime.UtcNow:o}\t{stage}\t{file}"); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            Write(progressFile, ProgressLine.Format(stage, file));
         }
 
         var fetch =
@@ -52,8 +51,13 @@ internal static class ElevatedReplace
         // このプロセスは画面を持たないので、メインのスレッドがそのまま作業用のスレッドになる（排他を取って手放す）
         var report = Replacer.Run(request);
         // 詳細とやり直せる時刻は終了コードで渡せないので、最後の行に書く（親は表示にだけ使う）
-        try { File.WriteAllText(progressFile, $"{DateTime.UtcNow:o}\t終わり\t{report.Detail}\t{report.RetryAt}"); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        Write(progressFile, ProgressLine.End(report.Detail, report.RetryAt));
         return ExitCodes.Encode(report.Result, report.Reason);
+    }
+
+    private static void Write(string path, string line)
+    {
+        try { File.WriteAllText(path, line); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 }

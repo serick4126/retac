@@ -61,5 +61,7 @@ public static class ZipPackage
             return null;
         }
         catch (InvalidDataException) { return Reason.Corrupt; }
+        // 準備フォルダへの書き出しの失敗（ディスクの不足・同じ名前が既にある・権限）。InvalidDataException より後に受ける（その基底なので）
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return Reason.WriteFailed; }
     }
 }
