@@ -4907,6 +4907,10 @@
       {
         "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
         "line": 39
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 228
       }
     ],
     "M-1": [
@@ -6121,6 +6125,10 @@
       {
         "file": "src/ReTAC.Updater/Core/Protocol.cs",
         "line": 44
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 17
       }
     ],
     "R-109-1": [
@@ -6143,6 +6151,10 @@
       {
         "file": "src/ReTAC.Updater/Core/NamedLock.cs",
         "line": 9
+      },
+      {
+        "file": "src/ReTAC.Updater/Program.cs",
+        "line": 12
       }
     ],
     "R-109-2": [
@@ -6161,6 +6173,14 @@
       {
         "file": "src/ReTAC.Updater/Core/ZipPackage.cs",
         "line": 11
+      },
+      {
+        "file": "src/ReTAC.Updater/Fetchers.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.Updater/Net/GitHubReleases.cs",
+        "line": 51
       }
     ],
     "R-109-3": [
@@ -6195,6 +6215,14 @@
       {
         "file": "src/ReTAC.App/UpdateProtocol.cs",
         "line": 40
+      },
+      {
+        "file": "src/ReTAC.Updater/ReTacProcesses.cs",
+        "line": 35
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 196
       }
     ],
     "R-109-4": [
@@ -6233,6 +6261,18 @@
       {
         "file": "src/ReTAC.Updater/Core/Versions.cs",
         "line": 45
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 45
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 259
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 450
       }
     ],
     "R-109-5": [
@@ -6243,6 +6283,32 @@
       {
         "file": "src/ReTAC.Updater/Core/Protocol.cs",
         "line": 74
+      },
+      {
+        "file": "src/ReTAC.Updater/ElevatedReplace.cs",
+        "line": 10
+      }
+    ],
+    "R-109-6": [
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 18
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 48
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 101
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 388
+      },
+      {
+        "file": "src/ReTAC.Updater/UpdaterForm.cs",
+        "line": 440
       }
     ],
     "R-11": [
