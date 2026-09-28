@@ -13,14 +13,15 @@ public sealed class ShortcutDialog : Form
     private readonly CheckBox _withSuffix = new() { Text = "ショートカット名に「へのショートカット」を付ける(&S)", AutoSize = true };
     private readonly CheckBox _withExtension = new() { Text = "ショートカット名にリンク元の拡張子を付ける(&E)", AutoSize = true };
 
-    public ShortcutDialog()
+    public ShortcutDialog(string? destination = null)
     {
         Text = "ショートカットファイルの作成";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         ShowInTaskbar = false;   // ダイアログはタスクバーに出さない（既定は true）
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = MaximizeBox = false;
-        ClientSize = new Size(400, 200);
+        var extraHeight = destination is null ? 0 : 26;
+        ClientSize = new Size(400, 200 + extraHeight);
 
         Controls.Add(new Label
         {
@@ -35,8 +36,23 @@ public sealed class ShortcutDialog : Form
         _withExtension.Location = new Point(24, 116);
         Controls.AddRange([_onDesktop, _withSuffix, _withExtension]);
 
-        var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Bounds = new Rectangle(190, 156, 90, 28) };
-        var cancel = new Button { Text = "キャンセル", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(290, 156, 90, 28) };
+        if (destination is not null)
+        {
+            // R-111-3: 作成先が決まっているとき（右ドロップのメニュー）は、デスクトップへの選択肢を出さない
+            _onDesktop.Checked = false;
+            _onDesktop.Enabled = false;
+            Controls.Add(new Label
+            {
+                Text = $"作成先: {destination}",
+                AutoEllipsis = true,
+                Size = new Size(368, 20),
+                Location = new Point(16, 146),
+                UseMnemonic = false,
+            });
+        }
+
+        var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Bounds = new Rectangle(190, 156 + extraHeight, 90, 28) };
+        var cancel = new Button { Text = "キャンセル", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(290, 156 + extraHeight, 90, 28) };
         Controls.AddRange([ok, cancel]);
         AcceptButton = ok;
         CancelButton = cancel;
@@ -47,7 +63,7 @@ public sealed class ShortcutDialog : Form
         AutoScaleMode = AutoScaleMode.Dpi;
     }
 
-    public bool OnDesktop => _onDesktop.Checked;
+    public bool OnDesktop => _onDesktop.Enabled && _onDesktop.Checked;
     public bool WithSuffix => _withSuffix.Checked;
     public bool WithExtension => _withExtension.Checked;
 

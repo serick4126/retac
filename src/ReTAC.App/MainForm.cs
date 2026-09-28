@@ -1354,13 +1354,21 @@ public sealed class MainForm : Form, IBookmarkHost
             ? Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)
             : _currentFolder;
 
-        foreach (var target in targets)
+        WriteShortcuts(dialog, folder, targets.Select(t => t.FullPath).ToList());
+        return true;
+    }
+
+    /// <summary>R-58 / R-111-3: ショートカットを作って「元に戻す」の記録に入れる。作業フォルダはリンク元のフォルダ。</summary>
+    private void WriteShortcuts(ShortcutDialog dialog, string folder, IReadOnlyList<string> sources)
+    {
+        foreach (var source in sources)
         {
-            var path = Path.Combine(folder, dialog.NameFor(target.Name));
+            var (name, sourceFolder) = ShortcutSource.Of(source);
+            var path = Path.Combine(folder, dialog.NameFor(name));
             var existed = File.Exists(path);
             try
             {
-                ShellObjects.CreateShortcut(path, target.FullPath, _currentFolder);
+                ShellObjects.CreateShortcut(path, source, sourceFolder ?? folder);
                 if (!existed) _recorder?.AddCreated(path);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -1369,10 +1377,20 @@ public sealed class MainForm : Form, IBookmarkHost
                 break;
             }
         }
-
         Reload();
-        return true;
     }
+
+    /// <summary>
+    /// R-111-3: 右ボタンのメニューの「ショートカットをここに作成」。ダイアログはドロップの処理を終えてから開く
+    /// （ドラッグ元を待たせない。TransferDropped と同じ）。中身全体を 1 件の記録にする（INV-UNDO-ONE-RECORD-PER-COMMAND）。
+    /// </summary>
+    private void CreateShortcutsAt(IReadOnlyList<string> sources, string folder) => BeginInvoke(() => Recording(() =>
+    {
+        Activate();   // ダイアログがドロップ元の窓の後ろに隠れないように
+        using var dialog = new ShortcutDialog(folder);
+        if (dialog.ShowDialog(this) == DialogResult.OK) WriteShortcuts(dialog, folder, sources);
+        return true;
+    }));
 
     /// <summary>`I`（ファイル名をコピー・0x831B）。R-57: カーソル位置に形式選択のポップアップ。</summary>
     private bool ShowNameFormatPopup()
