@@ -210,13 +210,8 @@
     {
       "id": "INV-UPDATER-ANY-MIX",
       "status": "enforced",
-      "specIds": [
-        "R-109",
-        "R-109-4"
-      ],
-      "applies": [
-        "app:ReTAC.Updater"
-      ],
+      "specIds": ["R-109", "R-109-4"],
+      "applies": ["app:ReTAC.Updater"],
       "rule": "配布物の名前は 6 つ（ReTAC.exe・ReTAC.Updater.exe・LICENSE・README.md・DOTNET-LICENSE.txt・DOTNET-ThirdPartyNotices.txt）に限る。実行されるのは単独で動く 2 つの exe だけなので、ファイルごとに新旧が混ざってもインストール先は使える。ReTAC とアップデータの間の約束（起動の引数・終了依頼のメッセージ名・返事・目印のプロパティ名）は版をまたいで変えない。",
       "enforcedBy": "updater:Distribution.Names・Distribution.Check（一覧の外を含む zip を拒否）／App:UpdateProtocol と updater:Protocol の定数",
       "testedBy": "tests/ReTAC.Domain.Tests/Updater/UpdaterDecisionTests.cs（約束の定数の一致）・UpdaterReplaceTests.cs（各境界で止めた状態）",
@@ -225,12 +220,8 @@
     {
       "id": "INV-UPDATER-ACCEPTS-SUBSET",
       "status": "enforced",
-      "specIds": [
-        "R-109-2"
-      ],
-      "applies": [
-        "app:ReTAC.Updater"
-      ],
+      "specIds": ["R-109-2"],
+      "applies": ["app:ReTAC.Updater"],
       "rule": "アップデータが受け付ける zip は、配布物の名前の部分集合で 2 つの exe を両方含み、フォルダを含まず、大文字小文字を区別せずに名前が重複しないもの。各項目の出力先は、正規化した絶対パスで準備フォルダの直下であることを確かめる。",
       "enforcedBy": "updater:Distribution.Check（書き出す前に全項目を検査）",
       "testedBy": "tests/ReTAC.Domain.Tests/Updater/UpdaterDecisionTests.cs"
@@ -238,12 +229,8 @@
     {
       "id": "INV-RELEASE-EXACT-SET",
       "status": "deferred",
-      "specIds": [
-        "R-109"
-      ],
-      "applies": [
-        "app:ReTAC.Updater"
-      ],
+      "specIds": ["R-109"],
+      "applies": ["app:ReTAC.Updater"],
       "rule": "公式のリリースの zip は、配布物の名前の 6 ファイルを 1 つずつ含み、ほかを含まない。2 つの exe の版が同じ。",
       "reason": "リリースの検査のスクリプトは Phase 13 の 13.3（リリース手順の変更）で足す。13.2 の時点ではまだ無い。",
       "plannedShape": {
@@ -255,12 +242,8 @@
     {
       "id": "INV-UPDATER-KEEPS-FILES",
       "status": "enforced",
-      "specIds": [
-        "R-109-4"
-      ],
-      "applies": [
-        "app:ReTAC.Updater"
-      ],
+      "specIds": ["R-109-4"],
+      "applies": ["app:ReTAC.Updater"],
       "rule": "アップデータは retac.settings.json を書かない。インストール先のファイルを消さない。例外は、今回作った準備フォルダ（ReTAC.update-<GUID>）の中の今回書き出したファイルと、空になったその準備フォルダだけ。再帰的に消さない。リパースポイントに触れない。前回までの準備フォルダにも %TEMP% の前回の作業フォルダにも触れない（持ち物だと証明できないため。前回の準備フォルダは名前を知らせるだけ）。",
       "enforcedBy": "updater:StagingFolder（CreateDirectory で今回作ったことを確かめ、記録した名前だけ消す）・Distribution.Check（設定ファイルを含む zip を拒否）・Replacer（念のため設定ファイルを名前で除く）",
       "testedBy": "tests/ReTAC.Domain.Tests/Updater/UpdaterLockAndFolderTests.cs・UpdaterReplaceTests.cs"
@@ -268,13 +251,8 @@
     {
       "id": "INV-UPDATER-VERIFY-IN-WRITER",
       "status": "enforced",
-      "specIds": [
-        "R-109-2",
-        "R-109-5"
-      ],
-      "applies": [
-        "app:ReTAC.Updater"
-      ],
+      "specIds": ["R-109-2", "R-109-5"],
+      "applies": ["app:ReTAC.Updater"],
       "rule": "取得・照合・展開は、置き換えの排他を取ったプロセスが自分で行う。zip は FileShare.None と DeleteOnClose で開いたハンドルのまま照合し、同じハンドルから展開する。昇格したプロセスは親から版番号だけを受け取り、親が照合したファイルや値を使わない。",
       "enforcedBy": "updater:Replacer.Run（排他の後に Fetch を呼ぶ）・ZipPackage・Fetchers・ElevatedReplace",
       "testedBy": "tests/ReTAC.Domain.Tests/Updater/UpdaterReplaceTests.cs",
@@ -283,12 +261,8 @@
     {
       "id": "INV-UPDATER-CONCURRENT-SAFE",
       "status": "enforced",
-      "specIds": [
-        "R-109-4"
-      ],
-      "applies": [
-        "app:ReTAC.Updater"
-      ],
+      "specIds": ["R-109-4"],
+      "applies": ["app:ReTAC.Updater"],
       "rule": "2 つのアップデータがインストール先を同時に書いても壊れない。インストール先の安全の根拠はこれであり、排他ではない（外からの強制終了で、排他は保留中の I/O より先に放棄されうる）。正規の名前を変えるのは MoveFileEx（MOVEFILE_REPLACE_EXISTING）1 回だけで、書き込む中身は照合済み、準備フォルダはアップデータごとに別。",
       "enforcedBy": "updater:Replacer（MoveFileEx・ReTAC.exe を最後に）・StagingFolder",
       "testedBy": "tests/ReTAC.Domain.Tests/Updater/UpdaterReplaceTests.cs（同じ版・異なる版を同時に書く全組・入れ替えの失敗）",
@@ -297,12 +271,8 @@
     {
       "id": "INV-UPDATER-WRITER-LOCK",
       "status": "enforced",
-      "specIds": [
-        "R-109-1"
-      ],
-      "applies": [
-        "app:ReTAC.Updater"
-      ],
+      "specIds": ["R-109-1"],
+      "applies": ["app:ReTAC.Updater"],
       "rule": "置き換えの排他は、ファイル操作を行う作業用のスレッドが取って手放し、アップデータ自身はそのスレッドを途中で終わらせない。ふだんの競合を防ぐためのもので、安全の根拠ではない。放棄は取れたものとして扱う。排他の名前は、GetFinalPathNameByHandle で正規化したインストール先の SHA-256 から作り、Global\\ に置く。既存のものは Synchronize | Modify だけで開く。",
       "enforcedBy": "updater:InstallFolder・NamedLock・Replacer.Run（作業用のスレッドで呼ぶ）",
       "testedBy": "tests/ReTAC.Domain.Tests/Updater/UpdaterLockAndFolderTests.cs"
@@ -310,12 +280,8 @@
     {
       "id": "INV-UPDATER-NO-DEADLOCK",
       "status": "enforced",
-      "specIds": [
-        "R-109-6"
-      ],
-      "applies": [
-        "app:ReTAC.Updater"
-      ],
+      "specIds": ["R-109-6"],
+      "applies": ["app:ReTAC.Updater"],
       "rule": "画面はいつでも応答し、閉じられる。外の相手（GitHub・ReTAC・利用者）を待つところには上限か押せるボタンがある。OS から戻らないファイル操作だけは例外で、そのときは I/O を抱えたスレッドが置き換えの排他を持ったまま残り、次の起動で Windows の再起動を案内する。",
       "enforcedBy": "updater:GitHubReleases（問い合わせ 15 秒・30 秒無受信で打ち切り）・UpdaterForm（ReTAC の送信は SendMessageTimeout 5 秒・終了待ち 60 秒で [再試行] [中止]・60 秒進まなければ [閉じる]。閉じても作業は止めない）",
       "note": "実機で確かめた（2026-09-28。止まったまま [閉じる] → プロセスは残り、次のアップデータは「入れ替えています」で止まり、解くと作業を終えて消える）。"
@@ -323,12 +289,8 @@
     {
       "id": "INV-UPDATER-NOT-ELEVATED-RESTART",
       "status": "enforced",
-      "specIds": [
-        "R-109-5"
-      ],
-      "applies": [
-        "app:ReTAC.Updater"
-      ],
+      "specIds": ["R-109-5"],
+      "applies": ["app:ReTAC.Updater"],
       "rule": "ReTAC を起動し直すのは、昇格していないプロセスだけ。昇格したまま起動すると ReTAC も管理者として動き、エクスプローラーからのドラッグ＆ドロップが UIPI で拒まれる。",
       "enforcedBy": "updater:ElevatedReplace（ReTAC を起動しない）・UpdaterForm.LaunchIfNeeded（昇格していない親から起動）"
     },
