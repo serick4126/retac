@@ -317,6 +317,19 @@ public sealed class MainForm : Form, IBookmarkHost
 
     protected override void WndProc(ref Message m)
     {
+        // R-109-3: アップデータからの終了依頼。返事はこのメッセージの中で返し、終了処理（K-5 の確認を含む）は後に回す。
+        // ここで確認を出すと SendMessageTimeout に返事が返らず、アップデータを待たせる
+        if (m.Msg == QuitForUpdateMessage && QuitForUpdateMessage != 0)
+        {
+            var (reply, startQuit) = UpdateProtocol.Decide(
+                anyWindowDisabled: Application.OpenForms.OfType<MainForm>().Any(f => !IsWindowEnabled(f.Handle)),
+                operationRunning: s_operationsRunning > 0,
+                ref s_quitForUpdateRequested);
+            m.Result = reply;
+            if (startQuit) BeginInvoke(QuitForUpdate);
+            return;
+        }
+
         base.WndProc(ref m);
         // R-32-3: WM_DEVICECHANGE はトップレベルのウィンドウにだけ届く。子コントロールの DriveBar では受けられない。
         // 通知の中身は見ない。ドライブ文字が変わっていなければ RefreshDrives は何もしない
@@ -617,6 +630,7 @@ public sealed class MainForm : Form, IBookmarkHost
         CommandId.EnvironmentSettings => ShowSettings(SettingsPage.Environment),
         CommandId.About => ShowAbout(),
         CommandId.OpenGitHub => OpenGitHub(),
+        CommandId.CheckForUpdate => CheckForUpdate(),
         CommandId.ColorAndFontSettings => ShowSettings(SettingsPage.ColorFont),
         CommandId.KeyAssignSettings => ShowSettings(SettingsPage.KeyAssign),
         CommandId.VisibleDriveSettings => ShowSettings(SettingsPage.DriveVisibility),
@@ -1149,6 +1163,9 @@ public sealed class MainForm : Form, IBookmarkHost
     {
         // 転送中に自動更新が何度も走らないよう、終わってから 1 回だけ開き直す
         _watcher.EnableRaisingEvents = false;
+        // R-109-3: 実行中はアップデータからの終了依頼を断る。Execute はシェルの進捗の中でメッセージを回すので、
+        // 転送の途中で依頼が届きうる
+        s_operationsRunning++;
         // R-84: Execute が例外を投げても、それまでに成功した分は _recorder に集める。
         // try の外で宣言し、catch でも同じインスタンスを参照できるようにする
         ShellFileOperation? operation = null;
@@ -1167,7 +1184,7 @@ public sealed class MainForm : Form, IBookmarkHost
             MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
         }
-        finally { operation?.Dispose(); WatchCurrentFolder(); }
+        finally { s_operationsRunning--; operation?.Dispose(); WatchCurrentFolder(); }
     }
 
     /// <summary>
@@ -1515,7 +1532,14 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>R-40-4: 常駐していても明示的に終了する手段（全ての ReTAC を終了・0x814E）。</summary>
     private bool QuitAllCommand()
     {
-        if (!ConfirmQueueBeforeExit()) return true;
+        QuitAll();
+        return true;
+    }
+
+    /// <summary>R-40-4 の本体。K-5 の確認で取りやめたら false。</summary>
+    private bool QuitAll()
+    {
+        if (!ConfirmQueueBeforeExit()) return false;
 
         // 確認は出さない。卓駆も出さず、常駐の状態は次の起動で復元されるので失うものがない
         // R-40-7 の「最後の 1 つだけ残す」は完全終了には適用しない。全部閉じる
@@ -1523,6 +1547,46 @@ public sealed class MainForm : Form, IBookmarkHost
         Application.Exit();
         return true;
     }
+
+    /// <summary>
+    /// R-109-3: アップデータからの終了依頼を受け付けた後の処理。常駐の設定に関係なく、R-40-4 と同じく全部閉じる。
+    /// K-5 の確認で取りやめたら受け付けの印を戻し、次の依頼をまた受け付けられるようにする。
+    /// </summary>
+    private void QuitForUpdate()
+    {
+        if (!QuitAll()) s_quitForUpdateRequested = false;
+    }
+
+    /// <summary>R-109-3: 終了依頼のメッセージ。RegisterWindowMessage が失敗したら 0 で、そのときは受け付けない。</summary>
+    private static readonly int QuitForUpdateMessage = (int)RegisterWindowMessage(UpdateProtocol.MessageName);
+
+    /// <summary>R-109-3: 終了依頼を受け付け済みか。どのウィンドウが受けてもプロセス全体への依頼なので、プロセスで 1 つ。</summary>
+    private static bool s_quitForUpdateRequested;
+
+    /// <summary>R-109-3: 実行中のファイル操作の数（全ウィンドウ共通）。0 でなければ終了依頼を断る。</summary>
+    private static int s_operationsRunning;
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        // R-109-3: アップデータが送り先を見分ける目印。ダイアログには付けない
+        SetProp(Handle, UpdateProtocol.WindowPropName, 1);
+    }
+
+    protected override void OnHandleDestroyed(EventArgs e)
+    {
+        RemoveProp(Handle, UpdateProtocol.WindowPropName);
+        base.OnHandleDestroyed(e);
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern uint RegisterWindowMessage(string name);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern bool SetProp(IntPtr window, string name, IntPtr data);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern IntPtr RemoveProp(IntPtr window, string name);
 
     /// <summary>
     /// K-5: 外部ツールキューに待ちが残ったままプロセスを終えるときの確認。動いている 1 件は止めない
@@ -2523,6 +2587,33 @@ public sealed class MainForm : Form, IBookmarkHost
     {
         if (explorer) OpenInExplorer(target.Folder);
         else _ = OpenFolderAsync(target.Folder, target.SelectName);
+    }
+
+    /// <summary>
+    /// R-109-1: ヘルプ「更新を確認」。インストール先の ReTAC.Updater.exe を、インストール先のフォルダを引数にして起動するだけ。
+    /// 版の確認・ダウンロード・ReTAC の終了・置き換えはアップデータが行う。ReTAC は通信しない（INV-NO-INTERNET）。
+    /// 引数の形は版をまたぐ約束なので変えない（旧版のアップデータも同じ形で受け取る）。
+    /// </summary>
+    private bool CheckForUpdate()
+    {
+        var folder = Path.TrimEndingDirectorySeparator(AppContext.BaseDirectory);
+        var updater = Path.Combine(folder, "ReTAC.Updater.exe");
+        if (!File.Exists(updater))
+        {
+            MessageBox.Show(this, "アップデータが見つかりません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return true;
+        }
+        try
+        {
+            var start = new ProcessStartInfo(updater) { UseShellExecute = false, WorkingDirectory = folder };
+            start.ArgumentList.Add(folder);
+            Process.Start(start);
+        }
+        catch (Win32Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        return true;
     }
 
     /// <summary>R-105: ヘルプ「GitHub のページを開く」。既定のキーは無い。</summary>

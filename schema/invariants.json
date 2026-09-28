@@ -190,6 +190,24 @@
       "reason": "利用者が開くだけの項目でキーに割り当てる理由がない（About と同じ）。ヘルプメニューの配線はコマンドの実行経路（Execute）で行い、CommandLabels には載せない。"
     },
     {
+      "id": "INV-CHECKFORUPDATE-NOT-ASSIGNABLE",
+      "status": "accepted",
+      "specIds": ["R-109-1"],
+      "applies": ["command:CheckForUpdate"],
+      "rule": "CheckForUpdate（0x9014）はキー割り当ての対象にしない。",
+      "reason": "アップデータを起動するだけの項目で、キーに割り当てる理由がない（About・OpenGitHub と同じ）。ヘルプメニューの配線はコマンドの実行経路（Execute）で行い、CommandLabels には載せない。"
+    },
+    {
+      "id": "INV-NO-INTERNET",
+      "status": "enforced",
+      "specIds": ["R-109"],
+      "applies": ["app:*"],
+      "rule": "ReTAC 自身のコード（ReTAC.App / ReTAC.Domain / ReTAC.Shell）は通信の API を使わない。インターネットへ出るのはアップデータ（ReTAC.Updater）だけ。ブラウザーでページを開くこと（R-105）と、利用者が設定した外部ツールを起動することは対象外（通信するのはブラウザーや外部ツールであり、ReTAC ではない）。",
+      "enforcedBy": "テストで 3 つを確かめる: 参照するアセンブリが ReTAC の 3 つと共有フレームワークだけ（ライブラリを足すなら通信しないことを確かめてから許可する）／通信のアセンブリ（System.Net.Http・Requests・WebClient・Sockets・WebSockets.Client・Mail・Quic）を参照しない／P/Invoke の呼び先に wininet・winhttp・ws2_32・urlmon・webio が無い",
+      "testedBy": "tests/ReTAC.Domain.Tests/NoInternetTests.cs",
+      "note": "COM 経由の通信（URL を開くシェルの API など）はテストで見えない。レビューで見る。"
+    },
+    {
       "id": "INV-EXTERNALTOOL-ID-UNIQUE",
       "status": "accepted",
       "specIds": ["F-04"],

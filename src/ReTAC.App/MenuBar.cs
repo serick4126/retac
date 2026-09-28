@@ -208,6 +208,8 @@ public static class MenuBar
                 Item("クイックアクセスの設定(&Q)...", CommandId.QuickAccessSettings)),
 
             Top("ヘルプ(&H)",
+                // R-109-1: アップデータの画面が開くので「...」を付ける。既定のキーなし
+                Item("更新を確認(&U)...", CommandId.CheckForUpdate),
                 // R-105: 新しいコマンド。既定のキーなし
                 Item("GitHub のページを開く(&G)", CommandId.OpenGitHub),
                 Separator(),

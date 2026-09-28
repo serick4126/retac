@@ -100,6 +100,8 @@ public enum CommandId
     OpenGitHub = 0x9012,
     /// <summary>R-107: ブックマークバーへフォーカスを移す。バーが非表示・空（案内の文だけ）なら何もしない。既定は B（B-21）。</summary>
     FocusBookmarkBar = 0x9013,
+    /// <summary>R-109-1: アップデータ（ReTAC.Updater.exe）を起動する。ReTAC 自身は通信しない（INV-NO-INTERNET）。既定のキーは無い。</summary>
+    CheckForUpdate = 0x9014,
     ColorAndFontSettings = 0x8151,
     KeyAssignSettings = 0x8155,
     VisibleDriveSettings = 0x814C,
