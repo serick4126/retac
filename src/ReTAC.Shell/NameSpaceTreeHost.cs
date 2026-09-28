@@ -212,6 +212,7 @@ public sealed class NameSpaceTreeHost : IDisposable
             throw new ArgumentException("現在位置は指定したルート内にありません。", nameof(currentPath));
         ApplyRoot(desktopMode: false, normalizedRoot, () => ShellItemPath.Create(normalizedRoot),
             currentPath, visibility, allowVirtualItems: false, expandedPaths);
+        ShellTreeDropTap.Install(_treeHwnd); // R-111-2 / T1: 右ボタンのドロップを見分けるため。作り直しのたびに包み直す
     }
 
     /// <summary>R-97: デスクトップツリーのルート。PC 全体で単一・固定で、ドライブ/UNC共有の変化では作り直さない。</summary>
@@ -223,6 +224,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         VerifyOwner();
         ApplyRoot(desktopMode: true, NameSpaceTreePolicy.DesktopRootMarker, ShellItemPath.CreateDesktopRoot,
             currentPath, visibility, allowVirtualItems: true, expandedPaths);
+        ShellTreeDropTap.Install(_treeHwnd); // R-111-2 / T1: 右ボタンのドロップを見分けるため。作り直しのたびに包み直す
     }
 
     /// <summary>SetRoot と SetDesktopRoot の共通部分（ルート項目の生成先だけが違う）。</summary>
@@ -1270,6 +1272,7 @@ public sealed class NameSpaceTreeHost : IDisposable
 
         public int OnDragEnter(IntPtr over, IntPtr data, bool outsideSource, uint keyState, ref uint effect)
         {
+            DragButtonState.Enter(keyState);
             var hr = CacheDropSources(data);
             _host?.UpdateDropFeedback(over, data, keyState, ref effect);
             return hr;
@@ -1277,6 +1280,7 @@ public sealed class NameSpaceTreeHost : IDisposable
 
         public int OnDragOver(IntPtr over, IntPtr data, uint keyState, ref uint effect)
         {
+            DragButtonState.Over(keyState);
             var hr = CacheDropSources(data);
             _host?.UpdateDropFeedback(over, data, keyState, ref effect);
             return hr;
