@@ -7,11 +7,14 @@ namespace ReTAC.App;
 /// <summary>R-78 / R-97-3: ReTAC から始めるファイルのドラッグ。</summary>
 internal static class ShellDrag
 {
+    /// <summary>R-110-1: ReTAC（このプロセス）が始めたドラッグの最中か。受け口が「ReTAC から」を見分けるのに使う。</summary>
+    public static bool InProgress { get; private set; }
+
     /// <summary>
     /// シェルが作るデータ（Shell IDList と FileDrop の両方を持つ）を WinForms の DataObject で包み、小さい画像を付けて渡す。
     /// FileDrop だけだと、名前空間ツリー（左パネル）はシェル項目に変換できず、ドラッグ中の通知もドロップも受けられない。
     /// </summary>
-    public static void Start(Control source, IReadOnlyList<string> paths, Bitmap image, Point cursorOffset)
+    public static void Start(Control source, IReadOnlyList<string> paths, Bitmap image, Point cursorOffset, bool rightButton = false)
     {
         var shell = ShellDataObject.For(paths);
         DataObject data;
@@ -42,6 +45,8 @@ internal static class ShellDrag
             }
         };
         source.GiveFeedback += redraw;
+        InProgress = true;
+        DragButtonState.SourceRight = rightButton;   // T1: ツリーは右ボタンを通知しないので、自分で始めた分は自分で覚える
         try
         {
             source.DoDragDrop(data, DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link,
@@ -49,6 +54,8 @@ internal static class ShellDrag
         }
         finally
         {
+            InProgress = false;
+            DragButtonState.SourceRight = false;
             source.GiveFeedback -= redraw;
             // シェルの資源を GC まで握らない。DoDragDrop は同期なので、戻れば使い終わっている
             if (shell is not null && Marshal.IsComObject(shell)) Marshal.ReleaseComObject(shell);

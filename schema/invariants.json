@@ -347,8 +347,8 @@
       "specIds": ["R-11", "R-80"],
       "applies": ["type:ReTAC.Domain.Selection.ListState"],
       "rule": "マークは、マークの操作（Space、行頭アイコンのクリック、Shift+クリック、マーク系のコマンド）でだけ変わる。カーソルの移動・検索・ドラッグ・ドロップ・再表示・メニューの表示ではマークを変えない。移動が完了したときの解除は、移動したものが一覧から消えるための後始末であり、例外とする。",
-      "enforcedBy": "domain:ListState（マークを変えるのは ToggleMark* / ToggleAllMarks / InvertMarks / Mark* / ClearMarks だけ）",
-      "testedBy": "tests/ReTAC.Domain.Tests/ListStateTests.cs",
+      "enforcedBy": "domain:ListState（マークを変えるのは ToggleMark* / ToggleAllMarks / InvertMarks / Mark* / ClearMarks だけ）。domain:MarkOnRelease（行頭アイコン・Shift+クリックは離した時点。D&D になったら変えない）",
+      "testedBy": "tests/ReTAC.Domain.Tests/ListStateTests.cs, tests/ReTAC.Domain.Tests/MarkOnReleaseTests.cs",
       "note": "ReTAC で最も重要な規則。Windows の標準（クリックで選択が置き換わる）に合わせて、クリックや検索でマークを外す実装を足さないこと。今いるフォルダを開き直す操作も足さない（開き直すとカーソルが先頭に戻りマークも消える。R-40-2。9.3 でパンくずの最後の段のクリックを「何もしない」にした）。"
     },
     {

@@ -28,6 +28,13 @@ public sealed class FileListView : Control
     private int _scrollColumn;
     /// <summary>R-76: ホイールの端数。フォルダを開き直したら捨てる。</summary>
     private readonly WheelAccumulator _wheel = new();
+    /// <summary>R-11-2 / Q7: 行頭アイコン・Shift+クリックのマークは、動かさずに離した時点で変える。</summary>
+    private readonly MarkOnRelease _markOnRelease = new();
+    /// <summary>
+    /// R-111-1: 右ボタンを押した項目・位置・Shift。右クリックのメニューは離した時点で出す（押した時点で出すと右ボタンのドラッグを始められない）。
+    /// Shift は押した時点の値（R-81）。ドラッグになったら null に戻し、メニューは出さない。
+    /// </summary>
+    private (int Index, Point Location, bool Shift)? _rightDown;
 
     public FileListView()
     {
@@ -390,9 +397,7 @@ public sealed class FileListView : Control
 
         if (e.Button == MouseButtons.Right)
         {
-            // 項目の上ならシェルのメニュー、余白なら `G` のポップアップ。振り分けは呼び出し側。
-            // 右クリックではマークを変えない（R-11 の「クリックはカーソル移動のみ」より更に静か）
-            RightClicked?.Invoke(this, new RightClick(index, PointToScreen(e.Location), ModifierKeys.HasFlag(Keys.Shift)));
+            _rightDown = (index, e.Location, ModifierKeys.HasFlag(Keys.Shift));
             return;
         }
         if (e.Button != MouseButtons.Left || index < 0) return;
@@ -400,33 +405,14 @@ public sealed class FileListView : Control
         _dragOrigin = e.Location;
         _dragIndex = index;
 
-        var before = _state.CursorIndex;
         // R-11-2 / B-07: 先頭の余白もアイコンの当たり判定に含める。
         // 卓駆も左端の余白でマークがトグルする
         var onIcon = e.X - (_layout.ColumnOf(index) - _scrollColumn) * _layout.ColumnWidth
                      < _layout.ColumnPadding + _icons.Size;
 
-        if (onIcon)
-        {
-            // R-11-2: 行頭アイコンのクリックでマークをトグルする。
-            // あわせてカーソルもその行へ移す。Space（R-11-3）がトグルとカーソル移動を
-            // 両方行うのと揃える。カーソルが動いてもマークは失われない（R-11）
-            _state.ToggleMark(index);
-            _state.MoveCursor(index);
-            Commit(before, marksChanged: true);
-            return;
-        }
-
-        if (ModifierKeys.HasFlag(Keys.Shift))
-        {
-            _state.MarkRange(_state.CursorIndex, index);   // R-11-2: 範囲マーク
-            _state.MoveCursor(index);
-            Commit(before, marksChanged: true);
-            return;
-        }
-
-        // ★ここが Windows 標準と決定的に異なる: マークに一切触れない（R-11）
-        _state.MoveCursor(index);
+        // Q7: マークを変えるのは離した時点（MarkOnRelease）。押した時点ではカーソルだけ移す
+        var before = _state.CursorIndex;
+        _markOnRelease.Press(_state, index, onIcon, ModifierKeys.HasFlag(Keys.Shift));
         Commit(before, marksChanged: false);
     }
 
@@ -439,6 +425,22 @@ public sealed class FileListView : Control
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
+
+        if (e.Button == MouseButtons.Right && _rightDown is { } down && down.Index >= 0 && !_state.Entries[down.Index].IsParent
+            && (Math.Abs(e.X - down.Location.X) >= SystemInformation.DragSize.Width
+                || Math.Abs(e.Y - down.Location.Y) >= SystemInformation.DragSize.Height))
+        {
+            _rightDown = null;
+            // R-111: 右クリックと同じく押した項目へカーソルを移す。対象はマークがあればマーク集合、無ければその項目（R-10 / R-65-2）。
+            // A-01: マークは変えない
+            MoveCursorTo(down.Index);
+            var rightTargets = _state.EffectiveTarget();
+            if (rightTargets.Count == 0) return;
+            using var rightImage = DragImage(rightTargets);
+            ShellDrag.Start(this, rightTargets.Select(target => target.FullPath).ToList(), rightImage, new Point(Scaled(8), Scaled(8)), rightButton: true);
+            return;
+        }
+
         if (e.Button != MouseButtons.Left || _dragIndex < 0) return;
 
         var moved = Math.Abs(e.X - _dragOrigin.X) >= SystemInformation.DragSize.Width
@@ -451,6 +453,7 @@ public sealed class FileListView : Control
         _dragIndex = -1;
         if (targets.Count == 0) return;
 
+        _markOnRelease.DragStarted();   // Q7: D&D になったらマークは変えない
         // A-01: ドラッグしてもマークは変わらない
         // R-78: 画像付きで始める。画像の無いドラッグには、落とす先が説明（「◯◯へ移動」）を出せない
         using var image = DragImage(targets);
@@ -495,6 +498,17 @@ public sealed class FileListView : Control
     {
         base.OnMouseUp(e);
         _dragIndex = -1;
+
+        if (e.Button == MouseButtons.Right && _rightDown is { } down)
+        {
+            _rightDown = null;
+            // R-111-1: 対象は押した位置の項目、出す位置は離した位置（マウスの位置。INV-POPUP-POSITION）
+            RightClicked?.Invoke(this, new RightClick(down.Index, PointToScreen(e.Location), down.Shift));
+            return;
+        }
+
+        if (e.Button == MouseButtons.Left && _markOnRelease.Release(_state))
+            Commit(_state.CursorIndex, marksChanged: true);
     }
 
     protected override void OnMouseWheel(MouseEventArgs e)
