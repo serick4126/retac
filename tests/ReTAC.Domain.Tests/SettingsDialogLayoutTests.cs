@@ -6,7 +6,7 @@ using ReTAC.Domain.Navigation;
 namespace ReTAC.Domain.Tests;
 
 /// <summary>
-/// R-102: 統合設定画面の枠を作り（表示はしない）、6 ページがそれぞれ枠のページ領域に収まり、
+/// R-102: 統合設定画面の枠を作り（表示はしない）、7 ページがそれぞれ枠のページ領域に収まり、
 /// ページの子コントロールがページの <see cref="Control.ClientRectangle"/> の中に収まることを確かめる。
 /// テスト実行環境の DPI（通常 100%）での検査であり、150% での確認は実機で行う。
 /// </summary>
@@ -19,9 +19,9 @@ public class SettingsDialogLayoutTests
         var draft = SettingsDraft.From(settings, settings.ToKeyMap(), Theme.Default, new QuickAccessList());
         using var dialog = new SettingsDialog(draft, SettingsPage.Environment, @"C:\", _ => true);
 
-        // 6 ページは UserControl、サイドバーは ListBox、下端は Button なので型で見分けられる
+        // 7 ページは UserControl、サイドバーは ListBox、下端は Button なので型で見分けられる
         var pages = dialog.Controls.OfType<UserControl>().ToList();
-        Assert.Equal(6, pages.Count);
+        Assert.Equal(7, pages.Count);
 
         var sidebar = dialog.Controls.OfType<ListBox>().Single();
 

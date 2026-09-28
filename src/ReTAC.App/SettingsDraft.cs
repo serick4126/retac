@@ -1,13 +1,14 @@
 using ReTAC.App.Rendering;
 using ReTAC.Domain.Commands;
 using ReTAC.Domain.Keys;
+using ReTAC.Domain.Listing;
 using ReTAC.Domain.Navigation;
 using ReTAC.Domain.Tools;
 
 namespace ReTAC.App;
 
 /// <summary>
-/// R-102-3: 統合した設定画面の 6 ページが編集する下書き。画面を開いたときに共有の設定から作り、
+/// R-102-3: 統合した設定画面の 7 ページが編集する下書き。画面を開いたときに共有の設定から作り、
 /// ページの操作はこれだけを変える。<see cref="CommitTo"/> を呼ぶまで <see cref="AppSettings"/>・
 /// キーマップ・クイックアクセスの実体は変わらない（INV-SETTINGS-DRAFT）。
 ///
@@ -48,6 +49,10 @@ public sealed class SettingsDraft
     /// </summary>
     public Theme SystemLight { get; set; } = Theme.Recommended(dark: false);
     public Theme SystemDark { get; set; } = Theme.Recommended(dark: true);
+
+    // --- ファイルビュー（FileViewPage） ------------------------------------
+    /// <summary>不変の record なので共有の設定と同じインスタンスを持ってよい。ページは with で差し替える（INV-SETTINGS-DRAFT）。</summary>
+    public FileViewSettings FileViews { get; set; } = new();
 
     // --- キー割り当て（KeyAssignPage） ------------------------------------
     /// <summary>枠ごとの今の割り当て。値が null なら「割り当てなし」（KeyAssignPage の内部表現と同じ形）。</summary>
@@ -115,6 +120,7 @@ public sealed class SettingsDraft
             ColorMode = settings.ColorMode,
             SystemLight = settings.ToSystemTheme(dark: false),
             SystemDark = settings.ToSystemTheme(dark: true),
+            FileViews = settings.FileViews,
             // KeyBindings を先に代入する。ExternalTools のセッターが「存在しないツールを指す
             // 割り当てを落とす」処理を持つため、後から代入すると順序が入れ替わり効果が消える。
             KeyBindings = KeySlots.All.ToDictionary(slot => slot, slot => keyMap.Resolve(slot)),
@@ -152,6 +158,7 @@ public sealed class SettingsDraft
         settings.ColorMode = ColorMode;
         settings.FromSystemTheme(dark: false, SystemLight);
         settings.FromSystemTheme(dark: true, SystemDark);
+        settings.FileViews = FileViews;
 
         var beforeKeyBindings = new Dictionary<string, string>(settings.KeyBindings);
         var keyMap = new KeyMap(KeyBindings

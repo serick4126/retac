@@ -229,4 +229,15 @@ public class SettingsDraftTests
         Assert.True(changed.ExternalToolsChanged);
         Assert.True(changed.KeyBindingsChanged);
     }
+
+    [Fact]
+    public void ファイルビューの設定は確定するまで共有の設定を変えない()
+    {
+        var settings = new AppSettings();
+        var draft = SettingsDraft.From(settings, settings.ToKeyMap(), settings.ToTheme(), settings.ToQuickAccess());
+        draft.FileViews = draft.FileViews with { List = draft.FileViews.List with { InPanelDragDrop = true } };
+        Assert.False(settings.FileViews.List.InPanelDragDrop);
+        draft.CommitTo(settings, settings.ToQuickAccess());
+        Assert.True(settings.FileViews.List.InPanelDragDrop);
+    }
 }

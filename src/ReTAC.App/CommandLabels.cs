@@ -81,6 +81,7 @@ public static class CommandLabels
         ("設定", CommandId.ColorAndFontSettings, "配色・フォントの設定"),
         ("設定", CommandId.KeyAssignSettings, "キー割り当ての設定"),
         ("設定", CommandId.VisibleDriveSettings, "表示するドライブの設定"),
+        ("設定", CommandId.FileViewSettings, "ファイルビューの設定"),
         ("設定", CommandId.EnvironmentSettings, "動作環境の設定"),
     ];
 

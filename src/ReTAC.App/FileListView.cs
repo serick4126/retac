@@ -96,6 +96,11 @@ public sealed class FileListView : Control
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public string DropFolder { get; set; } = "";
 
+    /// <summary>R-110: ファイル表示パネルの中の項目の上へ落とせるか。MainForm が設定から当てる。</summary>
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool InPanelDragDrop { get; set; }
+
     /// <summary>ファイルが落とされた（T8-2）。修飾キーはドロップの時点の値（R-111-2）。</summary>
     public readonly record struct Drop(string[] Files, string Destination, DragDropEffects Allowed, bool Ctrl, bool Shift);
 

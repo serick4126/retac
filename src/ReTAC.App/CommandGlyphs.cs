@@ -77,6 +77,7 @@ public static class CommandGlyphs
         [CommandId.ColorAndFontSettings] = '\uE790',
         [CommandId.KeyAssignSettings] = '\uE765',
         [CommandId.VisibleDriveSettings] = '\uEDA2',
+        [CommandId.FileViewSettings] = '\uE8FD',
         [CommandId.EnvironmentSettings] = '\uE713',
         [CommandId.OpenSettings] = '\uE713',
         [CommandId.NewWindow] = '\uE78B',

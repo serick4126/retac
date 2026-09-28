@@ -102,6 +102,8 @@ public enum CommandId
     FocusBookmarkBar = 0x9013,
     /// <summary>R-109-1: アップデータ（ReTAC.Updater.exe）を起動する。ReTAC 自身は通信しない（INV-NO-INTERNET）。既定のキーは無い。</summary>
     CheckForUpdate = 0x9014,
+    /// <summary>R-112-2: 統合した設定画面を「ファイルビュー」ページで開く。既定のキーは無い。</summary>
+    FileViewSettings = 0x9015,
     ColorAndFontSettings = 0x8151,
     KeyAssignSettings = 0x8155,
     VisibleDriveSettings = 0x814C,

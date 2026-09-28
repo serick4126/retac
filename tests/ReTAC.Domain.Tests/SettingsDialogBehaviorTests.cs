@@ -98,6 +98,7 @@ public class SettingsDialogBehaviorTests
 
     [Theory]
     [InlineData(SettingsPage.Environment)]
+    [InlineData(SettingsPage.FileView)]
     [InlineData(SettingsPage.KeyAssign)]
     [InlineData(SettingsPage.QuickAccess)]
     public void 指定した初期ページが選ばれている(SettingsPage page)

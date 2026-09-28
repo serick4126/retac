@@ -192,6 +192,7 @@ public sealed class MainForm : Form, IBookmarkHost
         _list.Theme = _settings.ToScreenTheme(Program.StartupColorMode, Program.StartupOs);   // 5-1 節・R-108
         ApplyLeftPanelFont(_list.Theme);                         // R-101: 左パネルは一覧とは別のフォント
         _driveBar.SetVisibility(_settings.ToHiddenDrives(), _settings.ShowDesktopButton);   // 16.7 節
+        _list.InPanelDragDrop = _settings.FileViews.List.InPanelDragDrop;   // R-110
         _list.CommandKey += (_, e) => OnCommandKey(e);
         _list.RightClicked += (_, click) => OnRightClick(click);
         // Step5: 左パネルが表示中のときだけ往復する。非表示なら CentralDisplayArea.LeftPanelVisible が false のまま何もしない
@@ -638,6 +639,7 @@ public sealed class MainForm : Form, IBookmarkHost
         CommandId.ColorAndFontSettings => ShowSettings(SettingsPage.ColorFont),
         CommandId.KeyAssignSettings => ShowSettings(SettingsPage.KeyAssign),
         CommandId.VisibleDriveSettings => ShowSettings(SettingsPage.DriveVisibility),
+        CommandId.FileViewSettings => ShowSettings(SettingsPage.FileView),
         CommandId.RunCommandLine => RunCommandLine(),
         CommandId.CopyToFolder => Recording(() => Transfer(moving: false)),
         CommandId.MoveToFolder => Recording(() => Transfer(moving: true)),
@@ -2340,7 +2342,7 @@ public sealed class MainForm : Form, IBookmarkHost
             "ReTAC", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK;
     }
 
-    /// <summary>統合した設定画面（R-102-2）。6 つの旧コマンドと新しい「設定」コマンドの、共通の入口。</summary>
+    /// <summary>統合した設定画面（R-102-2）。6 つの旧コマンドと、新しい「設定」「ファイルビューの設定」コマンドの共通の入口。</summary>
     private bool ShowSettings(SettingsPage page)
     {
         // R-108: _list.Theme は OS の色で解決済み。それを渡すと OS の色が独自の配色として保存される
@@ -2366,6 +2368,9 @@ public sealed class MainForm : Form, IBookmarkHost
         // R-36: 複数ウィンドウが同じ AppSettings を共有している。この窓の _keyMap は
         // 他の窓での変更を反映していない古いものかもしれないので、保存前の設定から作り直す
         _keyMap = _settings.ToKeyMap();
+        // R-110 / R-36: ファイルビューの設定も全ウィンドウで共有している。Phase 15 で表示モードを持ったら、表示中の系統の値を当てる
+        foreach (var window in Application.OpenForms.OfType<MainForm>().ToList())
+            window._list.InPanelDragDrop = window._settings.FileViews.List.InPanelDragDrop;
 
         SaveSettings();   // V-13
         if (result.ExternalToolsChanged || result.KeyBindingsChanged) RebuildMenus();

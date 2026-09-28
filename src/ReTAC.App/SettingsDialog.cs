@@ -4,7 +4,7 @@ using System.Windows.Forms;
 namespace ReTAC.App;
 
 /// <summary>
-/// 統合した設定画面の枠（R-102）。左のサイドバーで 6 ページを切り替え、下端の OK / キャンセル / 適用で
+/// 統合した設定画面の枠（R-102）。左のサイドバーで 7 ページを切り替え、下端の OK / キャンセル / 適用で
 /// 下書き（<see cref="SettingsDraft"/>）をまとめて確定する（R-102-3）。
 /// </summary>
 public sealed class SettingsDialog : Form
@@ -13,6 +13,7 @@ public sealed class SettingsDialog : Form
     [
         (SettingsPage.Environment, "動作環境"),
         (SettingsPage.ColorFont, "配色・フォント"),
+        (SettingsPage.FileView, "ファイルビュー"),
         (SettingsPage.KeyAssign, "キー割り当て"),
         (SettingsPage.ExternalTool, "外部ツール"),
         (SettingsPage.DriveVisibility, "表示するドライブ"),
@@ -54,6 +55,7 @@ public sealed class SettingsDialog : Form
         var pageLocation = new Point(pageLeft, Pad);
         var environmentPage = new EnvironmentPage(draft) { Location = pageLocation };
         var colorFontPage = new ColorFontPage(draft) { Location = pageLocation };
+        var fileViewPage = new FileViewPage(draft) { Location = pageLocation };
         var keyAssignPage = new KeyAssignPage(draft) { Location = pageLocation };
         _externalToolPage = new ExternalToolPage(draft) { Location = pageLocation };
         var driveVisibilityPage = new DriveVisibilityPage(draft) { Location = pageLocation };
@@ -63,6 +65,7 @@ public sealed class SettingsDialog : Form
         {
             [SettingsPage.Environment] = environmentPage,
             [SettingsPage.ColorFont] = colorFontPage,
+            [SettingsPage.FileView] = fileViewPage,
             [SettingsPage.KeyAssign] = keyAssignPage,
             [SettingsPage.ExternalTool] = _externalToolPage,
             [SettingsPage.DriveVisibility] = driveVisibilityPage,
@@ -75,7 +78,7 @@ public sealed class SettingsDialog : Form
         var applyRight = clientWidth - Pad;
         var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Bounds = new Rectangle(applyRight - ButtonWidth * 3 - ButtonGap * 2, buttonTop, ButtonWidth, ButtonHeight) };
         var cancel = new Button { Text = "キャンセル", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(applyRight - ButtonWidth * 2 - ButtonGap, buttonTop, ButtonWidth, ButtonHeight) };
-        // 6 ページの (&x) と衝突しない文字を選ぶ。A は ExternalToolPage の「追加」・QuickAccessPage の
+        // 7 ページの (&x) と衝突しない文字を選ぶ。A は ExternalToolPage の「追加」・QuickAccessPage の
         // 「フォルダを追加」と衝突する。E・I は、キー割り当てページにエクスポート・インポートのボタンを
         // 足す予定があるため、今は使っていなくても避ける
         var applyButton = new Button { Text = "適用(&S)", Bounds = new Rectangle(applyRight - ButtonWidth, buttonTop, ButtonWidth, ButtonHeight) };
@@ -84,7 +87,7 @@ public sealed class SettingsDialog : Form
         CancelButton = cancel;
         ShowValidationMessage = message => MessageBox.Show(this, message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
-        // C-1: 6 ページすべてを Controls に入れてから AutoScaleMode を代入する。後から足したページは
+        // C-1: 7 ページすべてを Controls に入れてから AutoScaleMode を代入する。後から足したページは
         // PerformAutoScale の対象にならず、150% で切れる
         Controls.Add(_sidebar);
         foreach (var page in _pages.Values) Controls.Add(page);
