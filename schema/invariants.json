@@ -60,7 +60,9 @@
     "QuickAccessShowTitles": "dialog:SettingsDialog#QuickAccessPage",
     "QuickAccessFixMissing": "dialog:SettingsDialog#QuickAccessPage",
 
-    "FolderHistory": "runtime:MainForm"
+    "FolderHistory": "runtime:MainForm",
+
+    "FileViews": "dialog:SettingsDialog#FileViewPage"
   },
 
   "invariants": [
@@ -513,6 +515,20 @@
       "rule": "画像付きのドラッグの元は、落とす先の説明（DropDescription）が出ていないとき、効果にかかわらず既定のカーソルを使わせる。WinForms は画像付きのとき既定のカーソルを使わないので、放っておくと説明を書かないアプリ（WinSCP など）の上でカーソルが矢印だけになる。説明が出る所へ戻ったら矢印に戻す。",
       "enforcedBy": "app:ShellDrag.Start（GiveFeedback で DragImageWindow.RedrawIfDescriptionChanged が false なら UseDefaultCursors = true）",
       "note": "OLE のドラッグの中の判断なので単体テストが無い。実機で、説明を書かないアプリ・エクスプローラー・ReTAC 自身・名前空間ツリーの落とせない所の 4 つを確かめる。"
+    },
+    {
+      "id": "INV-FILEVIEW-SETTINGS-PER-GROUP",
+      "status": "enforced",
+      "specIds": ["R-112", "R-112-1"],
+      "applies": [
+        "settings:FileViews",
+        "type:ReTAC.Domain.Listing.FileViewSettings",
+        "unique:ReTAC.Domain.Listing.DetailsViewSettings#Columns",
+        "unique:ReTAC.Domain.Listing.TilesViewSettings#Info"
+      ],
+      "rule": "ファイルビューの設定は、一覧・詳細・アイコン・並べて表示の系統ごとに別の欄（型）へ持つ。全ビューに同じく効くものだけ共通の欄（Common）に持つ。詳細表示の列・並べて表示の情報は、重複を許す型だが Normalize が読み込み時に重複を捨てる。",
+      "enforcedBy": "domain:FileViewSettings（系統ごとの欄と Common の欄。欄ごとに別の型）/ FileViewSettings.Normalize（Columns・Info の重複を DistinctBy / Distinct で捨てる）",
+      "testedBy": "tests/ReTAC.Domain.Tests/FileViewSettingsTests.cs"
     }
   ]
 }

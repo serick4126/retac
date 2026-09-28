@@ -195,6 +195,12 @@
         "default": 280
       },
       {
+        "key": "FileViews",
+        "type": "ReTAC.Domain.Listing.FileViewSettings",
+        "nullable": false,
+        "default": "FileViewSettings { Common = FileViewCommonSettings { ShowOverlays = True }, List = ListViewSettings { InPanelDragDrop = False, NameWidth = NameWidthSetting { Mode = ShowAll, MaxChars = 40 } }, Details = DetailsViewSettings { InPanelDragDrop = True, NameWidth = NameWidthSetting { Mode = ShowAll, MaxChars = 40 }, ExtensionInName = True, Columns = <>z__ReadOnlyArray`1[ReTAC.Domain.Listing.DetailsColumnSetting], FitColumnsToWindow = False }, Icons = IconsViewSettings { InPanelDragDrop = True, MediumSize = 48, LargeSize = 96, ExtraLargeSize = 256, CheckBoxes = HoverAndMarked, Thumbnails = True, FolderThumbnails = True, NameLines = 2, SmallIconWidth = NameWidthSetting { Mode = MaxChars, MaxChars = 40 } }, Tiles = TilesViewSettings { InPanelDragDrop = True, Info = <>z__ReadOnlyArray`1[ReTAC.Domain.Listing.TileInfo], TilesSize = 48, ContentSize = 48, CheckBoxes = HoverAndMarked, Thumbnails = True, FolderThumbnails = True } }"
+      },
+      {
         "key": "ExpandedBookmarkGroupIds",
         "type": "List<string>",
         "nullable": false,
@@ -1080,6 +1086,16 @@
       "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
       "doc": "Phase 1 で使う仮想キーコード。値は Win32 の VK_* と同じ（WinForms の Keys とも一致する）。"
     },
+    "ReTAC.Domain.Listing.CheckBoxMode": {
+      "id": "type:ReTAC.Domain.Listing.CheckBoxMode",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+      "doc": "R-116: マークのチェックボックスをいつ出すか。",
+      "members": [
+        "HoverAndMarked",
+        "Always"
+      ]
+    },
     "ReTAC.Domain.Listing.ColumnLayout": {
       "id": "type:ReTAC.Domain.Listing.ColumnLayout",
       "kind": "sealed record",
@@ -1154,6 +1170,85 @@
       "members": [
         "Strict",
         "Natural"
+      ]
+    },
+    "ReTAC.Domain.Listing.DetailsColumn": {
+      "id": "type:ReTAC.Domain.Listing.DetailsColumn",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+      "doc": "R-114: 詳細表示の名前以外の列。名前の列は常に先頭に出し、隠せないので含めない。",
+      "members": [
+        "Extension",
+        "Size",
+        "Modified",
+        "Created",
+        "Type",
+        "Attributes"
+      ]
+    },
+    "ReTAC.Domain.Listing.DetailsColumnSetting": {
+      "id": "type:ReTAC.Domain.Listing.DetailsColumnSetting",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+      "doc": "R-114: 列 1 つの表示・非表示。並びは列の中の順で持つ（非表示の列も並びを保つ）。",
+      "fields": [
+        {
+          "name": "Column",
+          "type": "ReTAC.Domain.Listing.DetailsColumn",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Visible",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Listing.DetailsViewSettings": {
+      "id": "type:ReTAC.Domain.Listing.DetailsViewSettings",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+      "fields": [
+        {
+          "name": "InPanelDragDrop",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "NameWidth",
+          "type": "ReTAC.Domain.Listing.NameWidthSetting",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "ExtensionInName",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "R-114 / Q20: 名前の列に拡張子を出す。"
+        },
+        {
+          "name": "Columns",
+          "type": "IReadOnlyList<ReTAC.Domain.Listing.DetailsColumnSetting>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "FitColumnsToWindow",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
       ]
     },
     "ReTAC.Domain.Listing.FileTypeFilter": {
@@ -1234,6 +1329,71 @@
         "Other"
       ]
     },
+    "ReTAC.Domain.Listing.FileViewCommonSettings": {
+      "id": "type:ReTAC.Domain.Listing.FileViewCommonSettings",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+      "doc": "R-112-1 / Phase 16 Q3: 全ビューに同じく効く設定（INV-FILEVIEW-SETTINGS-PER-GROUP）。",
+      "fields": [
+        {
+          "name": "ShowOverlays",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "R-118: 同期状態などの OS の印をアイコンに重ねる。"
+        }
+      ]
+    },
+    "ReTAC.Domain.Listing.FileViewLimits": {
+      "id": "type:ReTAC.Domain.Listing.FileViewLimits",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+      "doc": "R-113 / R-112-3 / R-115 / R-119: 範囲と候補。設定画面の部品もここから作る。"
+    },
+    "ReTAC.Domain.Listing.FileViewSettings": {
+      "id": "type:ReTAC.Domain.Listing.FileViewSettings",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+      "doc": "R-112: ファイルビューの設定は、系統ごとの欄に持つ（INV-FILEVIEW-SETTINGS-PER-GROUP）。全ビューに同じく効くものは Common。 設定 JSON にそのまま載るので required を付けない（S-14）。欠けた欄・項目は既定値で埋まる（移行はしない）。 欄はすべて不変の record で、列も IReadOnlyList なので、設定画面の下書きと共有してよい（INV-SETTINGS-DRAFT）。",
+      "fields": [
+        {
+          "name": "Common",
+          "type": "ReTAC.Domain.Listing.FileViewCommonSettings",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "List",
+          "type": "ReTAC.Domain.Listing.ListViewSettings",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Details",
+          "type": "ReTAC.Domain.Listing.DetailsViewSettings",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Icons",
+          "type": "ReTAC.Domain.Listing.IconsViewSettings",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Tiles",
+          "type": "ReTAC.Domain.Listing.TilesViewSettings",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
     "ReTAC.Domain.Listing.FolderEnumerator": {
       "id": "type:ReTAC.Domain.Listing.FolderEnumerator",
       "kind": "static class",
@@ -1246,11 +1406,151 @@
       "file": "src/ReTAC.Domain/Listing/FolderListing.cs",
       "doc": "R-04 / R-05: 親フォルダ項目を先頭に固定し、フォルダ優先で並べる。"
     },
+    "ReTAC.Domain.Listing.IconsViewSettings": {
+      "id": "type:ReTAC.Domain.Listing.IconsViewSettings",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+      "doc": "小・中・大・特大アイコン。大きさだけはモードごと（INV-FILEVIEW-SETTINGS-PER-GROUP の例外）。",
+      "fields": [
+        {
+          "name": "InPanelDragDrop",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "MediumSize",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "LargeSize",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "ExtraLargeSize",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "CheckBoxes",
+          "type": "ReTAC.Domain.Listing.CheckBoxMode",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Thumbnails",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "FolderThumbnails",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "NameLines",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "R-119: 中・大・特大の名前の行数。"
+        },
+        {
+          "name": "SmallIconWidth",
+          "type": "ReTAC.Domain.Listing.NameWidthSetting",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "Phase 16 Q6: 小アイコンの項目の幅。格子なので既定は最大文字数。"
+        }
+      ]
+    },
+    "ReTAC.Domain.Listing.LenientEnumConverter`1": {
+      "id": "type:ReTAC.Domain.Listing.LenientEnumConverter`1",
+      "kind": "sealed class",
+      "file": null,
+      "doc": "R-112: ファイルビューの列挙を名前で読み書きし、知らない名前・数は「定義されていない値」として読む（例外にしない）。 設定ファイルの全体は JsonStringEnumConverter で読むので、知らない名前は JsonException になり、AppSettings.Load が 設定ファイル全体を捨てて既定値で起動してしまう。FileViewSettings.Normalize が定義されていない値を既定値に戻す。 型ではなく欄に付ける（オプションの Converters は型に付けた属性より先に効くが、欄に付けた属性はそれより先に効く）。"
+    },
+    "ReTAC.Domain.Listing.LenientEnumListConverter`1": {
+      "id": "type:ReTAC.Domain.Listing.LenientEnumListConverter`1",
+      "kind": "sealed class",
+      "file": null,
+      "doc": "列挙の列。知らない名前の要素を捨てる（R-115 の情報の選択）。"
+    },
+    "ReTAC.Domain.Listing.ListViewSettings": {
+      "id": "type:ReTAC.Domain.Listing.ListViewSettings",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+      "fields": [
+        {
+          "name": "InPanelDragDrop",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "R-110: 一覧だけ既定はオフ（今の動作。B-05）。"
+        },
+        {
+          "name": "NameWidth",
+          "type": "ReTAC.Domain.Listing.NameWidthSetting",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
     "ReTAC.Domain.Listing.NameComparers": {
       "id": "type:ReTAC.Domain.Listing.NameComparers",
       "kind": "static class",
       "file": "src/ReTAC.Domain/Listing/NameComparers.cs",
       "doc": "R-05-3: 名前・拡張子の比較は大文字小文字を区別しない。"
+    },
+    "ReTAC.Domain.Listing.NameWidthMode": {
+      "id": "type:ReTAC.Domain.Listing.NameWidthMode",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+      "doc": "R-113: 名前の列（小アイコンでは項目の幅）の決め方。",
+      "members": [
+        "ShowAll",
+        "Auto",
+        "MaxChars"
+      ]
+    },
+    "ReTAC.Domain.Listing.NameWidthSetting": {
+      "id": "type:ReTAC.Domain.Listing.NameWidthSetting",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+      "doc": "R-113: 方式と、方式が「最大文字数」のときの文字数（数字 0 の幅の倍数）。一覧・詳細・小アイコンで共通の形。",
+      "fields": [
+        {
+          "name": "Mode",
+          "type": "ReTAC.Domain.Listing.NameWidthMode",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "MaxChars",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
     },
     "ReTAC.Domain.Listing.SortDirection": {
       "id": "type:ReTAC.Domain.Listing.SortDirection",
@@ -1296,6 +1596,76 @@
         {
           "name": "Mode",
           "type": "ReTAC.Domain.Listing.ComparisonMode",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Listing.TileInfo": {
+      "id": "type:ReTAC.Domain.Listing.TileInfo",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+      "doc": "R-115: 並べて表示・コンテンツで名前の横に出す情報。並びは入りきらないときに出す順（候補の並び）。",
+      "members": [
+        "Type",
+        "Size",
+        "Modified",
+        "Created",
+        "Attributes"
+      ]
+    },
+    "ReTAC.Domain.Listing.TilesViewSettings": {
+      "id": "type:ReTAC.Domain.Listing.TilesViewSettings",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+      "fields": [
+        {
+          "name": "InPanelDragDrop",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Info",
+          "type": "IReadOnlyList<ReTAC.Domain.Listing.TileInfo>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "R-115 / Q17: 並べて表示とコンテンツで共通の 1 つ。"
+        },
+        {
+          "name": "TilesSize",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "ContentSize",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "CheckBoxes",
+          "type": "ReTAC.Domain.Listing.CheckBoxMode",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Thumbnails",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "FolderThumbnails",
+          "type": "bool",
           "nullable": false,
           "required": false,
           "mutability": "init"
@@ -2354,6 +2724,138 @@
       "visibility": "private"
     },
     {
+      "from": "type:ReTAC.Domain.Listing.DetailsColumnSetting",
+      "to": "type:ReTAC.Domain.Listing.DetailsColumn",
+      "type": "1:1",
+      "fk": {
+        "field": "Column",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.DetailsViewSettings",
+      "to": "type:ReTAC.Domain.Listing.NameWidthSetting",
+      "type": "1:1",
+      "fk": {
+        "field": "NameWidth",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.DetailsViewSettings",
+      "to": "type:ReTAC.Domain.Listing.DetailsColumnSetting",
+      "type": "1:N",
+      "fk": {
+        "field": "Columns",
+        "container": "IReadOnlyList<ReTAC.Domain.Listing.DetailsColumnSetting>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.FileViewSettings",
+      "to": "type:ReTAC.Domain.Listing.FileViewCommonSettings",
+      "type": "1:1",
+      "fk": {
+        "field": "Common",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.FileViewSettings",
+      "to": "type:ReTAC.Domain.Listing.ListViewSettings",
+      "type": "1:1",
+      "fk": {
+        "field": "List",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.FileViewSettings",
+      "to": "type:ReTAC.Domain.Listing.DetailsViewSettings",
+      "type": "1:1",
+      "fk": {
+        "field": "Details",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.FileViewSettings",
+      "to": "type:ReTAC.Domain.Listing.IconsViewSettings",
+      "type": "1:1",
+      "fk": {
+        "field": "Icons",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.FileViewSettings",
+      "to": "type:ReTAC.Domain.Listing.TilesViewSettings",
+      "type": "1:1",
+      "fk": {
+        "field": "Tiles",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.IconsViewSettings",
+      "to": "type:ReTAC.Domain.Listing.CheckBoxMode",
+      "type": "1:1",
+      "fk": {
+        "field": "CheckBoxes",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.IconsViewSettings",
+      "to": "type:ReTAC.Domain.Listing.NameWidthSetting",
+      "type": "1:1",
+      "fk": {
+        "field": "SmallIconWidth",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.ListViewSettings",
+      "to": "type:ReTAC.Domain.Listing.NameWidthSetting",
+      "type": "1:1",
+      "fk": {
+        "field": "NameWidth",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.NameWidthSetting",
+      "to": "type:ReTAC.Domain.Listing.NameWidthMode",
+      "type": "1:1",
+      "fk": {
+        "field": "Mode",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
       "from": "type:ReTAC.Domain.Listing.SortOrder",
       "to": "type:ReTAC.Domain.Listing.SortKey",
       "type": "1:1",
@@ -2381,6 +2883,28 @@
       "type": "1:1",
       "fk": {
         "field": "Mode",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.TilesViewSettings",
+      "to": "type:ReTAC.Domain.Listing.TileInfo",
+      "type": "1:N",
+      "fk": {
+        "field": "Info",
+        "container": "IReadOnlyList<ReTAC.Domain.Listing.TileInfo>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.TilesViewSettings",
+      "to": "type:ReTAC.Domain.Listing.CheckBoxMode",
+      "type": "1:1",
+      "fk": {
+        "field": "CheckBoxes",
         "container": null,
         "unique": null
       },
@@ -2645,6 +3169,17 @@
       "type": "1:1",
       "fk": {
         "field": "SortMode",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.App.AppSettings",
+      "to": "type:ReTAC.Domain.Listing.FileViewSettings",
+      "type": "1:1",
+      "fk": {
+        "field": "FileViews",
         "container": null,
         "unique": null
       },
@@ -4266,11 +4801,11 @@
     "B-05": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 127
+        "line": 130
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 322
+        "line": 325
       },
       {
         "file": "src/ReTAC.App/IncrementalSearchBar.cs",
@@ -4279,6 +4814,10 @@
       {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 807
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 50
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
@@ -4528,7 +5067,7 @@
     "B-22": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 84
+        "line": 87
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
@@ -4642,7 +5181,7 @@
     "F-01": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 126
+        "line": 129
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
@@ -4938,7 +5477,7 @@
     "F-09": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 121
+        "line": 124
       },
       {
         "file": "src/ReTAC.App/EnvironmentPage.cs",
@@ -5150,7 +5689,7 @@
     "N-02": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 138
+        "line": 141
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -5568,7 +6107,7 @@
     "R-101": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 108
+        "line": 111
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -6082,11 +6621,11 @@
     "R-108": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 93
+        "line": 96
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 261
+        "line": 264
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -6174,19 +6713,19 @@
     "R-108-2": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 100
+        "line": 103
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 232
+        "line": 235
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 245
+        "line": 248
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 262
+        "line": 265
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -6675,6 +7214,12 @@
         "line": 283
       }
     ],
+    "R-110": [
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 50
+      }
+    ],
     "R-110-1": [
       {
         "file": "src/ReTAC.App/ShellDrag.cs",
@@ -6833,6 +7378,104 @@
         "line": 5
       }
     ],
+    "R-112": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 79
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 112
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/LenientEnumConverter.cs",
+        "line": 7
+      }
+    ],
+    "R-112-1": [
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 41
+      }
+    ],
+    "R-112-3": [
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 17
+      }
+    ],
+    "R-113": [
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 17
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 25
+      }
+    ],
+    "R-114": [
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 11
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 33
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 59
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 64
+      }
+    ],
+    "R-115": [
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 14
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 17
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 98
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/LenientEnumConverter.cs",
+        "line": 29
+      }
+    ],
+    "R-116": [
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 8
+      }
+    ],
+    "R-118": [
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 44
+      }
+    ],
+    "R-119": [
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 17
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 87
+      }
+    ],
     "R-12": [
       {
         "file": "src/ReTAC.App/FileListView.cs",
@@ -6902,7 +7545,7 @@
     "R-14": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 282
+        "line": 285
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -6974,7 +7617,7 @@
     "R-20-3": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 138
+        "line": 141
       }
     ],
     "R-22": [
@@ -7020,7 +7663,7 @@
     "R-25": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 288
+        "line": 291
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -7814,7 +8457,7 @@
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 145
+        "line": 148
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -7832,11 +8475,11 @@
     "R-55-3": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 150
+        "line": 153
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 179
+        "line": 182
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -8570,7 +9213,7 @@
     "R-83": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 288
+        "line": 291
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -8774,11 +9417,11 @@
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 83
+        "line": 86
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 89
+        "line": 92
       },
       {
         "file": "src/ReTAC.App/BookmarkBar.cs",
@@ -9814,7 +10457,7 @@
     "R-98": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 356
+        "line": 359
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
@@ -9965,6 +10608,10 @@
     ],
     "S-14": [
       {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 113
+      },
+      {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
         "line": 29
       },
@@ -10042,7 +10689,7 @@
     "V-07": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 202
+        "line": 205
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",

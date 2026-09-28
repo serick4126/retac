@@ -76,6 +76,9 @@ public sealed class AppSettings
     /// <summary>R-96: 全ビュー共通の幅を 96 DPI 論理値で保存する。</summary>
     public int LeftPanelWidth { get; set; } = 280;
 
+    /// <summary>R-112: ファイルビューの設定（系統ごとの欄と共通の欄）。</summary>
+    public FileViewSettings FileViews { get; set; } = new();
+
     /// <summary>ブックマークビューで展開しているグループの安定 ID。</summary>
     public List<string> ExpandedBookmarkGroupIds { get; set; } = [];
 
@@ -354,6 +357,7 @@ public sealed class AppSettings
         if (list.DropUnknownTools(ids)) QuickAccess = [.. list.Items];
         BookmarkRules.DropUnknownTools(Bookmarks, ids);
         BookmarkRules.EnsureIds(Bookmarks);   // R-98: DropUnknownTools が null の項目を落とした後で
+        FileViews = FileViewSettings.Normalize(FileViews);
     }
 
     private static Dictionary<string, string> WithoutNulls(Dictionary<string, string>? map) =>

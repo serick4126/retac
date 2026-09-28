@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ReTAC.App;
 using ReTAC.Domain.Commands;
+using ReTAC.Domain.Listing;
 using ReTAC.Domain.Navigation;
 using ReTAC.Domain.Tools;
 
@@ -115,5 +116,39 @@ public class SettingsNormalizeTests
             """, Json)!;
         Assert.Empty(settings.Bookmarks.Bar);
         Assert.Empty(settings.Bookmarks.Other);
+    }
+
+    [Fact]
+    public void FileViewsのnullと範囲外は正規化される()
+    {
+        // record の等価は IReadOnlyList を参照で比べるので、列を持つ Details / Tiles は列だけ個別に比べる
+        var defaults = new ReTAC.Domain.Listing.FileViewSettings();
+        var settings = JsonSerializer.Deserialize<AppSettings>("""{ "FileViews": null }""", Json)!;
+        settings.Normalize();
+        Assert.Equal(defaults.Common, settings.FileViews.Common);
+        Assert.Equal(defaults.List, settings.FileViews.List);
+        Assert.Equal(defaults.Icons, settings.FileViews.Icons);
+        Assert.Equal(defaults.Details.Columns, settings.FileViews.Details.Columns);
+        Assert.Equal(defaults.Tiles.Info, settings.FileViews.Tiles.Info);
+
+        var settings2 = JsonSerializer.Deserialize<AppSettings>("""
+            { "FileViews": { "List": { "NameWidth": { "MaxChars": 5 } } } }
+            """, Json)!;
+        settings2.Normalize();
+        Assert.Equal(10, settings2.FileViews.List.NameWidth.MaxChars);
+    }
+
+    [Fact]
+    public void FileViewsの知らない列の名前が設定ファイル全体を巻き込まない()
+    {
+        var settings = JsonSerializer.Deserialize<AppSettings>("""
+            {
+              "SortKey": "Size",
+              "FileViews": { "Details": { "Columns": [ { "Column": "Unknown", "Visible": true } ] } }
+            }
+            """, Json)!;
+        settings.Normalize();
+        Assert.Equal(SortKey.Size, settings.SortKey);
+        Assert.Equal(6, settings.FileViews.Details.Columns.Count);
     }
 }
