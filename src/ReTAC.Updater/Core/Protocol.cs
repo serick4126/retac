@@ -71,6 +71,25 @@ public enum Reason
     Unexpected = 12,
 }
 
+/// <summary>R-109-2: 取得・照合・展開の失敗。理由に、表示に添える詳細（HTTP の状態コードなど）と、レート制限のやり直せる時刻を付ける。</summary>
+public sealed class FetchFailure
+{
+    public FetchFailure(Reason reason, string? detail = null, string? retryAt = null)
+    {
+        Reason = reason;
+        Detail = detail;
+        RetryAt = retryAt;
+    }
+
+    public Reason Reason { get; }
+
+    /// <summary>技術的な詳細。結果の文の下に小さく添える。</summary>
+    public string? Detail { get; }
+
+    /// <summary>レート制限のとき、やり直せる時刻（HH:mm）。分からなければ null。</summary>
+    public string? RetryAt { get; }
+}
+
 /// <summary>R-109-5: 昇格したプロセスの終了コード。下位 4 ビットが結果、その上が理由。</summary>
 public static class ExitCodes
 {

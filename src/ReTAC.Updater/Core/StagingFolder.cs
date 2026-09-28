@@ -41,11 +41,15 @@ public sealed class StagingFolder
         throw new IOException("準備フォルダを作れませんでした。");
     }
 
-    /// <summary>書き出す先のパス。名前を記録する（片付けで消してよいのは記録したものだけ）。</summary>
-    public string PathFor(string name)
+    /// <summary>
+    /// 準備フォルダの中にファイルを新しく作って開く。<b>作れたときだけ</b>名前を記録する（片付けで消してよいのは記録したものだけ）。
+    /// 同じ名前が既にあれば作成は失敗し、記録しない。先に記録すると、作れなかったのに片付けで既存のファイルを消してしまう。
+    /// </summary>
+    public FileStream CreateFile(string name)
     {
+        var stream = new FileStream(Path.Combine(FullPath, name), FileMode.CreateNew, FileAccess.Write, FileShare.None);
         _written.Add(name);
-        return Path.Combine(FullPath, name);
+        return stream;
     }
 
     /// <summary>今回のファイルのうち残っているものを消し、準備フォルダを消す。消せなければ残す（利用者のファイルが入っている・使用中）。</summary>

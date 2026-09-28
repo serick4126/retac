@@ -42,10 +42,10 @@ public sealed class UpdaterReplaceTests : IDisposable
         return path;
     }
 
-    private static Func<StagingFolder, Reason?> FromZip(string zipPath) => staging =>
+    private static Func<StagingFolder, FetchFailure?> FromZip(string zipPath) => staging =>
     {
         using var stream = File.OpenRead(zipPath);
-        return ZipPackage.Extract(stream, staging);
+        return ZipPackage.Extract(stream, staging) is { } problem ? new FetchFailure(problem) : null;
     };
 
     private ReplaceRequest Request(string zipPath) =>
@@ -106,6 +106,26 @@ public sealed class UpdaterReplaceTests : IDisposable
         Assert.Equal((ReplaceResult.Unchanged, Reason.UnsupportedFormat), (report.Result, report.Reason));
         Assert.All(Distribution.Names, n => Assert.Equal(Content("v1", n), Read(n)));
         Assert.Empty(StagingFolders());
+    }
+
+    [Fact]
+    public void 準備フォルダに先に置かれたファイルは展開に失敗しても消さない()
+    {
+        Install("v1");
+        string? planted = null;
+        var request = new ReplaceRequest(_install, staging =>
+        {
+            // 展開の前に、同じ名前のファイルが置かれた
+            planted = Path.Combine(staging.FullPath, "README.md");
+            File.WriteAllText(planted, "user");
+            return FromZip(Zip("v2"))(staging);
+        }) { RetryDelay = TimeSpan.FromMilliseconds(10), Attempts = 2 };
+
+        var report = Replacer.Run(request);
+
+        Assert.Equal(ReplaceResult.Unchanged, report.Result);
+        Assert.Equal("user", File.ReadAllText(planted!));
+        Assert.All(Distribution.Names, n => Assert.Equal(Content("v1", n), Read(n)));
     }
 
     // ---- 置き換え ----
@@ -288,6 +308,56 @@ public sealed class UpdaterReplaceTests : IDisposable
         Assert.Equal(reTac == latest && updater == latest, upToDate);
 
         // 「最新です」でなければ、もう一度 v2 で置き換えると 2 つの exe が v2 になる（文書は古く残りうるが許す）
+        if (!upToDate) Replacer.Run(Request(Zip("v2")));
+        Assert.Equal(latest, VersionOf(Protocol.ReTacExe));
+        Assert.Equal(latest, VersionOf(Protocol.UpdaterExe));
+    }
+
+    /// <summary>
+    /// A を k 個入れ替えたところで待たせ、その間に B を最後まで終えさせ、そのあと A の残りを行う。
+    /// 強制終了された古いアップデータ（A）の保留中の入れ替えが、新しいアップデータ（B）の完了の後に済む順序。
+    /// </summary>
+    private (ReplaceReport A, ReplaceReport B) LateOld(string zipA, string zipB, int k)
+    {
+        using var aPaused = new ManualResetEventSlim();
+        using var aGo = new ManualResetEventSlim();
+        var requestA = Request(zipA);
+        requestA.BeforeReplace = i => { if (i == k) { aPaused.Set(); aGo.Wait(); } };
+
+        ReplaceReport? a = null;
+        var threadA = new Thread(() => a = Replacer.Run(requestA));
+        threadA.Start();
+        aPaused.Wait();
+        var b = Replacer.Run(Request(zipB));   // B は止まらずに最後まで
+        aGo.Set();
+        threadA.Join();
+        return (a!, b);
+    }
+
+    public static TheoryData<int> LateOldPoints() => [.. Enumerable.Range(0, 7)];
+
+    [Theory]
+    [MemberData(nameof(LateOldPoints))]
+    public void 新しいほうが終えた後に古いほうの入れ替えが済んでも最新の判定と再更新で直る(int k)
+    {
+        Install("v0");
+        var (a, b) = LateOld(Zip("v1"), Zip("v2"), k);
+
+        Assert.Equal(ReplaceResult.Completed, b.Result);
+        Assert.Contains(a.Result, new[] { ReplaceResult.Completed, ReplaceResult.Partial, ReplaceResult.Unchanged });
+        var versions = new[] { "v0", "v1", "v2" };
+        Assert.All(Distribution.Names, n => Assert.Contains(Read(n), versions.Select(v => Content(v, n))));
+        AssertUserFilesUntouched();
+        Assert.Empty(StagingFolders());
+
+        var latest = new Version(2, 0, 0);
+        var reTac = VersionOf(Protocol.ReTacExe);
+        var updater = VersionOf(Protocol.UpdaterExe);
+        var upToDate = Versions.IsUpToDate(latest, reTac, updater);
+        // A の残りが exe を古い版に戻したら「最新です」にはならない
+        Assert.Equal(reTac == latest && updater == latest, upToDate);
+        if (k < Distribution.Names.Count) Assert.False(upToDate);   // A は少なくとも ReTAC.exe（最後）を v1 に戻している
+
         if (!upToDate) Replacer.Run(Request(Zip("v2")));
         Assert.Equal(latest, VersionOf(Protocol.ReTacExe));
         Assert.Equal(latest, VersionOf(Protocol.UpdaterExe));

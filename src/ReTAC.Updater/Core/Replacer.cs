@@ -11,7 +11,7 @@ namespace ReTAC.Updater.Core;
 /// <summary>R-109-4: 置き換えの頼み方。</summary>
 public sealed class ReplaceRequest
 {
-    public ReplaceRequest(string installFolder, Func<StagingFolder, Reason?> fetch)
+    public ReplaceRequest(string installFolder, Func<StagingFolder, FetchFailure?> fetch)
     {
         InstallFolder = installFolder;
         Fetch = fetch;
@@ -24,7 +24,7 @@ public sealed class ReplaceRequest
     /// 取得・照合・展開。準備フォルダへ書き出す。失敗の理由を返す（成功なら null）。
     /// INV-UPDATER-VERIFY-IN-WRITER: 置き換えの排他を取った後、このスレッドで呼ぶ。ほかのプロセスが用意したファイルを使わない。
     /// </summary>
-    public Func<StagingFolder, Reason?> Fetch { get; }
+    public Func<StagingFolder, FetchFailure?> Fetch { get; }
 
     /// <summary>置き換えの排他の名前。null なら排他を取らない（同時に書く場合のテストだけ）。</summary>
     public string? LockName { get; set; }
@@ -48,8 +48,10 @@ public sealed class ReplaceRequest
 /// <summary>R-109-4: 置き換えの結果。</summary>
 public sealed class ReplaceReport
 {
-    public ReplaceReport(ReplaceResult result, Reason reason, int replaced, IReadOnlyList<string> leftovers, string? detail)
+    public ReplaceReport(ReplaceResult result, Reason reason, int replaced, IReadOnlyList<string> leftovers, string? detail,
+                         string? retryAt = null)
     {
+        RetryAt = retryAt;
         Result = result;
         Reason = reason;
         Replaced = replaced;
@@ -66,8 +68,11 @@ public sealed class ReplaceReport
     /// <summary>前回までの準備フォルダの名前（消さずに知らせる）。</summary>
     public IReadOnlyList<string> Leftovers { get; }
 
-    /// <summary>技術的な詳細（例外のメッセージ・止まったファイル名）。</summary>
+    /// <summary>技術的な詳細（例外のメッセージ・止まったファイル名・HTTP の状態コード）。</summary>
     public string? Detail { get; }
+
+    /// <summary>レート制限のとき、やり直せる時刻。</summary>
+    public string? RetryAt { get; }
 }
 
 /// <summary>テストと開発用のビルドの「止まる」指定だけが投げる。強制終了に見立て、片付けをせずに抜ける。</summary>
@@ -110,7 +115,7 @@ public static class Replacer
             if (request.Fetch(staging) is { } failed)
             {
                 staging.Cleanup();
-                return Report(ReplaceResult.Unchanged, failed, 0, leftovers, null);
+                return new ReplaceReport(ReplaceResult.Unchanged, failed.Reason, 0, leftovers, failed.Detail, failed.RetryAt);
             }
             request.AfterFetch?.Invoke();
 

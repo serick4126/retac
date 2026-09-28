@@ -157,12 +157,19 @@ public sealed class UpdaterLockAndFolderTests : IDisposable
 
     // ---- 準備フォルダ ----
 
+    private static void Write(StagingFolder staging, string name, string text)
+    {
+        using var stream = staging.CreateFile(name);
+        using var writer = new StreamWriter(stream);
+        writer.Write(text);
+    }
+
     [Fact]
     public void 片付けは今回書き出したファイルだけを消す()
     {
         var install = Folder("install");
         var staging = StagingFolder.Create(install);
-        File.WriteAllText(staging.PathFor("README.md"), "ours");
+        Write(staging, "README.md", "ours");
         File.WriteAllText(Path.Combine(staging.FullPath, "user.txt"), "user");   // 後から置かれたもの
 
         staging.Cleanup();
@@ -173,11 +180,26 @@ public sealed class UpdaterLockAndFolderTests : IDisposable
     }
 
     [Fact]
+    public void 同じ名前のファイルが先にあれば作らず片付けでも消さない()
+    {
+        var install = Folder("install");
+        var staging = StagingFolder.Create(install);
+        var planted = Path.Combine(staging.FullPath, "README.md");
+        File.WriteAllText(planted, "user");   // 作る前に置かれていた
+
+        Assert.ThrowsAny<IOException>(() => staging.CreateFile("README.md"));
+        Assert.Empty(staging.WrittenNames);
+        staging.Cleanup();
+
+        Assert.Equal("user", File.ReadAllText(planted));
+    }
+
+    [Fact]
     public void 空になった準備フォルダは消える()
     {
         var install = Folder("install");
         var staging = StagingFolder.Create(install);
-        File.WriteAllText(staging.PathFor(Protocol.ReTacExe), "x");
+        Write(staging, Protocol.ReTacExe, "x");
         staging.Cleanup();
         Assert.False(Directory.Exists(staging.FullPath));
     }
@@ -191,7 +213,7 @@ public sealed class UpdaterLockAndFolderTests : IDisposable
         File.WriteAllText(Path.Combine(leftover, "README.md"), "user");
 
         var staging = StagingFolder.Create(install);
-        File.WriteAllText(staging.PathFor("README.md"), "ours");
+        Write(staging, "README.md", "ours");
         var found = StagingFolder.FindLeftovers(install, staging);
         staging.Cleanup();
 
@@ -207,7 +229,7 @@ public sealed class UpdaterLockAndFolderTests : IDisposable
         File.WriteAllText(Path.Combine(elsewhere, "README.md"), "user");
 
         var staging = StagingFolder.Create(install);
-        File.WriteAllText(staging.PathFor("README.md"), "ours");
+        Write(staging, "README.md", "ours");
         File.Delete(Path.Combine(staging.FullPath, "README.md"));
         Directory.Delete(staging.FullPath);
         Junction(staging.FullPath, elsewhere);
@@ -225,8 +247,10 @@ public sealed class UpdaterLockAndFolderTests : IDisposable
         File.WriteAllText(Path.Combine(elsewhere, "keep.txt"), "user");
 
         var staging = StagingFolder.Create(install);
-        var planted = staging.PathFor("README.md");
-        Junction(planted, elsewhere);   // 書き出すはずの名前にジャンクションが置かれた
+        Write(staging, "README.md", "ours");
+        var planted = Path.Combine(staging.FullPath, "README.md");
+        File.Delete(planted);
+        Junction(planted, elsewhere);   // 書き出した名前がジャンクションに差し替えられた
 
         staging.Cleanup();
 

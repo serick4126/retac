@@ -54,7 +54,7 @@ public static class ZipPackage
             {
                 var name = Distribution.Canonical(Path.GetFileName(entry.FullName))!;
                 using var source = entry.Open();
-                using var target = new FileStream(staging.PathFor(name), FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                using var target = staging.CreateFile(name);
                 source.CopyTo(target);
                 target.Flush(flushToDisk: true);
             }

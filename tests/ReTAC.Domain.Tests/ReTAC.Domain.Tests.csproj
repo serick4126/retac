@@ -29,6 +29,8 @@
   <ItemGroup>
     <!-- R-109: アップデータは net48 なので参照できない。WinForms に依存しない判定と置き換えの処理だけをリンクで取り込む -->
     <Compile Include="..\..\src\ReTAC.Updater\Core\*.cs" Link="Updater\Core\%(Filename)%(Extension)" />
+    <!-- 通信の部分は、偽の応答を返すハンドラーで確かめる（テストのアセンブリは INV-NO-INTERNET の対象外） -->
+    <Compile Include="..\..\src\ReTAC.Updater\Net\GitHubReleases.cs" Link="Updater\Net\GitHubReleases.cs" />
   </ItemGroup>
 
 </Project>

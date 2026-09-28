@@ -28,6 +28,9 @@ internal sealed class Options
     /// <summary>開発用: 照合・展開の後で止まる。</summary>
     public bool PauseAfterVerify { get; private set; }
 
+    /// <summary>開発用: 画面から頼むファイルの読み取りを 120 秒待たせる（止まっても画面を閉じられることを確かめるため）。</summary>
+    public bool SlowIoForTest { get; private set; }
+
     /// <summary>起動し直すときに引き継ぐ開発用の指定。</summary>
     public IReadOnlyList<string> DebugArgs { get; private set; } = Array.Empty<string>();
 
@@ -55,6 +58,12 @@ internal sealed class Options
                 i += 1;
                 continue;
             }
+            if (arg == "--debug-slow-io")
+            {
+                options.SlowIoForTest = true;
+                debug.Add(arg);
+                continue;
+            }
             if (arg == "--debug-pause-after-verify")
             {
                 options.PauseAfterVerify = true;
@@ -75,6 +84,12 @@ internal sealed class Options
     {
         if (StopAfter is { } k) request.BeforeReplace = i => { if (i == k) Pause(workFolder); };
         if (PauseAfterVerify) request.AfterFetch = () => Pause(workFolder);
+    }
+
+    /// <summary>開発用の「読み取りを遅らせる」指定があれば待つ。Release では何もしない。</summary>
+    public void SlowIo()
+    {
+        if (SlowIoForTest) Thread.Sleep(TimeSpan.FromSeconds(120));
     }
 
     private static void Pause(string workFolder)

@@ -2,7 +2,6 @@
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.Serialization;
@@ -13,23 +12,22 @@ using ReTAC.Updater.Core;
 
 namespace ReTAC.Updater.Net;
 
-/// <summary>GitHub の結果。失敗なら <see cref="Failure"/> に理由が入る。</summary>
+/// <summary>GitHub の結果。失敗なら <see cref="Failure"/> が入る。</summary>
 public sealed class Fetched<T> where T : class
 {
-    private Fetched(T? value, Reason failure, string? detail)
+    private Fetched(T? value, FetchFailure? failure)
     {
         Value = value;
         Failure = failure;
-        Detail = detail;
     }
 
     public T? Value { get; }
-    public Reason Failure { get; }
-    public string? Detail { get; }
+    public FetchFailure? Failure { get; }
     public bool Ok => Value is not null;
 
-    public static Fetched<T> Success(T value) => new(value, Reason.None, null);
-    public static Fetched<T> Fail(Reason reason, string? detail = null) => new(null, reason, detail);
+    public static Fetched<T> Success(T value) => new(value, null);
+    public static Fetched<T> Fail(FetchFailure failure) => new(null, failure);
+    public static Fetched<T> Fail(Reason reason, string? detail = null) => new(null, new FetchFailure(reason, detail));
 }
 
 /// <summary>リリースのアセット（配布用の zip）。</summary>
@@ -56,14 +54,21 @@ public sealed class GitHubReleases : IDisposable
 {
     private const string Api = "https://api.github.com/repos/serick4126/retac/releases";
     private static readonly TimeSpan ApiTimeout = TimeSpan.FromSeconds(15);
-    private static readonly TimeSpan StallTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan DefaultStallTimeout = TimeSpan.FromSeconds(30);
 
     private readonly HttpClient _client;
+    private readonly TimeSpan _stallTimeout;
 
-    public GitHubReleases()
+    public GitHubReleases() : this(new HttpClientHandler(), DefaultStallTimeout)
     {
+    }
+
+    /// <summary>テストから、偽の応答を返すハンドラーと短い打ち切りの時間を渡す。</summary>
+    public GitHubReleases(HttpMessageHandler handler, TimeSpan stallTimeout)
+    {
+        _stallTimeout = stallTimeout;
         // 時間の上限は要求ごとに付ける（ダウンロードには全体の上限を設けない）
-        _client = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
+        _client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
         var version = typeof(GitHubReleases).Assembly.GetName().Version;
         _client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("ReTAC.Updater", $"{version.Major}.{version.Minor}.{version.Build}"));
     }
@@ -91,35 +96,44 @@ public sealed class GitHubReleases : IDisposable
     /// <summary>
     /// <paramref name="target"/> へダウンロードする。全体の上限は設けず、30 秒間 1 バイトも届かなければ打ち切る。
     /// <paramref name="received"/> で受け取った量を知らせる（昇格したプロセスが progress.txt に書き、親が進み具合を見る）。
+    /// 受け取り側の失敗（通信）と、保存先への書き込みの失敗（ディスクの不足など）は、別の理由にする。
     /// </summary>
-    public async Task<Reason?> DownloadAsync(string url, Stream target, Action<long>? received, CancellationToken cancel)
+    public async Task<FetchFailure?> DownloadAsync(string url, Stream target, Action<long>? received, CancellationToken cancel)
     {
-        using var stall = new CancellationTokenSource(StallTimeout);
+        using var stall = new CancellationTokenSource(_stallTimeout);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancel, stall.Token);
         try
         {
             using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, linked.Token).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode) return Classify(response).Failure;
+            if (!response.IsSuccessStatusCode) return Classify(response);
 
             using var source = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             var buffer = new byte[81920];
             long total = 0;
             while (true)
             {
-                stall.CancelAfter(StallTimeout);   // 届くたびに 30 秒を数え直す
+                stall.CancelAfter(_stallTimeout);   // 届くたびに数え直す
                 var read = await source.ReadAsync(buffer, 0, buffer.Length, linked.Token).ConfigureAwait(false);
                 if (read == 0) break;
-                await target.WriteAsync(buffer, 0, read, linked.Token).ConfigureAwait(false);
+                try { await target.WriteAsync(buffer, 0, read).ConfigureAwait(false); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    return new FetchFailure(Reason.WriteFailed, ex.Message);
+                }
                 total += read;
                 received?.Invoke(total);
             }
-            target.Flush();
+            try { target.Flush(); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return new FetchFailure(Reason.WriteFailed, ex.Message);
+            }
             return null;
         }
-        catch (OperationCanceledException) when (cancel.IsCancellationRequested) { return Reason.Cancelled; }
-        catch (OperationCanceledException) { return Reason.TimedOut; }
-        catch (HttpRequestException) { return Reason.CannotConnect; }
-        catch (IOException) { return Reason.CannotConnect; }
+        catch (OperationCanceledException) when (cancel.IsCancellationRequested) { return new FetchFailure(Reason.Cancelled); }
+        catch (OperationCanceledException) { return new FetchFailure(Reason.TimedOut); }
+        catch (HttpRequestException ex) { return new FetchFailure(Reason.CannotConnect, (ex.InnerException ?? ex).Message); }
+        catch (IOException ex) { return new FetchFailure(Reason.CannotConnect, ex.Message); }   // 受け取り側の切断
     }
 
     private async Task<Fetched<T>> GetReleaseAsync<T>(string url, Func<ReleaseDto, Fetched<T>> pick, CancellationToken cancel) where T : class
@@ -132,11 +146,7 @@ public sealed class GitHubReleases : IDisposable
         try
         {
             using var response = await _client.SendAsync(request, linked.Token).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
-            {
-                var (failure, detail) = Classify(response);
-                return Fetched<T>.Fail(failure, detail);
-            }
+            if (!response.IsSuccessStatusCode) return Fetched<T>.Fail(Classify(response));
             using var body = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             var release = (ReleaseDto?)new DataContractJsonSerializer(typeof(ReleaseDto)).ReadObject(body);
             return release is null ? Fetched<T>.Fail(Reason.GitHubError, "応答を読めない") : pick(release);
@@ -147,19 +157,23 @@ public sealed class GitHubReleases : IDisposable
         catch (SerializationException ex) { return Fetched<T>.Fail(Reason.GitHubError, ex.Message); }
     }
 
-    /// <summary>403・429 で残りの回数が 0 ならレート制限（やり直せる時刻を詳細に入れる）。それ以外は GitHub のエラー。</summary>
-    private static (Reason Failure, string Detail) Classify(HttpResponseMessage response)
+    /// <summary>
+    /// 403・429 で残りの回数が 0 ならレート制限。やり直せる時刻は x-ratelimit-reset から作り、読めない・範囲外なら省く。
+    /// それ以外は GitHub のエラー（状態コードを詳細に入れる）。
+    /// </summary>
+    public static FetchFailure Classify(HttpResponseMessage response)
     {
         var status = (int)response.StatusCode;
         if (status is 403 or 429 && Header(response, "x-ratelimit-remaining") == "0")
-        {
-            var reset = Header(response, "x-ratelimit-reset");
-            var detail = long.TryParse(reset, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds)
-                ? DateTimeOffset.FromUnixTimeSeconds(seconds).ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture) + " 以降にやり直せます"
-                : "";
-            return (Reason.RateLimited, detail);
-        }
-        return (Reason.GitHubError, $"HTTP {status}");
+            return new FetchFailure(Reason.RateLimited, $"HTTP {status}", RetryAt(Header(response, "x-ratelimit-reset")));
+        return new FetchFailure(Reason.GitHubError, $"HTTP {status}");
+    }
+
+    private static string? RetryAt(string? reset)
+    {
+        if (!long.TryParse(reset, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds)) return null;
+        try { return DateTimeOffset.FromUnixTimeSeconds(seconds).ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture); }
+        catch (ArgumentOutOfRangeException) { return null; }
     }
 
     private static string? Header(HttpResponseMessage response, string name) =>

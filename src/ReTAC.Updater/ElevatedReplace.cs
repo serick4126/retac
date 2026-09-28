@@ -51,7 +51,9 @@ internal static class ElevatedReplace
 
         // このプロセスは画面を持たないので、メインのスレッドがそのまま作業用のスレッドになる（排他を取って手放す）
         var report = Replacer.Run(request);
-        Progress("終わり", report.Detail);
+        // 詳細とやり直せる時刻は終了コードで渡せないので、最後の行に書く（親は表示にだけ使う）
+        try { File.WriteAllText(progressFile, $"{DateTime.UtcNow:o}\t終わり\t{report.Detail}\t{report.RetryAt}"); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         return ExitCodes.Encode(report.Result, report.Reason);
     }
 }

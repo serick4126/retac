@@ -57,6 +57,9 @@ internal sealed class UpdaterForm : Form
     private bool _replacingStarted;
     private bool _launched;
 
+    /// <summary>結果を出し終えた。この後に画面を閉じても ReTAC は起動しない（起動するかは結果の前に決め済み）。</summary>
+    private bool _finished;
+
     public UpdaterForm(string install, string normalized, string work, string self, Options options, NamedLock uiLock)
     {
         _uiLock = uiLock;
@@ -108,28 +111,29 @@ internal sealed class UpdaterForm : Form
             // R-109-6: 想定外の例外も画面に出して終わる。置き換えより前なら何も変わっていない
             RefreshStopped();
             LaunchIfNeeded(replaced: false);
-            Finish(Outcome.Message(ReplaceResult.Unchanged, Reason.Unexpected, _launched, _launched && _launchOk, ""), ex.Message);
+            Finish(Outcome.Message(ReplaceResult.Unchanged, Reason.Unexpected, _launched, _launchOk, ""), ex.Message);
         }
     }
 
     private async Task FlowAsync()
     {
         var reTacPath = Path.Combine(_install, Protocol.ReTacExe);
+        Busy("ReTAC を確かめています", NoButtons);
 
         // §3.3 の 4: OS から戻らない操作で止まったプロセスが置き換えの排他を持っていれば、ここで止まる
-        if (!NamedLock.IsFree(InstallFolder.ReplaceLockName(_normalized)))
+        if (!await Io(() => NamedLock.IsFree(InstallFolder.ReplaceLockName(_normalized))))
         {
             Finish(Outcome.ReasonText(Reason.OtherUpdater) + "。");
             return;
         }
-        if (!File.Exists(reTacPath))
+        if (!await Io(() => File.Exists(reTacPath)))
         {
             Finish($"ReTAC.exe が見つかりません（{_install}）。");
             return;
         }
 
-        var reTac = Versions.OfFile(reTacPath);
-        var updater = Versions.OfFile(Path.Combine(_install, Protocol.UpdaterExe));
+        var reTac = await Io(() => Versions.OfFile(reTacPath));
+        var updater = await Io(() => Versions.OfFile(Path.Combine(_install, Protocol.UpdaterExe)));
         if (reTac is null)
         {
             Finish("ReTAC.exe の版を読めません。");
@@ -149,7 +153,8 @@ internal sealed class UpdaterForm : Form
             var tag = await github.LatestTagAsync(_cancel.Token);
             if (!tag.Ok)
             {
-                Finish(Outcome.Message(ReplaceResult.Unchanged, tag.Failure, false, false, ""), tag.Detail);
+                var failure = tag.Failure!;
+                Finish(Outcome.Message(ReplaceResult.Unchanged, failure.Reason, false, false, "", failure.RetryAt), failure.Detail);
                 return;
             }
             if (Versions.ParseTag(tag.Value) is not { } parsed)
@@ -185,7 +190,9 @@ internal sealed class UpdaterForm : Form
         }
 
         // 置き換え（§6・§7）
-        var (report, leftovers) = CanWrite() ? await ReplaceHereAsync(version) : await ReplaceElevatedAsync(version, latest);
+        Busy("準備しています", NoButtons);
+        var writable = await Io(CanWrite);
+        var (report, leftovers) = writable ? await ReplaceHereAsync(version) : await ReplaceElevatedAsync(version, latest);
         if (_exitWhenWorkDone)
         {
             // 画面は閉じられている。作業が終わったので、ここでプロセスを終える
@@ -194,7 +201,7 @@ internal sealed class UpdaterForm : Form
         }
 
         LaunchIfNeeded(replaced: report.Replaced > 0 || report.Result != ReplaceResult.Unchanged);
-        var message = Outcome.Message(report.Result, report.Reason, _launched, _launchOk, "v" + version);
+        var message = Outcome.Message(report.Result, report.Reason, _launched, _launchOk, "v" + version, report.RetryAt);
         if (leftovers.Count > 0)
             message += Environment.NewLine + $"前回の更新で残ったフォルダがあります（{string.Join("、", leftovers)}）。不要なら消してください。";
         Finish(message, report.Detail);
@@ -219,7 +226,7 @@ internal sealed class UpdaterForm : Form
     /// <summary>インストール先の ReTAC をすべて終了させる。やめたら false。強制終了はしない。</summary>
     private async Task<bool> QuitReTacAsync()
     {
-        var targets = ReTacProcesses.Find(_normalized).Select(p => new Target(p)).ToList();
+        var targets = (await Io(() => ReTacProcesses.Find(_normalized))).Select(p => new Target(p)).ToList();
         _quitTargets = targets;
         if (targets.Count == 0) return true;
 
@@ -228,7 +235,7 @@ internal sealed class UpdaterForm : Form
 
         while (true)
         {
-            var alive = targets.Where(t => ReTacProcesses.IsRunning(t.Process.Id)).ToList();
+            var alive = await Io(() => targets.Where(t => ReTacProcesses.IsRunning(t.Process.Id)).ToList());
             _stoppedAnyReTac = alive.Count < targets.Count;
             if (alive.Count == 0) return true;
 
@@ -337,10 +344,14 @@ internal sealed class UpdaterForm : Form
     /// </summary>
     private async Task<(ReplaceReport, IReadOnlyList<string>)> ReplaceElevatedAsync(string version, Version target)
     {
-        var leftovers = StagingFolder.FindLeftovers(_install, null);
-        var before = Hashes();
         var progressFile = Path.Combine(_work, "progress.txt");
-        try { File.Delete(progressFile); } catch (IOException) { }
+        var leftovers = await Io(() => StagingFolder.FindLeftovers(_install, null));
+        var before = await Io(Hashes);
+        await Io(() =>
+        {
+            try { File.Delete(progressFile); } catch (IOException) { }
+            return true;
+        });
 
         var args = new[] { Protocol.ReplaceSwitch, _install, version, _work }.Concat(_options.DebugArgs);
         Process child;
@@ -358,34 +369,57 @@ internal sealed class UpdaterForm : Form
         {
             _workRunning = true;
             _elevatedRunning = true;
-            _replacingStarted = true;   // どこまで進んだか親からは分からない。閉じるときは ReTAC を起動し直す
-            var lastRaw = "";
-            var lastProgress = DateTime.UtcNow;
-            var exited = Task.Run(() => child.WaitForExit());
-            Busy("ファイルを入れ替えています", NoButtons);
-            await WatchStallAsync(exited, () =>
+            _replacingStarted = true;   // どこまで進んだか親からは分からない。作業中に閉じるときは ReTAC を起動し直す
+            try
             {
-                var raw = ReadProgress(progressFile);
-                if (raw != lastRaw)
+                // 進み具合の読み取りも作業側で行う（画面のスレッドでファイルを読まない）。表示と「止まっていないか」にだけ使う
+                var lastRaw = "";
+                var lastProgress = DateTime.UtcNow;
+                var exited = Task.Run(() => child.WaitForExit());
+                var polling = Task.Run(async () =>
                 {
-                    lastRaw = raw;
-                    lastProgress = DateTime.UtcNow;
-                    var parts = raw.Split('\t');
-                    if (parts.Length >= 3 && !_exitWhenWorkDone) Busy(StageText(parts[1], parts[2].Length == 0 ? null : parts[2]), NoButtons);
-                }
-                return lastProgress;
-            }, () => lastRaw);
-            await exited;
-            _workRunning = false;
+                    while (!exited.IsCompleted)
+                    {
+                        var raw = ReadProgress(progressFile);
+                        if (raw != lastRaw)
+                        {
+                            lastRaw = raw;
+                            lastProgress = DateTime.UtcNow;
+                            var parts = raw.Split('\t');
+                            if (parts.Length >= 3 && IsHandleCreated) BeginInvoke(new Action(() =>
+                            {
+                                if (!_exitWhenWorkDone) Busy(StageText(parts[1], parts[2].Length == 0 ? null : parts[2]), NoButtons);
+                            }));
+                        }
+                        await Task.Delay(500).ConfigureAwait(false);
+                    }
+                });
+                Busy("ファイルを入れ替えています", NoButtons);
+                await WatchStallAsync(exited, () => lastProgress, () => lastRaw);
+                await exited;
+                await polling;
+            }
+            finally
+            {
+                // 昇格したプロセスは終わった。結果の画面を閉じるときに「作業中」として ReTAC を起動しないように戻す
+                _workRunning = false;
+                _elevatedRunning = false;
+            }
             if (_exitWhenWorkDone) return (new ReplaceReport(ReplaceResult.Unchanged, Reason.None, 0, leftovers, null), leftovers);
 
-            if (ExitCodes.Decode(child.ExitCode) is { } decoded)
-                return (new ReplaceReport(decoded.Result, decoded.Reason, decoded.Result == ReplaceResult.Unchanged ? 0 : 1, leftovers, null), leftovers);
+            // 詳細とやり直せる時刻は、昇格したプロセスが最後に progress.txt に書いたもの（表示にだけ使う）
+            var end = (await Io(() => ReadProgress(progressFile))).Split('\t');
+            var detail = end.Length >= 3 && end[1] == "終わり" && end[2].Length > 0 ? end[2] : null;
+            var retryAt = end.Length >= 4 && end[1] == "終わり" && end[3].Length > 0 ? end[3] : null;
 
-            var after = Hashes();
-            var result = Versions.Rejudge(before, after, target,
-                                          Versions.OfFile(Path.Combine(_install, Protocol.ReTacExe)),
-                                          Versions.OfFile(Path.Combine(_install, Protocol.UpdaterExe)));
+            if (ExitCodes.Decode(child.ExitCode) is { } decoded)
+                return (new ReplaceReport(decoded.Result, decoded.Reason, decoded.Result == ReplaceResult.Unchanged ? 0 : 1, leftovers,
+                                          detail, retryAt), leftovers);
+
+            var after = await Io(Hashes);
+            var reTacAfter = await Io(() => Versions.OfFile(Path.Combine(_install, Protocol.ReTacExe)));
+            var updaterAfter = await Io(() => Versions.OfFile(Path.Combine(_install, Protocol.UpdaterExe)));
+            var result = Versions.Rejudge(before, after, target, reTacAfter, updaterAfter);
             return (new ReplaceReport(result, Reason.Unexpected, result == ReplaceResult.Unchanged ? 0 : 1, leftovers,
                                       $"終了コード {child.ExitCode}"), leftovers);
         }
@@ -426,33 +460,38 @@ internal sealed class UpdaterForm : Form
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
-        if (_elevatedRunning)
+        if (_exitWhenWorkDone)
         {
-            _exitWhenWorkDone = true;
-            LaunchIfNeeded(replaced: true);
             base.OnFormClosing(e);
             return;
         }
-        if (_workRunning && !_exitWhenWorkDone)
+        RefreshStopped();
+        var launch = Outcome.LaunchOnClose(_workRunning, _finished, _stoppedAnyReTac, _replacingStarted);
+
+        if (_elevatedRunning)
         {
-            // 作業を止めない。ダウンロードの最中ならやめさせる（それ以降は取り消せない）。
+            // 昇格したプロセスが最後まで行う。親はそのまま終わってよい
+            _exitWhenWorkDone = true;
+            if (launch) Launch();
+            base.OnFormClosing(e);
+            return;
+        }
+        if (_workRunning)
+        {
+            // 作業を止めない。ダウンロードの最中なら中止させる（それ以降は取り消せない）。
             // ReTAC は起動し直しておく（入れ替えの途中でも正規の名前には旧版か新版の完全なファイルがある）
             _cancel.Cancel();
             _exitWhenWorkDone = true;
-            LaunchIfNeeded(replaced: _replacingStarted);
+            if (launch) Launch();
             e.Cancel = true;
             Hide();
             // 画面はもう無い。次に起動したアップデータには、置き換えの排他（作業用のスレッドが持つ）で「入れ替えています」と出させる
             _uiLock.Dispose();
             return;
         }
-        // 待っている処理（GitHub・ReTAC の終了待ち）をやめる。終了させた ReTAC があれば起動し直す（R-109-6）
+        // 待っている処理（GitHub・ReTAC の終了待ち）を中止する。終了させた ReTAC があれば起動し直す（R-109-6）
         _cancel.Cancel();
-        if (!_exitWhenWorkDone)
-        {
-            RefreshStopped();
-            LaunchIfNeeded(replaced: false);
-        }
+        if (launch) Launch();
         base.OnFormClosing(e);
     }
 
@@ -463,7 +502,13 @@ internal sealed class UpdaterForm : Form
     /// <summary>ReTAC を終了させたか、入れ替えを行ったときだけ起動する。昇格していないこのプロセスから起動する（UIPI）。</summary>
     private void LaunchIfNeeded(bool replaced)
     {
-        if (_launched || !Outcome.ShouldLaunch(_stoppedAnyReTac, replaced ? 1 : 0)) return;
+        if (Outcome.ShouldLaunch(_stoppedAnyReTac, replaced ? 1 : 0)) Launch();
+    }
+
+    /// <summary>ReTAC を 1 回だけ起動する。</summary>
+    private void Launch()
+    {
+        if (_launched) return;
         _launched = true;
         try
         {
@@ -508,6 +553,7 @@ internal sealed class UpdaterForm : Form
     private void Finish(string text, string? detail = null)
     {
         if (IsDisposed) return;
+        _finished = true;
         Idle(text, detail);
         _link.Visible = false;
         SetButtons(("close", "閉じる"));
@@ -538,6 +584,16 @@ internal sealed class UpdaterForm : Form
             _buttons.Controls[_buttons.Controls.Count - 1].Focus();
         }
     }
+
+    /// <summary>
+    /// R-109-6: ファイルやプロセスを調べる処理は、画面のスレッドではなく作業側で行う。ストレージやフィルタードライバーの都合で
+    /// 戻らないことがあっても、画面は応答し、閉じられる（閉じればこの読み取りは置き去りにする。背景のスレッドなので終了を妨げない）。
+    /// </summary>
+    private Task<T> Io<T>(Func<T> read) => Task.Run(() =>
+    {
+        _options.SlowIo();
+        return read();
+    });
 
     private static string StageText(string stage, string? file) => stage switch
     {
