@@ -74,6 +74,7 @@ ReTAC は、Windows 用ファイラー「卓駆★」(以下卓駆と記載)の�
   - プレビュー: カーソル位置のファイルを Windows のプレビュー機能で表示する。プレビューの機能が無い画像はサムネイルを、文字だけのファイルはテキストとして出す
 - ツリーへのドラッグ＆ドロップ。落とすと宛先を入れたコピー／移動のダイアログが出る
 - 設定は実行ファイルと同じフォルダの `retac.settings.json` に即時保存（レジストリは使わない）
+- アップデータ。ヘルプの「更新を確認」から、新しい版の確認・ダウンロード・入れ替え・再起動までを行う（[更新](#更新)）
 
 ### キー割り当て
 
@@ -164,11 +165,13 @@ ReTAC は、Windows 用ファイラー「卓駆★」(以下卓駆と記載)の�
 
 ## インストール
 
-発行済みの `ReTAC.exe`（.NET ランタイム不要の単一ファイル）を任意のフォルダに置いて起動します。設定ファイルは同じフォルダに作られます。
+[リリースのページ](https://github.com/serick4126/retac/releases)から zip を取り、中のファイルをすべて任意のフォルダに置いて `ReTAC.exe` を起動します。`ReTAC.exe` は .NET ランタイム不要の単一ファイルです。設定ファイルは同じフォルダに作られます。
 
 ### 同梱の .NET ランタイムについて
 
 配布する `ReTAC.exe` には、Microsoft の .NET ランタイムが含まれています。このランタイムには、ReTAC の MIT License ではなく、Microsoft .NET Library License（配布物の `DOTNET-LICENSE.txt`）が適用されます。ランタイムに含まれる第三者のソフトウェアの表示は `DOTNET-ThirdPartyNotices.txt` にあります。**ReTAC を使うことで、同梱のランタイムについてはこの使用許諾にも同意したものとみなします。**
+
+アップデータ（`ReTAC.Updater.exe`）はランタイムを同梱していません。Windows に組み込まれている .NET Framework 4.8 で動きます（Windows 11 には必ず入っています）。
 
 自分でビルドする場合は .NET 10 SDK を使います。
 
@@ -176,7 +179,23 @@ ReTAC は、Windows 用ファイラー「卓駆★」(以下卓駆と記載)の�
 dotnet publish src/ReTAC.App/ReTAC.App.csproj -c Release -r win-x64 --self-contained true \
   -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
   -p:EnableCompressionInSingleFile=true -o publish
+dotnet build src/ReTAC.Updater/ReTAC.Updater.csproj -c Release   # アップデータ（bin/Release/net48/ReTAC.Updater.exe）
 ```
+
+## 更新
+
+ヘルプメニューの「更新を確認」を選ぶか、`ReTAC.Updater.exe` を直接起動します。新しい版があれば確認が出て、[更新] を押すと ReTAC が再起動します。アップデータが ReTAC を終了させ、ファイルを新しい版に入れ替え、ReTAC を起動し直します。
+
+- 設定ファイル（`retac.settings.json`）は変更しません。フォルダにあるほかのファイルも消しません。
+- ダウンロードしたファイルは、GitHub が公開している SHA-256 と照合してから使います。
+- `Program Files` など書き込みに管理者の許可が要るフォルダに置いているときは、ファイルを入れ替える前に許可を求めます（UAC）。
+- 2.7.1 以前の版にはアップデータが入っていません。アップデータの入った版へは、手動で一度だけ更新してください。
+
+### 通信について
+
+- **ReTAC 本体は、インターネットに一切アクセスしません。** ヘルプの「GitHub のページを開く」はブラウザーでページを開くだけで、通信するのはブラウザーです。登録した外部ツールが通信する場合も、それは外部ツールによるものです。
+- インターネットにアクセスするのは、アップデータ（`ReTAC.Updater.exe`）だけです。接続先は GitHub（リリースの情報の問い合わせと、配布用の zip のダウンロード）だけで、「更新を確認」を選んだときにだけ通信します。起動時などに自動で確認することはありません。
+- セキュリティソフトやファイアウォールの設定によっては、アップデータの通信に許可が要ることがあります。許可できない場合は、これまでどおりブラウザーで[リリースのページ](https://github.com/serick4126/retac/releases)から zip をダウンロードし、「ReTAC を完全に終了」で ReTAC を終了してから、zip の中のファイルでインストール先を上書きしてください（`retac.settings.json` は zip に入っていないので、上書きされません）。
 
 ## 困ったとき
 
