@@ -27,9 +27,10 @@ internal static class ShellDrag
         var defaultCursors = false;
         GiveFeedbackEventHandler redraw = (_, e) =>
         {
-            // 名前空間ツリーは、落とせない所（PC など）で説明を消す。画像付きの WinForms は既定のカーソルを使わないので、
-            // そのままでは禁止マークがどこにも出ない
-            if (!DragImageWindow.RedrawIfDescriptionChanged(data, ref lastDescription) && e.Effect == DragDropEffects.None)
+            // 説明が無ければ、効果にかかわらず既定のカーソルを使わせる。画像付きの WinForms は既定のカーソルを使わないので、
+            // 説明を書かないアプリ（WinSCP など）の上では矢印だけになり、名前空間ツリーが説明を消す落とせない所（PC など）
+            // では禁止マークがどこにも出ない
+            if (!DragImageWindow.RedrawIfDescriptionChanged(data, ref lastDescription))
             {
                 e.UseDefaultCursors = defaultCursors = true;
             }

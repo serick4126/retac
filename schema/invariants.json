@@ -392,6 +392,15 @@
       "rule": "SystemLightColors / SystemDarkColors に入るのは、ThemeSlots で SystemEditable の印が付いた 8 項目（属性 5 色とマーク 3 色）だけ。背景・文字・カーソルは OS に従うので保存しない。読むときは 8 項目以外のキー・null・読めない色を無視して推奨値にし、書くときは推奨値と違う色だけを書く。画面に当てるのは起動時の OS と同じ側の組だけで、反対側の組は保存と設定画面のプレビューにしか使わない。",
       "enforcedBy": "app:ThemeSlots.SystemMode（8 項目の一覧は印から作り、別の配列に書き写さない）/ AppSettings.ToSystemTheme・FromSystemTheme / AppSettings.ToScreenTheme（ToSystemTheme(os.Dark) だけを Theme.Resolve に渡す）",
       "testedBy": "tests/ReTAC.Domain.Tests/SystemColorSetsTests.cs"
+    },
+    {
+      "id": "INV-DRAG-DEFAULT-CURSOR-WITHOUT-DESCRIPTION",
+      "status": "enforced",
+      "specIds": ["R-78", "R-97-3"],
+      "applies": ["app:ShellDrag"],
+      "rule": "画像付きのドラッグの元は、落とす先の説明（DropDescription）が出ていないとき、効果にかかわらず既定のカーソルを使わせる。WinForms は画像付きのとき既定のカーソルを使わないので、放っておくと説明を書かないアプリ（WinSCP など）の上でカーソルが矢印だけになる。説明が出る所へ戻ったら矢印に戻す。",
+      "enforcedBy": "app:ShellDrag.Start（GiveFeedback で DragImageWindow.RedrawIfDescriptionChanged が false なら UseDefaultCursors = true）",
+      "note": "OLE のドラッグの中の判断なので単体テストが無い。実機で、説明を書かないアプリ・エクスプローラー・ReTAC 自身・名前空間ツリーの落とせない所の 4 つを確かめる。"
     }
   ]
 }
