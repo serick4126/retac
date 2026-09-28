@@ -4942,7 +4942,7 @@
       },
       {
         "file": "src/ReTAC.Updater/Core/PendingQuitWatch.cs",
-        "line": 90
+        "line": 114
       },
       {
         "file": "src/ReTAC.Updater/Core/Protocol.cs",
@@ -4962,7 +4962,7 @@
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 294
+        "line": 295
       }
     ],
     "M-1": [
@@ -6340,11 +6340,11 @@
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 330
+        "line": 331
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 571
+        "line": 572
       }
     ],
     "R-109-5": [
@@ -6392,15 +6392,15 @@
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 485
+        "line": 486
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 548
+        "line": 549
       },
       {
         "file": "src/ReTAC.Updater/UpdaterForm.cs",
-        "line": 662
+        "line": 663
       }
     ],
     "R-11": [

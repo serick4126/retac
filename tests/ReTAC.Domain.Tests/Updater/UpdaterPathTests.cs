@@ -242,12 +242,12 @@ public sealed class UpdaterPathTests : IDisposable
         var sending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var accepted = false;
         var probes = 0;
-        var follow = PendingQuitWatch.FollowAsync([sending.Task], () =>
+        var follow = PendingQuitWatch.FollowAsync([sending.Task], 1, _ =>
         {
             probes++;
             // 受け付ける前に問い合わせると「受け付けていない」と答えられてしまう
-            if (!accepted) return [Stayed];
-            return probes < 4 ? [Quitting] : [Gone];
+            if (!accepted) return Stayed;
+            return probes < 4 ? Quitting : Gone;
         }, () => { });
 
         await Task.Delay(100);
@@ -340,6 +340,43 @@ public sealed class UpdaterPathTests : IDisposable
     public async Task 送れなかった依頼も様子の問い合わせで決める()
     {
         var failed = Task.FromException(new InvalidOperationException());
-        Assert.Equal(PendingQuitEnd.SomeStayed, await PendingQuitWatch.FollowAsync([failed], () => [Stayed], () => { }));
+        Assert.Equal(PendingQuitEnd.SomeStayed, await PendingQuitWatch.FollowAsync([failed], 1, _ => Stayed, () => { }));
+    }
+
+    // ---- 複数の ReTAC が応答しないとき（実際に経った時間の上限）----
+
+    [Fact]
+    public void 応答しないReTACが多くても実際に経った時間で打ち切る()
+    {
+        // 20 個がどれも応答しない。1 件の問い合わせに 0.3 秒かかる（本物は最大 5 秒）。順番に問い合わせると 1 巡で 6 秒かかるが、
+        // 同時に問い合わせるので 1 巡は 1 件分で済み、上限（1 秒）の少し後に打ち切る
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var end = PendingQuitWatch.Wait(20, _ => { Thread.Sleep(300); return Silent; }, () => Thread.Sleep(50),
+                                        unknownLimit: TimeSpan.FromSeconds(1));
+        watch.Stop();
+
+        Assert.Equal(PendingQuitEnd.GaveUp, end);
+        Assert.InRange(watch.Elapsed.TotalSeconds, 1, 2.5);   // 上限 + 1 巡分。順番に行えば 6 秒を超える
+    }
+
+    [Fact]
+    public void 決まったReTACにはもう問い合わせない()
+    {
+        var asked = new int[3];
+        var end = PendingQuitWatch.Wait(3, i =>
+        {
+            Interlocked.Increment(ref asked[i]);
+            return i switch
+            {
+                0 => Gone,                                   // 最初から終わっている
+                1 => Stayed,                                 // 取りやめた
+                _ => Volatile.Read(ref asked[2]) < 5 ? Quitting : Gone,
+            };
+        }, () => { });
+
+        Assert.Equal(PendingQuitEnd.SomeStayed, end);
+        Assert.Equal(1, asked[0]);
+        Assert.Equal(1, asked[1]);
+        Assert.Equal(5, asked[2]);
     }
 }

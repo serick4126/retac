@@ -255,14 +255,15 @@ internal sealed class UpdaterForm : Form
         if (requested.Count == 0) return;   // 頼んでいなければ、終わっても起動し直さない
 
         // 送っている最中の依頼の返事を先に待ってから問い合わせる（PendingQuitWatch.FollowAsync）。
-        // 答えが無い状態だけが続けば 60 秒で打ち切る（INV-UPDATER-NO-DEADLOCK）
+        // 1 巡の問い合わせは ReTAC ごとに同時に行い、答えが無い状態だけが続けば実際に経った 60 秒で打ち切る（INV-UPDATER-NO-DEADLOCK）
         var ids = requested.Select(t => t.Process.Id).ToList();
         var end = await PendingQuitWatch.FollowAsync(
             requested.Select(t => t.InFlight).OfType<Task>(),
-            () =>
+            ids.Count,
+            i =>
             {
                 _options.SlowIo();
-                return ids.Select(ReTacProcesses.State).ToList();
+                return ReTacProcesses.State(ids[i]);
             },
             () => Thread.Sleep(500));
 

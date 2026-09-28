@@ -54,14 +54,38 @@ public static class PendingQuitWatch
     /// 送っている最中の依頼の返事を先に待ってから、<see cref="Wait"/> で見届ける。
     /// 問い合わせが依頼を追い越すと、受け付ける前の ReTAC に「受け付けていない」と答えられて見届けをやめてしまうため。
     /// </summary>
-    public static async Task<PendingQuitEnd> FollowAsync(IEnumerable<Task> inFlight, Func<IReadOnlyList<PendingQuitState>> probe, Action pause)
+    public static async Task<PendingQuitEnd> FollowAsync(IEnumerable<Task> inFlight, int count, Func<int, PendingQuitState> probeOne, Action pause)
     {
         foreach (var sending in inFlight)
         {
             try { await sending.ConfigureAwait(false); }
             catch (Exception) { }   // 送れなかった依頼も、様子の問い合わせで決める
         }
-        return await Task.Run(() => Wait(probe, pause)).ConfigureAwait(false);
+        return await Task.Run(() => Wait(count, probeOne, pause)).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 頼んだ ReTAC を 1 つずつ調べる形の見届け。<b>1 巡の問い合わせは ReTAC ごとに別のスレッドで同時に行う。</b>
+    /// 応答しない ReTAC への問い合わせは 1 件に最大 5 秒かかるので、順番に行うと ReTAC の数だけ 1 巡が延び、
+    /// 上限（実際に経った時間）を確かめる前に何十秒も過ぎてしまうため。何個あっても 1 巡は 1 件分の時間で済む。
+    /// 決まった ReTAC（終わった・取りやめた）には、もう問い合わせない。
+    /// スレッドプールではなく専用のスレッドにする（固まった問い合わせでプールが埋まると、スレッドの追加が遅れて待ちが延びる）。
+    /// </summary>
+    /// <param name="probeOne">i 番目の ReTAC の様子を調べる</param>
+    public static PendingQuitEnd Wait(int count, Func<int, PendingQuitState> probeOne, Action pause,
+                                      TimeSpan? unknownLimit = null, Func<TimeSpan>? clock = null)
+    {
+        var states = Enumerable.Repeat(PendingQuitState.Unknown, count).ToArray();
+        return Wait(() =>
+        {
+            var threads = Enumerable.Range(0, count)
+                .Where(i => states[i] is PendingQuitState.Quitting or PendingQuitState.Unknown)
+                .Select(i => new System.Threading.Thread(() => states[i] = probeOne(i)) { IsBackground = true })
+                .ToList();
+            foreach (var thread in threads) thread.Start();
+            foreach (var thread in threads) thread.Join();
+            return states.ToArray();
+        }, pause, unknownLimit, clock);
     }
 
     /// <param name="probe">頼んだ ReTAC それぞれの様子を調べる（応答しない ReTAC には 1 回に数秒かかりうる）</param>
