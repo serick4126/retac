@@ -203,7 +203,7 @@
       "specIds": ["R-109"],
       "applies": ["app:*"],
       "rule": "ReTAC 自身のコード（ReTAC.App / ReTAC.Domain / ReTAC.Shell）は通信の API を使わない。インターネットへ出るのはアップデータ（ReTAC.Updater）だけ。ブラウザーでページを開くこと（R-105）と、利用者が設定した外部ツールを起動することは対象外（通信するのはブラウザーや外部ツールであり、ReTAC ではない）。",
-      "enforcedBy": "テストで 3 つを確かめる: 参照するアセンブリが ReTAC の 3 つと共有フレームワークだけ（ライブラリを足すなら通信しないことを確かめてから許可する）／通信のアセンブリ（System.Net.Http・Requests・WebClient・Sockets・WebSockets.Client・Mail・Quic）を参照しない／P/Invoke の呼び先に wininet・winhttp・ws2_32・urlmon・webio が無い",
+      "enforcedBy": "テストで 3 つを確かめる: 参照するアセンブリが ReTAC の 3 つと共有フレームワークだけ（ライブラリを足すなら通信しないことを確かめてから許可する）／通信のアセンブリ（System.Net.Http・Requests・WebClient・Sockets・WebSockets.Client・Mail・Quic・NameResolution・Ping）を参照しない／P/Invoke の呼び先に wininet・winhttp・ws2_32・urlmon・webio・dnsapi・iphlpapi が無い",
       "testedBy": "tests/ReTAC.Domain.Tests/NoInternetTests.cs",
       "note": "COM 経由の通信（URL を開くシェルの API など）はテストで見えない。レビューで見る。"
     },

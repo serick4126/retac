@@ -21,9 +21,12 @@ public class NoInternetTests
     [
         "System.Net.Http", "System.Net.Requests", "System.Net.WebClient", "System.Net.Sockets",
         "System.Net.WebSockets.Client", "System.Net.Mail", "System.Net.Quic",
+        // 名前の解決（Dns）と Ping も外へ問い合わせる
+        "System.Net.NameResolution", "System.Net.Ping",
     ];
 
-    private static readonly string[] NetworkLibraries = ["wininet", "winhttp", "ws2_32", "urlmon", "webio"];
+    // dnsapi は名前の解決、iphlpapi は Ping（IcmpSendEcho）
+    private static readonly string[] NetworkLibraries = ["wininet", "winhttp", "ws2_32", "urlmon", "webio", "dnsapi", "iphlpapi"];
 
     public static TheoryData<string> AssemblyNames() => [.. ReTacAssemblies.Select(a => a.GetName().Name!)];
 

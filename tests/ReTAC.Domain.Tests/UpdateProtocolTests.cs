@@ -40,20 +40,96 @@ public class UpdateProtocolTests
         Assert.True(requested);
     }
 
-    [Fact]
-    public void 印を戻せば次の依頼でまた終了処理を始める()
+    [Theory]
+    [InlineData(true, false)]    // 受け付けた後、K-5 の確認でウィンドウが無効になっている
+    [InlineData(false, true)]    // 受け付けた後、ファイル操作が走っている
+    [InlineData(true, true)]
+    public void 受け付けた後の依頼はダイアログや操作の最中でも受け付け済みと返す(bool disabled, bool running)
     {
-        var requested = false;
-        UpdateProtocol.Decide(false, false, ref requested);
-        requested = false;   // K-5 の確認で取りやめたとき、MainForm が印を戻す
-        Assert.Equal((UpdateProtocol.Accepted, true), UpdateProtocol.Decide(false, false, ref requested));
+        var requested = true;
+        Assert.Equal((UpdateProtocol.Accepted, false), UpdateProtocol.Decide(disabled, running, ref requested));
+        Assert.True(requested);
+    }
+
+    // ---- QuitForUpdateGate（MainForm の配線）----
+
+    [Fact]
+    public void 受け口は受け付けたときだけ終了処理を1回予約する()
+    {
+        var gate = new QuitForUpdateGate();
+        var scheduled = 0;
+
+        Assert.Equal(UpdateProtocol.Accepted, gate.OnRequest(false, () => scheduled++));
+        // 予約した終了処理が K-5 の確認を出している間（ウィンドウが無効）に、もう一度依頼が来る
+        Assert.Equal(UpdateProtocol.Accepted, gate.OnRequest(true, () => scheduled++));
+        Assert.Equal(UpdateProtocol.Accepted, gate.OnRequest(false, () => scheduled++));
+
+        Assert.Equal(1, scheduled);
     }
 
     [Fact]
-    public void 受け付け済みでもダイアログを開いていれば断る()
+    public void 受け口はダイアログを開いている間は断り予約しない()
     {
-        var requested = true;
-        Assert.Equal((UpdateProtocol.Refused, false), UpdateProtocol.Decide(true, false, ref requested));
-        Assert.True(requested);
+        var gate = new QuitForUpdateGate();
+        var scheduled = 0;
+        Assert.Equal(UpdateProtocol.Refused, gate.OnRequest(true, () => scheduled++));
+        Assert.Equal(0, scheduled);
+        // ダイアログを閉じた後は受け付ける（断っても印は立っていない）
+        Assert.Equal(UpdateProtocol.Accepted, gate.OnRequest(false, () => scheduled++));
+        Assert.Equal(1, scheduled);
+    }
+
+    [Fact]
+    public void 受け口はファイル操作の間だけ断る()
+    {
+        var gate = new QuitForUpdateGate();
+        var scheduled = 0;
+
+        using (gate.BeginOperation())
+        {
+            using (gate.BeginOperation())   // 別のウィンドウの操作が重なる
+                Assert.Equal(UpdateProtocol.Refused, gate.OnRequest(false, () => scheduled++));
+            Assert.Equal(UpdateProtocol.Refused, gate.OnRequest(false, () => scheduled++));
+        }
+        Assert.Equal(0, scheduled);
+        Assert.Equal(UpdateProtocol.Accepted, gate.OnRequest(false, () => scheduled++));
+        Assert.Equal(1, scheduled);
+    }
+
+    [Fact]
+    public void 操作の終わりを2回伝えても数は1つしか減らない()
+    {
+        var gate = new QuitForUpdateGate();
+        var outer = gate.BeginOperation();
+        var inner = gate.BeginOperation();
+        inner.Dispose();
+        inner.Dispose();
+        Assert.Equal(UpdateProtocol.Refused, gate.OnRequest(false, () => { }));
+        outer.Dispose();
+        Assert.Equal(UpdateProtocol.Accepted, gate.OnRequest(false, () => { }));
+    }
+
+    [Fact]
+    public void 終了を取りやめたら次の依頼でまた予約する()
+    {
+        var gate = new QuitForUpdateGate();
+        var scheduled = 0;
+        gate.OnRequest(false, () => scheduled++);
+        gate.OnQuitFinished(quit: false);   // K-5 の確認で取りやめた
+
+        Assert.Equal(UpdateProtocol.Accepted, gate.OnRequest(false, () => scheduled++));
+        Assert.Equal(2, scheduled);
+    }
+
+    [Fact]
+    public void 終了したときは印を戻さない()
+    {
+        var gate = new QuitForUpdateGate();
+        var scheduled = 0;
+        gate.OnRequest(false, () => scheduled++);
+        gate.OnQuitFinished(quit: true);
+
+        Assert.Equal(UpdateProtocol.Accepted, gate.OnRequest(false, () => scheduled++));
+        Assert.Equal(1, scheduled);
     }
 }

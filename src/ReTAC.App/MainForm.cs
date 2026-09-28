@@ -321,12 +321,9 @@ public sealed class MainForm : Form, IBookmarkHost
         // ここで確認を出すと SendMessageTimeout に返事が返らず、アップデータを待たせる
         if (m.Msg == QuitForUpdateMessage && QuitForUpdateMessage != 0)
         {
-            var (reply, startQuit) = UpdateProtocol.Decide(
+            m.Result = s_quitGate.OnRequest(
                 anyWindowDisabled: Application.OpenForms.OfType<MainForm>().Any(f => !IsWindowEnabled(f.Handle)),
-                operationRunning: s_operationsRunning > 0,
-                ref s_quitForUpdateRequested);
-            m.Result = reply;
-            if (startQuit) BeginInvoke(QuitForUpdate);
+                scheduleQuit: () => BeginInvoke(QuitForUpdate));
             return;
         }
 
@@ -1165,7 +1162,7 @@ public sealed class MainForm : Form, IBookmarkHost
         _watcher.EnableRaisingEvents = false;
         // R-109-3: 実行中はアップデータからの終了依頼を断る。Execute はシェルの進捗の中でメッセージを回すので、
         // 転送の途中で依頼が届きうる
-        s_operationsRunning++;
+        using var running = s_quitGate.BeginOperation();
         // R-84: Execute が例外を投げても、それまでに成功した分は _recorder に集める。
         // try の外で宣言し、catch でも同じインスタンスを参照できるようにする
         ShellFileOperation? operation = null;
@@ -1184,7 +1181,7 @@ public sealed class MainForm : Form, IBookmarkHost
             MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
         }
-        finally { s_operationsRunning--; operation?.Dispose(); WatchCurrentFolder(); }
+        finally { operation?.Dispose(); WatchCurrentFolder(); }
     }
 
     /// <summary>
@@ -1552,19 +1549,16 @@ public sealed class MainForm : Form, IBookmarkHost
     /// R-109-3: アップデータからの終了依頼を受け付けた後の処理。常駐の設定に関係なく、R-40-4 と同じく全部閉じる。
     /// K-5 の確認で取りやめたら受け付けの印を戻し、次の依頼をまた受け付けられるようにする。
     /// </summary>
-    private void QuitForUpdate()
-    {
-        if (!QuitAll()) s_quitForUpdateRequested = false;
-    }
+    private void QuitForUpdate() => s_quitGate.OnQuitFinished(QuitAll());
 
     /// <summary>R-109-3: 終了依頼のメッセージ。RegisterWindowMessage が失敗したら 0 で、そのときは受け付けない。</summary>
     private static readonly int QuitForUpdateMessage = (int)RegisterWindowMessage(UpdateProtocol.MessageName);
 
-    /// <summary>R-109-3: 終了依頼を受け付け済みか。どのウィンドウが受けてもプロセス全体への依頼なので、プロセスで 1 つ。</summary>
-    private static bool s_quitForUpdateRequested;
-
-    /// <summary>R-109-3: 実行中のファイル操作の数（全ウィンドウ共通）。0 でなければ終了依頼を断る。</summary>
-    private static int s_operationsRunning;
+    /// <summary>
+    /// R-109-3: 終了依頼の受け口。どのウィンドウが受けてもプロセス全体への依頼なので、プロセスで 1 つ。
+    /// 受け付けの印と、実行中のファイル操作の数（全ウィンドウ共通）を持つ。
+    /// </summary>
+    private static readonly QuitForUpdateGate s_quitGate = new();
 
     protected override void OnHandleCreated(EventArgs e)
     {
