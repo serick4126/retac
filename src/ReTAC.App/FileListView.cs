@@ -427,7 +427,10 @@ public sealed class FileListView : Control
         // Q7: マークを変えるのは離した時点（MarkOnRelease）。押した時点ではカーソルだけ移す
         var before = _state.CursorIndex;
         _markOnRelease.Press(_state, index, onIcon, ModifierKeys.HasFlag(Keys.Shift));
-        Commit(before, marksChanged: false);
+        // R-11-2: Shift の押下ではカーソルが動かない（Press が動かさない）。ここで無条件に Commit すると、
+        // EnsureCursorVisible が古いカーソル（横スクロールでは画面外かもしれない）の列へ表示を戻してしまい、
+        // 押した項目の真下からマウスがずれる。動いていなければ何もしない
+        if (_state.CursorIndex != before) Commit(before, marksChanged: false);
     }
 
     // ---- ドラッグ＆ドロップ（R-65） ---------------------------------------
