@@ -69,7 +69,7 @@ public sealed class GitHubReleases : IDisposable
         _stallTimeout = stallTimeout;
         // 時間の上限は要求ごとに付ける（ダウンロードには全体の上限を設けない）
         _client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
-        var version = typeof(GitHubReleases).Assembly.GetName().Version;
+        var version = typeof(GitHubReleases).Assembly.GetName().Version ?? new Version(0, 0, 0);
         _client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("ReTAC.Updater", $"{version.Major}.{version.Minor}.{version.Build}"));
     }
 

@@ -228,16 +228,12 @@
     },
     {
       "id": "INV-RELEASE-EXACT-SET",
-      "status": "deferred",
+      "status": "enforced",
       "specIds": ["R-109"],
       "applies": ["app:ReTAC.Updater"],
-      "rule": "公式のリリースの zip は、配布物の名前の 6 ファイルを 1 つずつ含み、ほかを含まない。2 つの exe の版が同じ。",
-      "reason": "リリースの検査のスクリプトは Phase 13 の 13.3（リリース手順の変更）で足す。13.2 の時点ではまだ無い。",
-      "plannedShape": {
-        "script": "公開してよい場所に置く検査のスクリプト。配布物の名前はアップデータのコード（Distribution.Names）の 1 か所から読む",
-        "fails": "中身が 6 つと一致しない（多い・少ない・フォルダ・大文字小文字だけ違う重複）／ReTAC.exe と ReTAC.Updater.exe のファイルバージョンが X.Y.Z.0 でない",
-        "procedure": "release_procedure.md の zip を作った後に実行し、失敗ならリリースを止める"
-      }
+      "rule": "公式のリリースの zip は、配布物の名前の 6 ファイルを 1 つずつ含み、ほかを含まない。2 つの exe の版が同じ（X.Y.Z.0）。",
+      "enforcedBy": "build/Test-ReleaseZip.ps1（リリースの手順で zip を作った後に実行し、失敗ならリリースを止める）。配布物の名前は zip の中の ReTAC.Updater.exe の --list-distribution（Distribution.Names）から読む",
+      "testedBy": "tests/ReTAC.Domain.Tests/Updater/ReleaseZipCheckTests.cs"
     },
     {
       "id": "INV-UPDATER-KEEPS-FILES",

@@ -24,6 +24,8 @@
     <ProjectReference Include="..\..\src\ReTAC.Shell\ReTAC.Shell.csproj" />
     <!-- Phase 5: スキーマ・マニフェストが設定とコマンド配線を読むため -->
     <ProjectReference Include="..\..\src\ReTAC.App\ReTAC.App.csproj" />
+    <!-- R-109: リリースの検査のスクリプトのテストが、ビルドしたアップデータの exe を使う。参照はせず、先にビルドさせるだけ -->
+    <ProjectReference Include="..\..\src\ReTAC.Updater\ReTAC.Updater.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>
 
   <ItemGroup>
