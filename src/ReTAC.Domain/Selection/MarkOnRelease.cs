@@ -21,6 +21,13 @@ public sealed class MarkOnRelease
 
     public void DragStarted() => _kind = Kind.None;
 
+    /// <summary>
+    /// 押している最中に一覧が入れ替わった（自動更新など）。保留していた `_index` / `_anchor` は
+    /// もう別の項目を指しているので、離した時点で別のファイルをマークしてしまわないよう捨てる
+    /// （R-11-2 / INV-MARKS-EXPLICIT-ONLY）。
+    /// </summary>
+    public void Cancel() => _kind = Kind.None;
+
     /// <returns>マークを変えたか</returns>
     public bool Release(ListState state)
     {

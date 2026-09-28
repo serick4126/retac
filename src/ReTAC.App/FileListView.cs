@@ -128,6 +128,10 @@ public sealed class FileListView : Control
     /// </param>
     public void SetEntries(IReadOnlyList<Entry> entries, int cursorIndex = 0, bool keepScroll = false)
     {
+        // 自動更新などでボタンを押したまま一覧が入れ替わることがある。押した時点の添字は
+        // 別の項目を指すことになるので、離した時点の処理（マーク・右ボタンのドラッグ／メニュー）は捨てる
+        _rightDown = null;
+        _markOnRelease.Cancel();
         var scroll = _scrollColumn;
         _state = new ListState(entries);
         _state.MoveCursor(cursorIndex);

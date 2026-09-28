@@ -64,4 +64,17 @@ public class MarkOnReleaseTests
         Assert.Empty(state.Marks);
         Assert.Equal(2, state.CursorIndex);
     }
+
+    [Fact]
+    public void 押している間に一覧が入れ替わったらCancelでマークを変えない()
+    {
+        // 自動更新などでボタンを押したまま _state が差し替わる場合。押した時点の添字は
+        // もう別の項目を指しているので、離した時点でそれをマークしてはいけない
+        var state = State();
+        var click = new MarkOnRelease();
+        click.Press(state, 2, onIcon: true, shift: false);
+        click.Cancel();
+        Assert.False(click.Release(state));
+        Assert.Empty(state.Marks);
+    }
 }
