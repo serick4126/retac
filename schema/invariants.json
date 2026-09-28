@@ -282,8 +282,9 @@
       "status": "enforced",
       "specIds": ["R-109-6"],
       "applies": ["app:ReTAC.Updater"],
-      "rule": "画面はいつでも応答し、閉じられる。外の相手（GitHub・ReTAC・利用者）を待つところには上限か押せるボタンがある。OS から戻らないファイル操作だけは例外で、そのときは I/O を抱えたスレッドが置き換えの排他を持ったまま残り、次の起動で Windows の再起動を案内する。",
-      "enforcedBy": "updater:GitHubReleases（問い合わせ 15 秒・30 秒無受信で打ち切り）・UpdaterForm（ReTAC の送信は SendMessageTimeout 5 秒・終了待ち 60 秒で [再試行] [中止]・60 秒進まなければ [閉じる]。閉じても作業は止めない）",
+      "rule": "画面はいつでも応答し、閉じられる。外の相手（GitHub・ReTAC・利用者）を待つところには上限か押せるボタンがある。OS から戻らないファイル操作だけは例外で、そのときは I/O を抱えたスレッドが置き換えの排他を持ったまま残り、次の起動で Windows の再起動を案内する。画面を閉じた後の見届けは、ReTAC が答えている間は利用者の答え（ReTAC の K-5 の確認のボタン）を待ち、答えが無い状態は 60 秒で打ち切る。",
+      "enforcedBy": "updater:GitHubReleases（問い合わせ 15 秒・30 秒無受信で打ち切り）・UpdaterForm（ReTAC の送信は SendMessageTimeout 5 秒・終了待ち 60 秒で [再試行] [中止]・60 秒進まなければ [閉じる]。閉じても作業は止めない）・PendingQuitWatch（答えが無い状態の上限）",
+      "testedBy": "tests/ReTAC.Domain.Tests/Updater/UpdaterPathTests.cs（見届けの上限）",
       "note": "実機で確かめた（2026-09-28。止まったまま [閉じる] → プロセスは残り、次のアップデータは「入れ替えています」で止まり、解くと作業を終えて消える）。"
     },
     {

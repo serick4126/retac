@@ -234,8 +234,11 @@ internal sealed class UpdaterForm : Form
     /// <summary>終了を頼んだ ReTAC。画面を閉じたときに、終了させたものがあれば起動し直すために持つ。</summary>
     private List<Target> _quitTargets = new();
 
-    /// <summary>頼んだ ReTAC のうち、終わったものがあるか。プロセスを照会するので作業側で呼ぶ（<see cref="Io{T}"/>）。</summary>
-    private bool AnyStopped() => _quitTargets.Any(t => !ReTacProcesses.IsRunning(t.Process.Id));
+    /// <summary>
+    /// 終了を頼んだ ReTAC のうち、終わったものがあるか。頼んでいない ReTAC が自分で終わっても数えない。
+    /// プロセスを照会するので作業側で呼ぶ（<see cref="Io{T}"/>）。
+    /// </summary>
+    private bool AnyStopped() => _quitTargets.Any(t => t.Requested && !ReTacProcesses.IsRunning(t.Process.Id));
 
     /// <summary>受け付けた ReTAC の見届け。始めていなければ null。</summary>
     private Task? _following;
@@ -247,21 +250,24 @@ internal sealed class UpdaterForm : Form
     /// </summary>
     private async Task FollowQuitTargetsAsync()
     {
-        var requested = _quitTargets.Where(t => t.Requested).ToList();
-        if (requested.Count > 0)
-        {
-            // 送っている最中の依頼の返事を先に待ってから問い合わせる（PendingQuitWatch.FollowAsync）
-            var ids = requested.Select(t => t.Process.Id).ToList();
-            await PendingQuitWatch.FollowAsync(
-                requested.Select(t => t.InFlight).OfType<Task>(),
-                () =>
-                {
-                    _options.SlowIo();
-                    return ids.Select(ReTacProcesses.State).ToList();
-                },
-                () => Thread.Sleep(500));
-        }
-        if (await Background(AnyStopped))
+        var targets = _quitTargets.ToList();
+        var requested = targets.Where(t => t.Requested).ToList();
+        if (requested.Count == 0) return;   // 頼んでいなければ、終わっても起動し直さない
+
+        // 送っている最中の依頼の返事を先に待ってから問い合わせる（PendingQuitWatch.FollowAsync）。
+        // 答えが無い状態だけが続けば 60 秒で打ち切る（INV-UPDATER-NO-DEADLOCK）
+        var ids = requested.Select(t => t.Process.Id).ToList();
+        var end = await PendingQuitWatch.FollowAsync(
+            requested.Select(t => t.InFlight).OfType<Task>(),
+            () =>
+            {
+                _options.SlowIo();
+                return ids.Select(ReTacProcesses.State).ToList();
+            },
+            () => Thread.Sleep(500));
+
+        var states = await Background(() => targets.Select(t => (t.Requested, Exited: !ReTacProcesses.IsRunning(t.Process.Id))).ToList());
+        if (PendingQuitWatch.ShouldRelaunch(end, states))
         {
             _stoppedAnyReTac = true;
             Launch();
@@ -281,7 +287,8 @@ internal sealed class UpdaterForm : Form
         while (true)
         {
             var alive = await Io(() => targets.Where(t => ReTacProcesses.IsRunning(t.Process.Id)).ToList());
-            _stoppedAnyReTac = alive.Count < targets.Count;
+            // 起動し直す条件の「ReTAC を終了させた」は、頼んだものが終わったときだけ（頼む前に自分で終わったものは数えない）
+            _stoppedAnyReTac = targets.Any(t => t.Requested && !alive.Contains(t));
             if (alive.Count == 0) return true;
 
             // 受け付けた ReTAC には送り直さない（K-5 の確認で「やめる」を選んだ利用者に、確認を繰り返し出さないため）

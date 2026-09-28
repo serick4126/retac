@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace ReTAC.Updater.Core;
 
@@ -16,7 +17,7 @@ public enum PendingQuitState
     /// <summary>ReTAC が「受け付けていない」と答えた（断った・K-5 の確認で取りやめた）。</summary>
     NotQuitting,
 
-    /// <summary>答えが無い（ウィンドウを閉じていく途中・応答しない）。まだ終わる途中かもしれないので、見届けを続ける。</summary>
+    /// <summary>答えが無い（ウィンドウを閉じていく途中・応答しない）。</summary>
     Unknown,
 }
 
@@ -28,43 +29,68 @@ public enum PendingQuitEnd
 
     /// <summary>少なくとも 1 つが「受け付けていない」と答えて残った（取りやめた）。</summary>
     SomeStayed,
+
+    /// <summary>答えが無い状態が上限まで続いた（応答しない ReTAC がある）。見届けを打ち切る。</summary>
+    GaveUp,
 }
 
 /// <summary>
 /// R-109-3 / R-109-6: 終了依頼を受け付けた ReTAC が K-5 の確認を出している間にアップデータを閉じても、利用者が後から
 /// 「終了」を選べば ReTAC は終わる。そのとき ReTAC を使えない状態のまま残さないよう、アップデータは画面を閉じた後も
 /// 頼んだ ReTAC を見届け、終わったら起動し直す。
-/// <b>取りやめたかどうかは ReTAC に問い合わせて決める。</b>ウィンドウの様子や時間からは決めない
-/// （終了を選んだ後の設定の保存が長くかかると、操作できるように見える間が続きうるため）。時間の上限も設けない。
+/// 取りやめたかどうかは ReTAC に問い合わせて決める（ウィンドウの様子や時間からは決めない）。
+/// ReTAC が答えている限り（K-5 の確認の間は「終わる途中」と答える）見届けを続ける。
+/// 答えが無い状態だけが続くときは、上限（INV-UPDATER-NO-DEADLOCK）で打ち切る。
 /// </summary>
 public static class PendingQuitWatch
 {
+    /// <summary>答えが無い状態が続いてよい回数の既定（0.5 秒ごとに調べて 60 秒）。</summary>
+    public const int DefaultUnknownLimit = 120;
+
     /// <summary>
     /// 送っている最中の依頼の返事を先に待ってから、<see cref="Wait"/> で見届ける。
     /// 問い合わせが依頼を追い越すと、受け付ける前の ReTAC に「受け付けていない」と答えられて見届けをやめてしまうため。
     /// </summary>
-    public static async System.Threading.Tasks.Task<PendingQuitEnd> FollowAsync(
-        IEnumerable<System.Threading.Tasks.Task> inFlight, Func<IReadOnlyList<PendingQuitState>> probe, Action pause)
+    public static async Task<PendingQuitEnd> FollowAsync(
+        IEnumerable<Task> inFlight, Func<IReadOnlyList<PendingQuitState>> probe, Action pause, int unknownLimit = DefaultUnknownLimit)
     {
         foreach (var sending in inFlight)
         {
             try { await sending.ConfigureAwait(false); }
             catch (Exception) { }   // 送れなかった依頼も、様子の問い合わせで決める
         }
-        return await System.Threading.Tasks.Task.Run(() => Wait(probe, pause)).ConfigureAwait(false);
+        return await Task.Run(() => Wait(probe, pause, unknownLimit)).ConfigureAwait(false);
     }
 
     /// <param name="probe">頼んだ ReTAC それぞれの様子を調べる</param>
     /// <param name="pause">次に調べるまで待つ</param>
-    public static PendingQuitEnd Wait(Func<IReadOnlyList<PendingQuitState>> probe, Action pause)
+    /// <param name="unknownLimit">まだ決まっていない ReTAC がどれも答えない状態が、この回数続いたら打ち切る</param>
+    public static PendingQuitEnd Wait(Func<IReadOnlyList<PendingQuitState>> probe, Action pause, int unknownLimit = DefaultUnknownLimit)
     {
+        var silent = 0;
         while (true)
         {
             var states = probe();
-            var settled = states.All(s => s is PendingQuitState.Exited or PendingQuitState.NotQuitting);
-            if (settled)
+            var pending = states.Where(s => s is PendingQuitState.Quitting or PendingQuitState.Unknown).ToList();
+            if (pending.Count == 0)
                 return states.All(s => s == PendingQuitState.Exited) ? PendingQuitEnd.AllExited : PendingQuitEnd.SomeStayed;
+
+            // 答えている ReTAC が 1 つでもあれば（K-5 の確認の間など）、上限は数えない
+            silent = pending.All(s => s == PendingQuitState.Unknown) ? silent + 1 : 0;
+            if (silent >= unknownLimit) return PendingQuitEnd.GaveUp;
             pause();
         }
+    }
+
+    /// <summary>
+    /// 見届けの後に ReTAC を起動し直すか。<b>終了を頼んだ ReTAC だけ</b>で決める（頼んでいない ReTAC が自分で終わっても起動しない）。
+    /// 頼んだものが 1 つでも終わっていれば起動する。打ち切ったとき（応答しない ReTAC がある）も、頼んだものがあれば起動する
+    /// （時間切れの依頼も後から届いて終わりうる。そのとき使える ReTAC を残すため。固まったまま残っても、ReTAC は複数起動できる）。
+    /// </summary>
+    public static bool ShouldRelaunch(PendingQuitEnd end, IEnumerable<(bool Requested, bool Exited)> targets)
+    {
+        var requested = targets.Where(t => t.Requested).ToList();
+        if (requested.Count == 0) return false;
+        return end == PendingQuitEnd.GaveUp || requested.Any(t => t.Exited);
     }
 }

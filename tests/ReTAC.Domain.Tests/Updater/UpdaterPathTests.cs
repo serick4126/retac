@@ -259,6 +259,63 @@ public sealed class UpdaterPathTests : IDisposable
     }
 
     [Fact]
+    public void 答えが無い状態がずっと続けば上限で打ち切る()
+    {
+        // 応答しない ReTAC。見届けを無期限に続けない（INV-UPDATER-NO-DEADLOCK）
+        var probes = 0;
+        var end = PendingQuitWatch.Wait(() => { probes++; return [Silent]; }, () => { }, unknownLimit: 5);
+        Assert.Equal(PendingQuitEnd.GaveUp, end);
+        Assert.Equal(5, probes);
+    }
+
+    [Fact]
+    public void 既定の上限は60秒() =>
+        Assert.Equal(60, PendingQuitWatch.DefaultUnknownLimit / 2);   // 0.5 秒ごとに調べる
+
+    [Fact]
+    public void 答えているReTACがあれば上限を数えない()
+    {
+        // 片方は K-5 の確認を出している（終わる途中と答える）。もう片方は答えない
+        var steps = Enumerable.Repeat(new[] { Quitting, Silent }, 20).Append([Gone, Gone]).ToArray();
+        var i = 0;
+        Assert.Equal(PendingQuitEnd.AllExited,
+                     PendingQuitWatch.Wait(() => steps[Math.Min(i++, steps.Length - 1)], () => { }, unknownLimit: 5));
+    }
+
+    [Fact]
+    public void 答えが途切れても答えが戻れば数え直す()
+    {
+        var steps = new[] { [Silent], [Silent], [Quitting], [Silent], [Silent], [Quitting], new[] { Gone } };
+        var i = 0;
+        Assert.Equal(PendingQuitEnd.AllExited,
+                     PendingQuitWatch.Wait(() => steps[Math.Min(i++, steps.Length - 1)], () => { }, unknownLimit: 3));
+    }
+
+    // ---- 起動し直すか（頼んだ ReTAC だけで決める）----
+
+    [Fact]
+    public void 検索の後で送る前に閉じてReTACが自分で終わっても起動し直さない() =>
+        // 頼んでいない（Requested が無い）ReTAC が別の理由で終わった
+        Assert.False(PendingQuitWatch.ShouldRelaunch(PendingQuitEnd.AllExited, [(false, true)]));
+
+    [Fact]
+    public void 頼んだReTACが終わっていれば起動し直す() =>
+        Assert.True(PendingQuitWatch.ShouldRelaunch(PendingQuitEnd.AllExited, [(true, true), (false, false)]));
+
+    [Fact]
+    public void 頼んだReTACが取りやめて残れば起動し直さない() =>
+        Assert.False(PendingQuitWatch.ShouldRelaunch(PendingQuitEnd.SomeStayed, [(true, false)]));
+
+    [Fact]
+    public void 打ち切ったときは頼んだものがあれば起動し直す() =>
+        // 時間切れの依頼も後から届いて終わりうる。使える ReTAC を残す
+        Assert.True(PendingQuitWatch.ShouldRelaunch(PendingQuitEnd.GaveUp, [(true, false)]));
+
+    [Fact]
+    public void 打ち切っても頼んだものが無ければ起動し直さない() =>
+        Assert.False(PendingQuitWatch.ShouldRelaunch(PendingQuitEnd.GaveUp, [(false, false)]));
+
+    [Fact]
     public async Task 送れなかった依頼も様子の問い合わせで決める()
     {
         var failed = Task.FromException(new InvalidOperationException());
