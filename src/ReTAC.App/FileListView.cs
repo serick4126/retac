@@ -286,9 +286,7 @@ public sealed class FileListView : Control
             _layout.RowHeight);
 
         // R-11-6: カーソルとマークが重なる行は背景をカーソル色にし、★は残す
-        var background = isCursor ? _theme.CursorBackground
-                       : isMarked ? _theme.MarkBackground
-                       : _theme.Background;
+        var (background, foreground) = RowColors.Of(_theme, AttributeColorRule.Classify(entry.Attributes), isCursor, isMarked);
         using (var brush = new SolidBrush(background))
             g.FillRectangle(brush, rect);
 
@@ -298,7 +296,6 @@ public sealed class FileListView : Control
         if (icon is not null) g.DrawImage(icon, iconRect);
         if (isMarked) MarkStar.Draw(g, iconRect, _theme.MarkStarColor);   // R-11-5
 
-        var foreground = ForegroundOf(entry, isCursor, isMarked);
         var textTop = rect.Y + (rect.Height - _measure.LineHeight()) / 2;
         var baseX = rect.X + _layout.ColumnPadding + _icons.Size + gap;
 
@@ -314,15 +311,6 @@ public sealed class FileListView : Control
                 Math.Max(0, rect.Right - (rect.X + _layout.ExtensionOffset)), _layout.RowHeight);
             TextRenderer.DrawText(g, entry.Extension, _font, extRect, foreground, TextMeasure.Flags);
         }
-    }
-
-    private Color ForegroundOf(Entry entry, bool isCursor, bool isMarked)
-    {
-        if (isCursor) return _theme.CursorForeground;
-        // R-31: 既定では属性配色より選択の配色を優先する
-        if (isMarked && !_theme.SeparateMarkColorFromAttributes) return _theme.MarkForeground;
-        var attributeColor = _theme.ForAttribute(AttributeColorRule.Classify(entry.Attributes));
-        return isMarked && attributeColor == _theme.Foreground ? _theme.MarkForeground : attributeColor;
     }
 
     // ---- 固定キー -----------------------------------------------------------
