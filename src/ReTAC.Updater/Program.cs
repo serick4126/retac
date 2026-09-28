@@ -44,7 +44,8 @@ internal static class Program
         using var ui = NamedLock.TryAcquire(InstallFolder.UiLockName(normalized));
         if (ui is null)
         {
-            Show("アップデータがすでに動いています。");
+            // 先に開いている画面があれば、それを前面に出すだけにする（メッセージを重ねない）
+            if (!ActivateOtherWindow()) Show("アップデータがすでに動いています。");
             return 1;
         }
 
@@ -93,6 +94,68 @@ internal static class Program
     private static bool IsWorkFolder(string folder) =>
         Path.GetFileName(folder).StartsWith(WorkPrefix, StringComparison.OrdinalIgnoreCase)
         && string.Equals(Path.GetDirectoryName(folder)?.TrimEnd('\\'), Path.GetTempPath().TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// ほかのアップデータの画面（題が「ReTAC の更新」）が 1 つだけ見えていれば前面に出す。
+    /// 見えない（画面を閉じた後も置き換えが続いている）・2 つ以上ある（別のフォルダの更新）ときは出さない。
+    /// </summary>
+    private static bool ActivateOtherWindow()
+    {
+        var self = Process.GetCurrentProcess().Id;
+        var found = new System.Collections.Generic.List<IntPtr>();
+        EnumWindows((window, _) =>
+        {
+            GetWindowThreadProcessId(window, out var owner);
+            if (owner != self && IsWindowVisible(window) && WindowText(window) == UpdaterForm.Title)
+            {
+                try
+                {
+                    using var process = Process.GetProcessById(owner);
+                    if (string.Equals(process.ProcessName, Path.GetFileNameWithoutExtension(Protocol.UpdaterExe), StringComparison.OrdinalIgnoreCase))
+                        found.Add(window);
+                }
+                catch (ArgumentException) { }
+            }
+            return true;
+        }, IntPtr.Zero);
+
+        if (found.Count != 1) return false;
+        if (IsIconic(found[0])) ShowWindow(found[0], SW_RESTORE);
+        SetForegroundWindow(found[0]);
+        return true;
+    }
+
+    private static string WindowText(IntPtr window)
+    {
+        var text = new System.Text.StringBuilder(256);
+        GetWindowText(window, text, text.Capacity);
+        return text.ToString();
+    }
+
+    private const int SW_RESTORE = 9;
+
+    private delegate bool EnumWindowsProc(IntPtr window, IntPtr parameter);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr parameter);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr window, out int processId);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr window);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr window);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr window, int command);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr window);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetWindowTextW")]
+    private static extern int GetWindowText(IntPtr window, System.Text.StringBuilder text, int length);
 
     private static void Show(string message) =>
         MessageBox.Show(message, "ReTAC の更新", MessageBoxButtons.OK, MessageBoxIcon.Information);

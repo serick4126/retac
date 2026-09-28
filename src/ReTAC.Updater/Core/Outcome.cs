@@ -46,7 +46,7 @@ public static class Outcome
         Reason.Corrupt => "ダウンロードしたファイルが壊れています",
         Reason.UnsupportedFormat => "このアップデータでは更新できない形式です。手動で更新してください",
         Reason.OtherUpdater => "別のアップデータがファイルを入れ替えています。終わらないときは Windows を再起動してください",
-        Reason.Cancelled => "更新をやめました",
+        Reason.Cancelled => "更新を中止しました",
         Reason.ElevationDenied => "管理者の許可が得られませんでした",
         Reason.WriteFailed => "ファイルを置けませんでした",
         Reason.TimedOut => "GitHub からの応答が止まりました",

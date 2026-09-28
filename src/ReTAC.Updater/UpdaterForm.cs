@@ -20,6 +20,9 @@ namespace ReTAC.Updater;
 /// </summary>
 internal sealed class UpdaterForm : Form
 {
+    /// <summary>画面の題。二重に起動されたとき、先の画面を見つけて前面に出すのにも使う。</summary>
+    public const string Title = "ReTAC の更新";
+
     private const string ReleasesPage = "https://github.com/serick4126/retac/releases";
     private static readonly TimeSpan QuitWait = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan StallLimit = TimeSpan.FromSeconds(60);
@@ -59,7 +62,7 @@ internal sealed class UpdaterForm : Form
         _self = self;
         _options = options;
 
-        Text = "ReTAC の更新";
+        Text = Title;
         Icon = Icon.ExtractAssociatedIcon(self);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -160,9 +163,9 @@ internal sealed class UpdaterForm : Form
 
         // 確認
         var version = $"{latest.Major}.{latest.Minor}.{latest.Build}";
-        Idle($"ReTAC v{version} があります（今は v{reTac}）。{Environment.NewLine}更新すると、ReTAC を終了して起動し直します。");
+        Idle($"ReTAC v{version} があります（今は v{reTac}）。{Environment.NewLine}[更新] を押すと ReTAC が再起動します。");
         _link.Visible = true;
-        if (await AskAsync(("update", "更新"), ("cancel", "やめる")) != "update")
+        if (await AskAsync(("update", "更新"), ("cancel", "中止")) != "update")
         {
             Close();
             return;
@@ -242,7 +245,7 @@ internal sealed class UpdaterForm : Form
             if (stuck.Count > 0)
             {
                 Idle("ReTAC が終了しません。", unknown);
-                if (await AskAsync(("again", "もう一度頼む"), ("cancel", "やめる")) != "again") return false;
+                if (await AskAsync(("again", "再試行"), ("cancel", "中止")) != "again") return false;
                 foreach (var target in stuck) target.AcceptedAt = null;   // 押したときだけ送り直す
                 continue;
             }
@@ -285,7 +288,7 @@ internal sealed class UpdaterForm : Form
             {
                 if (_exitWhenWorkDone) return;
                 lastText = text;
-                // ダウンロードまではやめられる。照合の後は入れ替えに入るので、やめるボタンを外す
+                // ダウンロードまでは中止できる。照合の後は入れ替えに入るので、[中止] を外す
                 Busy(text, stage == "ダウンロード" ? Cancelable : NoButtons);
             }));
         }
@@ -471,7 +474,7 @@ internal sealed class UpdaterForm : Form
     // ---- 画面の部品 ----
 
     private static readonly (string, string)[] NoButtons = Array.Empty<(string, string)>();
-    private static readonly (string, string)[] Cancelable = { ("cancel", "やめる") };
+    private static readonly (string, string)[] Cancelable = { ("cancel", "中止") };
 
     private void Busy(string text, (string Id, string Label)[] buttons, string? detail = null)
     {
@@ -481,7 +484,7 @@ internal sealed class UpdaterForm : Form
         _detail.Visible = detail is not null;
         _bar.Visible = true;
         SetButtons(buttons);
-        // 処理中の [やめる] は、待っている処理を取り消す
+        // 処理中の [中止] は、待っている処理を取り消す
         _choice = new TaskCompletionSource<string>();
         _ = _choice.Task.ContinueWith(t => { if (t.Result == "cancel") _cancel.Cancel(); }, TaskScheduler.Default);
     }
