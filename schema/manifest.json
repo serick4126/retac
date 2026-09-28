@@ -6109,6 +6109,18 @@
       {
         "file": "src/ReTAC.App/UpdateProtocol.cs",
         "line": 4
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/Distribution.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/Protocol.cs",
+        "line": 4
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/Protocol.cs",
+        "line": 44
       }
     ],
     "R-109-1": [
@@ -6123,6 +6135,20 @@
       {
         "file": "src/ReTAC.Domain/Commands/CommandId.cs",
         "line": 103
+      }
+    ],
+    "R-109-2": [
+      {
+        "file": "src/ReTAC.Updater/Core/Distribution.cs",
+        "line": 31
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/Versions.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/Versions.cs",
+        "line": 35
       }
     ],
     "R-109-3": [
@@ -6157,6 +6183,38 @@
       {
         "file": "src/ReTAC.App/UpdateProtocol.cs",
         "line": 40
+      }
+    ],
+    "R-109-4": [
+      {
+        "file": "src/ReTAC.Updater/Core/Distribution.cs",
+        "line": 64
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/Outcome.cs",
+        "line": 4
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/Outcome.cs",
+        "line": 10
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/Protocol.cs",
+        "line": 31
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/Versions.cs",
+        "line": 45
+      }
+    ],
+    "R-109-5": [
+      {
+        "file": "src/ReTAC.Updater/Core/Protocol.cs",
+        "line": 27
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/Protocol.cs",
+        "line": 74
       }
     ],
     "R-11": [

@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    R-109: アップデータ。ReTAC の中でインターネットに出るのはこれだけ（INV-NO-INTERNET）。
+    .NET Framework 4.8 にするのは、Windows 10/11 に標準で入っていて exe 1 つで動くから。
+    一時フォルダへ自分をコピーして動く（インストール先の自分を置き換えるため）ので、
+    ReTAC と同じ .NET の自己完結型だとコピーが数十 MB になる。
+    ほかのプロジェクトを参照しない。ほかのプロジェクトからも参照しない。
+  -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>ReTAC.Updater</AssemblyName>
+    <RootNamespace>ReTAC.Updater</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>../ReTAC.App/retac.ico</ApplicationIcon>
+    <Product>ReTAC</Product>
+    <Description>ReTAC のアップデータ</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 参照アセンブリを NuGet から取る（MIT）。Visual Studio の開発者パックが無くてもビルドできる -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Runtime.Serialization" />
+  </ItemGroup>
+
+</Project>

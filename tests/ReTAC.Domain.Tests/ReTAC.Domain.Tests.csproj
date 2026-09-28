@@ -26,4 +26,9 @@
     <ProjectReference Include="..\..\src\ReTAC.App\ReTAC.App.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- R-109: アップデータは net48 なので参照できない。WinForms に依存しない判定と置き換えの処理だけをリンクで取り込む -->
+    <Compile Include="..\..\src\ReTAC.Updater\Core\*.cs" Link="Updater\Core\%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>
