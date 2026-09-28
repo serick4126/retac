@@ -442,13 +442,21 @@ public sealed class AddressBar : Control
     protected override void OnDragEnter(DragEventArgs e)
     {
         base.OnDragEnter(e);
-        GuardDrop(e, () => SetDropEffect(e));
+        GuardDrop(e, () =>
+        {
+            DropButton.Enter(e);   // R-111-2: 効果を決める前に覚える
+            SetDropEffect(e);
+        });
     }
 
     protected override void OnDragOver(DragEventArgs e)
     {
         base.OnDragOver(e);
-        GuardDrop(e, () => SetDropEffect(e));
+        GuardDrop(e, () =>
+        {
+            DropButton.Over(e);
+            SetDropEffect(e);
+        });
     }
 
     /// <summary>
@@ -469,13 +477,17 @@ public sealed class AddressBar : Control
     protected override void OnDragLeave(EventArgs e)
     {
         base.OnDragLeave(e);
-        GuardDrop(null, ResetDrop);
+        GuardDrop(null, () =>
+        {
+            DropButton.Leave();
+            ResetDrop();
+        });
     }
 
     protected override void OnDragDrop(DragEventArgs e)
     {
         base.OnDragDrop(e);
-        GuardDrop(e, () =>
+        GuardDrop(e, () => DropButton.Drop(e, () =>
         {
             var shown = _dropPart;
             ResetDrop();
@@ -483,7 +495,7 @@ public sealed class AddressBar : Control
             if (shown < 0 || shown != DropPartAt(e) || e.Data?.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files) return;
             var (ctrl, shift) = DropFeedback.Modifiers(e);   // 後に回すとキーは離されている
             FilesDropped?.Invoke(this, (_segments[_parts[shown].Index].Path, files, e.AllowedEffect, ctrl, shift));
-        });
+        }));
     }
 
     private void ResetDrop()

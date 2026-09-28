@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows.Forms;
 using ReTAC.Domain.FileOps;
 using ReTAC.Domain.Listing;
+using ReTAC.Shell;
 
 namespace ReTAC.App;
 
@@ -18,11 +19,12 @@ internal static class DropFeedback
     public static void Apply(DragEventArgs e, string? destination, string label)
     {
         var action = DropAction.None;
+        var files = destination is { Length: > 0 } ? e.Data?.GetData(DataFormats.FileDrop) as string[] : null;
         // 判定は先頭の項目で行う（エクスプローラーと同じ）。実際の転送は項目ごとに判定する
-        if (destination is { Length: > 0 } && e.Data?.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } files)
+        if (files is { Length: > 0 })
         {
             action = DropRules.Allow(
-                DropRules.Decide(files[0], destination, (e.KeyState & CtrlKey) != 0, (e.KeyState & ShiftKey) != 0),
+                DropRules.Decide(files[0], destination!, (e.KeyState & CtrlKey) != 0, (e.KeyState & ShiftKey) != 0),
                 copyAllowed: e.AllowedEffect.HasFlag(DragDropEffects.Copy),
                 moveAllowed: e.AllowedEffect.HasFlag(DragDropEffects.Move));
         }
@@ -34,6 +36,21 @@ internal static class DropFeedback
             _ => (DragDropEffects.None, DropImageType.None, ""),
         };
         e.MessageReplacementToken = label;
+
+        // R-111-2: 右ボタンのドラッグでは、左ボタンなら何も起きない所（別のドライブで移動だけ・リンクだけ）でも、
+        // メニューが出る所なら落とせる効果を返す。None のままだと OLE は Drop を呼ばず、メニューが出ない。
+        // 説明は出さない（何をするかはメニューで選ぶ）
+        if (action == DropAction.None && DragButtonState.Right && files is { Length: > 0 }
+            && DropRouting.Menu(files[0], destination!, e.AllowedEffect.HasFlag(DragDropEffects.Copy),
+                e.AllowedEffect.HasFlag(DragDropEffects.Move), e.AllowedEffect.HasFlag(DragDropEffects.Link)) is { } model)
+        {
+            (e.Effect, e.DropImageType) = DropRouting.RightDragEffect(model) switch
+            {
+                DropChoice.Copy => (DragDropEffects.Copy, DropImageType.Copy),
+                DropChoice.Move => (DragDropEffects.Move, DropImageType.Move),
+                _ => (DragDropEffects.Link, DropImageType.Link),
+            };
+        }
     }
 
     /// <summary>

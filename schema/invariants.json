@@ -399,12 +399,22 @@
     {
       "id": "INV-TREE-DROP-VIA-DIALOG",
       "status": "enforced",
-      "specIds": ["R-97-3", "R-93"],
+      "specIds": ["R-97-3", "R-93", "R-111-2"],
       "applies": ["type:ReTAC.Domain.FileOps.DropRules", "type:ReTAC.Domain.FileOps.DropAction"],
-      "rule": "ドライブツリー・デスクトップツリーへのドロップは、NSTC(INameSpaceTreeControl)自身の即時転送を使わず、必ず宛先入りの転送確認ダイアログ(既存の TransferDropped → TransferCore)を経由する。ファイルリスト・ドライブバーの通常のドロップ(DropInto、確認無しの即時転送)とは別の経路である。ブックマークのフォルダへのドロップも同じ確認を行う(既存)。",
-      "enforcedBy": "shell:NameSpaceTreeHost.OnDrop/DropFrom(effect を常に DragDropEffects.None に戻し、Shell 自身に即時転送させない。FilesDropped イベントだけを外へ出す)/ app:MainForm(_driveTree.FilesDropped / _desktopTree.FilesDropped を DropInto ではなく TransferDropped へ購読する)",
+      "rule": "ドライブツリー・デスクトップツリーへのドロップは、NSTC(INameSpaceTreeControl)自身の即時転送を使わず、必ず宛先入りの転送確認ダイアログ(既存の TransferDropped → TransferCore)を経由する。ファイルリスト・ドライブバーの通常のドロップ(DropInto、確認無しの即時転送)とは別の経路である。ブックマークのフォルダへのドロップも同じ確認を行う(既存)。右ボタンのドロップでも、NSTC 自身の転送・シェルのメニューを使わない。OnDrop の中で ReTAC のメニューを出し、効果は必ず None で返す。",
+      "enforcedBy": "shell:NameSpaceTreeHost.OnDrop/DropFrom(effect を常に DragDropEffects.None に戻し、Shell 自身に即時転送させない。FilesDropped イベントだけを外へ出す)/ shell:ShellTreeDropTap（右ボタンを知るためにツリーの受け口を包む）/ app:MainForm(_driveTree.FilesDropped / _desktopTree.FilesDropped を DropInto ではなく AcceptDrop(DropReceptacle.DriveTree / DesktopTree) → TransferDropped へ購読する)",
       "testedBy": "tests/ReTAC.Domain.Tests/DropRulesTests.cs",
       "note": "DropInto を使うと確認ダイアログが出ない(ファイルリスト・ドライブバーの通常のドロップと同じ挙動になってしまう)。ツリーは §9 の例外で、宛先を見せて確認する側を使う。"
+    },
+    {
+      "id": "INV-RIGHT-DROP-SAME-ROUTE",
+      "status": "enforced",
+      "specIds": ["R-111-2"],
+      "applies": ["type:ReTAC.Domain.FileOps.DropRouting"],
+      "rule": "右ボタンのメニューで選んだ転送は、その受け口に左ボタンで落としたときと同じ経路（ダイアログの有無を含む）で処理する。メニューは効果を決めるだけ。",
+      "enforcedBy": "domain:DropRouting.Plan（経路はボタンを見ない）/ app:MainForm.AcceptDrop（メニューは修飾キーを決めるだけで、同じ経路へ渡す）",
+      "testedBy": "tests/ReTAC.Domain.Tests/DropRoutingTests.cs",
+      "note": "右ボタンのドロップでは受け口がドラッグ元へ None を返す（T6）。受け口を足すときは DragButtonState の Enter / Over / Reset を忘れない（ReTAC の受け口は DropButton を通す）。"
     },
     {
       "id": "INV-NO-PATH-ITEM-NOT-IN-FILEPANEL",

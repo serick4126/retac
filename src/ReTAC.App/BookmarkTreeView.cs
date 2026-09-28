@@ -336,25 +336,25 @@ public sealed class BookmarkTreeView : TreeView
     protected override void OnDragEnter(DragEventArgs e)
     {
         base.OnDragEnter(e);
-        BookmarkDropZone.Guarded(e, () => { DragOverCore(e); DropTargetHelper.Enter(this, e); }, Reset);
+        BookmarkDropZone.Guarded(e, () => { DropButton.Enter(e); DragOverCore(e); DropTargetHelper.Enter(this, e); }, Reset);
     }
 
     protected override void OnDragOver(DragEventArgs e)
     {
         base.OnDragOver(e);
-        BookmarkDropZone.Guarded(e, () => { DragOverCore(e); DropTargetHelper.Over(e); }, Reset);
+        BookmarkDropZone.Guarded(e, () => { DropButton.Over(e); DragOverCore(e); DropTargetHelper.Over(e); }, Reset);
     }
 
     protected override void OnDragLeave(EventArgs e)
     {
         base.OnDragLeave(e);
-        BookmarkDropZone.Guarded(null, () => { Reset(); DropTargetHelper.Leave(); }, Reset);
+        BookmarkDropZone.Guarded(null, () => { DropButton.Leave(); Reset(); DropTargetHelper.Leave(); }, Reset);
     }
 
     protected override void OnDragDrop(DragEventArgs e)
     {
         base.OnDragDrop(e);
-        BookmarkDropZone.Guarded(e, () => { DropTargetHelper.Drop(e); DropCore(e); }, Reset);
+        BookmarkDropZone.Guarded(e, () => DropButton.Drop(e, () => { DropTargetHelper.Drop(e); DropCore(e); }), Reset);
     }
 
     private void DragOverCore(DragEventArgs e)
@@ -415,6 +415,7 @@ public sealed class BookmarkTreeView : TreeView
             DropFeedback.Apply(e, folder, DropFeedback.FolderLabel(folder));
             message = e.Effect switch
             {
+                _ when string.IsNullOrEmpty(e.Message) => "",   // R-111-2: 右ボタンだけで落とせる所は、メニューで選ぶので説明を出さない
                 DragDropEffects.Copy => $"{DropFeedback.FolderLabel(folder)} へコピー",
                 DragDropEffects.Move => $"{DropFeedback.FolderLabel(folder)} へ移動",
                 _ => "",

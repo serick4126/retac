@@ -56,7 +56,7 @@ public sealed class DriveBar : Control
     public event EventHandler? Cancelled;
 
     /// <summary>ドライブのボタンにファイルが落とされた（T8-3）。転送は呼び出し側が行う。</summary>
-    public event EventHandler<(string Path, string[] Files, DragDropEffects Allowed)>? FilesDropped;
+    public event EventHandler<(string Path, string[] Files, DragDropEffects Allowed, bool Ctrl, bool Shift)>? FilesDropped;
 
     /// <summary>
     /// ドライブのボタンが右クリックされた。エクスプローラーと同じく Windows 標準のメニューを出す。
@@ -361,12 +361,14 @@ public sealed class DriveBar : Control
     protected override void OnDragEnter(DragEventArgs e)
     {
         base.OnDragEnter(e);
+        DropButton.Enter(e);   // R-111-2: 効果を決める前に覚える
         SetDropEffect(e);
     }
 
     protected override void OnDragOver(DragEventArgs e)
     {
         base.OnDragOver(e);
+        DropButton.Over(e);
         SetDropEffect(e);
     }
 
@@ -387,6 +389,7 @@ public sealed class DriveBar : Control
     protected override void OnDragLeave(EventArgs e)
     {
         base.OnDragLeave(e);
+        DropButton.Leave();
         _hoverIndex = -1;
         Invalidate();
     }
@@ -394,15 +397,19 @@ public sealed class DriveBar : Control
     protected override void OnDragDrop(DragEventArgs e)
     {
         base.OnDragDrop(e);
-        _hoverIndex = -1;
-        Invalidate();
+        DropButton.Drop(e, () =>
+        {
+            _hoverIndex = -1;
+            Invalidate();
 
-        // 表示中に None だった所（「»」の下に隠れたボタン）へ落ちても、別の宛先を拾わない
-        var point = PointToClient(new Point(e.X, e.Y));
-        if (e.Effect == DragDropEffects.None
-            || _buttons.FirstOrDefault(b => b.Bounds.Contains(point) && IsShown(b)) is not { } button) return;
-        if (e.Data?.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0)
-            FilesDropped?.Invoke(this, (button.Path, files, e.AllowedEffect));
+            // 表示中に None だった所（「»」の下に隠れたボタン）へ落ちても、別の宛先を拾わない
+            var point = PointToClient(new Point(e.X, e.Y));
+            if (e.Effect == DragDropEffects.None
+                || _buttons.FirstOrDefault(b => b.Bounds.Contains(point) && IsShown(b)) is not { } button) return;
+            if (e.Data?.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files) return;
+            var (ctrl, shift) = DropFeedback.Modifiers(e);
+            FilesDropped?.Invoke(this, (button.Path, files, e.AllowedEffect, ctrl, shift));
+        });
     }
 
     protected override bool IsInputKey(Keys keyData) => (keyData & Keys.KeyCode) switch

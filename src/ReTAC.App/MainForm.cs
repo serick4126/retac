@@ -136,9 +136,10 @@ public sealed class MainForm : Form, IBookmarkHost
         _driveTree.CommandKeyRequested += (_, e) => e.Handled = ExecuteTreeCommandKey(_driveTree, e.KeyData);
         _desktopTree.CommandKeyRequested += (_, e) => e.Handled = ExecuteTreeCommandKey(_desktopTree, e.KeyData);
         // R-97-3: 右クリックは実フォルダだけシェルメニューの対象(パスが無ければ Path イベントが来ない)。開くだけでは移動しない
-        // R-97-3 / §9: ツリーへのドロップも既存の宛先入り転送ダイアログ(TransferDropped)を必ず通す
-        _driveTree.FilesDropped += (_, e) => TransferDropped(e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
-        _desktopTree.FilesDropped += (_, e) => TransferDropped(e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
+        // R-97-3 / §9: ツリーへのドロップも既存の宛先入り転送ダイアログ(TransferDropped)を必ず通す（INV-TREE-DROP-VIA-DIALOG）。
+        // R-111-2: 右ボタンでも、メニューの後に同じダイアログを通す
+        _driveTree.FilesDropped += (_, e) => AcceptDrop(DropReceptacle.DriveTree, e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
+        _desktopTree.FilesDropped += (_, e) => AcceptDrop(DropReceptacle.DesktopTree, e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
         // R-96-2: 上端の選択欄もメニューと同じ入口を通す（表示・保存・ラジオ印の反映を 1 か所にする）
         _leftPanel.ViewRequested += (_, kind) => ExecuteLeftPanelCommand(LeftPanel.CommandOf(kind), fromSelector: true);
 
@@ -213,12 +214,12 @@ public sealed class MainForm : Form, IBookmarkHost
         _addressBar.Cancelled += (_, _) => _list.Focus();
         _addressBar.IconClicked += (_, _) => OpenInExplorer(_currentFolder);
         _addressBar.CopyPathRequested += (_, path) => TryClipboard(() => Clipboard.SetText(path));
-        _addressBar.FilesDropped += (_, drop) => TransferDropped(drop.Files, drop.Destination, drop.Allowed, drop.Ctrl, drop.Shift);
+        _addressBar.FilesDropped += (_, drop) => AcceptDrop(DropReceptacle.AddressBar, drop.Files, drop.Destination, drop.Allowed, drop.Ctrl, drop.Shift);
         // ドライブのボタンの右クリックはリストの項目と同じ扱い。移動はしない
         _driveBar.RightClicked += (_, click) => ShowShellContextMenu([click.Path], click.ScreenPoint);
         // R-65 ②③: 落とされたファイルの転送はどちらも同じ経路を通す
-        _list.FilesDropped += (_, drop) => DropInto(_currentFolder, drop.Files, drop.Allowed);
-        _driveBar.FilesDropped += (_, drop) => DropInto(drop.Path, drop.Files, drop.Allowed);
+        _list.FilesDropped += (_, drop) => AcceptDrop(DropReceptacle.FileList, drop.Files, drop.Destination, drop.Allowed, drop.Ctrl, drop.Shift);
+        _driveBar.FilesDropped += (_, drop) => AcceptDrop(DropReceptacle.DriveBar, drop.Files, drop.Path, drop.Allowed, drop.Ctrl, drop.Shift);
 
         _watcher.SynchronizingObject = this;   // R-23: 通知を UI スレッドで受ける
         _watcher.Created += (_, _) => ScheduleAutoRefresh();
@@ -2016,8 +2017,32 @@ public sealed class MainForm : Form, IBookmarkHost
 
     void IBookmarkHost.ShowStatus(string text) => _statusBar.ShowMessage(text);
 
+    // ブックマークのフォルダとその中のメニューの両方がここを通る
     void IBookmarkHost.TransferDropped(string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift) =>
-        TransferDropped(files, destination, allowed, ctrl, shift);
+        AcceptDrop(DropReceptacle.BookmarkFolder, files, destination, allowed, ctrl, shift);
+
+    /// <summary>
+    /// R-111-2 / INV-RIGHT-DROP-SAME-ROUTE: ReTAC の受け口に落とされたファイルを、受け口ごとの経路へ渡す。
+    /// 右ボタンなら、ドロップの処理の中で同期してメニューを出し、選んだ操作を修飾キーに読み替えて、左ボタンと同じ経路へ渡す。
+    /// 右ボタンのドロップでは、受け口がドラッグ元へ None を返す（ReTAC が自分で転送するので、元のファイルを消させない。T6）。
+    /// 修飾キーは受け口がドロップの時点で読んで渡す（後に回すと利用者はキーを離している）。
+    /// </summary>
+    private void AcceptDrop(DropReceptacle receptacle, string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift)
+    {
+        if (files.Length == 0) return;
+        var plan = DropRouting.Plan(receptacle, ShellDrag.InProgress, DragButtonState.Right);
+        if (plan.ShowMenu)
+        {
+            if (DropRouting.Menu(files[0], destination, allowed.HasFlag(DragDropEffects.Copy), allowed.HasFlag(DragDropEffects.Move),
+                    allowed.HasFlag(DragDropEffects.Link)) is not { } model) return;
+            var choice = DropMenu.Show(Handle, model, Cursor.Position);
+            if (choice == DropChoice.Cancel) return;
+            if (choice == DropChoice.Link) { CreateShortcutsAt(files, destination); return; }
+            (ctrl, shift) = DropRouting.ModifiersFor(choice);
+        }
+        if (plan.Route == DropRoute.Dialog) TransferDropped(files, destination, allowed, ctrl, shift);
+        else DropInto(destination, files, allowed, ctrl, shift);
+    }
 
     /// <summary>
     /// R-93: ブックマークのフォルダ・パンくずの段へ落とされた。宛先を入れたコピー／移動のダイアログを、コピー → 移動の順に出す。
@@ -2130,16 +2155,15 @@ public sealed class MainForm : Form, IBookmarkHost
     /// ドロップされたファイルをフォルダへ入れる（T8-2 / T8-3）。
     /// コピーか移動かは Windows の作法に合わせて <see cref="DropRules"/> が決める。
     /// </summary>
-    private void DropInto(string destinationFolder, string[] files, DragDropEffects allowed) => _ = Recording(() =>
+    private void DropInto(string destinationFolder, string[] files, DragDropEffects allowed, bool ctrl, bool shift) => _ = Recording(() =>
     {
         // 衝突すると確認ダイアログを出す。ドロップ元（エクスプローラー）が前面のままだと
         // ダイアログがその後ろに隠れて、固まったように見える
         Activate();
 
         // R-78: 表示（DropFeedback）と同じく、ドラッグ元が許す効果に合わせる。
-        // ここは DragDrop のイベントの中から同期で呼ばれるので、ModifierKeys はドロップの時点の値
-        var (copies, moves) = DropRules.Split(files, destinationFolder,
-            ctrl: ModifierKeys.HasFlag(Keys.Control), shift: ModifierKeys.HasFlag(Keys.Shift),
+        // 修飾キーは受け口がドロップの時点で読んだ値か、右ボタンのメニューで選んだ操作（R-111-2）。ここで ModifierKeys を読むと、メニューの選択が効かない
+        var (copies, moves) = DropRules.Split(files, destinationFolder, ctrl, shift,
             copyAllowed: allowed.HasFlag(DragDropEffects.Copy), moveAllowed: allowed.HasFlag(DragDropEffects.Move));
         if (copies.Count == 0 && moves.Count == 0) return true;
 

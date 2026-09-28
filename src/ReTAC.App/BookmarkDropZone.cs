@@ -45,10 +45,11 @@ internal sealed class BookmarkDropZone
         var zone = new BookmarkDropZone(strip, list, host, vertical);
         strip.AllowDrop = true;
         // 効果を決めてからドラッグ画像の後始末へ知らせる（DropTargetHelper）
-        strip.DragEnter += (s, e) => zone.Guard(e, () => { zone.OnDragOver(s, e); DropTargetHelper.Enter(strip, e); });
-        strip.DragOver += (s, e) => zone.Guard(e, () => { zone.OnDragOver(s, e); DropTargetHelper.Over(e); });
-        strip.DragLeave += (_, _) => zone.Guard(null, () => { zone.Reset(); DropTargetHelper.Leave(); });
-        strip.DragDrop += (s, e) => zone.Guard(e, () => { DropTargetHelper.Drop(e); zone.OnDragDrop(s, e); });
+        // R-111-2: 右ボタンの印は効果を決める前に覚え、項目の間（追加）へ落としたときも消す
+        strip.DragEnter += (s, e) => zone.Guard(e, () => { DropButton.Enter(e); zone.OnDragOver(s, e); DropTargetHelper.Enter(strip, e); });
+        strip.DragOver += (s, e) => zone.Guard(e, () => { DropButton.Over(e); zone.OnDragOver(s, e); DropTargetHelper.Over(e); });
+        strip.DragLeave += (_, _) => zone.Guard(null, () => { DropButton.Leave(); zone.Reset(); DropTargetHelper.Leave(); });
+        strip.DragDrop += (s, e) => zone.Guard(e, () => DropButton.Drop(e, () => { DropTargetHelper.Drop(e); zone.OnDragDrop(s, e); }));
         strip.Paint += zone.OnPaint;
         zone._hold.Tick += (_, _) =>
         {
@@ -180,6 +181,7 @@ internal sealed class BookmarkDropZone
             else DropFeedback.Apply(e, folder.Target, DropFeedback.FolderLabel(folder.Target));
             message = e.Effect switch
             {
+                _ when string.IsNullOrEmpty(e.Message) => "",   // R-111-2: 右ボタンだけで落とせる所は、メニューで選ぶので説明を出さない
                 DragDropEffects.Copy => $"{DropFeedback.FolderLabel(folder.Target)} へコピー",
                 DragDropEffects.Move => $"{DropFeedback.FolderLabel(folder.Target)} へ移動",
                 _ => "",
@@ -341,10 +343,11 @@ internal sealed class ExpansionDropZone
     {
         var zone = new ExpansionDropZone(menu, folder, host);
         menu.AllowDrop = true;
-        menu.DragEnter += (_, e) => zone.Guard(e, () => { zone.OnDragOver(e); DropTargetHelper.Enter(menu, e); });
-        menu.DragOver += (_, e) => zone.Guard(e, () => { zone.OnDragOver(e); DropTargetHelper.Over(e); });
-        menu.DragLeave += (_, _) => zone.Guard(null, () => { zone.Reset(); DropTargetHelper.Leave(); });
-        menu.DragDrop += (_, e) => zone.Guard(e, () => { DropTargetHelper.Drop(e); zone.OnDragDrop(e); });
+        // R-111-2: 右ボタンの印は効果を決める前に覚える
+        menu.DragEnter += (_, e) => zone.Guard(e, () => { DropButton.Enter(e); zone.OnDragOver(e); DropTargetHelper.Enter(menu, e); });
+        menu.DragOver += (_, e) => zone.Guard(e, () => { DropButton.Over(e); zone.OnDragOver(e); DropTargetHelper.Over(e); });
+        menu.DragLeave += (_, _) => zone.Guard(null, () => { DropButton.Leave(); zone.Reset(); DropTargetHelper.Leave(); });
+        menu.DragDrop += (_, e) => zone.Guard(e, () => DropButton.Drop(e, () => { DropTargetHelper.Drop(e); zone.OnDragDrop(e); }));
         menu.Paint += zone.OnPaint;
         zone._hold.Tick += (_, _) =>
         {
@@ -372,6 +375,7 @@ internal sealed class ExpansionDropZone
         var label = DropFeedback.FolderLabel(folder);
         _host.ShowStatus(e.Effect switch
         {
+            _ when string.IsNullOrEmpty(e.Message) => "",   // R-111-2: 右ボタンだけで落とせる所は、メニューで選ぶので説明を出さない
             DragDropEffects.Copy => $"{label} へコピー",
             DragDropEffects.Move => $"{label} へ移動",
             _ => "",

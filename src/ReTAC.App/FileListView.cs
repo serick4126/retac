@@ -96,8 +96,11 @@ public sealed class FileListView : Control
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public string DropFolder { get; set; } = "";
 
+    /// <summary>ファイルが落とされた（T8-2）。修飾キーはドロップの時点の値（R-111-2）。</summary>
+    public readonly record struct Drop(string[] Files, string Destination, DragDropEffects Allowed, bool Ctrl, bool Shift);
+
     /// <summary>他アプリからファイルが落とされた（T8-2）。転送は呼び出し側が行う。</summary>
-    public event EventHandler<(string[] Files, DragDropEffects Allowed)>? FilesDropped;
+    public event EventHandler<Drop>? FilesDropped;
 
     public ListState State => _state;
 
@@ -473,9 +476,24 @@ public sealed class FileListView : Control
         return DragImageRenderer.Render(icon, _icons.Size, text, _font, _theme.Foreground, _theme.Background, Gap);
     }
 
-    protected override void OnDragEnter(DragEventArgs e) => SetDropEffect(e);
+    // R-111-2: 右ボタンの印は効果を決める前に覚える（DropFeedback が右ボタンの効果を返すため）
+    protected override void OnDragEnter(DragEventArgs e)
+    {
+        DropButton.Enter(e);
+        SetDropEffect(e);
+    }
 
-    protected override void OnDragOver(DragEventArgs e) => SetDropEffect(e);
+    protected override void OnDragOver(DragEventArgs e)
+    {
+        DropButton.Over(e);
+        SetDropEffect(e);
+    }
+
+    protected override void OnDragLeave(EventArgs e)
+    {
+        base.OnDragLeave(e);
+        DropButton.Leave();
+    }
 
     // R-78: 自分のフォルダへのドロップは DropRules が None を返すので「不可」の表示になる
     private void SetDropEffect(DragEventArgs e) =>
@@ -484,8 +502,12 @@ public sealed class FileListView : Control
     protected override void OnDragDrop(DragEventArgs e)
     {
         base.OnDragDrop(e);
-        if (e.Data?.GetData(DataFormats.FileDrop) is string[] paths && paths.Length > 0)
-            FilesDropped?.Invoke(this, (paths, e.AllowedEffect));
+        DropButton.Drop(e, () =>
+        {
+            if (e.Data?.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } paths) return;
+            var (ctrl, shift) = DropFeedback.Modifiers(e);
+            FilesDropped?.Invoke(this, new Drop(paths, DropFolder, e.AllowedEffect, ctrl, shift));
+        });
     }
 
     protected override void OnMouseDoubleClick(MouseEventArgs e)
