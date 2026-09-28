@@ -72,6 +72,10 @@ internal sealed class BookmarkDropZone
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine(ex);
+            // R-111-2: 後始末のどこが失敗しても、右ボタンの印だけは必ず消える所に置く。消し忘れると、
+            // 例外を投げた受け口の右ドラッグが Right=true のまま残り、続く左ドロップが右ドロップの
+            // メニュー扱いになってしまう（DropButton.Enter / Over を呼ぶ受け口はすべてこの Guarded を通る）
+            DropButton.Leave();
             if (e is not null) e.Effect = DragDropEffects.None;
             try { reset(); }
             catch (Exception inner) { System.Diagnostics.Debug.WriteLine(inner); }

@@ -19,7 +19,10 @@ internal static class DropTargetHelper
         get
         {
             try { return s_helper ??= (IDropTargetHelper)new DragDropHelper(); }
-            catch (COMException) { return null; }   // 画像が出ないだけ。ドロップは続ける
+            // 画像が出ないだけ。ドロップは続ける。QueryInterface の失敗は環境によって COMException ではなく
+            // InvalidCastException で返る（Try と同じ許容範囲に揃える。R-111-2: ここで投げると Guarded の
+            // 例外処理の中から呼んだときに、後始末の途中で別の例外にすり替わってしまう）
+            catch (Exception ex) when (ex is COMException or InvalidCastException) { return null; }
         }
     }
 
