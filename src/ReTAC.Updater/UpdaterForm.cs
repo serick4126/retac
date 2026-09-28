@@ -33,6 +33,9 @@ internal sealed class UpdaterForm : Form
     private readonly string _self;
     private readonly Options _options;
 
+    /// <summary>画面の排他。画面を閉じて作業だけが残るときは手放す（次のアップデータが「入れ替えています」を出せるように）。</summary>
+    private readonly NamedLock _uiLock;
+
     private readonly Label _status = new() { AutoSize = true, Margin = new Padding(0, 0, 0, 6) };
     private readonly Label _detail = new() { AutoSize = true, ForeColor = SystemColors.GrayText, Margin = new Padding(0, 0, 0, 8) };
     private readonly ProgressBar _bar = new() { Style = ProgressBarStyle.Marquee, Dock = DockStyle.Fill, Height = 14, MarqueeAnimationSpeed = 30 };
@@ -54,8 +57,9 @@ internal sealed class UpdaterForm : Form
     private bool _replacingStarted;
     private bool _launched;
 
-    public UpdaterForm(string install, string normalized, string work, string self, Options options)
+    public UpdaterForm(string install, string normalized, string work, string self, Options options, NamedLock uiLock)
     {
+        _uiLock = uiLock;
         _install = install;
         _normalized = normalized;
         _work = work;
@@ -438,6 +442,8 @@ internal sealed class UpdaterForm : Form
             LaunchIfNeeded(replaced: _replacingStarted);
             e.Cancel = true;
             Hide();
+            // 画面はもう無い。次に起動したアップデータには、置き換えの排他（作業用のスレッドが持つ）で「入れ替えています」と出させる
+            _uiLock.Dispose();
             return;
         }
         // 待っている処理（GitHub・ReTAC の終了待ち）をやめる。終了させた ReTAC があれば起動し直す（R-109-6）

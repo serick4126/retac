@@ -49,7 +49,7 @@ internal static class Program
             return 1;
         }
 
-        Application.Run(new UpdaterForm(install, normalized, work, self, options));
+        Application.Run(new UpdaterForm(install, normalized, work, self, options, ui));
         return 0;
     }
 
