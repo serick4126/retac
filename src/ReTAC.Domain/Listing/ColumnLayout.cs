@@ -6,7 +6,7 @@ namespace ReTAC.Domain.Listing;
 /// R-66-3: すべて実測値と DPI から算出し、物理ピクセルを直書きしない。
 /// 文字の実測は呼び出し側（描画層）が行い、ここには結果の数値だけを渡す。
 /// </summary>
-public sealed record ColumnLayout
+public sealed record ColumnLayout : IFileViewLayout
 {
     public required int RowHeight { get; init; }
     public required int IconWidth { get; init; }
@@ -35,6 +35,20 @@ public sealed record ColumnLayout
         var index = x / ColumnWidth * RowsPerColumn + row;
         return index < entryCount ? index : -1;
     }
+
+    /// <summary>R-110-2: 項目の矩形（中身の座標）。落とす先の枠に使う。</summary>
+    public (int X, int Y, int Width, int Height) ItemBounds(int index) => (XOf(index), YOf(index), ColumnWidth, RowHeight);
+
+    /// <summary>R-110-3: 一覧は横スクロールだけなので、左右の端（項目 1 行分の高さ）だけで横の向きを返す。縦は常に 0。</summary>
+    public (int X, int Y) AutoScrollDirection(int x, int y, int viewportWidth, int viewportHeight) =>
+        (x < RowHeight ? -1 : x >= viewportWidth - RowHeight ? 1 : 0, 0);
+
+    /// <summary>R-110-3: 一覧の 1 段は横に 1 列。左端は常に列の境界（列幅の途中で止めない）。</summary>
+    public (int X, int Y) ScrollOffset(ScrollPosition position) => (position.X * ColumnWidth, 0);
+
+    /// <summary>丸ごと収まる列の数だけ見せた状態が、いちばん後ろ。端数の列は右端で切れる。縦には動かない。</summary>
+    public ScrollPosition MaxScrollPosition(int entryCount, int viewportWidth, int viewportHeight) =>
+        new(Math.Max(0, ColumnCount - Math.Max(1, viewportWidth / Math.Max(1, ColumnWidth))), 0);
 
     public static readonly ColumnLayout Empty = new()
     {

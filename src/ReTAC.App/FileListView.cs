@@ -24,8 +24,8 @@ public sealed class FileListView : Control
     private ShellIcons _icons = null!;
     private ListState _state = new([]);
     private ColumnLayout _layout = ColumnLayout.Empty;
-    /// <summary>スクロール位置は列単位で持つ。実機は常に列単位でスクロールし、左端が見切れることがない。</summary>
-    private int _scrollColumn;
+    /// <summary>R-110-3: スクロール位置（縦横の段の数）。一覧は横だけで、1 段は 1 列</summary>
+    private ScrollPosition _scroll;
     /// <summary>R-76: ホイールの端数。フォルダを開き直したら捨てる。</summary>
     private readonly WheelAccumulator _wheel = new();
     /// <summary>R-11-2 / Q7: 行頭アイコン・Shift+クリックのマークは、動かさずに離した時点で変える。</summary>
@@ -46,7 +46,7 @@ public sealed class FileListView : Control
         // 何も動かない。入力欄（TextInputDialog 等）は別ウィンドウなので影響しない
         ImeMode = ImeMode.Disable;
         Controls.Add(_scrollBar);
-        _scrollBar.Scroll += (_, e) => { _scrollColumn = e.NewValue; Invalidate(); };
+        _scrollBar.Scroll += (_, e) => { _scroll = _scroll with { X = e.NewValue }; Invalidate(); };
         RebuildFontResources();
     }
 
@@ -119,7 +119,7 @@ public sealed class FileListView : Control
 
     /// <summary>N-06: キーボードから開くポップアップを出す位置（カーソル行の直下・クライアント座標）。</summary>
     public Point PopupAnchor() => new(
-        _layout.XOf(_state.CursorIndex) - ScrollX + _icons.Size,
+        _layout.XOf(_state.CursorIndex) - _layout.ScrollOffset(_scroll).X + _icons.Size,
         _layout.YOf(_state.CursorIndex) + _layout.RowHeight);
 
     /// <summary>カーソルを移す。スクロールと再描画とイベント通知まで面倒を見る。</summary>
@@ -140,13 +140,13 @@ public sealed class FileListView : Control
         // 別の項目を指すことになるので、離した時点の処理（マーク・右ボタンのドラッグ／メニュー）は捨てる
         _rightDown = null;
         _markOnRelease.Cancel();
-        var scroll = _scrollColumn;
+        var scroll = _scroll.X;
         _state = new ListState(entries);
         _state.MoveCursor(cursorIndex);
-        _scrollColumn = keepScroll ? scroll : 0;
+        _scroll = _scroll with { X = keepScroll ? scroll : 0 };
         if (!keepScroll) _wheel.Reset();
         RecomputeLayout();
-        _scrollColumn = Math.Clamp(_scrollColumn, 0, MaxScrollColumn);   // 件数が減って列が消えた場合
+        _scroll = _scroll with { X = Math.Clamp(_scroll.X, 0, MaxScrollColumn) };   // 件数が減って列が消えた場合
         // 見えている位置ならこの中で何も起きない。カーソルが画面外のときだけ動く
         EnsureCursorVisible();
         Invalidate();
@@ -165,12 +165,12 @@ public sealed class FileListView : Control
     private int ColumnPaddingValue => Scaled(4);
 
     /// <summary>左端は常に列の境界。列幅の途中で止めない（実機確認・2026-09-09）。</summary>
-    private int ScrollX => _scrollColumn * _layout.ColumnWidth;
+    private int ScrollX => _layout.ScrollOffset(_scroll).X;
 
     /// <summary>丸ごと収まる列の数。端数の列は右端で切れるが、それは実機と同じ。</summary>
     private int VisibleColumns => Math.Max(1, ClientSize.Width / Math.Max(1, _layout.ColumnWidth));
 
-    private int MaxScrollColumn => Math.Max(0, _layout.ColumnCount - VisibleColumns);
+    private int MaxScrollColumn => _layout.MaxScrollPosition(_state.Count, ClientSize.Width, ViewportHeight).X;
 
     private int ViewportHeight => Math.Max(0, ClientSize.Height - (_scrollBar.Visible ? _scrollBar.Height : 0));
 
@@ -216,7 +216,7 @@ public sealed class FileListView : Control
             total = _layout.TotalWidth;
         }
 
-        if (!needed) { _scrollColumn = 0; return; }
+        if (!needed) { _scroll = _scroll with { X = 0 }; return; }
 
         // スクロールバーの単位も列にする
         _scrollBar.Minimum = 0;
@@ -238,15 +238,15 @@ public sealed class FileListView : Control
         if (!_scrollBar.Visible || _state.Count == 0) return;
 
         var cursorColumn = _layout.ColumnOf(_state.CursorIndex);
-        if (cursorColumn < _scrollColumn) _scrollColumn = cursorColumn;
-        else if (cursorColumn > _scrollColumn + VisibleColumns - 1) _scrollColumn = cursorColumn - VisibleColumns + 1;
+        if (cursorColumn < _scroll.X) _scroll = _scroll with { X = cursorColumn };
+        else if (cursorColumn > _scroll.X + VisibleColumns - 1) _scroll = _scroll with { X = cursorColumn - VisibleColumns + 1 };
         SyncScrollBar();
     }
 
     private void SyncScrollBar()
     {
-        _scrollColumn = Math.Clamp(_scrollColumn, 0, MaxScrollColumn);
-        if (_scrollBar.Visible) _scrollBar.Value = Math.Min(_scrollColumn, _scrollBar.Maximum);
+        _scroll = _scroll with { X = Math.Clamp(_scroll.X, 0, MaxScrollColumn) };
+        if (_scrollBar.Visible) _scrollBar.Value = Math.Min(_scroll.X, _scrollBar.Maximum);
     }
 
     // ---- 描画 -------------------------------------------------------------
@@ -258,8 +258,8 @@ public sealed class FileListView : Control
 
         // 可視範囲の列だけを描く（件数に依存しない・R-01）。
         // 右端で切れる 1 列ぶんを余分に描く（R-01-4: 切れるのはウィンドウの右端）
-        var firstColumn = _scrollColumn;
-        var lastColumn = Math.Min(_layout.ColumnCount - 1, _scrollColumn + VisibleColumns);
+        var firstColumn = _scroll.X;
+        var lastColumn = Math.Min(_layout.ColumnCount - 1, _scroll.X + VisibleColumns);
 
         for (var column = firstColumn; column <= lastColumn; column++)
         {
@@ -280,7 +280,7 @@ public sealed class FileListView : Control
 
         // N-04-4: 塗りつぶしの範囲は文字列の長さではなく列の幅で決まる
         var rect = new Rectangle(
-            (column - _scrollColumn) * _layout.ColumnWidth,
+            (column - _scroll.X) * _layout.ColumnWidth,
             row * _layout.RowHeight,
             _layout.ColumnWidth,
             _layout.RowHeight);
@@ -419,7 +419,7 @@ public sealed class FileListView : Control
 
         // R-11-2 / B-07: 先頭の余白もアイコンの当たり判定に含める。
         // 卓駆も左端の余白でマークがトグルする
-        var onIcon = e.X - (_layout.ColumnOf(index) - _scrollColumn) * _layout.ColumnWidth
+        var onIcon = e.X - (_layout.ColumnOf(index) - _scroll.X) * _layout.ColumnWidth
                      < _layout.ColumnPadding + _icons.Size;
 
         // Q7: マークを変えるのは離した時点（MarkOnRelease）。押した時点ではカーソルだけ移す
@@ -548,7 +548,7 @@ public sealed class FileListView : Control
         // スクロールできない間にたまった分が、後でまとめて効かないようにする
         if (!_scrollBar.Visible) { _wheel.Reset(); return; }
         // R-76: 1 ノッチ = 1 列。左端は常に列の境界に揃う
-        _scrollColumn -= _wheel.Add(e.Delta, SystemInformation.MouseWheelScrollDelta);
+        _scroll = _scroll with { X = _scroll.X - _wheel.Add(e.Delta, SystemInformation.MouseWheelScrollDelta) };
         SyncScrollBar();
         Invalidate();
     }

@@ -1352,6 +1352,12 @@
       "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
       "doc": "R-113 / R-112-3 / R-115 / R-119: 範囲と候補。設定画面の部品もここから作る。"
     },
+    "ReTAC.Domain.Listing.FileViewScroll": {
+      "id": "type:ReTAC.Domain.Listing.FileViewScroll",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+      "doc": "R-110-1〜R-110-3: ドロップの処理が使う、スクロールのずれを縦横とも入れた計算。"
+    },
     "ReTAC.Domain.Listing.FileViewSettings": {
       "id": "type:ReTAC.Domain.Listing.FileViewSettings",
       "kind": "sealed record",
@@ -1406,6 +1412,12 @@
       "kind": "static class",
       "file": "src/ReTAC.Domain/Listing/FolderListing.cs",
       "doc": "R-04 / R-05: 親フォルダ項目を先頭に固定し、フォルダ優先で並べる。"
+    },
+    "ReTAC.Domain.Listing.IFileViewLayout": {
+      "id": "type:ReTAC.Domain.Listing.IFileViewLayout",
+      "kind": "interface",
+      "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+      "doc": "R-110-1〜R-110-3: ドロップの処理がレイアウトに聞くこと。ドロップの処理の中で行の高さ・列の幅を自分で計算しない。 Phase 15 で表示モードごとのレイアウトを作るとき、これを実装すればドロップの処理は変えずに済む。 IndexAt と ItemBounds は中身の座標（スクロールのずれを足した座標）、AutoScrollDirection は見えている範囲の座標。"
     },
     "ReTAC.Domain.Listing.IconsViewSettings": {
       "id": "type:ReTAC.Domain.Listing.IconsViewSettings",
@@ -1546,6 +1558,28 @@
         },
         {
           "name": "MaxChars",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Listing.ScrollPosition": {
+      "id": "type:ReTAC.Domain.Listing.ScrollPosition",
+      "kind": "struct",
+      "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+      "doc": "R-110-3: スクロール位置。軸ごとに「段」の数で持つ。1 段の量はレイアウトが決める（一覧は横に 1 列、縦のレイアウトは 1 行）。",
+      "fields": [
+        {
+          "name": "X",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Y",
           "type": "int",
           "nullable": false,
           "required": false,
@@ -4862,15 +4896,15 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
-        "line": 53
+        "line": 67
       },
       {
         "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
-        "line": 68
+        "line": 82
       },
       {
         "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
-        "line": 77
+        "line": 91
       }
     ],
     "B-09": [
@@ -7265,6 +7299,58 @@
       {
         "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
         "line": 44
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+        "line": 23
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+        "line": 36
+      }
+    ],
+    "R-110-2": [
+      {
+        "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
+        "line": 39
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+        "line": 43
+      }
+    ],
+    "R-110-3": [
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 27
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
+        "line": 42
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
+        "line": 46
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+        "line": 3
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+        "line": 23
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+        "line": 26
       }
     ],
     "R-111": [
