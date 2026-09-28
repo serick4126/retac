@@ -16,7 +16,9 @@ public sealed class MarkOnRelease
         _anchor = state.CursorIndex;
         _index = index;
         _kind = shift ? Kind.Range : onIcon ? Kind.Toggle : Kind.None;
-        state.MoveCursor(index);
+        // R-11-2: Shift の押下ではカーソルを動かさない。押す前の位置が範囲の起点として残る必要があるため
+        // （動かしてしまうと Release で MarkRange するときに起点を見失う）。カーソルは離した時点で動く
+        if (!shift) state.MoveCursor(index);
     }
 
     public void DragStarted() => _kind = Kind.None;
@@ -36,7 +38,8 @@ public sealed class MarkOnRelease
         switch (kind)
         {
             case Kind.Toggle: state.ToggleMark(_index); return true;
-            case Kind.Range: state.MarkRange(_anchor, _index); return true;
+            // 範囲をマークしてから、カーソルを押した項目へ動かす（R-11-2: 押した時点では動かさなかった分）
+            case Kind.Range: state.MarkRange(_anchor, _index); state.MoveCursor(_index); return true;
             default: return false;
         }
     }

@@ -461,9 +461,12 @@ public sealed class FileListView : Control
                  || Math.Abs(e.Y - _dragOrigin.Y) >= SystemInformation.DragSize.Height;
         if (!moved) return;
 
-        // R-65-2: 対象は実効対象の規則。マークがあればマーク集合、
-        // なければドラッグを始めた位置のエントリ（カーソルは MouseDown で既にそこへ移っている）
-        var targets = _state.EffectiveTarget();
+        // R-65-2 / R-11-2: 対象は実効対象の規則。マークがあればマーク集合、
+        // なければ押した位置のエントリ。Shift+クリックはカーソルを押した時点で動かさないので、
+        // ここでカーソルの項目（EffectiveTarget の既定）を見ると離す前の古いカーソル位置を拾ってしまう
+        IReadOnlyList<Entry> targets = _state.Marks.Count > 0
+            ? _state.EffectiveTarget()
+            : _dragIndex >= 0 && !_state.Entries[_dragIndex].IsParent ? [_state.Entries[_dragIndex]] : [];
         _dragIndex = -1;
         if (targets.Count == 0) return;
 
@@ -587,8 +590,13 @@ public sealed class FileListView : Control
             return;
         }
 
-        if (e.Button == MouseButtons.Left && _markOnRelease.Release(_state))
-            Commit(_state.CursorIndex, marksChanged: true);
+        if (e.Button == MouseButtons.Left)
+        {
+            // R-11-2: Shift の範囲マークは、離した時点でカーソルも押した項目へ動く（MarkOnRelease.Release の中で）。
+            // 動いたかどうかは離す前のカーソル位置と比べる必要があるので、Release より前に取っておく
+            var before = _state.CursorIndex;
+            if (_markOnRelease.Release(_state)) Commit(before, marksChanged: true);
+        }
     }
 
     protected override void OnMouseWheel(MouseEventArgs e)

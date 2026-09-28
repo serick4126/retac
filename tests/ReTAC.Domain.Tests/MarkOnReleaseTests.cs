@@ -49,9 +49,34 @@ public class MarkOnReleaseTests
         state.MoveCursor(1);
         var click = new MarkOnRelease();
         click.Press(state, 3, onIcon: true, shift: true);
+        Assert.Equal(1, state.CursorIndex);   // R-11-2: Shift の押下ではカーソルを動かさない（離した時点の起点）
         Assert.Empty(state.Marks);
         Assert.True(click.Release(state));
         Assert.Equal(new[] { 1, 2, 3 }, state.Marks.Order());
+        Assert.Equal(3, state.CursorIndex);   // マークしてから、カーソルが押した項目へ動く
+    }
+
+    [Fact]
+    public void Shiftで押したままドラッグを始めるとカーソルもマークも変わらない()
+    {
+        var state = State();
+        state.MoveCursor(1);
+        var click = new MarkOnRelease();
+        click.Press(state, 3, onIcon: true, shift: true);
+        click.DragStarted();
+        Assert.False(click.Release(state));
+        Assert.Empty(state.Marks);
+        Assert.Equal(1, state.CursorIndex);   // 起点のまま。ドラッグでは動かさない
+    }
+
+    [Fact]
+    public void Shift無しの押下は直ちにカーソルを動かす()
+    {
+        var state = State();
+        state.MoveCursor(1);
+        var click = new MarkOnRelease();
+        click.Press(state, 3, onIcon: false, shift: false);
+        Assert.Equal(3, state.CursorIndex);   // Shift が無ければ従来どおり押した時点で動く
     }
 
     [Fact]
