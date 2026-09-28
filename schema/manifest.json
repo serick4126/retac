@@ -6135,6 +6135,14 @@
       {
         "file": "src/ReTAC.Domain/Commands/CommandId.cs",
         "line": 103
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/InstallFolder.cs",
+        "line": 12
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/NamedLock.cs",
+        "line": 9
       }
     ],
     "R-109-2": [
@@ -6201,6 +6209,10 @@
       {
         "file": "src/ReTAC.Updater/Core/Protocol.cs",
         "line": 31
+      },
+      {
+        "file": "src/ReTAC.Updater/Core/StagingFolder.cs",
+        "line": 11
       },
       {
         "file": "src/ReTAC.Updater/Core/Versions.cs",
