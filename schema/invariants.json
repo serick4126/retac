@@ -409,6 +409,16 @@
       "note": "DropInto を使うと確認ダイアログが出ない(ファイルリスト・ドライブバーの通常のドロップと同じ挙動になってしまう)。ツリーは §9 の例外で、宛先を見せて確認する側を使う。"
     },
     {
+      "id": "INV-INPANEL-DROP-VIA-DIALOG",
+      "status": "enforced",
+      "specIds": ["R-110-1"],
+      "applies": ["type:ReTAC.Domain.FileOps.DropRouting"],
+      "rule": "ReTAC から始めたドラッグ（ツリーから始めたドラッグを含む。Q4）をファイル表示パネルの中へ落として起きるコピー・移動は、必ず宛先入りのダイアログを経由する。外からのドロップは今までどおりダイアログを出さない。",
+      "enforcedBy": "domain:DropRouting.Plan（FileList で fromReTAC なら Dialog）/ app:MainForm.AcceptDrop（ShellDrag.InProgress を渡す）",
+      "testedBy": "tests/ReTAC.Domain.Tests/DropRoutingTests.cs",
+      "note": "「新しいウィンドウ」で開いたウィンドウ（同じプロセス）からは ReTAC から（Q6）。別に起動した ReTAC（別のプロセス）からは外からの扱い"
+    },
+    {
       "id": "INV-RIGHT-DROP-SAME-ROUTE",
       "status": "enforced",
       "specIds": ["R-111-2"],

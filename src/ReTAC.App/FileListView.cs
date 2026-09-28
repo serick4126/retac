@@ -3,6 +3,7 @@ using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using ReTAC.App.Rendering;
 using ReTAC.Domain.Entries;
+using ReTAC.Domain.FileOps;
 using ReTAC.Domain.Listing;
 using ReTAC.Domain.Selection;
 using ReTAC.Shell;
@@ -35,6 +36,12 @@ public sealed class FileListView : Control
     /// Shift は押した時点の値（R-81）。ドラッグになったら null に戻し、メニューは出さない。
     /// </summary>
     private (int Index, Point Location, bool Shift)? _rightDown;
+    /// <summary>R-110-2: 落とす先として枠で囲む項目。-1 なら囲まない。</summary>
+    private int _dropTarget = -1;
+    /// <summary>R-110-3 / T5: 端で止めている間、この間隔で 1 列ずつスクロールする（実機で 0.3〜0.5 秒を比べて決めた）。</summary>
+    private const int AutoScrollInterval = 400;
+    private readonly System.Windows.Forms.Timer _autoScroll = new() { Interval = AutoScrollInterval };
+    private (int X, int Y) _autoScrollDirection;
 
     public FileListView()
     {
@@ -47,6 +54,7 @@ public sealed class FileListView : Control
         ImeMode = ImeMode.Disable;
         Controls.Add(_scrollBar);
         _scrollBar.Scroll += (_, e) => { _scroll = _scroll with { X = e.NewValue }; Invalidate(); };
+        _autoScroll.Tick += (_, _) => AutoScrollStep();
         RebuildFontResources();
     }
 
@@ -267,23 +275,21 @@ public sealed class FileListView : Control
             {
                 var index = column * _layout.RowsPerColumn + row;
                 if (index >= _state.Count) break;
-                DrawRow(e.Graphics, index, column, row, Gap);
+                DrawRow(e.Graphics, index, Gap);
             }
         }
     }
 
-    private void DrawRow(Graphics g, int index, int column, int row, int gap)
+    private void DrawRow(Graphics g, int index, int gap)
     {
         var entry = _state.Entries[index];
         var isCursor = index == _state.CursorIndex;
         var isMarked = _state.Marks.Contains(index);
 
         // N-04-4: 塗りつぶしの範囲は文字列の長さではなく列の幅で決まる
-        var rect = new Rectangle(
-            (column - _scroll.X) * _layout.ColumnWidth,
-            row * _layout.RowHeight,
-            _layout.ColumnWidth,
-            _layout.RowHeight);
+        // R-110-2: 矩形はレイアウトから取る。縦横どちらのずれも引く
+        var (x, y, width, height) = FileViewScroll.VisibleBounds(_layout, _scroll, index);
+        var rect = new Rectangle(x, y, width, height);
 
         // R-11-6: カーソルとマークが重なる行は背景をカーソル色にし、★は残す
         var (background, foreground) = RowColors.Of(_theme, AttributeColorRule.Classify(entry.Attributes), isCursor, isMarked);
@@ -310,6 +316,13 @@ public sealed class FileListView : Control
                 rect.X + _layout.ExtensionOffset, textTop,
                 Math.Max(0, rect.Right - (rect.X + _layout.ExtensionOffset)), _layout.RowHeight);
             TextRenderer.DrawText(g, entry.Extension, _font, extRect, foreground, TextMeasure.Flags);
+        }
+
+        // R-110-2: 落とす先はその項目の文字の色の枠。塗りはカーソルとマークが使っているので使わない
+        if (index == _dropTarget)
+        {
+            using var pen = new Pen(RowColors.Frame(background, foreground), Scaled(2)) { Alignment = PenAlignment.Inset };
+            g.DrawRectangle(pen, rect);
         }
     }
 
@@ -473,33 +486,80 @@ public sealed class FileListView : Control
     protected override void OnDragEnter(DragEventArgs e)
     {
         DropButton.Enter(e);
-        SetDropEffect(e);
+        UpdateDrop(e);
     }
 
     protected override void OnDragOver(DragEventArgs e)
     {
         DropButton.Over(e);
-        SetDropEffect(e);
+        UpdateDrop(e);
     }
 
+    // Esc での取り消しも OLE は DragLeave を呼ぶ。枠と自動スクロールはここで片付く
     protected override void OnDragLeave(EventArgs e)
     {
         base.OnDragLeave(e);
+        EndDrop();
         DropButton.Leave();
     }
 
-    // R-78: 自分のフォルダへのドロップは DropRules が None を返すので「不可」の表示になる
-    private void SetDropEffect(DragEventArgs e) =>
-        DropFeedback.Apply(e, DropFolder, DropFeedback.FolderLabel(DropFolder));
+    /// <summary>R-110-1: 落とした位置の項目と宛先。宛先を決めるのはドメイン（DropRouting）で、項目はレイアウトに聞く。</summary>
+    private (string Destination, int Index, Entry? Hit) DropTargetAt(DragEventArgs e)
+    {
+        var point = PointToClient(new Point(e.X, e.Y));
+        // 縦横どちらのずれも足す（Phase 15 の詳細表示は縦と横のスクロールが同時にある）
+        var index = FileViewScroll.IndexAt(_layout, _scroll, point.X, point.Y, _state.Count);
+        var hit = index >= 0 ? _state.Entries[index] : null;
+        return (DropRouting.FileListDestination(InPanelDragDrop, hit, DropFolder), index, hit);
+    }
+
+    private void UpdateDrop(DragEventArgs e)
+    {
+        var (destination, index, hit) = DropTargetAt(e);
+        // R-78: 表示と実際の転送は同じ判定。ドラッグしている項目自身・その中は DropRules が断る（「不可」。新しい判定は足さない）
+        DropFeedback.Apply(e, destination, DropFeedback.FolderLabel(destination));
+        var frame = e.Effect != DragDropEffects.None && DropRouting.TargetsItem(InPanelDragDrop, hit) ? index : -1;
+        if (frame != _dropTarget) { _dropTarget = frame; Invalidate(); }
+        var point = PointToClient(new Point(e.X, e.Y));
+        SetAutoScroll(InPanelDragDrop ? _layout.AutoScrollDirection(point.X, point.Y, ClientSize.Width, ViewportHeight) : (0, 0));
+    }
+
+    private void EndDrop()
+    {
+        SetAutoScroll((0, 0));
+        if (_dropTarget != -1) { _dropTarget = -1; Invalidate(); }
+    }
+
+    private void SetAutoScroll((int X, int Y) direction)
+    {
+        if (direction == _autoScrollDirection) return;
+        _autoScrollDirection = direction;
+        _autoScroll.Stop();
+        if (direction != (0, 0)) _autoScroll.Start();
+    }
+
+    /// <summary>R-110-3: 1 段。向きも段の量もレイアウトが決める（今の一覧では横に 1 列）。スクロールできる端まで来たら止める。</summary>
+    private void AutoScrollStep()
+    {
+        var next = FileViewScroll.Next(_layout, _scroll, _autoScrollDirection, _state.Count, ClientSize.Width, ViewportHeight);
+        if (next == _scroll) { SetAutoScroll((0, 0)); return; }
+        _scroll = next;
+        SyncScrollBar();
+        Invalidate();   // 枠の位置は次の DragOver で決め直す（OLE はマウスが止まっていても DragOver を呼び続ける）
+    }
 
     protected override void OnDragDrop(DragEventArgs e)
     {
         base.OnDragDrop(e);
-        DropButton.Drop(e, () =>
+        DropButton.Drop(e, () =>   // R-111-2 / T6: 右ボタンなら None を返す。例外でも印を残さない
         {
-            if (e.Data?.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } paths) return;
-            var (ctrl, shift) = DropFeedback.Modifiers(e);
-            FilesDropped?.Invoke(this, new Drop(paths, DropFolder, e.AllowedEffect, ctrl, shift));
+            var (destination, _, _) = DropTargetAt(e);
+            EndDrop();
+            if (e.Data?.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } paths)
+            {
+                var (ctrl, shift) = DropFeedback.Modifiers(e);
+                FilesDropped?.Invoke(this, new Drop(paths, destination, e.AllowedEffect, ctrl, shift));
+            }
         });
     }
 
@@ -570,6 +630,7 @@ public sealed class FileListView : Control
             _font?.Dispose();
             _measure?.Dispose();
             _icons?.Dispose();
+            _autoScroll.Dispose();
         }
         base.Dispose(disposing);
     }
