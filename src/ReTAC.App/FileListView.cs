@@ -148,6 +148,7 @@ public sealed class FileListView : Control
         // 別の項目を指すことになるので、離した時点の処理（マーク・右ボタンのドラッグ／メニュー）は捨てる
         _rightDown = null;
         _markOnRelease.Cancel();
+        _dragIndex = -1;
         var scroll = _scroll.X;
         _state = new ListState(entries);
         _state.MoveCursor(cursorIndex);
@@ -553,8 +554,8 @@ public sealed class FileListView : Control
         base.OnDragDrop(e);
         DropButton.Drop(e, () =>   // R-111-2 / T6: 右ボタンなら None を返す。例外でも印を残さない
         {
+            EndDrop();   // DropTargetAt が例外を投げても枠と自動スクロールのタイマーは必ず片付く（_scroll は変えない）
             var (destination, _, _) = DropTargetAt(e);
-            EndDrop();
             if (e.Data?.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } paths)
             {
                 var (ctrl, shift) = DropFeedback.Modifiers(e);

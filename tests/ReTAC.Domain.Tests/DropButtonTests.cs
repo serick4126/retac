@@ -14,6 +14,8 @@ public class DropButtonTests
     [Fact]
     public void 右ボタンのドロップは処理が例外を投げてもNoneを返し印を消す()
     {
+        DragButtonState.SourceRight = false;
+        DragButtonState.Reset();
         var over = Args(2);
         DropButton.Over(over);
         var drop = Args(0);
@@ -26,6 +28,8 @@ public class DropButtonTests
     [Fact]
     public void 左ボタンのドロップは効果を変えず印は消す()
     {
+        DragButtonState.SourceRight = false;
+        DragButtonState.Reset();
         DropButton.Enter(Args(1));
         var drop = Args(0);
         drop.Effect = DragDropEffects.Move;

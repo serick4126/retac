@@ -1270,9 +1270,15 @@ public sealed class NameSpaceTreeHost : IDisposable
             return S_OK;
         }
 
+        // R-111-2 / T1: ここで DragButtonState.Enter / Over を呼ばない。ShellTreeDropTap が入っているときは
+        // タップ側が KeyState を覚えるので二重になり、入っていないとき（フォールバック）は NSTC がシェルの断る
+        // 項目の上でしかこれらを呼ばないうえ、OnDragLeave はここでは Reset しない（NSTC が項目ごとに呼ぶか
+        // OnDrop の直前にしか呼ばないため、Reset すると本物の右ドラッグの印まで消えてしまう）。
+        // その結果、右ドラッグが断られる項目の上を通って別の場所で終えると Right=true が残ったままになり、
+        // 後続の左ドロップで右ドロップ用のメニューが出てしまう。ReTAC 自身の右ドラッグは
+        // DragButtonState.SourceRight（ShellDrag が管理）で別途見分けているので、ここで覚える必要はない。
         public int OnDragEnter(IntPtr over, IntPtr data, bool outsideSource, uint keyState, ref uint effect)
         {
-            DragButtonState.Enter(keyState);
             var hr = CacheDropSources(data);
             _host?.UpdateDropFeedback(over, data, keyState, ref effect);
             return hr;
@@ -1280,7 +1286,6 @@ public sealed class NameSpaceTreeHost : IDisposable
 
         public int OnDragOver(IntPtr over, IntPtr data, uint keyState, ref uint effect)
         {
-            DragButtonState.Over(keyState);
             var hr = CacheDropSources(data);
             _host?.UpdateDropFeedback(over, data, keyState, ref effect);
             return hr;
