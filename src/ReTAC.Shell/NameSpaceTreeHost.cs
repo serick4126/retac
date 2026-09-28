@@ -83,7 +83,7 @@ public sealed class NameSpaceTreeHost : IDisposable
     private const uint WM_KEYDOWN = 0x0100;
     private const uint WM_CHAR = 0x0102;
     private const uint MK_SHIFT = 0x0004, MK_CONTROL = 0x0008;
-    private const uint DROPEFFECT_COPY = 1, DROPEFFECT_MOVE = 2;
+    private const uint DROPEFFECT_COPY = 1, DROPEFFECT_MOVE = 2, DROPEFFECT_LINK = 4;
     private const int VK_RETURN = 0x0D;
     private const int VK_TAB = 0x09;
 
@@ -1216,19 +1216,42 @@ public sealed class NameSpaceTreeHost : IDisposable
     {
         if (!_acceptEvents) return;
         var destination = ShellItemPath.FileSystemPathOf(over);
-        var action = _dropSources.Length == 0
+        effect = _dropSources.Length == 0 ? 0u : TreeDropEffect(_dropSources[0], destination, keyState, effect, DragButtonState.Right);
+    }
+
+    /// <summary>
+    /// R-111-2: 右ボタンのドラッグ中は、左ボタンなら何も起きない所（別のドライブで移動だけ・リンクだけ）でも
+    /// メニューが出る所なら落とせる効果を返す。0 のままだと OLE が OnDrop を呼ばず、右ドロップのメニューが出せない
+    /// （ファイルリスト等の DropFeedback.Apply と同じ判定。NSTC が普通のフォルダの上でこれを呼ぶことは無いが、
+    /// シェルが断る項目の上や呼び出し方が変わった場合の保険として、他の受け口と合わせておく）。
+    /// </summary>
+    internal static uint TreeDropEffect(string source, string? destination, uint keyState, uint allowed, bool rightButton)
+    {
+        var action = destination is null
             ? ReTAC.Domain.FileOps.DropAction.None
             : ReTAC.Domain.FileOps.DropRules.Allow(
-                ReTAC.Domain.FileOps.DropRules.DecideForTree(_dropSources[0], destination,
+                ReTAC.Domain.FileOps.DropRules.DecideForTree(source, destination,
                     ctrl: (keyState & MK_CONTROL) != 0, shift: (keyState & MK_SHIFT) != 0),
-                copyAllowed: (effect & DROPEFFECT_COPY) != 0, moveAllowed: (effect & DROPEFFECT_MOVE) != 0);
-        var newEffect = action switch
+                copyAllowed: (allowed & DROPEFFECT_COPY) != 0, moveAllowed: (allowed & DROPEFFECT_MOVE) != 0);
+        var effect = action switch
         {
             ReTAC.Domain.FileOps.DropAction.Copy => DROPEFFECT_COPY,
             ReTAC.Domain.FileOps.DropAction.Move => DROPEFFECT_MOVE,
             _ => 0u,
         };
-        effect = newEffect;
+        if (!rightButton || effect != 0 || destination is null) return effect;
+
+        var model = ReTAC.Domain.FileOps.DropRouting.Menu(source, destination,
+            copyAllowed: (allowed & DROPEFFECT_COPY) != 0, moveAllowed: (allowed & DROPEFFECT_MOVE) != 0,
+            linkAllowed: (allowed & DROPEFFECT_LINK) != 0);
+        if (model is null) return effect;
+
+        return ReTAC.Domain.FileOps.DropRouting.RightDragEffect(model.Value) switch
+        {
+            ReTAC.Domain.FileOps.DropChoice.Copy => DROPEFFECT_COPY,
+            ReTAC.Domain.FileOps.DropChoice.Move => DROPEFFECT_MOVE,
+            _ => DROPEFFECT_LINK,
+        };
     }
 
     private void DropFrom(IntPtr over, IntPtr data, uint keyState, ref uint effect)
