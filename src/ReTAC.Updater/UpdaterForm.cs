@@ -133,7 +133,7 @@ internal sealed class UpdaterForm : Form
         }
         if (!await Io(() => File.Exists(reTacPath)))
         {
-            Finish($"ReTAC.exe が見つかりません（{_install}）。");
+            Finish("ReTAC.exe が見つかりません。", _install);
             return;
         }
 
@@ -164,20 +164,20 @@ internal sealed class UpdaterForm : Form
             }
             if (Versions.ParseTag(tag.Value) is not { } parsed)
             {
-                Finish($"リリースの版番号を読めません（{tag.Value}）。");
+                Finish($"リリースの版番号（{tag.Value}）を読めません。");
                 return;
             }
             latest = parsed;
         }
         if (Versions.IsUpToDate(latest, reTac, updater))
         {
-            Finish($"最新です（v{latest}）。");
+            Finish($"最新版（v{latest}）です。");
             return;
         }
 
         // 確認
         var version = $"{latest.Major}.{latest.Minor}.{latest.Build}";
-        Idle($"ReTAC v{version} があります（今は v{reTac}）。{Environment.NewLine}[更新] を押すと ReTAC が再起動します。");
+        Idle($"ReTAC v{version} があります。今は v{reTac} です。{Environment.NewLine}[更新] を押すと ReTAC が再起動します。");
         _link.Visible = true;
         if (await AskAsync(("update", "更新"), ("cancel", "中止")) != "update")
         {

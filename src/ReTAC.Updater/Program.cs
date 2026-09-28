@@ -38,7 +38,7 @@ internal static class Program
         var normalized = InstallFolder.Normalize(install);
         if (normalized is null)
         {
-            Show($"フォルダが見つかりません（{install}）。");
+            Show("フォルダが見つかりません。" + Environment.NewLine + install);
             return 1;
         }
 
