@@ -69,7 +69,7 @@ public static class Outcome
         Reason.ElevationDenied => "管理者の許可が得られませんでした",
         Reason.WriteFailed => "ファイルを置けませんでした",
         Reason.TimedOut => "GitHub からの応答が止まりました",
-        Reason.AssetMissing => "リリースに更新用のファイルがありません",
+        Reason.AssetMissing => "GitHub に更新用のファイルがありません",
         Reason.Unexpected => "更新の途中で問題が起きました",
         _ => "更新しませんでした",
     };

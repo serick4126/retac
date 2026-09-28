@@ -39,7 +39,7 @@ internal sealed class UpdaterForm : Form
     private readonly Label _status = new() { AutoSize = true, Margin = new Padding(0, 0, 0, 6) };
     private readonly Label _detail = new() { AutoSize = true, ForeColor = SystemColors.GrayText, Margin = new Padding(0, 0, 0, 8) };
     private readonly ProgressBar _bar = new() { Style = ProgressBarStyle.Marquee, Dock = DockStyle.Fill, Height = 14, MarqueeAnimationSpeed = 30 };
-    private readonly LinkLabel _link = new() { AutoSize = true, Text = "リリースのページを開く", Visible = false, Margin = new Padding(0, 6, 0, 0) };
+    private readonly LinkLabel _link = new() { AutoSize = true, Text = "変更内容を GitHub で見る", Visible = false, Margin = new Padding(0, 6, 0, 0) };
     private readonly FlowLayoutPanel _buttons = new()
     {
         FlowDirection = FlowDirection.RightToLeft, Dock = DockStyle.Fill, AutoSize = true, Margin = new Padding(0, 12, 0, 0),
@@ -141,7 +141,7 @@ internal sealed class UpdaterForm : Form
         var updater = await Io(() => Versions.OfFile(Path.Combine(_install, Protocol.UpdaterExe)));
         if (reTac is null)
         {
-            Finish("ReTAC.exe の版を読めません。");
+            Finish("ReTAC.exe のバージョンを読み取れません。");
             return;
         }
 
@@ -153,7 +153,7 @@ internal sealed class UpdaterForm : Form
         }
         else
         {
-            Busy("最新版を確認しています", Cancelable);
+            Busy("新しいバージョンを確認しています", Cancelable);
             using var github = new GitHubReleases();
             var tag = await github.LatestTagAsync(_cancel.Token);
             if (!tag.Ok)
@@ -164,20 +164,22 @@ internal sealed class UpdaterForm : Form
             }
             if (Versions.ParseTag(tag.Value) is not { } parsed)
             {
-                Finish($"リリースの版番号（{tag.Value}）を読めません。");
+                // 利用者の側でできることは無いので、何が起きたかだけを伝え、受け取った値は詳細の行に出す
+                Finish("新しいバージョンがあるか確認できませんでした。ReTAC は変更していません。",
+                       $"GitHub のバージョン番号を読み取れません: {tag.Value}");
                 return;
             }
             latest = parsed;
         }
         if (Versions.IsUpToDate(latest, reTac, updater))
         {
-            Finish($"最新版（v{latest}）です。");
+            Finish($"最新のバージョン（v{latest}）を使っています。");
             return;
         }
 
         // 確認
         var version = $"{latest.Major}.{latest.Minor}.{latest.Build}";
-        Idle($"ReTAC v{version} があります。今は v{reTac} です。{Environment.NewLine}[更新] を押すと ReTAC が再起動します。");
+        Idle($"新しいバージョン v{version} があります。{Environment.NewLine}現在のバージョンは v{reTac} です。{Environment.NewLine}[更新] を押すと ReTAC が再起動します。");
         _link.Visible = true;
         if (await AskAsync(("update", "更新"), ("cancel", "中止")) != "update")
         {
@@ -209,9 +211,14 @@ internal sealed class UpdaterForm : Form
 
         LaunchIfNeeded(replaced: report.Replaced > 0 || report.Result != ReplaceResult.Unchanged);
         var message = Outcome.Message(report.Result, report.Reason, _launched, _launchOk, "v" + version, report.RetryAt);
+        var detail = report.Detail;
         if (leftovers.Count > 0)
-            message += Environment.NewLine + $"前回の更新で残ったフォルダがあります（{string.Join("、", leftovers)}）。不要なら消してください。";
-        Finish(message, report.Detail);
+        {
+            // フォルダ名は詳細の行に出す（文の後ろに括弧を付けて「。」で終えない）
+            message += Environment.NewLine + "前回の更新で残ったフォルダがあります。不要なら消してください。";
+            detail = string.Join(Environment.NewLine, new[] { detail, string.Join(Environment.NewLine, leftovers) }.Where(d => !string.IsNullOrEmpty(d)));
+        }
+        Finish(message, detail);
     }
 
     // ---- ReTAC の終了（R-109-3）----
