@@ -1,0 +1,12 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- 既定でも 1.0.0 が入るが、名乗る値は明示しておく。
+         ここから AssemblyVersion / FileVersion / InformationalVersion が導かれ、
+         エクスプローラーのプロパティ→詳細に出る。
+         R-109: ReTAC とアップデータは同じ版番号を名乗る。アップデータは両方の exe の版で
+         「最新か」を判定するので、ここ 1 か所で揃える -->
+    <Version>2.7.1</Version>
+  </PropertyGroup>
+
+</Project>
