@@ -681,6 +681,105 @@
         "Move"
       ]
     },
+    "ReTAC.Domain.FileOps.DropChoice": {
+      "id": "type:ReTAC.Domain.FileOps.DropChoice",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+      "doc": "R-111-2: 右ボタンのメニューで選んだもの。Esc・メニューの外のクリックも Cancel。",
+      "members": [
+        "Cancel",
+        "Copy",
+        "Move",
+        "Link"
+      ]
+    },
+    "ReTAC.Domain.FileOps.DropMenuModel": {
+      "id": "type:ReTAC.Domain.FileOps.DropMenuModel",
+      "kind": "struct",
+      "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+      "doc": "R-111-2: 右ボタンのメニューの太字の項目と、使える項目。",
+      "fields": [
+        {
+          "name": "Default",
+          "type": "ReTAC.Domain.FileOps.DropAction",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "CopyEnabled",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "MoveEnabled",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "LinkEnabled",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.FileOps.DropPlan": {
+      "id": "type:ReTAC.Domain.FileOps.DropPlan",
+      "kind": "struct",
+      "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+      "fields": [
+        {
+          "name": "Route",
+          "type": "ReTAC.Domain.FileOps.DropRoute",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "ShowMenu",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.FileOps.DropReceptacle": {
+      "id": "type:ReTAC.Domain.FileOps.DropReceptacle",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+      "doc": "R-111-2: ドロップを受ける所。ブックマークの項目の間（ブックマークへの追加）は転送ではないので含めない。",
+      "members": [
+        "FileList",
+        "DriveTree",
+        "DesktopTree",
+        "DriveBar",
+        "AddressBar",
+        "BookmarkFolder"
+      ]
+    },
+    "ReTAC.Domain.FileOps.DropRoute": {
+      "id": "type:ReTAC.Domain.FileOps.DropRoute",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+      "doc": "宛先入りのダイアログを出すか、出さずに転送するか。",
+      "members": [
+        "Dialog",
+        "Direct"
+      ]
+    },
+    "ReTAC.Domain.FileOps.DropRouting": {
+      "id": "type:ReTAC.Domain.FileOps.DropRouting",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+      "doc": "R-110-1 / R-111-2: ReTAC の受け口に落とされたときの経路・宛先・右ボタンのメニュー。"
+    },
     "ReTAC.Domain.FileOps.DropRules": {
       "id": "type:ReTAC.Domain.FileOps.DropRules",
       "kind": "static class",
@@ -2151,6 +2250,28 @@
         "field": "Items",
         "container": "IReadOnlyList<ReTAC.Domain.FileOps.CopyPlanItem>",
         "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.FileOps.DropMenuModel",
+      "to": "type:ReTAC.Domain.FileOps.DropAction",
+      "type": "1:1",
+      "fk": {
+        "field": "Default",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.FileOps.DropPlan",
+      "to": "type:ReTAC.Domain.FileOps.DropRoute",
+      "type": "1:1",
+      "fk": {
+        "field": "Route",
+        "container": null,
+        "unique": null
       },
       "visibility": "public"
     },
@@ -6533,6 +6654,50 @@
       {
         "file": "src/ReTAC.App/FileListView.cs",
         "line": 269
+      }
+    ],
+    "R-110-1": [
+      {
+        "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+        "line": 19
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+        "line": 40
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+        "line": 44
+      }
+    ],
+    "R-111-2": [
+      {
+        "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+        "line": 13
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+        "line": 16
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+        "line": 19
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+        "line": 49
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+        "line": 62
+      },
+      {
+        "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+        "line": 72
       }
     ],
     "R-12": [
