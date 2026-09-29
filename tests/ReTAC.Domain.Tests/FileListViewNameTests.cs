@@ -74,6 +74,16 @@ public class FileListViewNameTests
     }
 
     [Fact]
+    public void 拡張子を表示しないとカーソルの全部描きも本体だけ()
+    {
+        using var hidden = Styled(showExtension: false, align: true, chars: 10, Long);
+        using var shown = Styled(showExtension: true, align: true, chars: 10, Long);
+        var entry = TestEntries.File(Long);
+        Assert.Equal("とても長い資料の名前がここに続いていてまだ終わらないもっと長い名前", hidden.FullNameText(entry));
+        Assert.Equal(Long, shown.FullNameText(entry));
+    }
+
+    [Fact]
     public void 揃えないと拡張子を本体に続けて描き省略しても拡張子を残す()
     {
         using var list = Styled(showExtension: true, align: false, chars: 10, Long);

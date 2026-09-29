@@ -467,7 +467,7 @@ public sealed class FileListView : Control
         if (full)
         {
             var all = new Rectangle(name.X + Gap, top, band.Right - name.X - Gap, _measure.LineHeight());
-            TextRenderer.DrawText(g, entry.Name, _font, all, foreground, TextMeasure.Flags);
+            TextRenderer.DrawText(g, FullNameText(entry), _font, all, foreground, TextMeasure.Flags);
             return;
         }
 
@@ -491,6 +491,9 @@ public sealed class FileListView : Control
         !_views.Common.ShowExtension ? ExtensionStyle.Hidden
         : (_mode == FileViewMode.Details ? _views.Details.AlignExtension : _views.List.AlignExtension)
             ? ExtensionStyle.Aligned : ExtensionStyle.Together;
+
+    /// <summary>R-01-7: カーソルの項目を全部描くときの文字。揃えから外して続けて描くが、拡張子を表示しない設定なら本体だけ。</summary>
+    internal string FullNameText(Entry entry) => Style == ExtensionStyle.Hidden ? entry.BaseName : entry.Name;
 
     /// <summary>揃えた拡張子の領域を使わないときに、名前の領域へ描く文字。</summary>
     internal string NameText(Entry entry) => Style == ExtensionStyle.Together ? entry.Name : entry.BaseName;
@@ -528,7 +531,7 @@ public sealed class FileListView : Control
     internal bool DrawsFullName(int index) => index == _state.CursorIndex && _mode == FileViewMode.List && IsTruncated(index);
 
     /// <summary>カーソルの項目を全部描くときの帯の幅（左の余白・アイコン・間・名前・右の余白）。</summary>
-    private int FullNameWidth(Entry entry) => ColumnPaddingValue + _icons.Size + Gap + _measure.Width(entry.Name) + ColumnPaddingValue;
+    private int FullNameWidth(Entry entry) => ColumnPaddingValue + _icons.Size + Gap + _measure.Width(FullNameText(entry)) + ColumnPaddingValue;
 
     private static Rectangle ToRectangle((int X, int Y, int Width, int Height) r) => new(r.X, r.Y, r.Width, r.Height);
 
