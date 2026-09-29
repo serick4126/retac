@@ -72,6 +72,18 @@ public class FileListViewDetailsTests
     }
 
     [Fact]
+    public void 列の最小幅は見出しの文字だけで決まりソートの印の幅を含まない()
+    {
+        using var list = Details(0);   // 項目が無ければ列の幅は最小幅
+        var layout = Assert.IsType<DetailsLayout>(list.Layout);
+        var theme = ReTAC.App.Rendering.Theme.Default;
+        using var font = new Font(theme.FontFamily, theme.FontSize);
+        using var measure = new ReTAC.App.Rendering.TextMeasure(font, list.DeviceDpi);
+        var size = layout.Header.Single(h => h.Column == DetailsColumn.Size);
+        Assert.Equal(measure.Width(ReTAC.App.Rendering.DetailsCells.Header(DetailsColumn.Size)) + layout.ColumnPadding * 2, size.Width);
+    }
+
+    [Fact]
     public void 手動の幅はdpiで拡大して使う()
     {
         using var list = Details(3, new Dictionary<string, int?> { ["Size"] = 150 });

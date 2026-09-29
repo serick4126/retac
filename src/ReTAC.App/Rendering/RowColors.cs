@@ -22,13 +22,16 @@ internal static class RowColors
     }
 
     /// <summary>
-    /// R-114: 詳細表示の見出しの地・文字・区切り線。OS を直接読まず（INV-THEME-STARTUP-OS-STATE）、テーマの背景を 1 段暗く
-    /// （暗い配色なら明るく）した色を地に、前景を文字に、地と文字の中間を区切り線にする。
+    /// R-114 / Q36: 詳細表示の見出しの地・文字・線・乗せた色・押した色。OS を直接読まず（INV-THEME-STARTUP-OS-STATE）テーマだけから作る。
+    /// 地はファイルリストと同じ背景。乗せた色と押した色は、地の明るさの反対（暗い地なら白、明るい地なら黒）へ寄せるので、
+    /// 暗い配色でも地から見分けられる。前景と背景を同じにした独自配色では文字や線が見えなくなるが、例外にはならない。
     /// </summary>
-    public static (Color Back, Color Fore, Color Line) Header(Theme theme)
+    public static (Color Back, Color Fore, Color Line, Color Hot, Color Pressed) Header(Theme theme)
     {
-        var back = Blend(theme.Background, theme.Background.GetBrightness() < 0.5f ? Color.White : Color.Black, 0.1f);
-        return (back, theme.Foreground, Blend(back, theme.Foreground, 0.5f));
+        var back = theme.Background;
+        var opposite = back.GetBrightness() < 0.5f ? Color.White : Color.Black;
+        return (back, Blend(back, theme.Foreground, 0.8f), Blend(back, theme.Foreground, 0.22f),
+            Blend(back, opposite, 0.06f), Blend(back, opposite, 0.12f));
     }
 
     private static Color Blend(Color from, Color to, float amount) => Color.FromArgb(

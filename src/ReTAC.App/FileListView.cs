@@ -63,6 +63,8 @@ public sealed class FileListView : Control
     private (int Cell, int StartX, int StartWidth)? _headerDrag;
     /// <summary>見出しのセルを押した状態（添字）。離した所が同じセルならソートする。列の並べ替えはしない（INV-NO-COLUMN-REORDER-BY-DRAG）。</summary>
     private int _headerPress = -1;
+    /// <summary>Q36: マウスが乗っている見出しのセル。境界の上・見出しの外では -1。</summary>
+    private int _headerHot = -1;
 
     public FileListView()
     {
@@ -255,9 +257,9 @@ public sealed class FileListView : Control
         UpdateScrollBars();
     }
 
-    /// <summary>列の最小幅。見出しの文字・ソートの印 1 つ分・左右の余白（ドラッグでもこれより狭くしない）。</summary>
+    /// <summary>列の最小幅。見出しの文字と左右の余白（ドラッグでもこれより狭くしない）。ソートの印は文字の上に描くので幅に入れない（Q36）。</summary>
     private int MinColumnWidth(DetailsColumn? column) =>
-        _measure.Width(DetailsCells.Header(column)) + _measure.Width("▼") + Gap + ColumnPaddingValue * 2;
+        _measure.Width(DetailsCells.Header(column)) + ColumnPaddingValue * 2;
 
     /// <summary>R-114 / R-113 / V6: 列ごとに中身の最長と見出しの最小幅を測り、手動の幅（96 dpi の論理値）を dpi で拡大して渡す。</summary>
     private DetailsLayout ComputeDetails()
@@ -293,7 +295,7 @@ public sealed class FileListView : Control
             RowHeight = _measure.LineHeight() + RowPadding,
             IconWidth = _icons.Size,
             ColumnPadding = pad,
-            HeaderHeight = _measure.LineHeight() + RowPadding,   // 見出しの高さは行の高さと同じ
+            HeaderHeight = _measure.LineHeight() + RowPadding + HeaderMarkHeight,   // 行の高さ + ソートの印を置く上の余白（Q36）
             StepWidth = _measure.Width("0") * 4,                 // Q28: 数字 0 の幅の 4 文字分
             Columns = columns,
             FitToWindow = details.FitColumnsToWindow,
@@ -388,25 +390,57 @@ public sealed class FileListView : Control
     }
 
     /// <summary>
-    /// R-114: 見出しは縦にスクロールせず、横だけ中身と一緒に動く。ソート中の列に ▲▼（HeaderSort.ShowsArrow）。
+    /// R-114: 見出しは縦にスクロールせず、横だけ中身と一緒に動く。ソート中の列の上端に山形（HeaderSort.ShowsArrow。Q36）。
     /// 色は OS を直接読まずテーマから作る（INV-THEME-STARTUP-OS-STATE）。
     /// </summary>
     private void DrawHeader(Graphics g)
     {
         var ox = _layout.ScrollOffset(_scroll).X;
         var height = _layout.HeaderHeight;
-        var (back, fore, line) = RowColors.Header(_theme);
+        var (back, fore, line, hot, pressed) = RowColors.Header(_theme);
         using (var brush = new SolidBrush(back)) g.FillRectangle(brush, 0, 0, ClientSize.Width, height);
-        using var pen = new Pen(line);
-        foreach (var cell in _layout.Header)
+        using var linePen = new Pen(line);
+        using var markPen = new Pen(fore, Math.Max(1, Scaled(1)));
+        for (var i = 0; i < _layout.Header.Count; i++)
         {
-            var rect = new Rectangle(cell.X - ox + ColumnPaddingValue, 0, Math.Max(0, cell.Width - ColumnPaddingValue * 2), height);
-            var label = DetailsCells.Header(cell.Column)
-                        + (HeaderSort.ShowsArrow(_sortOrder, cell.Column) ? (_sortOrder.Direction == SortDirection.Ascending ? " ▲" : " ▼") : "");
-            DrawCell(g, label, rect, fore, DetailsCells.RightAligned(cell.Column));
-            g.DrawLine(pen, cell.X - ox + cell.Width - 1, Scaled(3), cell.X - ox + cell.Width - 1, height - Scaled(3));
+            var cell = _layout.Header[i];
+            var left = cell.X - ox;
+            // Q36: 乗せた・押した色。幅を変えているあいだは塗らない
+            if (i == _headerHot && _headerDrag is null)
+                using (var brush = new SolidBrush(_headerPress == i ? pressed : hot))
+                    g.FillRectangle(brush, left, 0, cell.Width - 1, height - 1);
+            // 文字は印の下の残りで縦中央
+            var rect = new Rectangle(left + ColumnPaddingValue, HeaderMarkHeight, Math.Max(0, cell.Width - ColumnPaddingValue * 2), height - HeaderMarkHeight);
+            DrawCell(g, DetailsCells.Header(cell.Column), rect, fore, DetailsCells.RightAligned(cell.Column));
+            if (HeaderSort.ShowsArrow(_sortOrder, cell.Column))
+            {
+                // 山形（昇順は上向き、降順は下向き）を見出しのセルの上端の中央に
+                var (w, h) = (Scaled(8), Scaled(4));
+                var (cx, top) = (left + cell.Width / 2, Scaled(2));
+                var up = _sortOrder.Direction == SortDirection.Ascending;
+                var (tip, foot) = up ? (top, top + h) : (top + h, top);
+                var old = g.SmoothingMode;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.DrawLines(markPen, [new Point(cx - w / 2, foot), new Point(cx, tip), new Point(cx + w / 2, foot)]);
+                g.SmoothingMode = old;
+            }
+            g.DrawLine(linePen, left + cell.Width - 1, 0, left + cell.Width - 1, height - 1);
         }
+        g.DrawLine(linePen, 0, height - 1, ClientSize.Width, height - 1);   // 見出しと項目を分ける
     }
+
+    /// <summary>Q36: 見出しの上端に取る、ソートの印を置く余白。</summary>
+    private int HeaderMarkHeight => Scaled(4);
+
+    /// <summary>Q36: 乗せている見出しのセル（無ければ -1）を変え、変わったときだけ見出しの行を描き直す。</summary>
+    private void SetHeaderHot(int cell)
+    {
+        if (cell == _headerHot) return;
+        _headerHot = cell;
+        InvalidateHeader();
+    }
+
+    private void InvalidateHeader() => Invalidate(new Rectangle(0, 0, ClientSize.Width, _layout.HeaderHeight));
 
     /// <summary>省略は収まらないときだけ EndEllipsis を付ける（収まる文字に「…」を出さない。R-113）。</summary>
     private void DrawCell(Graphics g, string text, Rectangle rect, Color color, bool right)
@@ -635,7 +669,7 @@ public sealed class FileListView : Control
             _headerRightDown = e.Button == MouseButtons.Right;
             if (e.Button != MouseButtons.Left) return;
             if (border >= 0) _headerDrag = (border, e.X, _layout.Header[border].Width);   // 幅のドラッグを始める
-            else _headerPress = DetailsLayout.HeaderCellAt(_layout.Header, x);            // 離した時点でソート
+            else { _headerPress = DetailsLayout.HeaderCellAt(_layout.Header, x); InvalidateHeader(); }   // 離した時点でソート
             return;
         }
 
@@ -685,6 +719,9 @@ public sealed class FileListView : Control
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
+        SetHeaderHot(_layout.HeaderHeight > 0 && e.Y >= 0 && e.Y < _layout.HeaderHeight
+                     && DetailsLayout.HeaderBorderAt(_layout.Header, e.X + _layout.ScrollOffset(_scroll).X, Scaled(4)) < 0
+            ? DetailsLayout.HeaderCellAt(_layout.Header, e.X + _layout.ScrollOffset(_scroll).X) : -1);
 
         if (_headerDrag is { } drag && e.Button == MouseButtons.Left)
         {
@@ -763,6 +800,7 @@ public sealed class FileListView : Control
     {
         base.OnMouseLeave(e);
         ResetNameTip();
+        SetHeaderHot(-1);
     }
 
     /// <summary>R-78: ドラッグ中にカーソルに付ける画像。先頭の項目のアイコンと名前、複数なら件数。</summary>
@@ -877,6 +915,7 @@ public sealed class FileListView : Control
             var drag = _headerDrag;
             var press = _headerPress;
             (_headerDrag, _headerPress) = (null, -1);
+            InvalidateHeader();
             if (drag is { } d && _dragWidths.Count > 0)   // 動かしていなければ保存しない
             {
                 var column = _layout.Header[d.Cell].Column;
