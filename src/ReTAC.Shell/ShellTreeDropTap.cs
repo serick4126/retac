@@ -25,16 +25,26 @@ internal sealed class ShellTreeDropTap(IOleDropTarget inner) : IOleDropTarget
 {
     private const string DropTargetProp = "OleDropTargetInterface";
 
+    // 包んだ先が失敗を返した・例外を投げたときは、右ボタンの印を消す。失敗の後に DragLeave / Drop が来るとは限らず、
+    // 残すと次の左ボタンのドラッグが右ボタンに見える。印は包んだ先を呼ぶ前に立てる（NSTC の通知の中で読まれるため）
     public int DragEnter(IntPtr data, uint keyState, long point, ref uint effect)
     {
         DragButtonState.Enter(keyState);
-        return inner.DragEnter(data, keyState, point, ref effect);
+        try { return ResetIfFailed(inner.DragEnter(data, keyState, point, ref effect)); }
+        catch { DragButtonState.Reset(); throw; }
     }
 
     public int DragOver(uint keyState, long point, ref uint effect)
     {
         DragButtonState.Over(keyState);
-        return inner.DragOver(keyState, point, ref effect);
+        try { return ResetIfFailed(inner.DragOver(keyState, point, ref effect)); }
+        catch { DragButtonState.Reset(); throw; }
+    }
+
+    private static int ResetIfFailed(int hr)
+    {
+        if (hr < 0) DragButtonState.Reset();
+        return hr;
     }
 
     public int DragLeave()
@@ -69,9 +79,7 @@ internal sealed class ShellTreeDropTap(IOleDropTarget inner) : IOleDropTarget
         }, IntPtr.Zero);
         if (tree == IntPtr.Zero) return false;
 
-        var pointer = GetProp(tree, DropTargetProp);
-        if (pointer == IntPtr.Zero) return false;
-        if (Marshal.GetObjectForIUnknown(pointer) is not IOleDropTarget current) return false;
+        if (Resolve(GetProp(tree, DropTargetProp), Marshal.GetObjectForIUnknown) is not { } current) return false;
         if (current is ShellTreeDropTap) return true;
         var result = Replace(tree, current, RevokeDragDrop, RegisterDragDrop);
         // Lost は RegisterDragDrop が続けて 2 回失敗したとき（資源が尽きたときくらいしか起きない）。ツリーはドロップを受けなくなるが、
@@ -81,6 +89,18 @@ internal sealed class ShellTreeDropTap(IOleDropTarget inner) : IOleDropTarget
     }
 
     internal enum TapResult { Wrapped, NotWrapped, Lost }
+
+    /// <summary>
+    /// 登録された受け口を取り出す。取れなければ null（包まずに、右ボタンのドロップを左ボタンと同じに扱う）。
+    /// 文書化されていないプロパティの値なので、COM のオブジェクトにできずに例外が出ることもあり得る。例外もここで null に落とし、
+    /// ツリーを作る処理（SetRoot / SetDesktopRoot）まで抜けないようにする。変換を引数で受けるのは、失敗の経路をテストするため
+    /// </summary>
+    internal static IOleDropTarget? Resolve(IntPtr pointer, Func<IntPtr, object> toObject)
+    {
+        if (pointer == IntPtr.Zero) return null;
+        try { return toObject(pointer) as IOleDropTarget; }
+        catch (Exception) { return null; }
+    }
 
     /// <summary>
     /// 受け口の差し替え。登録済みのウィンドウへは登録できないので、先に外してから包んだものを登録する。

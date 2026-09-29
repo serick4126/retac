@@ -9,8 +9,12 @@ public class ShellTreeDropTapTests
     private sealed class FakeTarget : IOleDropTarget
     {
         public List<string> Calls { get; } = [];
-        public int DragEnter(IntPtr data, uint keyState, long point, ref uint effect) { Calls.Add($"Enter {keyState}"); return 0; }
-        public int DragOver(uint keyState, long point, ref uint effect) { Calls.Add($"Over {keyState}"); return 0; }
+        /// <summary>DragEnter / DragOver が返す値。負なら失敗</summary>
+        public int Result { get; set; }
+        public bool Throws { get; set; }
+        public int DragEnter(IntPtr data, uint keyState, long point, ref uint effect) { Calls.Add($"Enter {keyState}"); return Answer(); }
+        public int DragOver(uint keyState, long point, ref uint effect) { Calls.Add($"Over {keyState}"); return Answer(); }
+        private int Answer() => Throws ? throw new InvalidOperationException() : Result;
         public int DragLeave() { Calls.Add("Leave"); return 0; }
         public int Drop(IntPtr data, uint keyState, long point, ref uint effect) { Calls.Add($"Drop {keyState}"); return 0; }
     }
@@ -90,5 +94,58 @@ public class ShellTreeDropTapTests
     {
         var result = ShellTreeDropTap.Replace((IntPtr)1, new FakeTarget(), _ => 0, (_, _) => -1);
         Assert.Equal(ShellTreeDropTap.TapResult.Lost, result);
+    }
+
+    [Fact]
+    public void 包んだ先のDragEnterが失敗したら右ボタンの印を消す()
+    {
+        var inner = new FakeTarget { Result = unchecked((int)0x80004005) };   // E_FAIL
+        var tap = new ShellTreeDropTap(inner);
+        uint effect = 7;
+        Assert.Equal(unchecked((int)0x80004005), tap.DragEnter(IntPtr.Zero, 2, 0, ref effect));
+        Assert.False(DragButtonState.Right);   // 失敗の後に DragLeave が来なくても残さない
+        inner.Result = 0;
+        tap.DragEnter(IntPtr.Zero, 1, 0, ref effect);   // 続く左ボタンのドラッグ
+        Assert.False(DragButtonState.Right);
+    }
+
+    [Fact]
+    public void 包んだ先のDragOverが失敗したら右ボタンの印を消す()
+    {
+        var inner = new FakeTarget();
+        var tap = new ShellTreeDropTap(inner);
+        uint effect = 7;
+        tap.DragEnter(IntPtr.Zero, 2, 0, ref effect);
+        inner.Result = unchecked((int)0x80004005);
+        tap.DragOver(2, 0, ref effect);
+        Assert.False(DragButtonState.Right);
+        inner.Result = 0;
+        tap.DragEnter(IntPtr.Zero, 1, 0, ref effect);
+        Assert.False(DragButtonState.Right);
+    }
+
+    [Fact]
+    public void 包んだ先が例外を投げたら右ボタンの印を消して例外はそのまま返す()
+    {
+        var inner = new FakeTarget { Throws = true };
+        var tap = new ShellTreeDropTap(inner);
+        uint effect = 7;
+        Assert.Throws<InvalidOperationException>(() => tap.DragEnter(IntPtr.Zero, 2, 0, ref effect));
+        Assert.False(DragButtonState.Right);
+        inner.Throws = false;
+        tap.DragEnter(IntPtr.Zero, 2, 0, ref effect);
+        inner.Throws = true;
+        Assert.Throws<InvalidOperationException>(() => tap.DragOver(2, 0, ref effect));
+        Assert.False(DragButtonState.Right);
+    }
+
+    [Fact]
+    public void 受け口を取り出せなければnullにして例外を外へ出さない()
+    {
+        Assert.Null(ShellTreeDropTap.Resolve(IntPtr.Zero, _ => throw new InvalidOperationException("呼ばれない")));
+        Assert.Null(ShellTreeDropTap.Resolve((IntPtr)1, _ => throw new System.Runtime.InteropServices.COMException()));
+        Assert.Null(ShellTreeDropTap.Resolve((IntPtr)1, _ => new object()));   // 受け口ではないもの
+        var target = new FakeTarget();
+        Assert.Same(target, ShellTreeDropTap.Resolve((IntPtr)1, _ => target));
     }
 }
