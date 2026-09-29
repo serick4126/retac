@@ -90,9 +90,10 @@ public sealed class ShellIcons : IDisposable
     private Bitmap? Load(string path, uint attributes, bool useFileAttributes)
     {
         // R-66-2: 表示寸法に対応した解像度を選ぶ。16px 表示に 32px を縮小するとにじむため、
-        // 16px までは SMALLICON（等倍）、それより大きい表示は LARGEICON（32px）から縮小する。
-        // ponytail: 元解像度の上限は 32px。拡大率 250% 超（=40px 以上）を実用にするなら
-        // SHGetImageList(SHIL_EXTRALARGE/JUMBO) へ差し替える。
+        // 16px までは SMALLICON（等倍）、32px までは LARGEICON（32px）から縮小する。
+        // R-66-2 / R-117: 33px 以上はシステムのイメージリスト（48px・256px）から縮める。
+        // SHIL_JUMBO は小さな絵しか持たない種類でも 256px の枠の中央に小さく描いたものを返すことがある（OS の仕様）。
+        if (_size > 32) return LoadLarge(path, attributes, useFileAttributes);
         var flags = SHGFI_ICON
                   | (useFileAttributes ? SHGFI_USEFILEATTRIBUTES : 0)
                   | (_size <= 16 ? SHGFI_SMALLICON : SHGFI_LARGEICON);
@@ -102,22 +103,40 @@ public sealed class ShellIcons : IDisposable
 
         try
         {
-            using var icon = Icon.FromHandle(info.hIcon);
-            using var source = icon.ToBitmap();
-            // 等倍ならリサンプルせずにそのまま返す（にじみを出さない）
-            if (source.Width == _size && source.Height == _size) return new Bitmap(source);
-
-            var bitmap = new Bitmap(_size, _size);
-            using var g = Graphics.FromImage(bitmap);
-            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            g.DrawImage(source, 0, 0, _size, _size);
-            return bitmap;
+            return Scale(info.hIcon);
         }
         finally
         {
             DestroyIcon(info.hIcon);
         }
+    }
+
+    private Bitmap? LoadLarge(string path, uint attributes, bool useFileAttributes)
+    {
+        var flags = ShellImageInterop.SHGFI_SYSICONINDEX | (useFileAttributes ? SHGFI_USEFILEATTRIBUTES : 0);
+        if (SHGetFileInfo(path, attributes, out var info, (uint)Marshal.SizeOf<SHFILEINFO>(), flags) == IntPtr.Zero)
+            return null;
+        return ShellImageInterop.WithImageList(_size <= 48 ? ShellImageInterop.SHIL_EXTRALARGE : ShellImageInterop.SHIL_JUMBO, images =>
+        {
+            if (images.GetIcon(info.iIcon, ShellImageInterop.ILD_TRANSPARENT, out var hicon) != 0 || hicon == IntPtr.Zero) return null;
+            try { return Scale(hicon); }
+            finally { DestroyIcon(hicon); }
+        }, (Bitmap?)null);
+    }
+
+    private Bitmap Scale(IntPtr hicon)
+    {
+        using var icon = Icon.FromHandle(hicon);
+        using var source = icon.ToBitmap();
+        // 等倍ならリサンプルせずにそのまま返す（にじみを出さない）
+        if (source.Width == _size && source.Height == _size) return new Bitmap(source);
+
+        var bitmap = new Bitmap(_size, _size);
+        using var g = Graphics.FromImage(bitmap);
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        g.DrawImage(source, 0, 0, _size, _size);
+        return bitmap;
     }
 
     public void Dispose()

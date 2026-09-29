@@ -6745,6 +6745,10 @@
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
         "line": 54
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellOverlays.cs",
+        "line": 9
       }
     ],
     "N-06": [
@@ -8937,12 +8941,52 @@
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
         "line": 118
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellIcons.cs",
+        "line": 94
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellImageInterop.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellImageInterop.cs",
+        "line": 139
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellThumbnails.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellThumbnails.cs",
+        "line": 32
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellThumbnails.cs",
+        "line": 39
       }
     ],
     "R-118": [
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
         "line": 46
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellImageInterop.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellOverlays.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellThumbnails.cs",
+        "line": 32
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellThumbnails.cs",
+        "line": 39
       }
     ],
     "R-119": [
@@ -10325,6 +10369,10 @@
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
         "line": 92
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellIcons.cs",
+        "line": 94
       }
     ],
     "R-66-3": [

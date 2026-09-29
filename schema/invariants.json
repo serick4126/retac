@@ -590,6 +590,15 @@
       "rule": "項目・部品（行頭アイコン・名前・列のセル・チェックボックス・サムネイル）・見出しの矩形はレイアウトだけが計算する。部品の矩形は描画と部品の当たり判定に、項目の矩形は投げ縄・カーソルの枠・落とす先の枠に使う。FileListView の側で計算し直さない。",
       "enforcedBy": "domain:IFileViewLayout（ColumnLayout・DetailsLayout・GridLayout）。app:FileListView は幾何を HitTest・ItemBounds・IconBounds・NameBounds・ExtensionBounds・CheckBoxBounds・CellBounds・Header・HeaderBorderAt・HeaderCellAt・IndexesIn・Reveal にだけ聞き、DetailsLayout の具象や static は Compute 以外で呼ばない",
       "testedBy": "tests/ReTAC.Domain.Tests/LayoutContractTests.cs, tests/ReTAC.Domain.Tests/DetailsLayoutTests.cs, tests/ReTAC.Domain.Tests/ColumnLayoutTests.cs, tests/ReTAC.Domain.Tests/GridLayoutTests.cs"
+    },
+    {
+      "id": "INV-THUMBNAIL-NO-CLOUD-DOWNLOAD",
+      "status": "enforced",
+      "specIds": ["R-117", "R-118"],
+      "applies": ["app:ReTAC.Shell.ShellImageWorker", "type:ReTAC.Domain.Entries.CloudFiles"],
+      "rule": "サムネイルと OS の印の取得は、クラウドのファイルのダウンロード（取り込み）を誘発しない。クラウドの項目のサムネイルは OS のキャッシュにあるものだけで、作る要求を出さない。設定で変えられない。",
+      "enforcedBy": "shell:ShellImageWorker.QueryCached（Cloud なら 2 段目へ回さない）/ domain:CloudFiles.IsPlaceholder（RECALL_ON_DATA_ACCESS・RECALL_ON_OPEN・OFFLINE）",
+      "testedBy": "tests/ReTAC.Domain.Tests/ShellThumbnailsTests.cs, tests/ReTAC.Domain.Tests/CloudFilesTests.cs, tests/ReTAC.Domain.Tests/CloudHydrationTests.cs（RETAC_CLOUD_DIR があるときだけ）"
     }
   ]
 }

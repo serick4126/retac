@@ -57,4 +57,17 @@ public class ShellIconsTests
         using var icons = new ShellIcons(16);
         Assert.NotNull(icons.ForPath("notepad.exe"));
     }
+
+    [Theory]
+    [InlineData(48)]
+    [InlineData(96)]
+    [InlineData(256)]
+    public void 大きなアイコンは指定の大きさで返る(int size)
+    {
+        using var icons = new ShellIcons(size);
+        var bitmap = icons.ForFile(@"C:\x\a.txt");
+        Assert.NotNull(bitmap);
+        Assert.Equal((size, size), (bitmap!.Width, bitmap.Height));
+        Assert.NotNull(icons.ForFolder());
+    }
 }
