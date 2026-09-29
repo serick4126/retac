@@ -82,6 +82,7 @@ public sealed record IconsViewSettings
     public int ExtraLargeSize { get; init; } = 256;
     [JsonConverter(typeof(LenientEnumConverter<CheckBoxMode>))]
     public CheckBoxMode CheckBoxes { get; init; } = CheckBoxMode.HoverAndMarked;
+    /// <summary>R-117: 中アイコン以上でサムネイルを出す。クラウドのファイルは OS のキャッシュにあるものだけ（設定で変えられない）。</summary>
     public bool Thumbnails { get; init; } = true;
     public bool FolderThumbnails { get; init; } = true;
     /// <summary>R-119: 中・大・特大の名前の行数。</summary>
@@ -102,6 +103,7 @@ public sealed record TilesViewSettings
     public int ContentSize { get; init; } = 48;
     [JsonConverter(typeof(LenientEnumConverter<CheckBoxMode>))]
     public CheckBoxMode CheckBoxes { get; init; } = CheckBoxMode.HoverAndMarked;
+    /// <summary>R-117: 中アイコン以上でサムネイルを出す。クラウドのファイルは OS のキャッシュにあるものだけ（設定で変えられない）。</summary>
     public bool Thumbnails { get; init; } = true;
     public bool FolderThumbnails { get; init; } = true;
 

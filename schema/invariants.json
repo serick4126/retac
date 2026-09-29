@@ -539,6 +539,68 @@
       "rule": "ファイルビューの設定は、一覧・詳細・アイコン・並べて表示の系統ごとに別の欄（型）へ持つ。全ビューに同じく効くものだけ共通の欄（Common）に持つ。詳細表示の列・並べて表示の情報は、重複を許す型だが Normalize が読み込み時に重複を捨てる。",
       "enforcedBy": "domain:FileViewSettings（系統ごとの欄と Common の欄。欄ごとに別の型）/ FileViewSettings.Normalize（Columns・Info の重複を DistinctBy / Distinct で捨てる）",
       "testedBy": "tests/ReTAC.Domain.Tests/FileViewSettingsTests.cs"
+    },
+    {
+      "id": "INV-NO-WIDTH-HANDLE-ON-ITEMS",
+      "status": "deferred",
+      "specIds": ["R-113"],
+      "applies": ["type:ReTAC.Domain.Listing.IFileViewLayout"],
+      "rule": "ファイルリストの項目の部分には、列の幅を変える仕組みを持たせない。幅を変える操作は、詳細表示の見出しの境界と設定画面だけ。",
+      "reason": "Phase 15 の仕様で決めた（項目を選ぼうとして幅が変わるのは非常に悪い使い勝手。利用者）。詳細表示の見出しは Phase 15 で作るので、それまでは幅を変える操作自体が一覧の設定画面にしか無い。",
+      "plannedShape": {
+        "note": "レイアウトの当たり判定が幅の境界を返すのは見出しの行だけ。項目の領域の種類（行頭アイコン・名前・名前以外・チェックボックス・項目の無い所）に境界は無い。"
+      },
+      "enforcedBy": null
+    },
+    {
+      "id": "INV-DETAILS-ROW-HIT",
+      "status": "deferred",
+      "specIds": ["R-114", "R-11-2"],
+      "applies": ["type:ReTAC.Domain.Listing.IFileViewLayout", "type:ReTAC.Domain.Listing.DetailsViewSettings"],
+      "rule": "詳細表示では行全体を項目とする。行頭アイコンと名前の列（文字と列の中の余白）は押した時点でカーソルを移し、動かせば D&D。名前の列以外は、押しただけではカーソルを動かさず、動かさずに離したら移し、動かしたら投げ縄（Phase 15 の間は保留を捨てて何もしない）。",
+      "reason": "詳細表示は Phase 15 で作る。投げ縄は Phase 16。",
+      "plannedShape": {
+        "note": "レイアウトが座標から項目の番号と領域の種類を返し、MarkOnRelease が「名前以外」の保留（離したらカーソル・Shift なら範囲マーク、動いたら捨てる）を持つ。"
+      },
+      "enforcedBy": null
+    },
+    {
+      "id": "INV-NO-COLUMN-REORDER-BY-DRAG",
+      "status": "deferred",
+      "specIds": ["R-114"],
+      "applies": ["type:ReTAC.Domain.Listing.DetailsViewSettings"],
+      "rule": "詳細表示の列の並びは、見出しのドラッグでは変えない。設定画面の ▲▼ だけで変える（ソートしようとして誤って並べ替えるため）。",
+      "reason": "詳細表示の見出しは Phase 15 で作る。設定画面の ▲▼ は Phase 14 で作成済み。",
+      "plannedShape": {
+        "note": "見出しのドラッグは境界の上でだけ幅の変更になり、それ以外の所では何もしない（クリックはソート）。"
+      },
+      "enforcedBy": null
+    },
+    {
+      "id": "INV-VIEWMODE-APP-WIDE",
+      "status": "deferred",
+      "specIds": ["R-112"],
+      "applies": ["settings:FileViews"],
+      "rule": "今の表示モードはアプリ全体で 1 つ。「表示」メニュー・コマンド・Ctrl+ホイールの切り替えはすべて同じ処理を通り、全ウィンドウへ即時に当てて保存する。ウィンドウごと・フォルダごとには持たない。",
+      "reason": "表示モードの切り替えは Phase 15 で作る（仕様 ID は R-112-4。コードに出たら specIds と applies の settings:ViewMode を足す）。",
+      "plannedShape": {
+        "ViewMode": "enum（V9 の 8 モード。既定 List。知らない値・未実装のモードは List）",
+        "editedBy": "runtime:MainForm",
+        "note": "切り替えても項目・カーソル・マーク・ソートは保ち、スクロールはカーソルが見える位置に直す。"
+      },
+      "enforcedBy": null
+    },
+    {
+      "id": "INV-LAYOUT-GEOMETRY-SINGLE-SOURCE",
+      "status": "deferred",
+      "specIds": ["R-112"],
+      "applies": ["type:ReTAC.Domain.Listing.IFileViewLayout", "type:ReTAC.Domain.Listing.ColumnLayout"],
+      "rule": "項目・部品（行頭アイコン・名前・列のセル）・見出しの矩形はレイアウトだけが計算する。描画・当たり判定・見出しの操作・ドロップの枠は同じ答えを使い、FileListView の側で列の幅を計算し直さない。",
+      "reason": "配置の一般化は Phase 15 で作る。今の FileListView は ColumnLayout の具象のプロパティを直接読んでいる。",
+      "plannedShape": {
+        "note": "IFileViewLayout に部品の矩形と見出し（論理列 ID ごとのセルの矩形・境界の当たり判定）を足す。詳細表示だけ型を判定して別に計算する形にしない。"
+      },
+      "enforcedBy": null
     }
   ]
 }

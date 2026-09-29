@@ -1465,7 +1465,8 @@
           "type": "bool",
           "nullable": false,
           "required": false,
-          "mutability": "init"
+          "mutability": "init",
+          "doc": "R-117: 中アイコン以上でサムネイルを出す。クラウドのファイルは OS のキャッシュにあるものだけ（設定で変えられない）。"
         },
         {
           "name": "FolderThumbnails",
@@ -1696,7 +1697,8 @@
           "type": "bool",
           "nullable": false,
           "required": false,
-          "mutability": "init"
+          "mutability": "init",
+          "doc": "R-117: 中アイコン以上でサムネイルを出す。クラウドのファイルは OS のキャッシュにあるものだけ（設定で変えられない）。"
         },
         {
           "name": "FolderThumbnails",
@@ -7596,7 +7598,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 112
+        "line": 114
       },
       {
         "file": "src/ReTAC.Domain/Listing/LenientEnumConverter.cs",
@@ -7676,7 +7678,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 98
+        "line": 99
       },
       {
         "file": "src/ReTAC.Domain/Listing/LenientEnumConverter.cs",
@@ -7687,6 +7689,16 @@
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
         "line": 8
+      }
+    ],
+    "R-117": [
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 85
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 106
       }
     ],
     "R-118": [
@@ -7702,7 +7714,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 87
+        "line": 88
       }
     ],
     "R-12": [
@@ -10846,7 +10858,7 @@
     "S-14": [
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 113
+        "line": 115
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
