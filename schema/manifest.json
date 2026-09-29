@@ -2285,6 +2285,33 @@
       "file": "src/ReTAC.Domain/Listing/NameWidths.cs",
       "doc": "R-113: 名前の列の方式から、名前の文字（本体 + 間 + 拡張子）に使ってよい幅の上限を求める。"
     },
+    "ReTAC.Domain.Listing.NameWrap": {
+      "id": "type:ReTAC.Domain.Listing.NameWrap",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Listing/NameWrap.cs",
+      "doc": "R-119: アイコン表示の名前の折り返し。行数まで書記素の境目で折り返し、あふれたら最後の行で本体の末尾を「…」にして拡張子を残す。 拡張子（tail）は揃えず、本体に続けて描く（Q35）。隠した拡張子（R-01-7）は呼び出し側が tail を空にして渡す。 ponytail: 語の境目を見ずに書記素ごとに詰める。日本語の名前がほとんどなので、英語の語の途中の折り返しが気になるようなら空白を優先する形に広げる。"
+    },
+    "ReTAC.Domain.Listing.NameWrap+Result": {
+      "id": "type:ReTAC.Domain.Listing.NameWrap+Result",
+      "kind": "sealed record",
+      "file": "src/ReTAC.App/LeftPanelCommands.cs",
+      "fields": [
+        {
+          "name": "Lines",
+          "type": "IReadOnlyList<string>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Truncated",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
     "ReTAC.Domain.Listing.ScrollPosition": {
       "id": "type:ReTAC.Domain.Listing.ScrollPosition",
       "kind": "struct",
@@ -6885,6 +6912,10 @@
         "line": 49
       },
       {
+        "file": "src/ReTAC.Domain/Listing/NameWrap.cs",
+        "line": 7
+      },
+      {
         "file": "src/ReTAC.Shell/RegisteredExtensions.cs",
         "line": 7
       }
@@ -8657,6 +8688,10 @@
       {
         "file": "src/ReTAC.Domain/Listing/NameWidths.cs",
         "line": 3
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/NameWrap.cs",
+        "line": 29
       }
     ],
     "R-114": [
@@ -8881,6 +8916,10 @@
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
         "line": 111
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/NameWrap.cs",
+        "line": 6
       }
     ],
     "R-12": [
