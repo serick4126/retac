@@ -4768,11 +4768,11 @@
     "A-01": [
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 452
+        "line": 464
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 477
+        "line": 489
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -4888,7 +4888,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 422
+        "line": 434
       },
       {
         "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
@@ -6118,7 +6118,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 451
+        "line": 463
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -7202,19 +7202,27 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 422
+        "line": 423
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 430
+        "line": 434
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 467
+        "line": 442
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 591
+        "line": 479
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 603
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 620
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListState.cs",
@@ -7314,7 +7322,7 @@
     "R-110-1": [
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 506
+        "line": 518
       },
       {
         "file": "src/ReTAC.App/ShellDrag.cs",
@@ -7386,7 +7394,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 541
+        "line": 553
       },
       {
         "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
@@ -7416,7 +7424,7 @@
     "R-111": [
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 451
+        "line": 463
       }
     ],
     "R-111-1": [
@@ -7426,7 +7434,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 584
+        "line": 596
       }
     ],
     "R-111-2": [
@@ -7484,11 +7492,11 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 492
+        "line": 504
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 554
+        "line": 566
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -8914,7 +8922,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 436
+        "line": 448
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -8932,11 +8940,11 @@
     "R-65-2": [
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 451
+        "line": 463
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 467
+        "line": 479
       }
     ],
     "R-66": [
@@ -8962,7 +8970,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 621
+        "line": 644
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
@@ -9010,7 +9018,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 626
+        "line": 649
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -9170,7 +9178,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 603
+        "line": 615
       },
       {
         "file": "src/ReTAC.Domain/Listing/WheelAccumulator.cs",
@@ -9270,15 +9278,15 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 478
+        "line": 490
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 483
+        "line": 495
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 519
+        "line": 531
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -10934,7 +10942,7 @@
     "V-09": [
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 571
+        "line": 583
       }
     ],
     "V-10": [
