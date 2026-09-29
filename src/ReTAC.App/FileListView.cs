@@ -140,7 +140,7 @@ public sealed class FileListView : Control
     /// <summary>N-06: キーボードから開くポップアップを出す位置（カーソル行の直下・クライアント座標）。</summary>
     public Point PopupAnchor()
     {
-        var (x, y, _, h) = FileViewScroll.ToVisible(_layout, _scroll, _layout.IconBounds(_state.CursorIndex));
+        var (x, y, _, h) = FileViewScroll.VisibleBounds(_layout, _scroll, _state.CursorIndex);
         return new Point(x + _icons.Size, y + h);
     }
 
@@ -160,6 +160,7 @@ public sealed class FileListView : Control
     {
         // 自動更新などでボタンを押したまま一覧が入れ替わることがある。押した時点の添字は
         // 別の項目を指すことになるので、離した時点の処理（マーク・右ボタンのドラッグ／メニュー）は捨てる
+        ResetNameTip();
         _rightDown = null;
         _markOnRelease.Cancel();
         _dragIndex = -1;
@@ -187,8 +188,8 @@ public sealed class FileListView : Control
     private int ColumnPaddingValue => Scaled(4);
 
     /// <summary>項目を描ける領域（見出しとスクロールバーを除く）。</summary>
-    private int ViewportWidth => Math.Max(0, ClientSize.Width - (_vScrollBar.Visible ? _vScrollBar.Width : 0));
-    private int ViewportHeight => Math.Max(0, ClientSize.Height - _layout.HeaderHeight - (_hScrollBar.Visible ? _hScrollBar.Height : 0));
+    private int ViewportWidth => Math.Max(0, ClientSize.Width - (_layout.ScrollBars.Vertical ? _vScrollBar.Width : 0));
+    private int ViewportHeight => Math.Max(0, ClientSize.Height - _layout.HeaderHeight - (_layout.ScrollBars.Horizontal ? _hScrollBar.Height : 0));
 
     private void RebuildFontResources()
     {
@@ -206,6 +207,7 @@ public sealed class FileListView : Control
     /// </summary>
     public void SetView(FileViewMode mode, FileViewSettings views, IReadOnlyDictionary<string, int?> columnWidths, SortOrder sortOrder)
     {
+        ResetNameTip();
         var modeChanged = mode != _mode;
         (_mode, _views, _columnWidths, _sortOrder) = (mode, views, columnWidths, sortOrder);
         if (modeChanged) { _scroll = default; _wheel.Reset(); }
@@ -233,12 +235,13 @@ public sealed class FileListView : Control
         var max = _layout.MaxScrollPosition(_state.Count, ViewportWidth, ViewportHeight);
         var page = _layout.VisibleSteps(ViewportWidth, ViewportHeight);
         _scroll = new ScrollPosition(horizontal ? Math.Clamp(_scroll.X, 0, max.X) : 0, vertical ? Math.Clamp(_scroll.Y, 0, max.Y) : 0);
-        Configure(_hScrollBar, max.X, page.X, _scroll.X);
-        Configure(_vScrollBar, max.Y, page.Y, _scroll.Y);
+        // Control.Visible は親がまだ表示されていないと false を返すので、要否はレイアウトの答えで決める
+        Configure(_hScrollBar, horizontal, max.X, page.X, _scroll.X);
+        Configure(_vScrollBar, vertical, max.Y, page.Y, _scroll.Y);
 
-        static void Configure(ScrollBar bar, int max, int page, int value)
+        static void Configure(ScrollBar bar, bool needed, int max, int page, int value)
         {
-            if (!bar.Visible) return;
+            if (!needed) return;
             bar.Minimum = 0;
             bar.LargeChange = Math.Max(1, page);
             bar.SmallChange = 1;
@@ -323,10 +326,12 @@ public sealed class FileListView : Control
         var baseText = showExtension ? entry.BaseName : NameWithoutAlignment(entry);
         var baseRight = showExtension ? ext.X - Gap : name.Right;
         var baseRect = new Rectangle(name.X + Gap, top, Math.Max(0, baseRight - name.X - Gap), _measure.LineHeight());
-        TextRenderer.DrawText(g, baseText, _font, baseRect, foreground, TextMeasure.Flags | TextFormatFlags.EndEllipsis);
+        // R-01-4: すべて表示では「…」を出さない。実際に収まらないときだけ EndEllipsis を付ける（1px の測り違いで出さない）
+        var ellipsis = IsTruncated(index) ? TextFormatFlags.EndEllipsis : 0;
+        TextRenderer.DrawText(g, baseText, _font, baseRect, foreground, TextMeasure.Flags | ellipsis);
         if (showExtension)
             TextRenderer.DrawText(g, entry.Extension, _font, ext with { Y = top, Height = _measure.LineHeight() }, foreground,
-                TextMeasure.Flags | TextFormatFlags.EndEllipsis);
+                TextMeasure.Flags | ellipsis);
     }
 
     /// <summary>揃えた拡張子を出さないとき（詳細表示で名前に拡張子を出さない設定）の名前。一覧では常に本体（拡張子は揃えて出す）。</summary>
@@ -543,11 +548,16 @@ public sealed class FileListView : Control
         _nameTip.SetToolTip(this, index >= 0 && IsTruncated(index) ? _state.Entries[index].Name : "");
     }
 
+    private void ResetNameTip()
+    {
+        _tipIndex = -1;
+        _nameTip.SetToolTip(this, "");
+    }
+
     protected override void OnMouseLeave(EventArgs e)
     {
         base.OnMouseLeave(e);
-        _tipIndex = -1;
-        _nameTip.SetToolTip(this, "");
+        ResetNameTip();
     }
 
     /// <summary>R-78: ドラッグ中にカーソルに付ける画像。先頭の項目のアイコンと名前、複数なら件数。</summary>
@@ -671,7 +681,7 @@ public sealed class FileListView : Control
     {
         base.OnMouseWheel(e);
         // スクロールできない間にたまった分が、後でまとめて効かないようにする
-        if (!_hScrollBar.Visible) { _wheel.Reset(); return; }
+        if (!_layout.ScrollBars.Horizontal) { _wheel.Reset(); return; }
         // R-76: 1 ノッチ = 1 列。左端は常に列の境界に揃う
         ScrollColumns(_wheel.Add(e.Delta, SystemInformation.MouseWheelScrollDelta));
     }

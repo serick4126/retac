@@ -1,5 +1,6 @@
 using System.Drawing;
 using ReTAC.App;
+using ReTAC.Domain.Listing;
 
 namespace ReTAC.Domain.Tests;
 
@@ -55,5 +56,19 @@ public class FileListViewPressTests
 
         Assert.NotEqual(0, list.State.CursorIndex);
         Assert.Equal(scrolled, list.ScrollPosition);   // 押した項目はすでに見えている列なのでスクロールは動かない
+    }
+
+    [Fact]
+    public void 一度も表示していなくてもスクロールバーの範囲が設定されカーソルは見える位置へ出る()
+    {
+        using var list = CreateScrollableList();   // フォームには載せない（子の Visible は false を返す）
+        Assert.True(list.Layout.ScrollBars.Horizontal);
+
+        list.ScrollColumns(-1000);
+        Assert.True(list.ScrollPosition.X > 0);
+
+        list.MoveCursorTo(199);
+        var (x, _, w, _) = FileViewScroll.VisibleBounds(list.Layout, list.ScrollPosition, 199);
+        Assert.True(x >= 0 && x < 300 && w > 0);
     }
 }
