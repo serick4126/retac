@@ -22,6 +22,21 @@ internal static class RowColors
     }
 
     /// <summary>
+    /// R-114: 詳細表示の見出しの地・文字・区切り線。OS を直接読まず（INV-THEME-STARTUP-OS-STATE）、テーマの背景を 1 段暗く
+    /// （暗い配色なら明るく）した色を地に、前景を文字に、地と文字の中間を区切り線にする。
+    /// </summary>
+    public static (Color Back, Color Fore, Color Line) Header(Theme theme)
+    {
+        var back = Blend(theme.Background, theme.Background.GetBrightness() < 0.5f ? Color.White : Color.Black, 0.1f);
+        return (back, theme.Foreground, Blend(back, theme.Foreground, 0.5f));
+    }
+
+    private static Color Blend(Color from, Color to, float amount) => Color.FromArgb(
+        (int)Math.Round(from.R + (to.R - from.R) * amount),
+        (int)Math.Round(from.G + (to.G - from.G) * amount),
+        (int)Math.Round(from.B + (to.B - from.B) * amount));
+
+    /// <summary>
     /// R-110-2: 落とす先の枠の色。ふだんは文字の色。独自の配色では文字と地を同じ色にできるので、そのときは地の明るさの反対の黒か白にする
     /// （文字は読めなくても、落とす先は見えるように）。
     /// </summary>
