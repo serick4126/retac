@@ -216,6 +216,7 @@ public sealed class FileListView : Control
         RecomputeLayout();
         // 見えている位置ならこの中で何も起きない。カーソルが画面外のときだけ動く
         EnsureCursorVisible();
+        RefreshHot();            // R-116: 入れ替わった一覧のマウスの下の項目
         NextImageGeneration();   // R-117: 同じ内容の読み直しでも進める（届く前の結果は別の一覧のもの）
         Invalidate();
         CursorMoved?.Invoke(this, EventArgs.Empty);
@@ -236,6 +237,13 @@ public sealed class FileListView : Control
     /// <summary>鍵は（パス・大きさ・更新日時）。世代をまたいで使い回す（読み直しても中身が同じなら取り直さない）。</summary>
     private readonly LruCache<(string Path, int Size, DateTime Modified), Bitmap> _thumbnails =
         new(ThumbnailBytes, b => (long)b.Width * b.Height * 4, b => b.Dispose());
+    /// <summary>
+    /// 作れなかった（最終の結果がサムネイル無し）鍵。世代をまたいで覚え、同じ（パス・大きさ・更新日時）を毎回要求し直さない。
+    /// ponytail: 上限 4096 件。満ちたら全部忘れる（また 1 回ずつ問い合わせるだけ）。古い順に捨てる必要が出たら LRU にする。
+    /// </summary>
+    private readonly HashSet<(string Path, int Size, DateTime Modified)> _noThumbnail = [];
+    private const int NoThumbnailCap = 4096;
+
     /// <summary>今の一覧の印の番号（パス → 番号）。世代が変わったら捨てる（同期状態は読み直しで変わりうる）。</summary>
     private readonly Dictionary<string, int> _overlays = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>今の一覧のパス → 添字。SetEntries で作る（届いた結果のたびに一覧を走査しない）。</summary>
@@ -273,7 +281,8 @@ public sealed class FileListView : Control
         {
             var entry = _state.Entries[index];
             if (entry.IsParent) continue;
-            var wantsThumbnail = WantsThumbnail(entry) && !_thumbnails.TryGet((entry.FullPath, size, entry.LastWriteTime), out _);
+            var key = (entry.FullPath, size, entry.LastWriteTime);
+            var wantsThumbnail = WantsThumbnail(entry) && !_noThumbnail.Contains(key) && !_thumbnails.TryGet(key, out _);
             var wantsOverlay = overlays && !_overlays.ContainsKey(entry.FullPath);
             if (!wantsThumbnail && !wantsOverlay) continue;
             result.Add(new ImageRequest(ImageGeneration, entry.FullPath, size, wantsThumbnail, wantsOverlay,
@@ -314,8 +323,20 @@ public sealed class FileListView : Control
     {
         var request = result.Request;
         if (IsDisposed || request.Generation != ImageGeneration) { result.Thumbnail?.Dispose(); return; }
-        if (request.Overlay) _overlays[request.FullPath] = result.OverlayIndex;
+        var overlayChanged = false;
+        if (request.Overlay)
+        {
+            overlayChanged = _overlays.GetValueOrDefault(request.FullPath) != result.OverlayIndex;
+            _overlays[request.FullPath] = result.OverlayIndex;
+        }
         if (result.Thumbnail is { } thumbnail) _thumbnails.Add((request.FullPath, request.Size, request.Modified), thumbnail);
+        else if (request.Thumbnail && (!request.Overlay || request.Cloud))
+        {
+            // 最終の結果だけ覚える。非クラウドの 1 段目（Overlay 付き）の null は、まだ 2 段目で作れるので覚えない
+            if (_noThumbnail.Count >= NoThumbnailCap) _noThumbnail.Clear();
+            _noThumbnail.Add((request.FullPath, request.Size, request.Modified));
+        }
+        if (result.Thumbnail is null && !overlayChanged) return;   // 描きが変わらないものは描き直さない
         if (!_indexOfPath.TryGetValue(request.FullPath, out var index)) return;
         InvalidatedItems++;
         Invalidate(ToRectangle(FileViewScroll.VisibleBounds(_layout, _scroll, index)));
@@ -336,7 +357,7 @@ public sealed class FileListView : Control
     private int Gap => Scaled(4);
     private int RowPadding => Scaled(2);
 
-    /// <summary>仕様書の格子の既定（設定に置かない）: 項目の間と外周、チェックボックス、自動スクロールの端。</summary>
+    /// <summary>格子の間隔・チェックボックスの大きさ・自動スクロールの端は設定に置かず、コードに固定する（96 dpi の値）。</summary>
     private int GridGap => Scaled(4);
     private int CheckBoxSize => Scaled(16);
     private int EdgeBand => Scaled(24);
@@ -396,8 +417,9 @@ public sealed class FileListView : Control
         Invalidate();
     }
 
-    private (FileViewMode, int, bool, bool, bool) ImageSettingsKey() =>
-        (_mode, IconSizeFor(_mode), _views.Icons.Thumbnails, _views.Icons.FolderThumbnails, _views.Common.ShowOverlays);
+    /// <summary>モードそのものは含めない（一覧と詳細の切り替えで印を捨てて描き直さない）。大きさと、サムネイル・印を求めるかだけで決まる。</summary>
+    private (int, bool, bool, bool) ImageSettingsKey() =>
+        (IconSizeFor(_mode), ThumbnailsOn, _views.Icons.FolderThumbnails, _views.Common.ShowOverlays);
 
     private void RecomputeLayout()
     {
@@ -664,7 +686,8 @@ public sealed class FileListView : Control
         // R-01-4: 右端で切れる列も描く（切れるのはウィンドウの右端）。IndexesIn は交わる項目を返すのでそのまま入る。
         // カーソルの項目は最後に描く（全部描くときに右隣へ重ねるため）
         var visible = _layout.IndexesIn(ox, oy, ViewportWidth, ViewportHeight, _state.Count);
-        foreach (var index in visible.Where(i => i != _state.CursorIndex)) DrawRow(e.Graphics, index);
+        // 部分の描き直し（届いた項目 1 つ・ホバー）では、クリップに交わる項目だけ描く。カーソルの項目は右へ帯を広げうるので毎回描く
+        foreach (var index in visible.Where(i => i != _state.CursorIndex && IntersectsClip(e.ClipRectangle, i))) DrawRow(e.Graphics, index);
         if (visible.Contains(_state.CursorIndex)) DrawRow(e.Graphics, _state.CursorIndex);
         if (_lasso.Active is not null)   // R-120: 項目の後に、枠と半透明の塗りを重ねる
         {
@@ -679,6 +702,8 @@ public sealed class FileListView : Control
         var range = visible.Count > 0 ? (visible.Min(), visible.Max()) : (-1, -1);
         if (range != _imageRange) { _imageRange = range; UpdateImageQueue(); }
     }
+
+    private bool IntersectsClip(Rectangle clip, int index) => ToRectangle(FileViewScroll.VisibleBounds(_layout, _scroll, index)).IntersectsWith(clip);
 
     /// <summary>
     /// R-114: 見出しは縦にスクロールせず、横だけ中身と一緒に動く。ソート中の列の上端に山形（HeaderSort.ShowsArrow。Q36）。
@@ -796,7 +821,7 @@ public sealed class FileListView : Control
     internal bool IsMarkedForDisplay(int index)
     {
         var marked = _state.Marks.Contains(index);
-        if (_lasso.Active is not { } lasso) return marked;
+        if (_lasso.Active is not { } lasso || _state.Entries[index].IsParent) return marked;   // 「..」は仮のマークにもしない
         _lassoCovered ??= lasso.Covered(_layout, _state.Count).ToHashSet();
         return _lassoCovered.Contains(index) ? !lasso.Remove : marked;
     }
@@ -892,7 +917,7 @@ public sealed class FileListView : Control
     {
         var entry = _state.Entries[index];
         var isCursor = index == _state.CursorIndex;
-        var isMarked = IsMarkedForDisplay(index);   // 投げ縄の仮のマークを含む（Task 8）
+        var isMarked = IsMarkedForDisplay(index);   // 投げ縄の仮のマークを含む
         var small = _mode == FileViewMode.SmallIcons;
         var item = CursorFrameBounds(index);
         var (background, foreground) = RowColors.Of(_theme, AttributeColorRule.Classify(entry.Attributes), isCursor, isMarked);
@@ -1003,7 +1028,15 @@ public sealed class FileListView : Control
     /// <summary>R-116 / Q1: 「ホバー中とマーク済み」なら、マウスが乗っている項目とマーク済みの項目だけ。「常に表示」なら全項目。</summary>
     internal bool ShowsCheckBox(int index) =>
         _layout.CheckBoxBounds(index) is not null
+        && !_state.Entries[index].IsParent   // 「..」はマークできないので、チェックボックスも出さない
         && (_views.Icons.CheckBoxes == CheckBoxMode.Always || index == HotIndex || _state.Marks.Contains(index));
+
+    /// <summary>今のマウスの位置でホバーを付け直す。ハンドルが無ければ位置が分からないので外す。</summary>
+    internal void RefreshHot() =>
+        RefreshHot(IsHandleCreated && PointToClient(Cursor.Position) is var p && ClientRectangle.Contains(p) ? p : new Point(-1, -1));
+
+    /// <summary>スクロール・一覧の入れ替えのあとに、クライアント座標の点の下の項目をホバーにする。</summary>
+    internal void RefreshHot(Point clientPoint) => SetHot(clientPoint.X < 0 ? -1 : HitAt(clientPoint).Index);
 
     /// <summary>ホバーの項目を変え、古い項目と新しい項目の見えている矩形だけ描き直す。</summary>
     private void SetHot(int index)
@@ -1570,9 +1603,15 @@ public sealed class FileListView : Control
         // スクロールできない間にたまった分が、後でまとめて効かないようにする
         if (!horizontal && !vertical) { _wheel.Reset(); return; }
         // R-76: 一覧は 1 ノッチ = 1 列（左端は常に列の境界に揃う）。詳細は縦のバーがあれば縦に MouseWheelScrollLines 行、無ければ横に 1 段
-        var steps = _wheel.Add(e.Delta, SystemInformation.MouseWheelScrollDelta);
-        if (vertical) ScrollBy(0, -steps * Math.Max(1, SystemInformation.MouseWheelScrollLines));
-        else ScrollBy(-steps, 0);
+        ScrollWheel(_wheel.Add(e.Delta, SystemInformation.MouseWheelScrollDelta));
+    }
+
+    /// <summary>ホイールのノッチ数（正で上・左へ）ぶん進める。1 ノッチの段数はレイアウトが答える（格子は 1 段が大きいので 1 行。INV-LAYOUT-GEOMETRY-SINGLE-SOURCE）。</summary>
+    internal void ScrollWheel(int notches)
+    {
+        if (_layout.ScrollBars.Vertical)
+            ScrollBy(0, -notches * _layout.WheelSteps(Math.Max(1, SystemInformation.MouseWheelScrollLines), ViewportWidth, ViewportHeight));
+        else ScrollBy(-notches, 0);
     }
 
     /// <summary>
@@ -1610,6 +1649,7 @@ public sealed class FileListView : Control
     {
         _scroll = new ScrollPosition(_scroll.X + dx, _scroll.Y + dy);
         UpdateScrollBars();   // 範囲へのクランプもここ
+        RefreshHot();         // R-116: マウスは動かなくても、下にある項目が変わる
         Invalidate();
     }
 
@@ -1650,6 +1690,7 @@ public sealed class FileListView : Control
             _bigIcons?.Dispose();
             ImageWorker?.Dispose();   // 待たない
             _thumbnails.Clear();
+            _noThumbnail.Clear();
             _overlays.Clear();
             _autoScroll.Dispose();
             _nameTip.Dispose();

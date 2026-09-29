@@ -66,7 +66,7 @@ public class FileListViewImagesTests
     private static ShellImageWorker QuietWorker() => new() { OverlayOverride = _ => 0, GetOverride = (_, _, _) => null };
 
     /// <summary>
-    /// 待ちの列が本当に消えることは Task 5 のワーカーのテストが確かめる。ここでは、FileListView が空の一覧で差し替えを送ったことを確かめる
+    /// 待ちの列が本当に消えることは ワーカーのテストが確かめる。ここでは、FileListView が空の一覧で差し替えを送ったことを確かめる
     /// （ワーカーへ別の差し替えを送らない。送ると、FileListView が送り忘れても古い待ちが消えてしまい、見逃す）。
     /// </summary>
     [Fact]
@@ -211,5 +211,55 @@ public class FileListViewImagesTests
         var bitmap = new Bitmap(4, 4);
         list.DeliverImage(new ImageResult(request, bitmap, 0));
         Assert.Throws<ArgumentException>(() => _ = bitmap.Width);
+    }
+
+    private static ImageRequest Stage(FileListView list, bool overlay = false, bool cloud = false, bool thumbnail = true) =>
+        list.BuildImageRequests()[0] with { Overlay = overlay, Cloud = cloud, Thumbnail = thumbnail };
+
+    [Fact]
+    public void 作れなかった最終の結果は同じパス_大きさ_更新日時では要求し直さない()
+    {
+        var at = new DateTime(2026, 9, 1);
+        using var list = new FileListView { Size = new Size(600, 400) };
+        list.SetView(FileViewMode.LargeIcons, new FileViewSettings { Common = new() { ShowOverlays = false } }, new Dictionary<string, int?>(), SortOrder.Default);
+        list.SetEntries(Files(1, modified: at));
+        list.DeliverImage(new ImageResult(Stage(list), null, 0));    // 2 段目で作れなかった
+        Assert.Empty(list.BuildImageRequests());
+        list.SetEntries(Files(1, modified: at));                     // 読み直しても世代をまたいで覚えている
+        Assert.Empty(list.BuildImageRequests());
+        list.SetEntries(Files(1, modified: at.AddMinutes(1)));       // 更新日時が変われば取り直す
+        Assert.True(list.BuildImageRequests()[0].Thumbnail);
+    }
+
+    [Fact]
+    public void 非クラウドの1段目の結果はまだ2段目へ進めるので覚えない()
+    {
+        using var list = new FileListView { Size = new Size(600, 400) };
+        list.SetView(FileViewMode.LargeIcons, new FileViewSettings(), new Dictionary<string, int?>(), SortOrder.Default);
+        list.SetEntries(Files(1));
+        list.DeliverImage(new ImageResult(Stage(list, overlay: true), null, 0));
+        Assert.True(list.BuildImageRequests()[0].Thumbnail);
+    }
+
+    [Fact]
+    public void クラウドの項目でキャッシュに無ければ1段目でも覚える()
+    {
+        using var list = new FileListView { Size = new Size(600, 400) };
+        list.SetView(FileViewMode.LargeIcons, new FileViewSettings { Common = new() { ShowOverlays = false } }, new Dictionary<string, int?>(), SortOrder.Default);
+        list.SetEntries(Files(1));
+        list.DeliverImage(new ImageResult(Stage(list, cloud: true), null, 0));
+        Assert.Empty(list.BuildImageRequests());
+    }
+
+    [Fact]
+    public void サムネイルの無い結果は印が変わらなければ描き直さない()
+    {
+        using var list = new FileListView { Size = new Size(600, 400) };
+        list.SetView(FileViewMode.LargeIcons, new FileViewSettings(), new Dictionary<string, int?>(), SortOrder.Default);
+        list.SetEntries(Files(1));
+        list.DeliverImage(new ImageResult(Stage(list, overlay: true), null, 0));   // 印は 0 のまま
+        Assert.Equal(0, list.InvalidatedItems);
+        list.DeliverImage(new ImageResult(Stage(list, overlay: true), null, 2));   // 印が変わった
+        Assert.Equal(1, list.InvalidatedItems);
     }
 }
