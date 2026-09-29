@@ -63,7 +63,8 @@
 
     "FolderHistory": "runtime:MainForm",
 
-    "FileViews": "dialog:SettingsDialog#FileViewPage"
+    "FileViews": "dialog:SettingsDialog#FileViewPage",
+    "DetailsColumnWidths": "runtime:FileListView"
   },
 
   "invariants": [

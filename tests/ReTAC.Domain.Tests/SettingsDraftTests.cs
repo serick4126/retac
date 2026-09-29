@@ -2,6 +2,7 @@ using ReTAC.App;
 using ReTAC.App.Rendering;
 using ReTAC.Domain.Commands;
 using ReTAC.Domain.Keys;
+using ReTAC.Domain.Listing;
 using ReTAC.Domain.Navigation;
 using ReTAC.Domain.Tools;
 
@@ -247,5 +248,27 @@ public class SettingsDraftTests
         Assert.False(settings.FileViews.List.InPanelDragDrop);
         draft.CommitTo(settings, settings.ToQuickAccess());
         Assert.True(settings.FileViews.List.InPanelDragDrop);
+    }
+
+    [Fact]
+    public void 開いている間に別のウィンドウの見出しで変えた列は確定しても消えない()
+    {
+        var (settings, keyMap, quickAccess) = Baseline();
+        var draft = SettingsDraft.From(settings, keyMap, Theme.Default, quickAccess);
+        // 別のウィンドウの見出しで種類の列を隠した（共有の設定を直接書き換える）
+        settings.FileViews = settings.FileViews with
+        {
+            Details = settings.FileViews.Details with
+            {
+                Columns = settings.FileViews.Details.Columns.Select(c => c.Column == DetailsColumn.Type ? c with { Visible = false } : c).ToList(),
+            },
+        };
+        // 設定画面ではほかの項目だけ変える
+        draft.FileViews = draft.FileViews with { List = draft.FileViews.List with { InPanelDragDrop = true } };
+
+        draft.CommitTo(settings, quickAccess);
+
+        Assert.True(settings.FileViews.List.InPanelDragDrop);
+        Assert.False(settings.FileViews.Details.Columns.Single(c => c.Column == DetailsColumn.Type).Visible);
     }
 }

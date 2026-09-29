@@ -163,4 +163,16 @@ public class SettingsNormalizeTests
         settings.Normalize();
         Assert.Equal(expected, settings.ViewMode);
     }
+
+    [Fact]
+    public void 列幅は壊れた値を捨て欠けたら空()
+    {
+        var settings = JsonSerializer.Deserialize<AppSettings>("""{ "DetailsColumnWidths": { "Name": 250, "Size": null, "Bogus": 3 } }""", Json)!;
+        settings.Normalize();
+        Assert.Equal(new Dictionary<string, int?> { ["Name"] = 250 }, settings.DetailsColumnWidths);
+
+        var empty = JsonSerializer.Deserialize<AppSettings>("""{ "DetailsColumnWidths": null }""", Json)!;
+        empty.Normalize();
+        Assert.Empty(empty.DetailsColumnWidths);
+    }
 }

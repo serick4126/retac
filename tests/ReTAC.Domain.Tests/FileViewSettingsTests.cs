@@ -193,4 +193,103 @@ public class FileViewSettingsTests
         var s = FileViewSettings.Normalize(new FileViewSettings { Icons = new() { SmallIconWidth = new() { Mode = (NameWidthMode)9 } } });
         Assert.Equal(NameWidthMode.MaxChars, s.Icons.SmallIconWidth.Mode);   // Phase 16 Q6: 一覧・詳細の既定とは違う
     }
+
+    // ---- 列幅の保存値（R-114）----
+
+    [Fact]
+    public void 列幅は知らない列と0以下とnullを捨て上限で止める()
+    {
+        var normalized = DetailsColumnWidths.Normalize(new Dictionary<string, int?>
+        {
+            ["Name"] = 300, ["Size"] = 0, ["Modified"] = -5, ["Type"] = null, ["Unknown"] = 100, ["Attributes"] = 99999,
+        });
+        Assert.Equal(new Dictionary<string, int?> { ["Name"] = 300, ["Attributes"] = DetailsColumnWidths.Max }, normalized);
+        Assert.Empty(DetailsColumnWidths.Normalize(null));
+    }
+
+    [Fact]
+    public void 列の鍵は名前と列挙の名前() =>
+        Assert.Equal(["Name", "Extension", "Size", "Modified", "Created", "Type", "Attributes"],
+            new DetailsColumn?[] { null }.Concat(Enum.GetValues<DetailsColumn>().Cast<DetailsColumn?>()).Select(DetailsColumnWidths.Key));
+
+    [Theory]
+    [InlineData(96)]
+    [InlineData(144)]
+    [InlineData(192)]
+    public void 保存値はdpiを行き来しても変わらない(int dpi)
+    {
+        foreach (var logical in new[] { 1, 37, 120, 333, DetailsColumnWidths.Max })
+            Assert.Equal(logical, DetailsColumnWidths.ToLogical(DetailsColumnWidths.ToPixels(logical, dpi), dpi));
+        Assert.Equal(180, DetailsColumnWidths.ToPixels(120, 144));
+    }
+
+    // ---- 下書きのマージ（Q33）----
+
+    [Fact]
+    public void 下書きで変えた項目だけを今の設定へ書き込む()
+    {
+        var baseline = new FileViewSettings();
+        var draft = baseline with { List = baseline.List with { InPanelDragDrop = true } };
+        // 設定画面を開いている間に、別のウィンドウの見出しで列を隠した
+        var hidden = baseline.Details.Columns.Select(c => c.Column == DetailsColumn.Type ? c with { Visible = false } : c).ToList();
+        var current = baseline with { Details = baseline.Details with { Columns = hidden } };
+
+        var merged = FileViewSettings.Merge(baseline, draft, current);
+
+        Assert.True(merged.List.InPanelDragDrop);
+        Assert.False(merged.Details.Columns.Single(c => c.Column == DetailsColumn.Type).Visible);
+    }
+
+    [Fact]
+    public void 両方で同じ項目を変えたら下書きが勝つ()
+    {
+        var baseline = new FileViewSettings();
+        var draftColumns = baseline.Details.Columns.Reverse().ToList();
+        var draft = baseline with { Details = baseline.Details with { Columns = draftColumns } };
+        var current = baseline with { Details = baseline.Details with { Columns = baseline.Details.Columns.Skip(1).ToList() } };
+
+        Assert.Equal(draftColumns, FileViewSettings.Merge(baseline, draft, current).Details.Columns);
+    }
+
+    [Fact]
+    public void 中身が同じ列は変えていないとみなす()
+    {
+        var baseline = new FileViewSettings();
+        var draft = baseline with { Details = baseline.Details with { Columns = baseline.Details.Columns.ToList() } };   // 別の参照・同じ中身
+        var currentColumns = baseline.Details.Columns.Skip(1).ToList();
+        var current = baseline with { Details = baseline.Details with { Columns = currentColumns } };
+
+        Assert.Equal(currentColumns, FileViewSettings.Merge(baseline, draft, current).Details.Columns);
+    }
+
+    [Fact]
+    public void すべての系統のすべての項目がマージの対象になる()
+    {
+        // 型に項目を足したときに、Merge が黙って落とさないことを確かめる。各項目を 1 つずつ下書きだけで変えて、結果に出るか
+        var baseline = new FileViewSettings();
+        var changed = new FileViewSettings
+        {
+            Common = new() { ShowOverlays = false },
+            List = new() { InPanelDragDrop = true, NameWidth = new() { Mode = NameWidthMode.Auto, MaxChars = 11 } },
+            Details = new()
+            {
+                InPanelDragDrop = false, NameWidth = new() { Mode = NameWidthMode.MaxChars, MaxChars = 12 }, ExtensionInName = false,
+                Columns = [new() { Column = DetailsColumn.Size, Visible = false }], FitColumnsToWindow = true,
+            },
+            Icons = new()
+            {
+                InPanelDragDrop = false, MediumSize = 32, LargeSize = 64, ExtraLargeSize = 128, CheckBoxes = CheckBoxMode.Always,
+                Thumbnails = false, FolderThumbnails = false, NameLines = 3, SmallIconWidth = new() { Mode = NameWidthMode.ShowAll },
+            },
+            Tiles = new()
+            {
+                InPanelDragDrop = false, Info = [TileInfo.Created], TilesSize = 96, ContentSize = 128, CheckBoxes = CheckBoxMode.Always,
+                Thumbnails = false, FolderThumbnails = false,
+            },
+        };
+
+        var merged = FileViewSettings.Merge(baseline, changed, baseline);
+
+        Assert.Equal(System.Text.Json.JsonSerializer.Serialize(changed), System.Text.Json.JsonSerializer.Serialize(merged));
+    }
 }

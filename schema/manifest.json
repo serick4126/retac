@@ -207,6 +207,12 @@
         "default": "FileViewSettings { Common = FileViewCommonSettings { ShowOverlays = True }, List = ListViewSettings { InPanelDragDrop = False, NameWidth = NameWidthSetting { Mode = ShowAll, MaxChars = 40 } }, Details = DetailsViewSettings { InPanelDragDrop = True, NameWidth = NameWidthSetting { Mode = ShowAll, MaxChars = 40 }, ExtensionInName = True, Columns = <>z__ReadOnlyArray`1[ReTAC.Domain.Listing.DetailsColumnSetting], FitColumnsToWindow = False }, Icons = IconsViewSettings { InPanelDragDrop = True, MediumSize = 48, LargeSize = 96, ExtraLargeSize = 256, CheckBoxes = HoverAndMarked, Thumbnails = True, FolderThumbnails = True, NameLines = 2, SmallIconWidth = NameWidthSetting { Mode = MaxChars, MaxChars = 40 } }, Tiles = TilesViewSettings { InPanelDragDrop = True, Info = <>z__ReadOnlyArray`1[ReTAC.Domain.Listing.TileInfo], TilesSize = 48, ContentSize = 48, CheckBoxes = HoverAndMarked, Thumbnails = True, FolderThumbnails = True } }"
       },
       {
+        "key": "DetailsColumnWidths",
+        "type": "Dictionary<string, int?>",
+        "nullable": false,
+        "default": "{} (0 件)"
+      },
+      {
         "key": "ExpandedBookmarkGroupIds",
         "type": "List<string>",
         "nullable": false,
@@ -1298,6 +1304,12 @@
         }
       ]
     },
+    "ReTAC.Domain.Listing.DetailsColumnWidths": {
+      "id": "type:ReTAC.Domain.Listing.DetailsColumnWidths",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Listing/DetailsColumnWidths.cs",
+      "doc": "R-114 / V6: 詳細表示の手動の列幅（見出しの境界のドラッグで決める。実行中に保存する値なので FileViews の外の最上位のキー）。 論理列 ID → 96 dpi の論理ピクセル。キーが無い列は自動。"
+    },
     "ReTAC.Domain.Listing.DetailsLayout": {
       "id": "type:ReTAC.Domain.Listing.DetailsLayout",
       "kind": "sealed record",
@@ -1685,7 +1697,7 @@
       "id": "type:ReTAC.Domain.Listing.FileViewSettings",
       "kind": "sealed record",
       "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-      "doc": "R-112: ファイルビューの設定は、系統ごとの欄に持つ（INV-FILEVIEW-SETTINGS-PER-GROUP）。全ビューに同じく効くものは Common。 設定 JSON にそのまま載るので required を付けない（S-14）。欠けた欄・項目は既定値で埋まる（移行はしない）。 欄はすべて不変の record で、列も IReadOnlyList なので、設定画面の下書きと共有してよい（INV-SETTINGS-DRAFT）。",
+      "doc": "R-112: ファイルビューの設定は、系統ごとの欄に持つ（INV-FILEVIEW-SETTINGS-PER-GROUP）。全ビューに同じく効くものは Common。 設定 JSON にそのまま載るので required を付けない（S-14）。欠けた欄・項目は既定値で埋まる（移行はしない）。 欄はすべて不変の record で、列も IReadOnlyList なので、設定画面の下書きと共有してよい（INV-SETTINGS-DRAFT）。 項目を足したら FileViewSettingsTests のマージのテストにも足す。",
       "fields": [
         {
           "name": "Common",
@@ -5301,11 +5313,11 @@
     "B-05": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 140
+        "line": 146
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 335
+        "line": 341
       },
       {
         "file": "src/ReTAC.App/IncrementalSearchBar.cs",
@@ -5317,7 +5329,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 50
+        "line": 52
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
@@ -5571,7 +5583,7 @@
     "B-22": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 97
+        "line": 103
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
@@ -5685,7 +5697,7 @@
     "F-01": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 139
+        "line": 145
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
@@ -5705,11 +5717,11 @@
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
-        "line": 66
+        "line": 68
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
-        "line": 89
+        "line": 91
       },
       {
         "file": "src/ReTAC.Domain/Commands/CommandId.cs",
@@ -5981,7 +5993,7 @@
     "F-09": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 134
+        "line": 140
       },
       {
         "file": "src/ReTAC.App/EnvironmentPage.cs",
@@ -6001,7 +6013,7 @@
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
-        "line": 107
+        "line": 109
       },
       {
         "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
@@ -6193,7 +6205,7 @@
     "N-02": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 151
+        "line": 157
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -6643,7 +6655,7 @@
     "R-101": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 121
+        "line": 127
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -6815,7 +6827,7 @@
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
-        "line": 143
+        "line": 146
       },
       {
         "file": "src/ReTAC.Domain/Navigation/QuickAccessList.cs",
@@ -7165,11 +7177,11 @@
     "R-108": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 106
+        "line": 112
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 274
+        "line": 280
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -7257,19 +7269,19 @@
     "R-108-2": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 113
+        "line": 119
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 245
+        "line": 251
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 258
+        "line": 264
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 275
+        "line": 281
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -7821,7 +7833,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 50
+        "line": 52
       }
     ],
     "R-110-1": [
@@ -8097,7 +8109,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 116
+        "line": 118
       },
       {
         "file": "src/ReTAC.Domain/Listing/LenientEnumConverter.cs",
@@ -8107,7 +8119,7 @@
     "R-112-1": [
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 41
+        "line": 43
       }
     ],
     "R-112-2": [
@@ -8123,7 +8135,7 @@
     "R-112-3": [
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 17
+        "line": 19
       }
     ],
     "R-112-4": [
@@ -8159,15 +8171,15 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 5
+        "line": 7
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 17
+        "line": 19
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 25
+        "line": 27
       },
       {
         "file": "src/ReTAC.Domain/Listing/NameWidths.cs",
@@ -8175,6 +8187,10 @@
       }
     ],
     "R-114": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 93
+      },
       {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 38
@@ -8188,6 +8204,10 @@
         "line": 30
       },
       {
+        "file": "src/ReTAC.Domain/Listing/DetailsColumnWidths.cs",
+        "line": 4
+      },
+      {
         "file": "src/ReTAC.Domain/Listing/DetailsLayout.cs",
         "line": 3
       },
@@ -8197,19 +8217,19 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 11
+        "line": 13
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 33
+        "line": 35
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 59
+        "line": 61
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 64
+        "line": 66
       },
       {
         "file": "src/ReTAC.Domain/Listing/HeaderSort.cs",
@@ -8227,15 +8247,15 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 14
+        "line": 16
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 17
+        "line": 19
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 100
+        "line": 102
       },
       {
         "file": "src/ReTAC.Domain/Listing/LenientEnumConverter.cs",
@@ -8245,41 +8265,41 @@
     "R-116": [
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 8
+        "line": 10
       }
     ],
     "R-117": [
-      {
-        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 85
-      },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
         "line": 87
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 107
+        "line": 89
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
         "line": 109
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 111
       }
     ],
     "R-118": [
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 44
+        "line": 46
       }
     ],
     "R-119": [
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 17
+        "line": 19
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 89
+        "line": 91
       }
     ],
     "R-12": [
@@ -8351,7 +8371,7 @@
     "R-14": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 295
+        "line": 301
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -8423,7 +8443,7 @@
     "R-20-3": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 151
+        "line": 157
       }
     ],
     "R-22": [
@@ -8469,7 +8489,7 @@
     "R-25": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 301
+        "line": 307
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -8687,11 +8707,11 @@
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
-        "line": 152
+        "line": 155
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
-        "line": 193
+        "line": 197
       }
     ],
     "R-37-3": [
@@ -9271,7 +9291,7 @@
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 158
+        "line": 164
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -9289,11 +9309,11 @@
     "R-55-3": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 163
+        "line": 169
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 192
+        "line": 198
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -10027,7 +10047,7 @@
     "R-83": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 301
+        "line": 307
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -10231,11 +10251,11 @@
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 96
+        "line": 102
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 102
+        "line": 108
       },
       {
         "file": "src/ReTAC.App/BookmarkBar.cs",
@@ -11271,7 +11291,7 @@
     "R-98": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 369
+        "line": 375
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
@@ -11423,7 +11443,7 @@
     "S-14": [
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 117
+        "line": 119
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
@@ -11503,7 +11523,7 @@
     "V-07": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 215
+        "line": 221
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",

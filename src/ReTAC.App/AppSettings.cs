@@ -89,6 +89,12 @@ public sealed class AppSettings
     /// <summary>R-112: ファイルビューの設定（系統ごとの欄と共通の欄）。</summary>
     public FileViewSettings FileViews { get; set; } = new();
 
+    /// <summary>
+    /// R-114 / V6: 詳細表示の手動の列幅（論理列 ID → 96 dpi の論理ピクセル）。見出しの境界のドラッグで更新する。
+    /// 値を null にしても設定ファイル全体を捨てないよう int? で読み、Normalize で捨てる。
+    /// </summary>
+    public Dictionary<string, int?> DetailsColumnWidths { get; set; } = [];
+
     /// <summary>ブックマークビューで展開しているグループの安定 ID。</summary>
     public List<string> ExpandedBookmarkGroupIds { get; set; } = [];
 
@@ -368,6 +374,7 @@ public sealed class AppSettings
         BookmarkRules.DropUnknownTools(Bookmarks, ids);
         BookmarkRules.EnsureIds(Bookmarks);   // R-98: DropUnknownTools が null の項目を落とした後で
         FileViews = FileViewSettings.Normalize(FileViews);
+        DetailsColumnWidths = Domain.Listing.DetailsColumnWidths.Normalize(DetailsColumnWidths);
         ViewMode = FileViewModes.Normalize(ViewMode);
     }
 

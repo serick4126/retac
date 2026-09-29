@@ -53,6 +53,8 @@ public sealed class SettingsDraft
     // --- ファイルビュー（FileViewPage） ------------------------------------
     /// <summary>不変の record なので共有の設定と同じインスタンスを持ってよい。ページは with で差し替える（INV-SETTINGS-DRAFT）。</summary>
     public FileViewSettings FileViews { get; set; } = new();
+    /// <summary>Q33: 開いた時点の FileViews。確定のときに、下書きで変えた項目を見分けるのに使う。</summary>
+    public FileViewSettings FileViewsBaseline { get; private set; } = new();
 
     // --- キー割り当て（KeyAssignPage） ------------------------------------
     /// <summary>枠ごとの今の割り当て。値が null なら「割り当てなし」（KeyAssignPage の内部表現と同じ形）。</summary>
@@ -134,6 +136,7 @@ public sealed class SettingsDraft
         draft.QuickAccess.FixMissingAutomatically = quickAccess.FixMissingAutomatically;
         foreach (var entry in quickAccess.Items) draft.QuickAccess.Add(entry);
 
+        draft.FileViewsBaseline = settings.FileViews;
         return draft;
     }
 
@@ -158,7 +161,8 @@ public sealed class SettingsDraft
         settings.ColorMode = ColorMode;
         settings.FromSystemTheme(dark: false, SystemLight);
         settings.FromSystemTheme(dark: true, SystemDark);
-        settings.FileViews = FileViews;
+        // Q33: 開いている間に別のウィンドウの見出しで変えた値を、古い下書きで消さない
+        settings.FileViews = FileViewSettings.Merge(FileViewsBaseline, FileViews, settings.FileViews);
 
         var beforeKeyBindings = new Dictionary<string, string>(settings.KeyBindings);
         var keyMap = new KeyMap(KeyBindings

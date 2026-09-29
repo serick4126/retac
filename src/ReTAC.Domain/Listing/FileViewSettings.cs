@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Reflection;
 using System.Text.Json.Serialization;
 
 namespace ReTAC.Domain.Listing;
@@ -116,6 +118,7 @@ public sealed record TilesViewSettings
 /// R-112: ファイルビューの設定は、系統ごとの欄に持つ（INV-FILEVIEW-SETTINGS-PER-GROUP）。全ビューに同じく効くものは Common。
 /// 設定 JSON にそのまま載るので required を付けない（S-14）。欠けた欄・項目は既定値で埋まる（移行はしない）。
 /// 欄はすべて不変の record で、列も IReadOnlyList なので、設定画面の下書きと共有してよい（INV-SETTINGS-DRAFT）。
+/// 項目を足したら FileViewSettingsTests のマージのテストにも足す。
 /// </summary>
 public sealed record FileViewSettings
 {
@@ -124,6 +127,32 @@ public sealed record FileViewSettings
     public DetailsViewSettings Details { get; init; } = new();
     public IconsViewSettings Icons { get; init; } = new();
     public TilesViewSettings Tiles { get; init; } = new();
+
+    /// <summary>
+    /// Q33: 設定画面の確定。開いた時点（baseline）から下書き（draft）で変えた項目だけを、確定する時点の設定（current）へ書き込む。
+    /// 下書きで変えていない項目は current の値を残す（別のウィンドウの見出しで変えた列の表示を、古い下書きで消さないため）。
+    /// 項目の単位は、系統の欄の中の各プロパティ。列は要素の並びで比べる（別の参照でも中身が同じなら変えていない）。
+    /// 項目を足したら FileViewSettingsTests のマージのテストにも足す。
+    /// </summary>
+    public static FileViewSettings Merge(FileViewSettings baseline, FileViewSettings draft, FileViewSettings current) =>
+        (FileViewSettings)MergeRecord(baseline, draft, current, groups: true);
+
+    private static object MergeRecord(object baseline, object draft, object current, bool groups)
+    {
+        // record の複製（コンパイラが作る <Clone>$）に、init のプロパティをリフレクションで書く
+        var result = current.GetType().GetMethod("<Clone>$")!.Invoke(current, null)!;
+        foreach (var property in current.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(p => p.CanWrite))
+        {
+            var (b, d, c) = (property.GetValue(baseline), property.GetValue(draft), property.GetValue(current));
+            if (groups) property.SetValue(result, MergeRecord(b!, d!, c!, groups: false));
+            else if (!Same(b, d)) property.SetValue(result, d);
+        }
+        return result;
+    }
+
+    private static bool Same(object? a, object? b) => a is IEnumerable x && b is IEnumerable y && a is not string
+        ? x.Cast<object>().SequenceEqual(y.Cast<object>())
+        : Equals(a, b);
 
     /// <summary>
     /// 手で書いた JSON の null・範囲外・知らない値を直す。System.Text.Json は明示された null をそのまま入れ、
