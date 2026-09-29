@@ -264,6 +264,7 @@ public sealed class FileListView : Control
     /// <summary>R-114 / R-113 / V6: 列ごとに中身の最長と見出しの最小幅を測り、手動の幅（96 dpi の論理値）を dpi で拡大して渡す。</summary>
     private DetailsLayout ComputeDetails()
     {
+        DetailsComputeCount++;
         var details = _views.Details;
         var pad = ColumnPaddingValue;
         var showExtension = AlignExtension;
@@ -339,21 +340,41 @@ public sealed class FileListView : Control
         }
     }
 
-    /// <summary>R-114: 背景で届いた種類（作業スレッドから呼ばれる）。破棄済み・ハンドルが無いなら何もしない。今の一覧にその鍵が無ければ描き直さない。</summary>
+    /// <summary>R-114: 背景で届いた種類の鍵。UI スレッドで反映するまでためる（作業スレッドから積まれる）。</summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _resolvedKeys = new();
+    private int _flushScheduled;
+    /// <summary>テスト用: 詳細表示のレイアウトを全部測り直した回数（R-114: 種類名が届くたびに測り直さない）。</summary>
+    internal int DetailsComputeCount { get; private set; }
+
+    /// <summary>
+    /// R-114: 背景で届いた種類（作業スレッドから呼ばれる）。破棄済み・ハンドルが無いなら何もしない。
+    /// 反映の予約は 1 つだけにして、その間に届いた分はまとめて 1 回で測り直す（拡張子 U 種類 × 項目 N 件の全走査を通知ごとにしない）。
+    /// </summary>
     private void OnTypeResolved(string key)
     {
         if (IsDisposed || !IsHandleCreated) return;
-        try
-        {
-            BeginInvoke(() =>
-            {
-                if (IsDisposed || _mode != FileViewMode.Details) return;
-                if (!_state.Entries.Any(e => ShellFileType.KeyOf(e.FullPath, e.Kind == EntryKind.Folder) == key)) return;
-                RecomputeLayout();   // 種類の列の自動の幅が変わりうる
-                Invalidate();
-            });
-        }
-        catch (InvalidOperationException) { }   // 閉じる途中でハンドルが消えた
+        if (!QueueResolvedType(key)) return;
+        try { BeginInvoke(FlushResolvedTypes); }
+        catch (InvalidOperationException) { Volatile.Write(ref _flushScheduled, 0); }   // 閉じる途中でハンドルが消えた
+    }
+
+    /// <summary>鍵をためる。反映の予約がまだ無く、これから予約するなら true。</summary>
+    internal bool QueueResolvedType(string key)
+    {
+        _resolvedKeys[key] = 0;
+        return Interlocked.Exchange(ref _flushScheduled, 1) == 0;
+    }
+
+    /// <summary>UI スレッドでの反映。今の一覧にためた鍵が 1 つも無ければ描き直さない。</summary>
+    internal void FlushResolvedTypes()
+    {
+        Volatile.Write(ref _flushScheduled, 0);
+        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var key in _resolvedKeys.Keys) if (_resolvedKeys.TryRemove(key, out _)) keys.Add(key);
+        if (IsDisposed || _mode != FileViewMode.Details || keys.Count == 0) return;
+        if (!_state.Entries.Any(e => keys.Contains(ShellFileType.KeyOf(e.FullPath, e.Kind == EntryKind.Folder)))) return;
+        RecomputeLayout();   // 種類の列の自動の幅が変わりうる
+        Invalidate();
     }
 
     protected override void OnResize(EventArgs e)

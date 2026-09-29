@@ -140,4 +140,28 @@ public class FileListViewDetailsTests
         Assert.Equal(6, columns.Count);
         Assert.Equal([true, true, true, true, false, false], columns.Select(c => c.Checked));   // 既定の並び（R-112-3）
     }
+
+    [Fact]
+    public void 種類名が次々に届いても全体の測り直しは通知の数だけ走らない()
+    {
+        // R-114: 拡張子 200 種類の通知を流しても、反映の予約は 1 つで、測り直しは 1 回（BeginInvoke の先を直接呼ぶ）
+        using var list = new FileListView { Size = new Size(500, 200) };
+        var entries = Enumerable.Range(0, 200).Select(i => TestEntries.File($"file{i}.x{i}")).ToList();
+        list.SetEntries(entries);
+        list.SetView(FileViewMode.Details, new FileViewSettings(), new Dictionary<string, int?>(), SortOrder.Default);
+        var before = list.DetailsComputeCount;
+
+        var scheduled = 0;
+        foreach (var entry in entries)
+            if (list.QueueResolvedType(ReTAC.Shell.ShellFileType.KeyOf(entry.FullPath, false))) scheduled++;
+        list.FlushResolvedTypes();
+
+        Assert.Equal(1, scheduled);
+        Assert.Equal(1, list.DetailsComputeCount - before);
+
+        // 今の一覧に無い鍵だけなら測り直さない
+        list.QueueResolvedType(".none");
+        list.FlushResolvedTypes();
+        Assert.Equal(1, list.DetailsComputeCount - before);
+    }
 }
