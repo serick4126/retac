@@ -95,6 +95,7 @@ public sealed class FileListView : Control
         // Control 直系の自前描画コントロールでは値を持つだけで IME コンテキストに触れない。
         // ウィンドウから IME を切り離すのは自分でやる。ハンドル再生成のたびに掛け直す
         ImmAssociateContext(Handle, IntPtr.Zero);
+        UpdateImageQueue();   // R-117: ハンドルができたので、ここから背景の取得を始められる
     }
 
     [System.Runtime.InteropServices.DefaultDllImportSearchPaths(System.Runtime.InteropServices.DllImportSearchPath.System32)]
@@ -206,6 +207,8 @@ public sealed class FileListView : Control
         _dragIndex = -1;
         var scroll = _scroll;
         _state = new ListState(entries);
+        _indexOfPath = new(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < _state.Count; i++) _indexOfPath[_state.Entries[i].FullPath] = i;
         _content = null;
         _state.MoveCursor(cursorIndex);
         _scroll = keepScroll ? scroll : default;
@@ -213,9 +216,117 @@ public sealed class FileListView : Control
         RecomputeLayout();
         // 見えている位置ならこの中で何も起きない。カーソルが画面外のときだけ動く
         EnsureCursorVisible();
+        NextImageGeneration();   // R-117: 同じ内容の読み直しでも進める（届く前の結果は別の一覧のもの）
         Invalidate();
         CursorMoved?.Invoke(this, EventArgs.Empty);
         MarksChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    // ---- サムネイルと OS の印（R-117 / R-118） ----------------------------------
+
+    /// <summary>一覧を入れる（同じ内容の読み直しを含む）・モードや大きさ・サムネイルと印の設定を変える・dpi が変わるたびに進める。古い結果を捨てるため。</summary>
+    internal int ImageGeneration { get; private set; }
+    [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    internal ShellImageWorker? ImageWorker { get; set; }
+    internal int InvalidatedItems { get; private set; }
+    private (int, int) _imageRange = (-1, -1);
+
+    /// <summary>ponytail: 上限は画素のバイト数の合計 64MB（256px で 256 枚）。足りなければ上げる。</summary>
+    private const long ThumbnailBytes = 64L * 1024 * 1024;
+    /// <summary>鍵は（パス・大きさ・更新日時）。世代をまたいで使い回す（読み直しても中身が同じなら取り直さない）。</summary>
+    private readonly LruCache<(string Path, int Size, DateTime Modified), Bitmap> _thumbnails =
+        new(ThumbnailBytes, b => (long)b.Width * b.Height * 4, b => b.Dispose());
+    /// <summary>今の一覧の印の番号（パス → 番号）。世代が変わったら捨てる（同期状態は読み直しで変わりうる）。</summary>
+    private readonly Dictionary<string, int> _overlays = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>今の一覧のパス → 添字。SetEntries で作る（届いた結果のたびに一覧を走査しない）。</summary>
+    private Dictionary<string, int> _indexOfPath = new(StringComparer.OrdinalIgnoreCase);
+
+    private bool ThumbnailsOn => _mode switch
+    {
+        FileViewMode.MediumIcons or FileViewMode.LargeIcons or FileViewMode.ExtraLargeIcons => _views.Icons.Thumbnails,
+        _ => false,   // 並べて表示・コンテンツは Phase 17
+    };
+
+    /// <summary>R-117: この項目にサムネイルを使うか。フォルダは「フォルダに中身のサムネイルを出す」も見る（要求と描画の両方がここを通る）。</summary>
+    private bool WantsThumbnail(Entry entry) =>
+        ThumbnailsOn && !entry.IsParent && (entry.Kind == EntryKind.File || _views.Icons.FolderThumbnails);
+
+    /// <summary>今の設定で描くサムネイル。設定でオフになったものは、キャッシュにあっても返さない。</summary>
+    internal Bitmap? ThumbnailFor(Entry entry) =>
+        WantsThumbnail(entry) && _thumbnails.TryGet((entry.FullPath, IconSizeFor(_mode), entry.LastWriteTime), out var b) ? b : null;
+
+    internal IReadOnlyList<ImageRequest> BuildImageRequests()
+    {
+        var overlays = _views.Common.ShowOverlays;
+        if (!overlays && !ThumbnailsOn || _state.Count == 0) return [];
+        var (ox, oy) = _layout.ScrollOffset(_scroll);
+        var visible = _layout.IndexesIn(ox, oy, ViewportWidth, ViewportHeight, _state.Count);
+        var page = Math.Max(1, _layout.PageItems(ViewportWidth, ViewportHeight));
+        var first = visible.Count > 0 ? visible.Min() : 0;
+        var last = visible.Count > 0 ? visible.Max() : 0;
+        // 見えている項目、その後に後ろの 1 画面分、前の 1 画面分
+        var order = visible.Concat(Enumerable.Range(last + 1, Math.Max(0, Math.Min(page, _state.Count - last - 1))))
+            .Concat(Enumerable.Range(Math.Max(0, first - page), Math.Min(page, first)).Reverse());
+        var size = IconSizeFor(_mode);
+        var result = new List<ImageRequest>();
+        foreach (var index in order)
+        {
+            var entry = _state.Entries[index];
+            if (entry.IsParent) continue;
+            var wantsThumbnail = WantsThumbnail(entry) && !_thumbnails.TryGet((entry.FullPath, size, entry.LastWriteTime), out _);
+            var wantsOverlay = overlays && !_overlays.ContainsKey(entry.FullPath);
+            if (!wantsThumbnail && !wantsOverlay) continue;
+            result.Add(new ImageRequest(ImageGeneration, entry.FullPath, size, wantsThumbnail, wantsOverlay,
+                CloudFiles.IsPlaceholder(entry.Attributes), entry.Kind != EntryKind.File, entry.LastWriteTime));
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// 見えている範囲・設定・一覧が変わった。待ちの列を丸ごと差し替える。
+    /// 要求が空でも、ワーカーがあれば空で差し替えて古い待ちを消す（設定をオフにしたら問い合わせもしない。R-118）。空のためにワーカーは作らない。
+    /// </summary>
+    internal void UpdateImageQueue()
+    {
+        if (IsDisposed) return;
+        var requests = BuildImageRequests();
+        if (requests.Count == 0) { ImageWorker?.Replace([]); return; }
+        // 結果は BeginInvoke で受けるので、ハンドルが無いうちは作らない（テストは ImageWorker を差し替えて使う）
+        ImageWorker ??= IsHandleCreated ? CreateWorker() : null;
+        ImageWorker?.Replace(requests);
+    }
+
+    private ShellImageWorker CreateWorker()
+    {
+        var worker = new ShellImageWorker();
+        worker.Completed += result =>
+        {
+            // 背景のスレッド。破棄済み・ハンドルが無ければ解放して終わる（Phase 15 の種類名の取得と同じ）
+            if (IsDisposed || !IsHandleCreated) { result.Thumbnail?.Dispose(); return; }
+            try { BeginInvoke(() => DeliverImage(result)); }
+            catch (InvalidOperationException) { result.Thumbnail?.Dispose(); }
+        };
+        return worker;
+    }
+
+    /// <summary>UI のスレッドでの反映。古い世代・閉じた後なら解放して捨てる。届いた項目の矩形だけを描き直す（組み直さない・全項目を走査しない）。</summary>
+    internal void DeliverImage(ImageResult result)
+    {
+        var request = result.Request;
+        if (IsDisposed || request.Generation != ImageGeneration) { result.Thumbnail?.Dispose(); return; }
+        if (request.Overlay) _overlays[request.FullPath] = result.OverlayIndex;
+        if (result.Thumbnail is { } thumbnail) _thumbnails.Add((request.FullPath, request.Size, request.Modified), thumbnail);
+        if (!_indexOfPath.TryGetValue(request.FullPath, out var index)) return;
+        InvalidatedItems++;
+        Invalidate(ToRectangle(FileViewScroll.VisibleBounds(_layout, _scroll, index)));
+    }
+
+    /// <summary>世代を進め、印の番号を捨てて、要求を出し直す。</summary>
+    private void NextImageGeneration()
+    {
+        ImageGeneration++;
+        _overlays.Clear();
+        UpdateImageQueue();
     }
 
     // ---- レイアウト -------------------------------------------------------
@@ -275,12 +386,18 @@ public sealed class FileListView : Control
     {
         ResetNameTip();
         var modeChanged = mode != _mode;
+        var imagesBefore = ImageSettingsKey();
         (_mode, _views, _columnWidths, _sortOrder) = (mode, views, columnWidths, sortOrder);
         if (modeChanged) { _scroll = default; _wheel.Reset(); }
         RecomputeLayout();
         EnsureCursorVisible();
+        // R-117 / R-118: 変わっていなくても、レイアウトが変わって見えている範囲が変わりうるので出し直す
+        if (ImageSettingsKey() != imagesBefore) NextImageGeneration(); else UpdateImageQueue();
         Invalidate();
     }
+
+    private (FileViewMode, int, bool, bool, bool) ImageSettingsKey() =>
+        (_mode, IconSizeFor(_mode), _views.Icons.Thumbnails, _views.Icons.FolderThumbnails, _views.Common.ShowOverlays);
 
     private void RecomputeLayout()
     {
@@ -558,6 +675,9 @@ public sealed class FileListView : Control
             e.Graphics.DrawRectangle(pen, r.X, r.Y, Math.Max(0, r.Width - 1), Math.Max(0, r.Height - 1));
         }
         e.Graphics.ResetClip();
+        // R-117: 見えている範囲が変わったら要求を出し直す（スクロール・リサイズの入口をここ 1 か所にする）
+        var range = visible.Count > 0 ? (visible.Min(), visible.Max()) : (-1, -1);
+        if (range != _imageRange) { _imageRange = range; UpdateImageQueue(); }
     }
 
     /// <summary>
@@ -637,8 +757,9 @@ public sealed class FileListView : Control
         using (var brush = new SolidBrush(background)) g.FillRectangle(brush, band);
 
         var iconRect = ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, _layout.IconBounds(index)));
-        var icon = entry.Kind == EntryKind.File ? _icons.ForFile(entry.FullPath) : _icons.ForFolder();
-        if (icon is not null) g.DrawImage(icon, iconRect with { Y = rect.Y + (rect.Height - _icons.Size) / 2, Width = _icons.Size, Height = _icons.Size });
+        var imageRect = iconRect with { Y = rect.Y + (rect.Height - _icons.Size) / 2, Width = _icons.Size, Height = _icons.Size };
+        DrawItemImage(g, entry, imageRect);
+        DrawOverlay(g, entry, imageRect);
         if (isMarked) MarkStar.Draw(g, iconRect, _theme.MarkStarColor);   // R-11-5
 
         DrawName(g, index, entry, foreground, full, band);
@@ -825,17 +946,33 @@ public sealed class FileListView : Control
             }
     }
 
-    /// <summary>R-116: アイコンだけ（サムネイルは R-117 で足す）。</summary>
+    /// <summary>
+    /// R-117 / R-118: ② サムネイル（今の設定で使うものがあれば。無ければアイコン）。サムネイルは縦横比を保って矩形の中央に縮める。
+    /// 一覧・詳細の行頭のアイコンも通る（サムネイルは中〜特大だけ。ThumbnailFor が null を返す）。
+    /// </summary>
     private void DrawItemImage(Graphics g, Entry entry, Rectangle iconRect)
     {
-        var icons = _mode == FileViewMode.SmallIcons || _bigIcons is null ? _icons : _bigIcons;
+        var size = iconRect.Width;
+        if (ThumbnailFor(entry) is { } thumbnail)
+        {
+            var scale = Math.Min((float)size / thumbnail.Width, (float)size / thumbnail.Height);
+            var (w, h) = ((int)(thumbnail.Width * scale), (int)(thumbnail.Height * scale));
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.DrawImage(thumbnail, iconRect.X + (size - w) / 2, iconRect.Y + (size - h) / 2, w, h);
+            return;
+        }
+        // 中〜特大の大きさの取り口は、そのモードのときだけ使う（一覧・詳細へ切り替えても _bigIcons は残る）
+        var icons = IsIconMode && _mode != FileViewMode.SmallIcons && _bigIcons is not null ? _bigIcons : _icons;
         var icon = entry.Kind == EntryKind.File ? icons.ForFile(entry.FullPath) : icons.ForFolder();
         if (icon is not null) g.DrawImage(icon, iconRect);
     }
 
-    /// <summary>R-118: OS の印（リンク・共有・クラウドの状態）。中身は別の段で入れる。</summary>
+    /// <summary>R-118: ③ OS の印。印の位置はシェルの絵のとおり（絵の中の左下）なので、アイコンの矩形にそのまま重ねる。GridLayers の順（アイコンの後・チェックボックスの前）で呼ぶ。</summary>
     private void DrawOverlay(Graphics g, Entry entry, Rectangle iconRect)
     {
+        var size = iconRect.Width;
+        if (_views.Common.ShowOverlays && _overlays.TryGetValue(entry.FullPath, out var overlay) && ShellOverlays.Image(overlay, size) is { } mark)
+            g.DrawImage(mark, iconRect with { Width = size, Height = size });
     }
 
     /// <summary>
@@ -1499,6 +1636,7 @@ public sealed class FileListView : Control
         RebuildFontResources();   // フォント・計測面・アイコンを新しい DPI で作り直す
         RecomputeLayout();        // R-66-3: 行高・列幅・拡張子の位置を再計算する
         EnsureCursorVisible();
+        NextImageGeneration();    // R-117: 大きさが変わるので取り直す
         Invalidate();
     }
 
@@ -1510,6 +1648,9 @@ public sealed class FileListView : Control
             _measure?.Dispose();
             _icons?.Dispose();
             _bigIcons?.Dispose();
+            ImageWorker?.Dispose();   // 待たない
+            _thumbnails.Clear();
+            _overlays.Clear();
             _autoScroll.Dispose();
             _nameTip.Dispose();
         }
