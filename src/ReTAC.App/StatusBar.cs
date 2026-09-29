@@ -175,7 +175,7 @@ public sealed class StatusBar : Control
         var restWidth = TextRenderer.MeasureText(g, rest, Font, Size.Empty, measure).Width;
         var nameWidth = Math.Max(0, Math.Min(TextRenderer.MeasureText(g, _cursorName, Font, Size.Empty, measure).Width,
             right - x - restWidth - pad));
-        var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
+        var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding | TextFormatFlags.PreserveGraphicsClipping;
         TextRenderer.DrawText(g, _cursorName, Font, new Rectangle(x, 0, nameWidth, Height), ForeColor, flags | TextFormatFlags.EndEllipsis);
         TextRenderer.DrawText(g, rest, Font, new Rectangle(x + nameWidth, 0, restWidth, Height), ForeColor, flags);
     }

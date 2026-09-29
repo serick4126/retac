@@ -2474,16 +2474,17 @@ public sealed class MainForm : Form, IBookmarkHost
         _driveBarMenuItem.Checked = _driveBarShown;
         _addressBarMenuItem.Checked = _addressBarShown;
         _bookmarkBarMenuItem.Checked = _bookmarkBarShown;
-        // R-96-2: RebuildMenu は項目を作り直すので、このウィンドウの状態を毎回このメニューへ映す
-        // R-112-4: 表示モードのラジオは開くたびに今の値で付け直す（別のウィンドウで変えても合う）
+        // R-112-4: 表示モードのラジオは開くたびに今の値で付け直す（別のウィンドウで変えても合う）。
+        // 見出しの文字（アクセスキー）を変えても外れないよう、中のコマンドで探す
         var fileViewPanel = _menu.Items.Cast<ToolStripMenuItem>().SelectMany(top => top.DropDownItems.OfType<ToolStripMenuItem>())
-            .First(item => item.Text == "ファイル表示パネル(&P)");
+            .First(item => item.DropDownItems.OfType<ToolStripMenuItem>().Any(child => child.Tag is CommandId.ViewList));
         fileViewPanel.DropDownOpening += (_, _) =>
         {
             foreach (var item in fileViewPanel.DropDownItems.OfType<RadioToolStripMenuItem>())
                 if (item.Tag is CommandId command && ViewModeCommands.Target(command) is { } mode)
                     item.Checked = mode == _settings.ViewMode;
         };
+        // R-96-2: RebuildMenu は項目を作り直すので、このウィンドウの状態を毎回このメニューへ映す
         _leftPanelMenuItems.Root.Checked = _leftPanelShown;
         _leftPanelMenuItems.Views[_leftPanel.ViewKind].Checked = true;
         // R-90: 「ツール」の前に「ブックマーク」。中身は MainForm の状態（ブックマーク・今のフォルダ）に依るのでここで足す
