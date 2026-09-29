@@ -40,6 +40,14 @@ public interface IFileViewLayout
     (int X, int Y, int Width, int Height) NameBounds(int index);
     /// <summary>揃えた拡張子の矩形。出さないなら幅 0。</summary>
     (int X, int Y, int Width, int Height) ExtensionBounds(int index);
+    /// <summary>
+    /// 行のセルの矩形（左右の余白を除いた文字の領域）。列は論理列 ID で指す。名前の列・その列が無い・見出しの無いレイアウトは null。
+    /// </summary>
+    (int X, int Y, int Width, int Height)? CellBounds(int index, DetailsColumn column);
+    /// <summary>x が見出しのセルの右の境界から tolerance 以内なら、そのセルの添字。無ければ（見出しの無いレイアウトも）-1。</summary>
+    int HeaderBorderAt(int x, int tolerance);
+    /// <summary>x にある見出しのセルの添字。無ければ（見出しの無いレイアウトも）-1。</summary>
+    int HeaderCellAt(int x);
     /// <summary>矩形に交わる項目（投げ縄・描く範囲）。</summary>
     IReadOnlyList<int> IndexesIn(int x, int y, int width, int height, int entryCount);
     /// <summary>矢印キーでの移動先。動かないなら index。</summary>

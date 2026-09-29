@@ -179,6 +179,18 @@ public sealed record DetailsLayout : IFileViewLayout
         !ScrollBars.Horizontal ? 0 : x < RowHeight ? -1 : x >= viewportWidth - RowHeight ? 1 : 0,
         y < RowHeight ? -1 : y >= viewportHeight - RowHeight ? 1 : 0);
 
+    public (int X, int Y, int Width, int Height)? CellBounds(int index, DetailsColumn column)
+    {
+        foreach (var cell in Header)
+            if (cell.Column == column)
+                return (cell.X + ColumnPadding, index * RowHeight, Math.Max(0, cell.Width - ColumnPadding * 2), RowHeight);
+        return null;
+    }
+
+    public int HeaderBorderAt(int x, int tolerance) => HeaderBorderAt(Header, x, tolerance);
+
+    public int HeaderCellAt(int x) => HeaderCellAt(Header, x);
+
     /// <returns>x がセルの右の境界から tolerance 以内なら、そのセルの添字。無ければ -1</returns>
     public static int HeaderBorderAt(IReadOnlyList<HeaderCell> header, int x, int tolerance)
     {

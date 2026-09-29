@@ -25,6 +25,9 @@ public class FileViewScrollTests
         // 契約に足したメンバーはこの試験では使わない（ドロップの計算だけを見る）
         public int HeaderHeight => 0;
         public IReadOnlyList<HeaderCell> Header => [];
+    public (int X, int Y, int Width, int Height)? CellBounds(int index, DetailsColumn column) => null;
+    public int HeaderBorderAt(int x, int tolerance) => -1;
+    public int HeaderCellAt(int x) => -1;
         public (bool Horizontal, bool Vertical) ScrollBars => (true, true);
         public bool ArrowsScrollHorizontally => true;
         public (int Index, FileViewArea Area) HitTest(int x, int y, int entryCount) { var i = IndexAt(x, y, entryCount); return (i, i < 0 ? FileViewArea.None : FileViewArea.Other); }

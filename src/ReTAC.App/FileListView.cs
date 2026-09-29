@@ -493,12 +493,11 @@ public sealed class FileListView : Control
 
         if (_mode == FileViewMode.Details)   // R-114: 名前以外のセル
         {
-            var ox = _layout.ScrollOffset(_scroll).X;
-            foreach (var cell in _layout.Header.Skip(1))
-            {
-                var cellRect = new Rectangle(cell.X - ox + ColumnPaddingValue, rect.Y, Math.Max(0, cell.Width - ColumnPaddingValue * 2), rect.Height);
-                DrawCell(g, DetailsCells.Text(entry, cell.Column!.Value), cellRect, foreground, DetailsCells.RightAligned(cell.Column));
-            }
+            // INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: セルの矩形はレイアウトに聞く
+            foreach (var cell in _layout.Header)
+                if (cell.Column is { } column && _layout.CellBounds(index, column) is { } bounds)
+                    DrawCell(g, DetailsCells.Text(entry, column), ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, bounds)),
+                        foreground, DetailsCells.RightAligned(column));
         }
 
         if (index == _dropTarget)   // R-110-2
@@ -706,12 +705,12 @@ public sealed class FileListView : Control
         if (e.Y < _layout.HeaderHeight)
         {
             var x = e.X + _layout.ScrollOffset(_scroll).X;
-            var border = DetailsLayout.HeaderBorderAt(_layout.Header, x, Scaled(4));
+            var border = _layout.HeaderBorderAt(x, Scaled(4));
             _rightDown = null;
             _headerRightDown = e.Button == MouseButtons.Right;
             if (e.Button != MouseButtons.Left) return;
             if (border >= 0) _headerDrag = (border, e.X, _layout.Header[border].Width);   // 幅のドラッグを始める
-            else { _headerPress = DetailsLayout.HeaderCellAt(_layout.Header, x); InvalidateHeader(); }   // 離した時点でソート
+            else { _headerPress = _layout.HeaderCellAt(x); InvalidateHeader(); }   // 離した時点でソート
             return;
         }
 
@@ -762,8 +761,8 @@ public sealed class FileListView : Control
     {
         base.OnMouseMove(e);
         SetHeaderHot(_layout.HeaderHeight > 0 && e.Y >= 0 && e.Y < _layout.HeaderHeight
-                     && DetailsLayout.HeaderBorderAt(_layout.Header, e.X + _layout.ScrollOffset(_scroll).X, Scaled(4)) < 0
-            ? DetailsLayout.HeaderCellAt(_layout.Header, e.X + _layout.ScrollOffset(_scroll).X) : -1);
+                     && _layout.HeaderBorderAt(e.X + _layout.ScrollOffset(_scroll).X, Scaled(4)) < 0
+            ? _layout.HeaderCellAt(e.X + _layout.ScrollOffset(_scroll).X) : -1);
 
         if (_headerDrag is { } drag && e.Button == MouseButtons.Left)
         {
@@ -778,7 +777,7 @@ public sealed class FileListView : Control
         if (e.Button == MouseButtons.None && _layout.HeaderHeight > 0)
         {
             var onBorder = e.Y < _layout.HeaderHeight
-                           && DetailsLayout.HeaderBorderAt(_layout.Header, e.X + _layout.ScrollOffset(_scroll).X, Scaled(4)) >= 0;
+                           && _layout.HeaderBorderAt(e.X + _layout.ScrollOffset(_scroll).X, Scaled(4)) >= 0;
             Cursor = onBorder ? Cursors.VSplit : Cursors.Default;
         }
 
@@ -935,7 +934,7 @@ public sealed class FileListView : Control
         if (e.Y < _layout.HeaderHeight)
         {
             // 境界の上なら自動の幅に戻す。ダブルクリックの 2 度目の押下でつかんだ境界は、離しても幅を保存しない
-            var border = DetailsLayout.HeaderBorderAt(_layout.Header, e.X + _layout.ScrollOffset(_scroll).X, Scaled(4));
+            var border = _layout.HeaderBorderAt(e.X + _layout.ScrollOffset(_scroll).X, Scaled(4));
             _headerDrag = null;
             _dragWidths.Clear();
             if (border >= 0) ColumnWidthChanged?.Invoke(this, (DetailsColumnWidths.Key(_layout.Header[border].Column), null));
@@ -966,7 +965,7 @@ public sealed class FileListView : Control
                 ColumnWidthChanged?.Invoke(this, (DetailsColumnWidths.Key(column), DetailsColumnWidths.ToLogical(width, DeviceDpi)));
             }
             else if (press >= 0 && e.Y < _layout.HeaderHeight
-                     && DetailsLayout.HeaderCellAt(_layout.Header, e.X + _layout.ScrollOffset(_scroll).X) == press)
+                     && _layout.HeaderCellAt(e.X + _layout.ScrollOffset(_scroll).X) == press)
                 HeaderClicked?.Invoke(this, _layout.Header[press].Column);
             return;
         }
@@ -974,7 +973,7 @@ public sealed class FileListView : Control
         {
             _headerRightDown = false;
             // 見出しの上では項目のメニューではなく列のメニュー
-            DetailsHeaderMenu(DetailsLayout.HeaderCellAt(_layout.Header, e.X + _layout.ScrollOffset(_scroll).X)).Show(this, e.Location);
+            DetailsHeaderMenu(_layout.HeaderCellAt(e.X + _layout.ScrollOffset(_scroll).X)).Show(this, e.Location);
             return;
         }
 
