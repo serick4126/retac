@@ -2240,6 +2240,28 @@
         }
       ]
     },
+    "ReTAC.Domain.Listing.LruCache`2": {
+      "id": "type:ReTAC.Domain.Listing.LruCache`2",
+      "kind": "sealed class",
+      "file": null,
+      "doc": "R-117: 大きさ（コスト）の合計に上限のある LRU。追い出しは入れる前に行う（P-25。入れてから追い出すと、今入れたものを解放して返してしまう）。 UI のスレッドだけで使う（ロックしない）。",
+      "fields": [
+        {
+          "name": "Count",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "Total",
+          "type": "long",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        }
+      ]
+    },
     "ReTAC.Domain.Listing.NameComparers": {
       "id": "type:ReTAC.Domain.Listing.NameComparers",
       "kind": "static class",
@@ -6843,6 +6865,12 @@
         "line": 106
       }
     ],
+    "P-25": [
+      {
+        "file": "src/ReTAC.Domain/Listing/LruCache.cs",
+        "line": 4
+      }
+    ],
     "R-01": [
       {
         "file": "src/ReTAC.App/FileListView.cs",
@@ -8941,6 +8969,10 @@
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
         "line": 118
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/LruCache.cs",
+        "line": 4
       },
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
