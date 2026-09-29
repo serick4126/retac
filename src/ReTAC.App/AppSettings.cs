@@ -23,8 +23,11 @@ public sealed class AppSettings
     /// <summary>R-26: 「保持する」が無効なときの固定の起動フォルダ。</summary>
     public string? StartFolder { get; set; }
 
-    /// <summary>R-40: 常駐する。終了コマンドでプロセスを終わらせず最小化する。</summary>
-    public bool Resident { get; set; } = true;
+    /// <summary>
+    /// R-40: 常駐する。終了コマンドでプロセスを終わらせず最小化する。
+    /// 既定は常駐しない（2026-09-29 利用者の決定）。初めて使う人が閉じてもプロセスが残ると、終わっていないことに気づきにくい
+    /// </summary>
+    public bool Resident { get; set; }
     /// <summary>R-40-6: 起動時はウィンドウを表示しない。</summary>
     public bool StartMinimized { get; set; }
 

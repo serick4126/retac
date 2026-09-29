@@ -19,7 +19,7 @@ namespace ReTAC.App;
 public sealed class SettingsDraft
 {
     // --- 動作環境（EnvironmentPage） -------------------------------------
-    public bool Resident { get; set; } = true;
+    public bool Resident { get; set; }
     public bool StartMinimized { get; set; }
     public bool KeepLastFolder { get; set; } = true;
 

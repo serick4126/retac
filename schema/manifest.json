@@ -48,7 +48,7 @@
         "key": "Resident",
         "type": "bool",
         "nullable": false,
-        "default": true
+        "default": false
       },
       {
         "key": "StartMinimized",
@@ -4844,11 +4844,11 @@
     "B-05": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 130
+        "line": 133
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 325
+        "line": 328
       },
       {
         "file": "src/ReTAC.App/IncrementalSearchBar.cs",
@@ -5086,7 +5086,7 @@
     "B-20": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 72
+        "line": 75
       }
     ],
     "B-21": [
@@ -5110,7 +5110,7 @@
     "B-22": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 87
+        "line": 90
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
@@ -5224,7 +5224,7 @@
     "F-01": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 129
+        "line": 132
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
@@ -5520,7 +5520,7 @@
     "F-09": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 124
+        "line": 127
       },
       {
         "file": "src/ReTAC.App/EnvironmentPage.cs",
@@ -5732,7 +5732,7 @@
     "N-02": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 141
+        "line": 144
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -6150,7 +6150,7 @@
     "R-101": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 111
+        "line": 114
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -6672,11 +6672,11 @@
     "R-108": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 96
+        "line": 99
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 264
+        "line": 267
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -6764,19 +6764,19 @@
     "R-108-2": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 103
+        "line": 106
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 235
+        "line": 238
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 248
+        "line": 251
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 265
+        "line": 268
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -7588,7 +7588,7 @@
     "R-112": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 79
+        "line": 82
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
@@ -7770,7 +7770,7 @@
     "R-14": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 285
+        "line": 288
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -7842,7 +7842,7 @@
     "R-20-3": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 141
+        "line": 144
       }
     ],
     "R-22": [
@@ -7888,7 +7888,7 @@
     "R-25": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 291
+        "line": 294
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -8180,7 +8180,7 @@
     "R-40": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 26
+        "line": 27
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -8232,7 +8232,7 @@
     "R-40-6": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 28
+        "line": 31
       },
       {
         "file": "src/ReTAC.App/Program.cs",
@@ -8690,7 +8690,7 @@
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 148
+        "line": 151
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -8708,11 +8708,11 @@
     "R-55-3": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 153
+        "line": 156
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 182
+        "line": 185
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -9188,7 +9188,7 @@
     "R-77": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 61
+        "line": 64
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
@@ -9446,7 +9446,7 @@
     "R-83": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 291
+        "line": 294
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -9528,7 +9528,7 @@
     "R-86": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 66
+        "line": 69
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -9646,15 +9646,15 @@
     "R-89": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 69
+        "line": 72
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 86
+        "line": 89
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 92
+        "line": 95
       },
       {
         "file": "src/ReTAC.App/BookmarkBar.cs",
@@ -10170,7 +10170,7 @@
     "R-96": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 76
+        "line": 79
       },
       {
         "file": "src/ReTAC.App/CentralDisplayArea.cs",
@@ -10690,7 +10690,7 @@
     "R-98": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 359
+        "line": 362
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
@@ -10922,7 +10922,7 @@
     "V-07": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 205
+        "line": 208
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",

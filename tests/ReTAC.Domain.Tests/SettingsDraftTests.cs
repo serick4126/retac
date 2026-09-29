@@ -111,13 +111,21 @@ public class SettingsDraftTests
         draft.HiddenDrives = ['D'];
         draft.ShowDesktopButton = !settings.ShowDesktopButton;
 
-        Assert.True(settings.Resident);
+        Assert.False(settings.Resident);
         Assert.False(settings.StartMinimized);
         Assert.True(settings.KeepLastFolder);
         Assert.True(settings.SuppressMultipleToolLaunch);
         Assert.Equal(16f, settings.ToTheme().FontSize);
         Assert.Empty(settings.HiddenDrives);
         Assert.True(settings.ShowDesktopButton);
+    }
+
+    /// <summary>R-40: 設定ファイルが無いとき・欄が無いときは常駐しない（2026-09-29 利用者の決定）</summary>
+    [Fact]
+    public void 常駐の既定はしない()
+    {
+        Assert.False(new AppSettings().Resident);
+        Assert.False(new SettingsDraft().Resident);
     }
 
     [Fact]
@@ -152,7 +160,7 @@ public class SettingsDraftTests
         var (settings, keyMap, quickAccess) = Baseline();
         var draft = SettingsDraft.From(settings, keyMap, Theme.Default, quickAccess);
 
-        draft.Resident = false;
+        draft.Resident = true;
         draft.Theme = Theme.Default with { FontSize = 20f };
         draft.HiddenDrives = ['D'];
         draft.ShowDesktopButton = false;
@@ -160,7 +168,7 @@ public class SettingsDraftTests
 
         draft.CommitTo(settings, quickAccess);
 
-        Assert.False(settings.Resident);
+        Assert.True(settings.Resident);
         Assert.Equal(20f, settings.ToTheme().FontSize);
         Assert.Equal(['D'], settings.ToHiddenDrives());
         Assert.False(settings.ShowDesktopButton);
