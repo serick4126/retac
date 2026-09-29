@@ -1237,6 +1237,45 @@
         "Attributes"
       ]
     },
+    "ReTAC.Domain.Listing.DetailsColumnInput": {
+      "id": "type:ReTAC.Domain.Listing.DetailsColumnInput",
+      "kind": "struct",
+      "file": "src/ReTAC.Domain/Listing/DetailsLayout.cs",
+      "doc": "R-114: 列 1 つの入力（幅はすべてその dpi のピクセル）。Column が null なら名前の列（常に先頭）。",
+      "fields": [
+        {
+          "name": "Column",
+          "type": "ReTAC.Domain.Listing.DetailsColumn?",
+          "nullable": true,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "AutoWidth",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "自動の幅（中身の最長。名前の列は方式〔R-113〕を当てた後の幅）"
+        },
+        {
+          "name": "MinWidth",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "見出しの文字・ソートの印・余白が収まる幅（ドラッグでもこれより狭くしない）"
+        },
+        {
+          "name": "ManualWidth",
+          "type": "int?",
+          "nullable": true,
+          "required": false,
+          "mutability": "init",
+          "doc": "見出しの境界のドラッグで決めた幅。null なら自動（V6）"
+        }
+      ]
+    },
     "ReTAC.Domain.Listing.DetailsColumnSetting": {
       "id": "type:ReTAC.Domain.Listing.DetailsColumnSetting",
       "kind": "sealed record",
@@ -1256,6 +1295,206 @@
           "nullable": false,
           "required": false,
           "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Listing.DetailsLayout": {
+      "id": "type:ReTAC.Domain.Listing.DetailsLayout",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Listing/DetailsLayout.cs",
+      "doc": "R-114 / V1 / V6: 詳細表示のレイアウト。行全体が項目（INV-DETAILS-ROW-HIT）。縦は 1 段 1 行、横は 1 段 StepWidth。",
+      "fields": [
+        {
+          "name": "RowHeight",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "IconWidth",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "ColumnPadding",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "HeaderHeight",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "StepWidth",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "Header",
+          "type": "IReadOnlyList<ReTAC.Domain.Listing.HeaderCell>",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "EntryCount",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "ExtensionOffset",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "ViewportWidth",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "ViewportHeight",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "ScrollBars",
+          "type": "ValueTuple<bool, bool>",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "TotalWidth",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "ArrowsScrollHorizontally",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        }
+      ]
+    },
+    "ReTAC.Domain.Listing.DetailsLayoutInput": {
+      "id": "type:ReTAC.Domain.Listing.DetailsLayoutInput",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Listing/DetailsLayout.cs",
+      "fields": [
+        {
+          "name": "EntryCount",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "RowHeight",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "IconWidth",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "ColumnPadding",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "HeaderHeight",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "StepWidth",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "横のスクロールの 1 段（一覧のフォントの数字 0 の幅の 4 文字分）。"
+        },
+        {
+          "name": "Columns",
+          "type": "IReadOnlyList<ReTAC.Domain.Listing.DetailsColumnInput>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "表示する列だけを表示の順に。[0] は名前の列。"
+        },
+        {
+          "name": "FitToWindow",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "ClientWidth",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "ClientHeight",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "VerticalBarWidth",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "HorizontalBarHeight",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "ExtensionOffset",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "名前のセルの左端から、揃えた拡張子（R-01-6）を描き始める位置。名前に拡張子を出さないなら 0。"
         }
       ]
     },
@@ -2934,6 +3173,28 @@
         "field": "Column",
         "container": null,
         "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.DetailsLayout",
+      "to": "type:ReTAC.Domain.Listing.HeaderCell",
+      "type": "1:N",
+      "fk": {
+        "field": "Header",
+        "container": "IReadOnlyList<ReTAC.Domain.Listing.HeaderCell>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.DetailsLayoutInput",
+      "to": "type:ReTAC.Domain.Listing.DetailsColumnInput",
+      "type": "1:N",
+      "fk": {
+        "field": "Columns",
+        "container": "IReadOnlyList<ReTAC.Domain.Listing.DetailsColumnInput>",
+        "unique": false
       },
       "visibility": "public"
     },
@@ -5095,6 +5356,10 @@
       {
         "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
         "line": 122
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/DetailsLayout.cs",
+        "line": 123
       }
     ],
     "B-09": [
@@ -6203,6 +6468,10 @@
       {
         "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
         "line": 140
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/DetailsLayout.cs",
+        "line": 25
       }
     ],
     "R-04": [
@@ -7447,6 +7716,10 @@
         "line": 122
       },
       {
+        "file": "src/ReTAC.Domain/Listing/DetailsLayout.cs",
+        "line": 123
+      },
+      {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
         "line": 6
       },
@@ -7625,6 +7898,10 @@
       {
         "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
         "line": 36
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/DetailsLayout.cs",
+        "line": 177
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
@@ -7871,6 +8148,10 @@
         "line": 76
       },
       {
+        "file": "src/ReTAC.Domain/Listing/DetailsLayout.cs",
+        "line": 4
+      },
+      {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
         "line": 5
       },
@@ -7898,6 +8179,14 @@
       },
       {
         "file": "src/ReTAC.Domain/Formatting/Display.cs",
+        "line": 30
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/DetailsLayout.cs",
+        "line": 3
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/DetailsLayout.cs",
         "line": 30
       },
       {

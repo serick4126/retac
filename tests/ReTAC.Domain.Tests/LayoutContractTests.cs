@@ -11,6 +11,13 @@ public class LayoutContractTests
     public static TheoryData<string, IFileViewLayout, int> Layouts() => new()
     {
         { "一覧", ColumnLayout.Compute(23, 120, 30, 16, 100, 16, 4, 2, 4), 23 },
+        { "詳細", DetailsLayout.Compute(new DetailsLayoutInput
+            {
+                EntryCount = 23, RowHeight = 20, IconWidth = 16, ColumnPadding = 4, HeaderHeight = 20, StepWidth = 32,
+                Columns = [new(null, 200, 60, null), new(DetailsColumn.Size, 80, 40, null), new(DetailsColumn.Type, 120, 40, 90)],
+                FitToWindow = false, ClientWidth = 250, ClientHeight = 150, VerticalBarWidth = 17, HorizontalBarHeight = 17,
+                ExtensionOffset = 150,
+            }), 23 },
     };
 
     [Theory]
@@ -63,9 +70,13 @@ public class LayoutContractTests
         {
             var scroll = layout.Reveal(i, new ScrollPosition(0, 0), vw, vh);
             var (ox, oy) = layout.ScrollOffset(scroll);
-            var (x, y, _, h) = layout.ItemBounds(i);
+            var (x, y, w, h) = layout.ItemBounds(i);
             Assert.True(y - oy >= 0 && y - oy + h <= vh, $"{name} の {i} が縦に見えない");
-            Assert.True(x - ox >= 0 && x - ox < vw, $"{name} の {i} が横に見えない");
+            // 詳細は縦だけ動かし横は保つ（行は幅が内容全体）ので、横のどこかで見えていればよい。一覧は列の左端が見えている
+            if (layout.ArrowsScrollHorizontally)
+                Assert.True(x - ox < vw && x - ox + w > 0, $"{name} の {i} が横に見えない");
+            else
+                Assert.True(x - ox >= 0 && x - ox < vw, $"{name} の {i} が横に見えない");
         }
     }
 }
