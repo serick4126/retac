@@ -6301,7 +6301,7 @@
       },
       {
         "file": "src/ReTAC.Shell/ShellFileType.cs",
-        "line": 18
+        "line": 77
       },
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
@@ -8238,6 +8238,10 @@
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
         "line": 9
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFileType.cs",
+        "line": 29
       }
     ],
     "R-115": [

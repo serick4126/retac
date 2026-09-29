@@ -10,20 +10,97 @@ public static class ShellFileType
     // 列挙は Task.Run 上でも走る（MainForm の非同期の folder 展開）。素の Dictionary だと壊れる
     private static readonly ConcurrentDictionary<string, string> Cache = new(StringComparer.OrdinalIgnoreCase);
 
+    public static string KeyOf(string fullPath, bool isFolder) => isFolder ? "__folder__" : Path.GetExtension(fullPath);
+
     public static string TypeName(string fullPath, bool isFolder)
     {
-        var key = isFolder ? "__folder__" : Path.GetExtension(fullPath);
+        var key = KeyOf(fullPath, isFolder);
         if (Cache.TryGetValue(key, out var cached)) return cached;
 
+        var name = Query(key);
+        Cache[key] = name;
+        return name;
+    }
+
+    public static bool TryGetCached(string fullPath, bool isFolder, out string name) =>
+        Cache.TryGetValue(KeyOf(fullPath, isFolder), out name!);
+
+    /// <summary>
+    /// R-114: 詳細表示の種類の列は、描画を止めないよう背景で取り、届くまでは空欄で描く。
+    /// 同じ鍵の問い合わせが進行中なら積まない（同じ拡張子 1000 件でも問い合わせは 1 回）。問い合わせは背景の 1 本のスレッドで順に行う。
+    /// </summary>
+    public static void Request(string fullPath, bool isFolder)
+    {
+        var key = KeyOf(fullPath, isFolder);
+        if (Cache.ContainsKey(key) || !Pending.TryAdd(key, 0)) return;
+        Queue.Add(key);
+        EnsureWorker();
+    }
+
+    /// <summary>届いた鍵。背景のスレッドから呼ばれる。受け取る側は UI のスレッドへ渡し、破棄済みなら何もしない。</summary>
+    public static event Action<string>? Resolved;
+
+    private static readonly ConcurrentDictionary<string, byte> Pending = new(StringComparer.OrdinalIgnoreCase);
+    private static BlockingCollection<string> Queue = new();
+    private static Thread? _worker;
+    private static readonly object WorkerLock = new();
+
+    private static void EnsureWorker()
+    {
+        lock (WorkerLock)
+        {
+            if (_worker is not null) return;
+            // 終了を待たない（IsBackground）。SHGetFileInfo は COM を使うので STA で回す
+            _worker = new Thread(Work) { IsBackground = true, Name = "ShellFileType" };
+            _worker.SetApartmentState(ApartmentState.STA);
+            _worker.Start(Queue);
+        }
+    }
+
+    private static void Work(object? state)
+    {
+        foreach (var key in ((BlockingCollection<string>)state!).GetConsumingEnumerable())
+        {
+            string name;
+            try { name = Query(key); }
+            catch (Exception) { name = ""; }   // 1 つの失敗で列を止めない。空欄のまま（次に開いたときも問い合わせない）
+            Cache[key] = name;
+            Pending.TryRemove(key, out _);
+            Interlocked.Increment(ref _queryCount);
+            Resolved?.Invoke(key);
+        }
+    }
+
+    private static string Query(string key)
+    {
+        if (QueryOverride is { } fake) return fake(key);
         // SHGFI_USEFILEATTRIBUTES: 実ファイルに触れないので、応答しないドライブでも固まらない（N-05）
+        var isFolder = key == "__folder__";
         var attributes = isFolder ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL;
-        var name = SHGetFileInfo(isFolder ? @"C:\x" : "x" + key, attributes,
+        return SHGetFileInfo(isFolder ? @"C:\x" : "x" + key, attributes,
             out var info, (uint)Marshal.SizeOf<SHFILEINFO>(), SHGFI_TYPENAME | SHGFI_USEFILEATTRIBUTES) == IntPtr.Zero
             ? ""
             : info.szTypeName;
+    }
 
-        Cache[key] = name;
-        return name;
+    internal static Func<string, string>? QueryOverride;
+    private static int _queryCount;
+    internal static int QueryCount => _queryCount;
+
+    internal static void ResetForTests()
+    {
+        lock (WorkerLock)
+        {
+            Queue.CompleteAdding();
+            _worker?.Join(TimeSpan.FromSeconds(5));
+            _worker = null;
+            Queue = new();
+        }
+        Cache.Clear();
+        Pending.Clear();
+        Resolved = null;
+        QueryOverride = null;
+        _queryCount = 0;
     }
 
     /// <summary>
