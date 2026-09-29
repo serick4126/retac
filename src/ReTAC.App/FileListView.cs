@@ -511,7 +511,7 @@ public sealed class FileListView : Control
     /// <summary>
     /// R-01-4 / R-01-6 / R-113: 本体は名前の領域の左から、拡張子は揃えた位置から。収まらなければ本体の末尾を「…」で省略し、
     /// 拡張子は残す（拡張子そのものが入らなければ拡張子も「…」）。全部描く（full）ときは揃えから外して続けて描く（R-01-6 の例外）。
-    /// ponytail: 省略は GDI の EndEllipsis 任せ。結合文字で崩れる例が見つかったら、書記素に切って自前で測る形に変える。
+    /// ponytail: 続けて描く名前以外の省略は GDI の EndEllipsis 任せ（切る位置は GDI が決める）。崩れる例が見つかったら、CutAtGrapheme で自前に切る形に広げる。
     /// </summary>
     private void DrawName(Graphics g, int index, Entry entry, Color foreground, bool full, Rectangle band)
     {
@@ -572,9 +572,19 @@ public sealed class FileListView : Control
     {
         var tail = "…" + entry.Extension;
         if (entry.Extension.Length == 0 || _measure.Width(tail) >= width) return entry.Name;
-        var length = entry.BaseName.Length;
-        while (length > 0 && _measure.Width(entry.BaseName[..length] + tail) > width) length--;
-        return entry.BaseName[..length] + tail;
+        return CutAtGrapheme(entry.BaseName, tail, width, _measure.Width);
+    }
+
+    /// <summary>
+    /// R-113: 省略は文字の途中で切らない（サロゲートペア・異体字セレクタ・結合文字を書記素の単位で残す）。
+    /// UTF-16 の長さで 1 つずつ削ると、対の片方だけが残って壊れた文字になる。
+    /// </summary>
+    internal static string CutAtGrapheme(string text, string tail, int width, Func<string, int> measure)
+    {
+        var starts = System.Globalization.StringInfo.ParseCombiningCharacters(text);
+        var count = starts.Length;
+        while (count > 0 && measure(text[..(count < starts.Length ? starts[count] : text.Length)] + tail) > width) count--;
+        return text[..(count < starts.Length ? starts[count] : text.Length)] + tail;
     }
 
     /// <summary>R-113: 省略して描いているか。本体の実測が本体の領域より広いか、拡張子の実測が拡張子の領域より広いとき。</summary>

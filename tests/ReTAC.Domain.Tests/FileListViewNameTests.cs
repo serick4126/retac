@@ -134,4 +134,25 @@ public class FileListViewNameTests
         using var all = List(NameWidthMode.ShowAll, names: ["a.txt"]);
         Assert.Equal(((ColumnLayout)all.Layout).ColumnWidth, ((ColumnLayout)wide.Layout).ColumnWidth);
     }
+
+    [Theory]
+    [InlineData("😀😀😀😀")]
+    [InlineData("葛󠄀葛󠄀葛󠄀")]
+    [InlineData("がががが")]
+    public void 省略は書記素の途中で切らない(string name)
+    {
+        // R-113: 1 書記素を 10 とみなし、境目の前後になるすべての幅で切る
+        static int Width(string text) => new System.Globalization.StringInfo(text).LengthInTextElements * 10;
+        var original = System.Globalization.StringInfo.ParseCombiningCharacters(name).Length;
+        for (var width = 0; width <= original * 10 + 15; width++)
+        {
+            var cut = FileListView.CutAtGrapheme(name, "…", width, Width);
+            Assert.EndsWith("…", cut);
+            var body = cut[..^1];
+            Assert.StartsWith(body, name);
+            // 残った文字列の書記素の数が、元の先頭からその数だけ取ったものと一致する（途中で切れていれば境目がずれる）
+            var kept = new System.Globalization.StringInfo(body).LengthInTextElements;
+            Assert.Equal(new System.Globalization.StringInfo(name).SubstringByTextElements(0, kept), body);
+        }
+    }
 }
