@@ -656,7 +656,7 @@ public sealed class MainForm : Form, IBookmarkHost
         CommandId.KeyAssignSettings => ShowSettings(SettingsPage.KeyAssign),
         CommandId.VisibleDriveSettings => ShowSettings(SettingsPage.DriveVisibility),
         CommandId.FileViewSettings => ShowSettings(SettingsPage.FileView),
-        CommandId.ViewList or CommandId.ViewDetails => SetViewMode(ViewModeCommands.Target(command)!.Value),
+        _ when ViewModeCommands.Target(command) is { } mode => SetViewMode(mode),
         CommandId.RunCommandLine => RunCommandLine(),
         CommandId.CopyToFolder => Recording(() => Transfer(moving: false)),
         CommandId.MoveToFolder => Recording(() => Transfer(moving: true)),

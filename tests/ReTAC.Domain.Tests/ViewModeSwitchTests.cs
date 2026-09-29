@@ -9,6 +9,10 @@ public class ViewModeSwitchTests
     [Theory]
     [InlineData(CommandId.ViewList, FileViewMode.List)]
     [InlineData(CommandId.ViewDetails, FileViewMode.Details)]
+    [InlineData(CommandId.ViewExtraLargeIcons, FileViewMode.ExtraLargeIcons)]
+    [InlineData(CommandId.ViewLargeIcons, FileViewMode.LargeIcons)]
+    [InlineData(CommandId.ViewMediumIcons, FileViewMode.MediumIcons)]
+    [InlineData(CommandId.ViewSmallIcons, FileViewMode.SmallIcons)]
     public void モードごとのコマンドがモードを指す(CommandId command, FileViewMode mode) =>
         Assert.Equal(mode, ViewModeCommands.Target(command));
 

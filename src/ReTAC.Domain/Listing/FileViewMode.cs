@@ -12,7 +12,9 @@ public static class FileViewModes
     /// Q29: 作ったビューから順に切り替えの段へ足す。3.0.0 では 8 つすべて。
     /// 並びは列挙の順（Ctrl+ホイールの段の順）を保つ。
     /// </summary>
-    public static readonly IReadOnlyList<FileViewMode> Built = [FileViewMode.List, FileViewMode.Details];
+    public static readonly IReadOnlyList<FileViewMode> Built = [
+        FileViewMode.ExtraLargeIcons, FileViewMode.LargeIcons, FileViewMode.MediumIcons, FileViewMode.SmallIcons,
+        FileViewMode.List, FileViewMode.Details];
 
     /// <summary>知らない値・まだ作っていないモードは一覧に直す（手で書いた設定ファイルでだけ起こる）。</summary>
     public static FileViewMode Normalize(FileViewMode mode) => Built.Contains(mode) ? mode : FileViewMode.List;

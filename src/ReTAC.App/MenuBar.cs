@@ -86,6 +86,10 @@ public static class MenuBar
         };
         // R-112-4 / V9: ビューはファイル表示パネルのサブメニューに並べる。チェックは開くたびに MainForm が付ける（DropDownOpening）
         var fileViewPanel = Top("ファイル表示パネル(&P)",
+            Item("特大アイコン(&X)", CommandId.ViewExtraLargeIcons, radio: true),
+            Item("大アイコン(&R)", CommandId.ViewLargeIcons, radio: true),
+            Item("中アイコン(&M)", CommandId.ViewMediumIcons, radio: true),
+            Item("小アイコン(&N)", CommandId.ViewSmallIcons, radio: true),
             Item("一覧(&L)", CommandId.ViewList, radio: true),
             Item("詳細(&D)", CommandId.ViewDetails, radio: true));
         var leftPanel = Top("左パネル(&L)", [leftToggle, Separator(), .. leftViews.Values]);

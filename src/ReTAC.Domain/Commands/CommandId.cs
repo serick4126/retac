@@ -108,6 +108,14 @@ public enum CommandId
     ViewList = 0x9016,
     /// <summary>R-112-4 / V9: 表示モードを詳細にする（全ウィンドウ）。既定のキーは無い。</summary>
     ViewDetails = 0x9017,
+    /// <summary>R-112-4 / V9: 表示モードを特大アイコンにする（全ウィンドウ）。既定のキーは無い。</summary>
+    ViewExtraLargeIcons = 0x9018,
+    /// <summary>R-112-4 / V9: 表示モードを大アイコンにする（全ウィンドウ）。既定のキーは無い。</summary>
+    ViewLargeIcons = 0x9019,
+    /// <summary>R-112-4 / V9: 表示モードを中アイコンにする（全ウィンドウ）。既定のキーは無い。</summary>
+    ViewMediumIcons = 0x901A,
+    /// <summary>R-112-4 / V9: 表示モードを小アイコンにする（全ウィンドウ）。既定のキーは無い。</summary>
+    ViewSmallIcons = 0x901B,
     ColorAndFontSettings = 0x8151,
     KeyAssignSettings = 0x8155,
     VisibleDriveSettings = 0x814C,

@@ -415,6 +415,10 @@
         "FileViewSettings",
         "ViewList",
         "ViewDetails",
+        "ViewExtraLargeIcons",
+        "ViewLargeIcons",
+        "ViewMediumIcons",
+        "ViewSmallIcons",
         "ClipboardCopy",
         "ClipboardCut",
         "ClipboardPaste",
@@ -4800,9 +4804,41 @@
         "defaultKeys": []
       },
       {
+        "id": "ViewExtraLargeIcons",
+        "hex": "0x9018",
+        "label": "特大アイコンで表示",
+        "category": "表示",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "ViewLargeIcons",
+        "hex": "0x9019",
+        "label": "大アイコンで表示",
+        "category": "表示",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
         "id": "ViewList",
         "hex": "0x9016",
         "label": "一覧で表示",
+        "category": "表示",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "ViewMediumIcons",
+        "hex": "0x901A",
+        "label": "中アイコンで表示",
+        "category": "表示",
+        "assignable": true,
+        "defaultKeys": []
+      },
+      {
+        "id": "ViewSmallIcons",
+        "hex": "0x901B",
+        "label": "小アイコンで表示",
         "category": "表示",
         "assignable": true,
         "defaultKeys": []
@@ -6378,7 +6414,7 @@
     "F-06": [
       {
         "file": "src/ReTAC.App/CommandLabels.cs",
-        "line": 98
+        "line": 102
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
@@ -6432,7 +6468,7 @@
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 260
+        "line": 264
       }
     ],
     "F-08": [
@@ -7392,15 +7428,15 @@
     "R-104": [
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 155
+        "line": 159
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 172
+        "line": 176
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 233
+        "line": 237
       }
     ],
     "R-104-1": [
@@ -7446,27 +7482,27 @@
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 96
+        "line": 100
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 127
+        "line": 131
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 181
+        "line": 185
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 186
+        "line": 190
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 199
+        "line": 203
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 280
+        "line": 284
       }
     ],
     "R-105": [
@@ -7476,7 +7512,7 @@
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 219
+        "line": 223
       },
       {
         "file": "src/ReTAC.Domain/Commands/CommandId.cs",
@@ -7954,7 +7990,7 @@
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 217
+        "line": 221
       },
       {
         "file": "src/ReTAC.Domain/Commands/CommandId.cs",
@@ -8713,6 +8749,22 @@
         "line": 109
       },
       {
+        "file": "src/ReTAC.Domain/Commands/CommandId.cs",
+        "line": 111
+      },
+      {
+        "file": "src/ReTAC.Domain/Commands/CommandId.cs",
+        "line": 113
+      },
+      {
+        "file": "src/ReTAC.Domain/Commands/CommandId.cs",
+        "line": 115
+      },
+      {
+        "file": "src/ReTAC.Domain/Commands/CommandId.cs",
+        "line": 117
+      },
+      {
         "file": "src/ReTAC.Domain/Listing/FileViewMode.cs",
         "line": 4
       },
@@ -9264,7 +9316,7 @@
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 97
+        "line": 101
       }
     ],
     "R-120": [
@@ -10738,7 +10790,7 @@
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 310
+        "line": 314
       },
       {
         "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
@@ -11032,7 +11084,7 @@
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 92
+        "line": 96
       },
       {
         "file": "src/ReTAC.App/UndoHost.cs",
@@ -11066,7 +11118,7 @@
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 92
+        "line": 96
       },
       {
         "file": "src/ReTAC.Domain/Commands/CommandId.cs",
@@ -11100,7 +11152,7 @@
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 274
+        "line": 278
       },
       {
         "file": "src/ReTAC.App/UndoRecorder.cs",
@@ -11244,7 +11296,7 @@
       },
       {
         "file": "src/ReTAC.App/MenuBar.cs",
-        "line": 273
+        "line": 277
       },
       {
         "file": "src/ReTAC.App/MenuSpacing.cs",
@@ -11350,7 +11402,7 @@
       },
       {
         "file": "src/ReTAC.App/CommandGlyphs.cs",
-        "line": 105
+        "line": 109
       },
       {
         "file": "src/ReTAC.App/CommandPickerDialog.cs",
