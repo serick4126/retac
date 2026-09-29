@@ -202,11 +202,11 @@ public static class MenuBar
                 Separator(),
                 Item("動作環境の設定(&E)...", CommandId.EnvironmentSettings),
                 Item("配色・フォントの設定(&C)...", CommandId.ColorAndFontSettings),
+                Item("ファイルビューの設定(&V)...", CommandId.FileViewSettings),
                 Item("キー割り当ての設定(&K)...", CommandId.KeyAssignSettings),
                 Item("外部ツールの設定(&T)...", CommandId.ExternalToolSettings),
                 Item("表示するドライブの設定(&D)...", CommandId.VisibleDriveSettings),
-                Item("クイックアクセスの設定(&Q)...", CommandId.QuickAccessSettings),
-                Item("ファイルビューの設定(&V)...", CommandId.FileViewSettings)),
+                Item("クイックアクセスの設定(&Q)...", CommandId.QuickAccessSettings)),
 
             Top("ヘルプ(&H)",
                 // R-109-1: アップデータの画面が開くので「...」を付ける。既定のキーなし
