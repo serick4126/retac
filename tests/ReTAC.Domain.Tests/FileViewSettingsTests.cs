@@ -20,7 +20,9 @@ public class FileViewSettingsTests
         Assert.True(s.Tiles.InPanelDragDrop);
         Assert.Equal(new NameWidthSetting { Mode = NameWidthMode.ShowAll, MaxChars = 40 }, s.List.NameWidth);
         Assert.Equal(new NameWidthSetting { Mode = NameWidthMode.ShowAll, MaxChars = 40 }, s.Details.NameWidth);
-        Assert.True(s.Details.ExtensionInName);
+        Assert.True(s.Common.ShowExtension);                                                 // R-01-7
+        Assert.True(s.List.AlignExtension);                                                  // R-01-6
+        Assert.True(s.Details.AlignExtension);
         Assert.Equal([DetailsColumn.Size, DetailsColumn.Modified, DetailsColumn.Type, DetailsColumn.Attributes],
             s.Details.Columns.Where(c => c.Visible).Select(c => c.Column));
         Assert.Equal(6, s.Details.Columns.Count);                                            // 非表示の列も並びを持つ
@@ -45,6 +47,9 @@ public class FileViewSettingsTests
         Assert.True(s.List.InPanelDragDrop);
         Assert.Equal(new NameWidthSetting(), s.List.NameWidth);
         Assert.Equal(new FileViewCommonSettings(), s.Common);
+        Assert.True(s.Common.ShowExtension);
+        Assert.True(s.List.AlignExtension);       // 欠けた R-01-6 の項目は既定値
+        Assert.True(s.Details.AlignExtension);
         Assert.True(s.Details.InPanelDragDrop);
         Assert.Equal(DetailsViewSettings.DefaultColumns, s.Details.Columns);
         Assert.Equal(new IconsViewSettings(), s.Icons);
@@ -269,11 +274,11 @@ public class FileViewSettingsTests
         var baseline = new FileViewSettings();
         var changed = new FileViewSettings
         {
-            Common = new() { ShowOverlays = false },
-            List = new() { InPanelDragDrop = true, NameWidth = new() { Mode = NameWidthMode.Auto, MaxChars = 11 } },
+            Common = new() { ShowOverlays = false, ShowExtension = false },
+            List = new() { AlignExtension = false, InPanelDragDrop = true, NameWidth = new() { Mode = NameWidthMode.Auto, MaxChars = 11 } },
             Details = new()
             {
-                InPanelDragDrop = false, NameWidth = new() { Mode = NameWidthMode.MaxChars, MaxChars = 12 }, ExtensionInName = false,
+                InPanelDragDrop = false, NameWidth = new() { Mode = NameWidthMode.MaxChars, MaxChars = 12 }, AlignExtension = false,
                 Columns = [new() { Column = DetailsColumn.Size, Visible = false }], FitColumnsToWindow = true,
             },
             Icons = new()

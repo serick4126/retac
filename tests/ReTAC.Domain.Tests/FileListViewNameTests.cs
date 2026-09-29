@@ -16,6 +16,19 @@ public class FileListViewNameTests
         return list;
     }
 
+    private static FileListView Styled(bool showExtension, bool align, int chars, params string[] names)
+    {
+        var list = new FileListView { Size = new Size(600, 200) };
+        var views = new FileViewSettings
+        {
+            Common = new() { ShowExtension = showExtension },
+            List = new() { AlignExtension = align, NameWidth = new() { Mode = NameWidthMode.MaxChars, MaxChars = chars } },
+        };
+        list.SetView(FileViewMode.List, views, new Dictionary<string, int?>(), SortOrder.Default);
+        list.SetEntries(names.Select(n => TestEntries.File(n)).ToList());
+        return list;
+    }
+
     private const string Long = "とても長い資料の名前がここに続いていてまだ終わらないもっと長い名前.xlsx";
 
     [Fact]
@@ -49,6 +62,28 @@ public class FileListViewNameTests
         using var list = List(NameWidthMode.MaxChars, chars: 10, names: [Long, "a.txt"]);
         Assert.True(list.DrawsFullName(0));    // カーソルは先頭
         Assert.False(list.DrawsFullName(1));   // カーソルではない
+    }
+
+    [Fact]
+    public void 拡張子を表示しないと本体だけを描き揃えの領域も持たない()
+    {
+        using var list = Styled(showExtension: false, align: true, chars: 200, "資料.xlsx");
+        var entry = TestEntries.File("資料.xlsx");
+        Assert.Equal("資料", list.NameText(entry));
+        Assert.Equal(0, list.Layout.ExtensionBounds(0).Width);
+    }
+
+    [Fact]
+    public void 揃えないと拡張子を本体に続けて描き省略しても拡張子を残す()
+    {
+        using var list = Styled(showExtension: true, align: false, chars: 10, Long);
+        var entry = TestEntries.File(Long);
+        Assert.Equal(Long, list.NameText(entry));
+        Assert.Equal(0, list.Layout.ExtensionBounds(0).Width);
+        var shown = list.TogetherText(entry, 150);
+        Assert.EndsWith("….xlsx", shown);
+        Assert.NotEqual(Long, shown);
+        Assert.Equal(Long, list.TogetherText(entry, 5));   // 拡張子も入らなければ全体（末尾を EndEllipsis で省略）
     }
 
     [Fact]

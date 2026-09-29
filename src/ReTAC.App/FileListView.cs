@@ -18,8 +18,9 @@ namespace ReTAC.App;
 /// </summary>
 public sealed class FileListView : Control
 {
-    private readonly HScrollBar _hScrollBar = new() { Dock = DockStyle.Bottom, Visible = false };
-    private readonly VScrollBar _vScrollBar = new() { Dock = DockStyle.Right, Visible = false };
+    // 子は親の Cursor を引き継ぐ。見出しの境界で VSplit になったまま接するスクロールバーへ移ると、そこでも VSplit のままになるので矢印に固定する
+    private readonly HScrollBar _hScrollBar = new() { Dock = DockStyle.Bottom, Visible = false, Cursor = Cursors.Default };
+    private readonly VScrollBar _vScrollBar = new() { Dock = DockStyle.Right, Visible = false, Cursor = Cursors.Default };
 
     private Theme _theme = Theme.Default;
     private Font _font = null!;
@@ -250,7 +251,7 @@ public sealed class FileListView : Control
         // R-113: 「自動」はパネルの幅（名前の文字の外側を引いたもの）、「最大文字数」は数字 0 の幅 × 文字数（Q9）
         var cap = NameWidths.TextCap(_views.List.NameWidth, _measure.Width("0"), ClientSize.Width - textStart - ColumnPaddingValue);
         _layout = EntryMetrics.Layout(_state.Entries, _measure, ClientSize.Width, ClientSize.Height, _hScrollBar.Height,
-            _icons.Size, Gap, RowPadding, ColumnPaddingValue, cap);
+            _icons.Size, Gap, RowPadding, ColumnPaddingValue, cap, Style);
         UpdateScrollBars();
     }
 
@@ -263,12 +264,13 @@ public sealed class FileListView : Control
     {
         var details = _views.Details;
         var pad = ColumnPaddingValue;
-        var showExtension = details.ExtensionInName;
+        var style = Style;
+        var showExtension = style == ExtensionStyle.Aligned;
         var maxBase = 0;
         var maxExt = 0;
         foreach (var entry in _state.Entries)
         {
-            maxBase = Math.Max(maxBase, _measure.Width(showExtension ? entry.BaseName : entry.Name));
+            maxBase = Math.Max(maxBase, _measure.Width(NameText(entry)));
             if (showExtension) maxExt = Math.Max(maxExt, _measure.Width(entry.Extension));
         }
         var nameTextStart = pad + _icons.Size + Gap;
@@ -470,20 +472,41 @@ public sealed class FileListView : Control
         }
 
         var showExtension = ext.Width > 0 && entry.Extension.Length > 0;
-        var baseText = showExtension ? entry.BaseName : NameWithoutAlignment(entry);
         var baseRight = showExtension ? ext.X - Gap : name.Right;
         var baseRect = new Rectangle(name.X + Gap, top, Math.Max(0, baseRight - name.X - Gap), _measure.LineHeight());
         // R-01-4: すべて表示では「…」を出さない。実際に収まらないときだけ EndEllipsis を付ける（1px の測り違いで出さない）
-        var ellipsis = IsTruncated(index) ? TextFormatFlags.EndEllipsis : 0;
+        var truncated = IsTruncated(index);
+        var ellipsis = truncated ? TextFormatFlags.EndEllipsis : 0;
+        var baseText = showExtension ? entry.BaseName : NameText(entry);
+        // R-01-6: 続けて描くときの省略は、拡張子を残して本体の末尾を「…」にする（拡張子が入らなければ全体の末尾）
+        if (truncated && !showExtension && Style == ExtensionStyle.Together) baseText = TogetherText(entry, baseRect.Width);
         TextRenderer.DrawText(g, baseText, _font, baseRect, foreground, TextMeasure.Flags | ellipsis);
         if (showExtension)
             TextRenderer.DrawText(g, entry.Extension, _font, ext with { Y = top, Height = _measure.LineHeight() }, foreground,
                 TextMeasure.Flags | ellipsis);
     }
 
-    /// <summary>揃えた拡張子を出さないとき（詳細表示で名前に拡張子を出さない設定）の名前。一覧では常に本体（拡張子は揃えて出す）。</summary>
-    private string NameWithoutAlignment(Entry entry) =>
-        _mode == FileViewMode.Details && !_views.Details.ExtensionInName ? entry.Name : entry.BaseName;
+    /// <summary>R-01-6 / R-01-7: いまのモードでの名前の描き方。拡張子を出さない設定が優先し、そのうえで揃えるかを見る。</summary>
+    private ExtensionStyle Style =>
+        !_views.Common.ShowExtension ? ExtensionStyle.Hidden
+        : (_mode == FileViewMode.Details ? _views.Details.AlignExtension : _views.List.AlignExtension)
+            ? ExtensionStyle.Aligned : ExtensionStyle.Together;
+
+    /// <summary>揃えた拡張子の領域を使わないときに、名前の領域へ描く文字。</summary>
+    internal string NameText(Entry entry) => Style == ExtensionStyle.Together ? entry.Name : entry.BaseName;
+
+    /// <summary>
+    /// 続けて描く名前が width に入らないときの文字。「本体…」に拡張子を続ける。
+    /// 拡張子と「…」だけで入らないときは本体を出せないので、全体を返して描画側の EndEllipsis に任せる。
+    /// </summary>
+    internal string TogetherText(Entry entry, int width)
+    {
+        var tail = "…" + entry.Extension;
+        if (entry.Extension.Length == 0 || _measure.Width(tail) >= width) return entry.Name;
+        var length = entry.BaseName.Length;
+        while (length > 0 && _measure.Width(entry.BaseName[..length] + tail) > width) length--;
+        return entry.BaseName[..length] + tail;
+    }
 
     /// <summary>R-113: 省略して描いているか。本体の実測が本体の領域より広いか、拡張子の実測が拡張子の領域より広いとき。</summary>
     internal bool IsTruncated(int index)
@@ -494,7 +517,7 @@ public sealed class FileListView : Control
         var (ex, _, ew, _) = _layout.ExtensionBounds(index);
         var showExtension = ew > 0 && entry.Extension.Length > 0;
         var baseWidth = (showExtension ? ex - Gap : nx + nw) - nx - Gap;
-        return _measure.Width(showExtension ? entry.BaseName : NameWithoutAlignment(entry)) > baseWidth
+        return _measure.Width(showExtension ? entry.BaseName : NameText(entry)) > baseWidth
                || showExtension && _measure.Width(entry.Extension) > ew;
     }
 

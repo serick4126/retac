@@ -55,7 +55,9 @@ public sealed class FileViewPage : UserControl
 
     // 共通
     private readonly CheckBox _overlays = Check("同期状態などの印をアイコンに表示する(&O)");
+    private readonly CheckBox _showExtension = Check("名前に拡張子を表示する(&X)");
     // 一覧
+    private readonly CheckBox _listAlignExtension = Check("拡張子を揃えて表示する(&X)");
     internal CheckBox ListDragDrop { get; } = Check("ファイル表示パネル内でドラッグ＆ドロップを使用する(&D)");
     private readonly ComboBox _listWidth = Combo(WidthModes, 130);
     private readonly NumericUpDown _listChars = Chars();
@@ -63,7 +65,7 @@ public sealed class FileViewPage : UserControl
     private readonly CheckBox _detailsDragDrop = Check("ファイル表示パネル内でドラッグ＆ドロップを使用する(&D)");
     private readonly ComboBox _detailsWidth = Combo(WidthModes, 130);
     private readonly NumericUpDown _detailsChars = Chars();
-    private readonly CheckBox _extensionInName = Check("名前に拡張子を表示する(&X)");
+    private readonly CheckBox _detailsAlignExtension = Check("拡張子を揃えて表示する(&X)");
     internal CheckedListBox DetailsColumns { get; } = new() { Size = new Size(200, 124), CheckOnClick = true, IntegralHeight = false };
     internal Button MoveColumnUp { get; } = new() { Text = "上へ(&U)", Bounds = new Rectangle(210, 0, 90, 28) };
     private readonly Button _moveColumnDown = new() { Text = "下へ(&N)", Bounds = new Rectangle(210, 0, 90, 28) };
@@ -98,16 +100,17 @@ public sealed class FileViewPage : UserControl
         // アクセスキーはパネルの中で重ねず、ダイアログの「適用(&S)」の S と、ダイアログで避けている A は使わない
         _panels =
         [
-            Arrange(new Panel(), (_overlays, 0)),
+            Arrange(new Panel(), (_overlays, 0), (_showExtension, 32)),
             Arrange(new Panel(),
                 (ListDragDrop, 0),
                 (Row("名前の列の幅(&W):", _listWidth), 36),
-                (Row("文字数(&R):", _listChars), 36 + RowHeight)),
+                (Row("文字数(&R):", _listChars), 36 + RowHeight),
+                (_listAlignExtension, 106)),
             Arrange(new Panel(),
                 (_detailsDragDrop, 0),
                 (Row("名前の列の幅(&W):", _detailsWidth), 36),
                 (Row("文字数(&R):", _detailsChars), 36 + RowHeight),
-                (_extensionInName, 106),
+                (_detailsAlignExtension, 106),
                 (Caption("表示する列(&L):"), 140),
                 (DetailsColumns, 160),
                 (MoveColumnUp, 160),
@@ -173,13 +176,16 @@ public sealed class FileViewPage : UserControl
         var views = _draft.FileViews;
 
         _overlays.Checked = views.Common.ShowOverlays;
+        _showExtension.Checked = views.Common.ShowExtension;
+        _listAlignExtension.Checked = views.List.AlignExtension;
+        _detailsAlignExtension.Checked = views.Details.AlignExtension;
+        UpdateAlignEnabled();
 
         ListDragDrop.Checked = views.List.InPanelDragDrop;
         LoadWidth(_listWidth, _listChars, views.List.NameWidth);
 
         _detailsDragDrop.Checked = views.Details.InPanelDragDrop;
         LoadWidth(_detailsWidth, _detailsChars, views.Details.NameWidth);
-        _extensionInName.Checked = views.Details.ExtensionInName;
         foreach (var column in views.Details.Columns)
             DetailsColumns.Items.Add(new Choice<DetailsColumn>(column.Column, ColumnNames[column.Column]), column.Visible);
         _fitColumns.Checked = views.Details.FitColumnsToWindow;
@@ -210,13 +216,17 @@ public sealed class FileViewPage : UserControl
     private void Wire()
     {
         OnCheck(_overlays, (v, on) => v with { Common = v.Common with { ShowOverlays = on } });
+        OnCheck(_showExtension, (v, on) => v with { Common = v.Common with { ShowExtension = on } });
+        // 下書きの中で切り替えたらその場で灰色を切り替える。揃えるかの値は消さずに残す
+        _showExtension.CheckedChanged += (_, _) => UpdateAlignEnabled();
+        OnCheck(_listAlignExtension, (v, on) => v with { List = v.List with { AlignExtension = on } });
 
         OnCheck(ListDragDrop, (v, on) => v with { List = v.List with { InPanelDragDrop = on } });
         OnWidth(_listWidth, _listChars, (v, w) => v with { List = v.List with { NameWidth = w } });
 
         OnCheck(_detailsDragDrop, (v, on) => v with { Details = v.Details with { InPanelDragDrop = on } });
         OnWidth(_detailsWidth, _detailsChars, (v, w) => v with { Details = v.Details with { NameWidth = w } });
-        OnCheck(_extensionInName, (v, on) => v with { Details = v.Details with { ExtensionInName = on } });
+        OnCheck(_detailsAlignExtension, (v, on) => v with { Details = v.Details with { AlignExtension = on } });
         // ItemCheck はチェックが変わる前に来るので、変わる項目だけ新しい値で読む
         DetailsColumns.ItemCheck += (_, e) => CommitColumns(e.Index, e.NewValue == CheckState.Checked);
         MoveColumnUp.Click += (_, _) => MoveColumn(-1);
@@ -250,6 +260,10 @@ public sealed class FileViewPage : UserControl
         OnCheck(_tilesThumbnails, (v, on) => v with { Tiles = v.Tiles with { Thumbnails = on } });
         OnCheck(_tilesFolderThumbnails, (v, on) => v with { Tiles = v.Tiles with { FolderThumbnails = on } });
     }
+
+    /// <summary>R-01-7: 拡張子を表示しないときは、揃えるかは意味を持たない。</summary>
+    private void UpdateAlignEnabled() =>
+        _listAlignExtension.Enabled = _detailsAlignExtension.Enabled = _showExtension.Checked;
 
     private void Change(Func<FileViewSettings, FileViewSettings> change)
     {
