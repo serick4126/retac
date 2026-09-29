@@ -3,14 +3,20 @@ namespace ReTAC.Domain.Listing;
 /// <summary>R-110-3: スクロール位置。軸ごとに「段」の数で持つ。1 段の量はレイアウトが決める（一覧は横に 1 列、縦のレイアウトは 1 行）。</summary>
 public readonly record struct ScrollPosition(int X, int Y);
 
+/// <summary>R-11-2 / INV-DETAILS-ROW-HIT: 押した所の種類。マウスの操作の表の行を決める。</summary>
+public enum FileViewArea { None, MarkIcon, Name, Other }
+
+/// <summary>R-114: 見出しのセル 1 つ（中身の座標の x と幅）。Column が null なら名前の列。</summary>
+public readonly record struct HeaderCell(DetailsColumn? Column, int X, int Width);
+
 /// <summary>
-/// R-110-1〜R-110-3: ドロップの処理がレイアウトに聞くこと。ドロップの処理の中で行の高さ・列の幅を自分で計算しない。
-/// Phase 15 で表示モードごとのレイアウトを作るとき、これを実装すればドロップの処理は変えずに済む。
-/// IndexAt と ItemBounds は中身の座標（スクロールのずれを足した座標）、AutoScrollDirection は見えている範囲の座標。
+/// INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: 項目・部品・見出しの矩形、当たり判定、キーでの移動、スクロールはレイアウトだけが計算する。
+/// 描画・当たり判定・見出しの操作・ドロップの枠は同じ答えを使う。座標は中身の座標（見出しを除いた領域の左上が原点、スクロールのずれを足したもの）。
+/// viewport は見出しとスクロールバーを除いた、項目を描ける領域の大きさ。AutoScrollDirection だけは見えている範囲の座標。
 /// </summary>
 public interface IFileViewLayout
 {
-    int IndexAt(int x, int y, int entryCount);
+    int IndexAt(int x, int y, int entryCount) => HitTest(x, y, entryCount).Index;
     (int X, int Y, int Width, int Height) ItemBounds(int index);
     /// <returns>軸ごとに -1 は前へ、1 は後ろへ、0 はスクロールしない。端はその軸の端から項目 1 行分の高さ。角なら両方</returns>
     (int X, int Y) AutoScrollDirection(int x, int y, int viewportWidth, int viewportHeight);
@@ -18,6 +24,32 @@ public interface IFileViewLayout
     (int X, int Y) ScrollOffset(ScrollPosition position);
     /// <summary>いちばん後ろのスクロール位置（軸ごと）。</summary>
     ScrollPosition MaxScrollPosition(int entryCount, int viewportWidth, int viewportHeight);
+
+    /// <summary>見出しの高さ。見出しの無いビューは 0。</summary>
+    int HeaderHeight { get; }
+    /// <summary>見出しのセル。見出しの無いビューは空。</summary>
+    IReadOnlyList<HeaderCell> Header { get; }
+    /// <summary>要るスクロールバー。</summary>
+    (bool Horizontal, bool Vertical) ScrollBars { get; }
+    (int Index, FileViewArea Area) HitTest(int x, int y, int entryCount);
+    /// <summary>行頭アイコンの矩形。</summary>
+    (int X, int Y, int Width, int Height) IconBounds(int index);
+    /// <summary>名前の矩形（アイコンより右）。</summary>
+    (int X, int Y, int Width, int Height) NameBounds(int index);
+    /// <summary>揃えた拡張子の矩形。出さないなら幅 0。</summary>
+    (int X, int Y, int Width, int Height) ExtensionBounds(int index);
+    /// <summary>矩形に交わる項目（投げ縄・描く範囲）。</summary>
+    IReadOnlyList<int> IndexesIn(int x, int y, int width, int height, int entryCount);
+    /// <summary>矢印キーでの移動先。動かないなら index。</summary>
+    int Arrow(int index, int dx, int dy, int entryCount);
+    /// <summary>左右の矢印キーが横スクロールになるか（詳細）。</summary>
+    bool ArrowsScrollHorizontally { get; }
+    /// <summary>PageUp / PageDown の 1 画面分の項目数。</summary>
+    int PageItems(int viewportWidth, int viewportHeight);
+    /// <summary>R-10: カーソルを見える所へ出すスクロール位置。</summary>
+    ScrollPosition Reveal(int index, ScrollPosition current, int viewportWidth, int viewportHeight);
+    /// <summary>スクロールバーの LargeChange（軸ごとの段数）。</summary>
+    (int X, int Y) VisibleSteps(int viewportWidth, int viewportHeight);
 }
 
 /// <summary>R-110-1〜R-110-3: ドロップの処理が使う、スクロールのずれを縦横とも入れた計算。</summary>
@@ -33,18 +65,23 @@ public static class FileViewScroll
             Math.Clamp(position.Y + Math.Sign(direction.Y), 0, max.Y));
     }
 
-    /// <summary>R-110-1: 見えている範囲の点にある項目。縦横どちらのずれも足す。</summary>
+    /// <summary>R-110-1: 見えている範囲の点にある項目。縦横どちらのずれも足し、見出しの分を引く。見出しの上なら -1。</summary>
     public static int IndexAt(IFileViewLayout layout, ScrollPosition position, int x, int y, int entryCount)
     {
+        if (y < layout.HeaderHeight) return -1;
         var offset = layout.ScrollOffset(position);
-        return layout.IndexAt(x + offset.X, y + offset.Y, entryCount);
+        return layout.IndexAt(x + offset.X, y - layout.HeaderHeight + offset.Y, entryCount);
     }
 
-    /// <summary>R-110-2: 項目の矩形を、見えている範囲の座標で。縦横どちらのずれも引く。</summary>
-    public static (int X, int Y, int Width, int Height) VisibleBounds(IFileViewLayout layout, ScrollPosition position, int index)
+    /// <summary>R-110-2: 項目の矩形を、見えている範囲の座標で。縦横どちらのずれも引き、見出しの分を足す。</summary>
+    public static (int X, int Y, int Width, int Height) VisibleBounds(IFileViewLayout layout, ScrollPosition position, int index) =>
+        ToVisible(layout, position, layout.ItemBounds(index));
+
+    /// <summary>中身の座標の矩形を、見えている範囲の座標へ（部品の矩形にも使う）。</summary>
+    public static (int X, int Y, int Width, int Height) ToVisible(IFileViewLayout layout, ScrollPosition position,
+        (int X, int Y, int Width, int Height) bounds)
     {
-        var (x, y, width, height) = layout.ItemBounds(index);
         var offset = layout.ScrollOffset(position);
-        return (x - offset.X, y - offset.Y, width, height);
+        return (bounds.X - offset.X, bounds.Y - offset.Y + layout.HeaderHeight, bounds.Width, bounds.Height);
     }
 }

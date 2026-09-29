@@ -94,4 +94,71 @@ public class ColumnLayoutTests
         var layout = Sample(60);
         Assert.Equal(layout.ColumnWidth * 3, layout.TotalWidth);
     }
+
+    // pad 4 + icon 16 + gap 4 = 24 が文字の始まり
+    private static ColumnLayout Capped(int maxBase, int maxExt, int? cap) => ColumnLayout.Compute(
+        entryCount: 10, maxBaseWidth: maxBase, maxExtensionWidth: maxExt, lineHeight: 16, viewportHeight: 100,
+        iconWidth: 16, gap: 4, rowPadding: 2, columnPadding: 4, maxTextWidth: cap);
+
+    [Fact]
+    public void 上限が無ければ今と同じ()
+    {
+        var layout = Capped(200, 30, null);
+        Assert.Equal(24 + 200 + 4, layout.ExtensionOffset);
+        Assert.Equal(24 + 200 + 4 + 30 + 4, layout.ColumnWidth);
+    }
+
+    [Fact]
+    public void 中身が上限より短ければ上限は効かない()
+    {
+        var layout = Capped(50, 30, 400);
+        Assert.Equal(24 + 50 + 4 + 30 + 4, layout.ColumnWidth);   // R-113: 余白を残さない
+    }
+
+    [Fact]
+    public void 上限を超えたら本体を縮めて拡張子は揃えた位置に残す()
+    {
+        var layout = Capped(200, 30, 100);
+        Assert.Equal(24 + 100 + 4, layout.ColumnWidth);            // 文字は 100 まで
+        Assert.Equal(24 + (100 - 30 - 4) + 4, layout.ExtensionOffset);
+    }
+
+    [Fact]
+    public void 拡張子だけで上限を超えても拡張子の位置は文字の始まりより前に行かない()
+    {
+        var layout = Capped(200, 150, 100);
+        Assert.Equal(24 + 100 + 4, layout.ColumnWidth);
+        Assert.True(layout.ExtensionOffset >= 24);
+        Assert.True(layout.ExtensionOffset <= layout.ColumnWidth - 4);
+    }
+
+    [Fact]
+    public void 当たり判定は行頭アイコンと名前を分ける()
+    {
+        var layout = Capped(200, 30, null);   // 列幅 262、行高 18
+        Assert.Equal((0, FileViewArea.MarkIcon), layout.HitTest(0, 0, 10));      // 左の余白もアイコン（B-07）
+        Assert.Equal((0, FileViewArea.MarkIcon), layout.HitTest(19, 0, 10));
+        Assert.Equal((0, FileViewArea.Name), layout.HitTest(20, 0, 10));
+        Assert.Equal((0, FileViewArea.Name), layout.HitTest(261, 0, 10));        // 名前の右の空き（Q26）
+        Assert.Equal((5, FileViewArea.MarkIcon), layout.HitTest(262, 0, 10));    // 次の列の先頭
+        Assert.Equal((-1, FileViewArea.None), layout.HitTest(5, 18 * 5 + 1, 5)); // 最後の項目より下
+    }
+
+    [Fact]
+    public void 矢印は隣の列へ動き隣が無ければ動かない()
+    {
+        var layout = Capped(200, 30, null);   // 1 列 5 行
+        Assert.Equal(1, layout.Arrow(0, 0, 1, 10));
+        Assert.Equal(0, layout.Arrow(0, 0, -1, 10));
+        Assert.Equal(5, layout.Arrow(0, 1, 0, 10));
+        Assert.Equal(7, layout.Arrow(7, 1, 0, 10));   // 12 は無い（R-01-5）
+        Assert.False(layout.ArrowsScrollHorizontally);
+    }
+
+    [Theory]
+    [InlineData(NameWidthMode.ShowAll, 40, null)]
+    [InlineData(NameWidthMode.Auto, 40, 500)]
+    [InlineData(NameWidthMode.MaxChars, 10, 80)]
+    public void 名前の文字の上限は方式で決まる(NameWidthMode mode, int chars, int? expected) =>
+        Assert.Equal(expected, NameWidths.TextCap(new NameWidthSetting { Mode = mode, MaxChars = chars }, zeroWidth: 8, panelTextWidth: 500));
 }

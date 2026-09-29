@@ -22,7 +22,20 @@ public class FileViewScrollTests
         public ScrollPosition MaxScrollPosition(int entryCount, int viewportWidth, int viewportHeight) => new(
             Math.Max(0, (RowWidth - viewportWidth + HorizontalStep - 1) / HorizontalStep),
             Math.Max(0, entryCount - Math.Max(1, viewportHeight / RowHeight)));
-    }
+        // 契約に足したメンバーはこの試験では使わない（ドロップの計算だけを見る）
+        public int HeaderHeight => 0;
+        public IReadOnlyList<HeaderCell> Header => [];
+        public (bool Horizontal, bool Vertical) ScrollBars => (true, true);
+        public bool ArrowsScrollHorizontally => true;
+        public (int Index, FileViewArea Area) HitTest(int x, int y, int entryCount) { var i = IndexAt(x, y, entryCount); return (i, i < 0 ? FileViewArea.None : FileViewArea.Other); }
+        public (int X, int Y, int Width, int Height) IconBounds(int index) => ItemBounds(index);
+        public (int X, int Y, int Width, int Height) NameBounds(int index) => ItemBounds(index);
+        public (int X, int Y, int Width, int Height) ExtensionBounds(int index) => ItemBounds(index);
+        public IReadOnlyList<int> IndexesIn(int x, int y, int width, int height, int entryCount) => [];
+        public int Arrow(int index, int dx, int dy, int entryCount) => index;
+        public int PageItems(int viewportWidth, int viewportHeight) => 1;
+        public ScrollPosition Reveal(int index, ScrollPosition current, int viewportWidth, int viewportHeight) => current;
+        public (int X, int Y) VisibleSteps(int viewportWidth, int viewportHeight) => (1, 1);    }
 
     [Fact]
     public void 一覧は左右の端だけで横に1列進む()
@@ -95,5 +108,16 @@ public class FileViewScrollTests
         Assert.Equal(25, FileViewScroll.IndexAt(layout, scrolled, 5, 5, 100));          // 2 列目の先頭
         Assert.Equal((0, 0, Columns().ColumnWidth, 20), FileViewScroll.VisibleBounds(layout, scrolled, 25));
         Assert.Equal((Columns().ColumnWidth, 60, Columns().ColumnWidth, 20), layout.ItemBounds(28));   // 中身の座標では 2 列目の 4 行目
+    }
+
+    [Fact]
+    public void 見出しの無いレイアウトでは見えている座標と中身の座標のずれはスクロールだけ()
+    {
+        var layout = ColumnLayout.Compute(23, 120, 30, 16, 100, 16, 4, 2, 4);
+        var position = new ScrollPosition(1, 0);
+        var (x, y, _, _) = FileViewScroll.VisibleBounds(layout, position, 5);
+        Assert.Equal(layout.ItemBounds(5).X - layout.ColumnWidth, x);
+        Assert.Equal(layout.ItemBounds(5).Y, y);
+        Assert.Equal(5, FileViewScroll.IndexAt(layout, position, x + 1, y + 1, 23));
     }
 }
