@@ -489,26 +489,19 @@ public sealed class FileListView : Control
         return DragImageRenderer.Render(icon, _icons.Size, text, _font, _theme.Foreground, _theme.Background, Gap);
     }
 
-    // R-111-2: 右ボタンの印は効果を決める前に覚える（DropFeedback が右ボタンの効果を返すため）
-    protected override void OnDragEnter(DragEventArgs e)
-    {
-        DropButton.Enter(e);
-        UpdateDrop(e);
-    }
+    // R-111-2: 右ボタンの印は効果を決める前に覚える（DropFeedback が右ボタンの効果を返すため）。
+    // 4 つの受け口はすべて DropButton.Guard を通す（INV-RIGHT-DROP-SAME-ROUTE）。素通しだと、
+    // ここから先が例外を投げたとき OLE が DragEnter 失敗と見なして以後 DragLeave を呼ばなくなり、
+    // 右ボタンの印（DragButtonState.Right）が残ったまま次の左ドロップが右ドロップのメニュー扱いになる
+    protected override void OnDragEnter(DragEventArgs e) =>
+        DropButton.Guard(e, () => { DropButton.Enter(e); UpdateDrop(e); }, EndDrop);
 
-    protected override void OnDragOver(DragEventArgs e)
-    {
-        DropButton.Over(e);
-        UpdateDrop(e);
-    }
+    protected override void OnDragOver(DragEventArgs e) =>
+        DropButton.Guard(e, () => { DropButton.Over(e); UpdateDrop(e); }, EndDrop);
 
     // Esc での取り消しも OLE は DragLeave を呼ぶ。枠と自動スクロールはここで片付く
-    protected override void OnDragLeave(EventArgs e)
-    {
-        base.OnDragLeave(e);
-        EndDrop();
-        DropButton.Leave();
-    }
+    protected override void OnDragLeave(EventArgs e) =>
+        DropButton.Guard(null, () => { base.OnDragLeave(e); EndDrop(); DropButton.Leave(); }, EndDrop);
 
     /// <summary>R-110-1: 落とした位置の項目と宛先。宛先を決めるのはドメイン（DropRouting）で、項目はレイアウトに聞く。</summary>
     private (string Destination, int Index, Entry? Hit) DropTargetAt(DragEventArgs e)
@@ -555,7 +548,7 @@ public sealed class FileListView : Control
         Invalidate();   // 枠の位置は次の DragOver で決め直す（OLE はマウスが止まっていても DragOver を呼び続ける）
     }
 
-    protected override void OnDragDrop(DragEventArgs e)
+    protected override void OnDragDrop(DragEventArgs e) => DropButton.Guard(e, () =>
     {
         base.OnDragDrop(e);
         DropButton.Drop(e, () =>   // R-111-2 / T6: 右ボタンなら None を返す。例外でも印を残さない
@@ -568,7 +561,7 @@ public sealed class FileListView : Control
                 FilesDropped?.Invoke(this, new Drop(paths, destination, e.AllowedEffect, ctrl, shift));
             }
         });
-    }
+    }, EndDrop);
 
     protected override void OnMouseDoubleClick(MouseEventArgs e)
     {

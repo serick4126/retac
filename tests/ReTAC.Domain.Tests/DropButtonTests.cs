@@ -37,4 +37,19 @@ public class DropButtonTests
         Assert.Equal(DragDropEffects.Move, drop.Effect);
         Assert.False(DragButtonState.Right);
     }
+
+    // R-111-2: FileListView / DriveBar も含め、DropButton.Enter / Over を呼ぶ受け口はすべて
+    // この Guard を通す（INV-RIGHT-DROP-SAME-ROUTE）。個別に例外を捕まえる受け口を増やさない
+    [Fact]
+    public void Guardは例外を漏らさず右ボタンの印を消しEffectをNoneにする()
+    {
+        DragButtonState.SourceRight = false;
+        DragButtonState.Reset();
+        var e = Args(2);   // MK_RBUTTON
+
+        DropButton.Guard(e, () => { DropButton.Enter(e); throw new InvalidOperationException(); }, () => { });
+
+        Assert.False(DragButtonState.Right);
+        Assert.Equal(DragDropEffects.None, e.Effect);
+    }
 }

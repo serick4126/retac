@@ -358,19 +358,13 @@ public sealed class DriveBar : Control
     }
 
     // R-78: DragEnter でも同じ設定をしないと、入った直後の説明とカーソルが出ない
-    protected override void OnDragEnter(DragEventArgs e)
-    {
-        base.OnDragEnter(e);
-        DropButton.Enter(e);   // R-111-2: 効果を決める前に覚える
-        SetDropEffect(e);
-    }
+    // R-111-2: 4 つの受け口はすべて DropButton.Guard を通す（FileListView と同じ理由。INV-RIGHT-DROP-SAME-ROUTE）。
+    // 素通しで例外が漏れると OLE が以後 DragLeave を呼ばなくなり、右ボタンの印が次のドロップへ残る
+    protected override void OnDragEnter(DragEventArgs e) =>
+        DropButton.Guard(e, () => { base.OnDragEnter(e); DropButton.Enter(e); SetDropEffect(e); }, ResetHover);
 
-    protected override void OnDragOver(DragEventArgs e)
-    {
-        base.OnDragOver(e);
-        DropButton.Over(e);
-        SetDropEffect(e);
-    }
+    protected override void OnDragOver(DragEventArgs e) =>
+        DropButton.Guard(e, () => { base.OnDragOver(e); DropButton.Over(e); SetDropEffect(e); }, ResetHover);
 
     private void SetDropEffect(DragEventArgs e)
     {
@@ -386,21 +380,15 @@ public sealed class DriveBar : Control
             button.DriveLetter is { } letter ? $"{char.ToUpperInvariant(letter)}:" : DesktopLabel);
     }
 
-    protected override void OnDragLeave(EventArgs e)
-    {
-        base.OnDragLeave(e);
-        DropButton.Leave();
-        _hoverIndex = -1;
-        Invalidate();
-    }
+    protected override void OnDragLeave(EventArgs e) =>
+        DropButton.Guard(null, () => { base.OnDragLeave(e); DropButton.Leave(); ResetHover(); }, ResetHover);
 
-    protected override void OnDragDrop(DragEventArgs e)
+    protected override void OnDragDrop(DragEventArgs e) => DropButton.Guard(e, () =>
     {
         base.OnDragDrop(e);
         DropButton.Drop(e, () =>
         {
-            _hoverIndex = -1;
-            Invalidate();
+            ResetHover();
 
             // 表示中に None だった所（「»」の下に隠れたボタン）へ落ちても、別の宛先を拾わない
             var point = PointToClient(new Point(e.X, e.Y));
@@ -410,6 +398,13 @@ public sealed class DriveBar : Control
             var (ctrl, shift) = DropFeedback.Modifiers(e);
             FilesDropped?.Invoke(this, (button.Path, files, e.AllowedEffect, ctrl, shift));
         });
+    }, ResetHover);
+
+    /// <summary>ドラッグ中のホバー表示を元に戻す。DropButton.Guard の後始末としても使う。</summary>
+    private void ResetHover()
+    {
+        _hoverIndex = -1;
+        Invalidate();
     }
 
     protected override bool IsInputKey(Keys keyData) => (keyData & Keys.KeyCode) switch

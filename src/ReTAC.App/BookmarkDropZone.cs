@@ -65,23 +65,11 @@ internal sealed class BookmarkDropZone
     /// </summary>
     private void Guard(DragEventArgs? e, Action action) => Guarded(e, action, Reset);
 
-    /// <summary><see cref="Guard"/> の中身。展開したメニューの受け口（<see cref="ExpansionDropZone"/>）も同じ守り方をする。</summary>
-    internal static void Guarded(DragEventArgs? e, Action action, Action reset)
-    {
-        try { action(); }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine(ex);
-            // R-111-2: 後始末のどこが失敗しても、右ボタンの印だけは必ず消える所に置く。消し忘れると、
-            // 例外を投げた受け口の右ドラッグが Right=true のまま残り、続く左ドロップが右ドロップの
-            // メニュー扱いになってしまう（DropButton.Enter / Over を呼ぶ受け口はすべてこの Guarded を通る）
-            DropButton.Leave();
-            if (e is not null) e.Effect = DragDropEffects.None;
-            try { reset(); }
-            catch (Exception inner) { System.Diagnostics.Debug.WriteLine(inner); }
-            DropTargetHelper.Leave();
-        }
-    }
+    /// <summary>
+    /// R-111-2: 中身は <see cref="DropButton.Guard"/>（全受け口で共通の 1 つの実装）。
+    /// 展開したメニューの受け口（<see cref="ExpansionDropZone"/>）も同じ守り方をする。
+    /// </summary>
+    internal static void Guarded(DragEventArgs? e, Action action, Action reset) => DropButton.Guard(e, action, reset);
 
     /// <summary>
     /// バー・グループのメニューの項目を、左ボタンで押して動かしたらドラッグを始める。

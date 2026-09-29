@@ -4956,7 +4956,7 @@
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 484
+        "line": 479
       },
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
@@ -5926,7 +5926,7 @@
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 484
+        "line": 479
       }
     ],
     "P-14": [
@@ -6542,7 +6542,11 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 434
+        "line": 422
+      },
+      {
+        "file": "src/ReTAC.App/BookmarkDropZone.cs",
+        "line": 443
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
@@ -6550,27 +6554,23 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 467
+        "line": 500
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 512
+        "line": 509
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 521
+        "line": 573
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 585
+        "line": 615
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 627
-      },
-      {
-        "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 642
+        "line": 630
       },
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
@@ -7214,7 +7214,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 598
+        "line": 591
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListState.cs",
@@ -7314,7 +7314,7 @@
     "R-110-1": [
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 513
+        "line": 506
       },
       {
         "file": "src/ReTAC.App/ShellDrag.cs",
@@ -7386,7 +7386,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 548
+        "line": 541
       },
       {
         "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
@@ -7426,7 +7426,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 591
+        "line": 584
       }
     ],
     "R-111-2": [
@@ -7440,19 +7440,19 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 75
+        "line": 69
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 188
+        "line": 176
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 350
+        "line": 338
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 382
+        "line": 370
       },
       {
         "file": "src/ReTAC.App/BookmarkTreeView.cs",
@@ -7460,11 +7460,15 @@
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 364
+        "line": 361
       },
       {
         "file": "src/ReTAC.App/DropButton.cs",
         "line": 7
+      },
+      {
+        "file": "src/ReTAC.App/DropButton.cs",
+        "line": 31
       },
       {
         "file": "src/ReTAC.App/DropFeedback.cs",
@@ -7484,7 +7488,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 561
+        "line": 554
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -8954,11 +8958,11 @@
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 515
+        "line": 510
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 628
+        "line": 621
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
@@ -9006,7 +9010,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 633
+        "line": 626
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -9166,7 +9170,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 610
+        "line": 603
       },
       {
         "file": "src/ReTAC.Domain/Listing/WheelAccumulator.cs",
@@ -9274,7 +9278,7 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 526
+        "line": 519
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -9670,11 +9674,11 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 152
+        "line": 140
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 273
+        "line": 261
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
@@ -9874,11 +9878,11 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 183
+        "line": 171
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 370
+        "line": 358
       },
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
@@ -9912,19 +9916,19 @@
     "R-91-2": [
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 105
+        "line": 93
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 497
+        "line": 485
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 508
+        "line": 496
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 569
+        "line": 557
       },
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
@@ -10012,23 +10016,23 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 140
+        "line": 128
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 182
+        "line": 170
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 217
+        "line": 205
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 247
+        "line": 235
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 325
+        "line": 313
       },
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
@@ -10686,11 +10690,11 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 117
+        "line": 105
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
-        "line": 273
+        "line": 261
       },
       {
         "file": "src/ReTAC.App/BookmarkTreeView.cs",
@@ -10930,7 +10934,7 @@
     "V-09": [
       {
         "file": "src/ReTAC.App/FileListView.cs",
-        "line": 578
+        "line": 571
       }
     ],
     "V-10": [

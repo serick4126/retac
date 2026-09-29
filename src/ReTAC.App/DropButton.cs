@@ -26,4 +26,25 @@ internal static class DropButton
             DragButtonState.Reset();
         }
     }
+
+    /// <summary>
+    /// R-111-2: DropButton.Enter / Over を呼ぶ受け口はすべてこれを通す（INV-RIGHT-DROP-SAME-ROUTE）。
+    /// 個別に try/catch を持つと消し忘れが起き、直前の右ドラッグの印が残った左ドロップが右ドロップの
+    /// メニュー扱いになる。受け口ごとに書かず、ここ 1 か所にまとめる。
+    /// </summary>
+    /// <param name="reset">その受け口の見た目の後始末（枠・ホバーなど）。失敗しても他の後始末は続ける</param>
+    internal static void Guard(DragEventArgs? e, Action action, Action reset)
+    {
+        try { action(); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex);
+            // 後始末のどこが失敗しても、右ボタンの印だけは必ず消える所に置く
+            DragButtonState.Reset();
+            if (e is not null) e.Effect = DragDropEffects.None;
+            try { reset(); }
+            catch (Exception inner) { System.Diagnostics.Debug.WriteLine(inner); }
+            DropTargetHelper.Leave();
+        }
+    }
 }
