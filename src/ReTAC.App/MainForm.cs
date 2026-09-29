@@ -193,7 +193,7 @@ public sealed class MainForm : Form, IBookmarkHost
         _list.Theme = _settings.ToScreenTheme(Program.StartupColorMode, Program.StartupOs);   // 5-1 節・R-108
         ApplyLeftPanelFont(_list.Theme);                         // R-101: 左パネルは一覧とは別のフォント
         _driveBar.SetVisibility(_settings.ToHiddenDrives(), _settings.ShowDesktopButton);   // 16.7 節
-        _list.InPanelDragDrop = _settings.FileViews.List.InPanelDragDrop;   // R-110
+        _list.SetView(FileViewMode.List, _settings.FileViews, _settings.DetailsColumnWidths, _sortOrder);   // R-110
         _list.CommandKey += (_, e) => OnCommandKey(e);
         _list.RightClicked += (_, click) => OnRightClick(click);
         // Step5: 左パネルが表示中のときだけ往復する。非表示なら CentralDisplayArea.LeftPanelVisible が false のまま何もしない
@@ -2371,7 +2371,7 @@ public sealed class MainForm : Form, IBookmarkHost
         _keyMap = _settings.ToKeyMap();
         // R-110 / R-36: ファイルビューの設定も全ウィンドウで共有している。Phase 15 で表示モードを持ったら、表示中の系統の値を当てる
         foreach (var window in Application.OpenForms.OfType<MainForm>().ToList())
-            window._list.InPanelDragDrop = window._settings.FileViews.List.InPanelDragDrop;
+            window._list.SetView(FileViewMode.List, window._settings.FileViews, window._settings.DetailsColumnWidths, window._sortOrder);
 
         SaveSettings();   // V-13
         if (result.ExternalToolsChanged || result.KeyBindingsChanged) RebuildMenus();

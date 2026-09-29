@@ -12,12 +12,14 @@ public readonly record struct HeaderCell(DetailsColumn? Column, int X, int Width
 /// <summary>
 /// INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: 項目・部品・見出しの矩形、当たり判定、キーでの移動、スクロールはレイアウトだけが計算する。
 /// 描画・当たり判定・見出しの操作・ドロップの枠は同じ答えを使う。座標は中身の座標（見出しを除いた領域の左上が原点、スクロールのずれを足したもの）。
-/// viewport は見出しとスクロールバーを除いた、項目を描ける領域の大きさ。AutoScrollDirection だけは見えている範囲の座標。
+/// viewport は見出しとスクロールバーを除いた、項目を描ける領域の大きさ。
+/// AutoScrollDirection の x・y も、見出しの分を引いた項目の領域の左上を原点にした座標（呼び出し側が y から HeaderHeight を引いて渡す）。
 /// </summary>
 public interface IFileViewLayout
 {
     int IndexAt(int x, int y, int entryCount) => HitTest(x, y, entryCount).Index;
     (int X, int Y, int Width, int Height) ItemBounds(int index);
+    /// <param name="y">見出しを引いた項目の領域での座標。viewportHeight も見出しを除いた高さ</param>
     /// <returns>軸ごとに -1 は前へ、1 は後ろへ、0 はスクロールしない。端はその軸の端から項目 1 行分の高さ。角なら両方</returns>
     (int X, int Y) AutoScrollDirection(int x, int y, int viewportWidth, int viewportHeight);
     /// <summary>スクロール位置のときに、中身をどれだけずらして見せるか（ピクセル。縦横）。</summary>

@@ -120,4 +120,24 @@ public class FileViewScrollTests
         Assert.Equal(layout.ItemBounds(5).Y, y);
         Assert.Equal(5, FileViewScroll.IndexAt(layout, position, x + 1, y + 1, 23));
     }
+
+    [Fact]
+    public void 見出しのあるレイアウトでは見出しの上は項目なしで枠と当たり判定が往復する()
+    {
+        IFileViewLayout layout = DetailsLayout.Compute(new DetailsLayoutInput
+        {
+            EntryCount = 50, RowHeight = 20, IconWidth = 16, ColumnPadding = 4, HeaderHeight = 20, StepWidth = 32,
+            Columns = [new(null, 200, 60, null), new(DetailsColumn.Size, 80, 40, null)],
+            FitToWindow = false, ClientWidth = 500, ClientHeight = 200,
+            VerticalBarWidth = 17, HorizontalBarHeight = 17, ExtensionOffset = 150,
+        });
+        var scrolled = new ScrollPosition(0, 3);
+        Assert.Equal(-1, FileViewScroll.IndexAt(layout, scrolled, 10, 5, 50));
+        Assert.Equal(-1, FileViewScroll.IndexAt(layout, scrolled, 10, 19, 50));
+        Assert.Equal(3, FileViewScroll.IndexAt(layout, scrolled, 10, 20, 50));
+        var (x, y, w, h) = FileViewScroll.VisibleBounds(layout, scrolled, 5);
+        Assert.Equal(20 + 2 * 20, y);
+        Assert.Equal(5, FileViewScroll.IndexAt(layout, scrolled, x + 1, y + 1, 50));
+        Assert.Equal(5, FileViewScroll.IndexAt(layout, scrolled, x + w - 1, y + h - 1, 50));
+    }
 }

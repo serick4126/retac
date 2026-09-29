@@ -143,7 +143,7 @@ public sealed record ColumnLayout : IFileViewLayout
 
     public IReadOnlyList<int> IndexesIn(int x, int y, int width, int height, int entryCount)
     {
-        if (width <= 0 || height <= 0 || entryCount == 0) return [];
+        if (width <= 0 || height <= 0 || entryCount == 0 || x + width <= 0 || y + height <= 0) return [];
         var firstColumn = Math.Max(0, x / ColumnWidth);
         var lastColumn = Math.Min(ColumnCount - 1, (x + width - 1) / ColumnWidth);
         var firstRow = Math.Max(0, y / RowHeight);

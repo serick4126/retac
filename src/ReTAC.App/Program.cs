@@ -112,7 +112,7 @@ internal static class Program
         using var font = new Font(Theme.Default.FontFamily, Theme.Default.FontSize);
         using var measure = new TextMeasure(font, 96f);
         var layout = Stopwatch.StartNew();
-        var computed = EntryMetrics.Layout(entries, measure, 700, 16, 4, 2, 4);
+        var computed = EntryMetrics.Layout(entries, measure, 1200, 700, 17, 16, 4, 2, 4, null);
         layout.Stop();
 
         Console.WriteLine($"{path}");

@@ -16,6 +16,31 @@ public class DetailsLayoutTests
             VerticalBarWidth = 17, HorizontalBarHeight = 17, ExtensionOffset = 150,
         });
 
+    [Fact]
+    public void 自動スクロールの向きは上下の端と横バーがあるときの左右の端()
+    {
+        var withBar = Layout(100, clientWidth: 300, clientHeight: 200);     // 合計 400 > 300 なので横バーあり
+        Assert.True(withBar.ScrollBars.Horizontal);
+        Assert.Equal((0, -1), withBar.AutoScrollDirection(100, 5, 283, 143));
+        Assert.Equal((0, 1), withBar.AutoScrollDirection(100, 130, 283, 143));
+        Assert.Equal((0, 0), withBar.AutoScrollDirection(100, 70, 283, 143));
+        Assert.Equal((-1, 0), withBar.AutoScrollDirection(5, 70, 283, 143));
+        Assert.Equal((1, 0), withBar.AutoScrollDirection(270, 70, 283, 143));
+
+        var noBar = Layout(100, clientWidth: 500, clientHeight: 200);
+        Assert.False(noBar.ScrollBars.Horizontal);
+        Assert.Equal((0, 0), noBar.AutoScrollDirection(5, 70, 483, 180));
+        Assert.Equal((0, 0), noBar.AutoScrollDirection(480, 70, 483, 180));
+    }
+
+    [Fact]
+    public void 負の矩形には項目を返さない()
+    {
+        var layout = Layout(10, 500, 200);
+        Assert.Empty(layout.IndexesIn(-100, 0, 50, 200, 10));
+        Assert.Empty(layout.IndexesIn(0, -100, 500, 50, 10));
+    }
+
     // ---- 列幅（R-114 / V6）----
 
     [Fact]

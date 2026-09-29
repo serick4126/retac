@@ -140,7 +140,7 @@ public sealed record DetailsLayout : IFileViewLayout
 
     public IReadOnlyList<int> IndexesIn(int x, int y, int width, int height, int entryCount)
     {
-        if (width <= 0 || height <= 0 || entryCount == 0 || x >= TotalWidth || x + width <= 0) return [];
+        if (width <= 0 || height <= 0 || entryCount == 0 || x >= TotalWidth || x + width <= 0 || y + height <= 0) return [];
         var first = Math.Max(0, y / RowHeight);
         var last = Math.Min(entryCount - 1, (y + height - 1) / RowHeight);
         return first > last ? [] : Enumerable.Range(first, last - first + 1).ToList();

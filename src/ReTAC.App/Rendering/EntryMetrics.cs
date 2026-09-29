@@ -9,14 +9,10 @@ namespace ReTAC.App.Rendering;
 /// </summary>
 public static class EntryMetrics
 {
-    public static ColumnLayout Layout(
-        IReadOnlyList<Entry> entries,
-        TextMeasure measure,
-        int viewportHeight,
-        int iconWidth,
-        int gap,
-        int rowPadding,
-        int columnPadding)
+    /// <param name="maxTextWidth">R-113: 名前の文字の上限（NameWidths.TextCap）。すべて表示なら null</param>
+    public static ColumnLayout Layout(IReadOnlyList<Entry> entries, TextMeasure measure,
+        int clientWidth, int clientHeight, int horizontalBarHeight, int iconWidth, int gap, int rowPadding, int columnPadding,
+        int? maxTextWidth)
     {
         var maxBase = 0;
         var maxExtension = 0;
@@ -26,8 +22,7 @@ public static class EntryMetrics
             maxExtension = Math.Max(maxExtension, measure.Width(entry.Extension));
         }
 
-        return ColumnLayout.Compute(
-            entries.Count, maxBase, maxExtension, measure.LineHeight(),
-            viewportHeight, iconWidth, gap, rowPadding, columnPadding);
+        return ColumnLayout.ComputeFitted(entries.Count, maxBase, maxExtension, measure.LineHeight(),
+            clientWidth, clientHeight, horizontalBarHeight, iconWidth, gap, rowPadding, columnPadding, maxTextWidth);
     }
 }

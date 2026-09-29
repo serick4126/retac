@@ -5,6 +5,14 @@ namespace ReTAC.Domain.Tests;
 /// <summary>R-01-3・R-01-6・R-66-3 のレイアウト計算</summary>
 public class ColumnLayoutTests
 {
+    [Fact]
+    public void 負の矩形には項目を返さない()
+    {
+        var layout = ColumnLayout.Compute(23, 120, 30, 16, 100, 16, 4, 2, 4);
+        Assert.Empty(layout.IndexesIn(-500, 0, 100, 100, 23));
+        Assert.Empty(layout.IndexesIn(0, -100, 500, 50, 23));
+    }
+
     // 行高 20 / 1 列 25 行 / アイコン 16 / gap 4 / 余白 4 / 基底名 100 / 拡張子 30
     private static ColumnLayout Sample(int entryCount) =>
         ColumnLayout.Compute(entryCount, maxBaseWidth: 100, maxExtensionWidth: 30,

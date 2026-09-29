@@ -7,6 +7,7 @@ using ReTAC.Domain.FileOps;
 using ReTAC.Domain.Listing;
 using ReTAC.Domain.Selection;
 using ReTAC.Shell;
+using SortOrder = ReTAC.Domain.Listing.SortOrder;
 
 namespace ReTAC.App;
 
@@ -17,14 +18,23 @@ namespace ReTAC.App;
 /// </summary>
 public sealed class FileListView : Control
 {
-    private readonly HScrollBar _scrollBar = new() { Dock = DockStyle.Bottom, Visible = false };
+    private readonly HScrollBar _hScrollBar = new() { Dock = DockStyle.Bottom, Visible = false };
+    private readonly VScrollBar _vScrollBar = new() { Dock = DockStyle.Right, Visible = false };
 
     private Theme _theme = Theme.Default;
     private Font _font = null!;
     private TextMeasure _measure = null!;
     private ShellIcons _icons = null!;
     private ListState _state = new([]);
-    private ColumnLayout _layout = ColumnLayout.Empty;
+    private IFileViewLayout _layout = ColumnLayout.Empty;
+    private FileViewMode _mode = FileViewMode.List;
+    private FileViewSettings _views = new();
+    private IReadOnlyDictionary<string, int?> _columnWidths = new Dictionary<string, int?>();
+    private SortOrder _sortOrder = SortOrder.Default;
+    private readonly ToolTip _nameTip = new();
+    private int _tipIndex = -1;
+    /// <summary>押した所の種類。名前以外を押したままのドラッグは D&amp;D を始めない（INV-DETAILS-ROW-HIT）。</summary>
+    private FileViewArea _pressArea;
     /// <summary>R-110-3: スクロール位置（縦横の段の数）。一覧は横だけで、1 段は 1 列</summary>
     private ScrollPosition _scroll;
     /// <summary>R-76: ホイールの端数。フォルダを開き直したら捨てる。</summary>
@@ -52,8 +62,10 @@ public sealed class FileListView : Control
         // B-04: ファイルリストは 1 打鍵がコマンドである。IME がオンだと文字が食われて
         // 何も動かない。入力欄（TextInputDialog 等）は別ウィンドウなので影響しない
         ImeMode = ImeMode.Disable;
-        Controls.Add(_scrollBar);
-        _scrollBar.Scroll += (_, e) => { _scroll = _scroll with { X = e.NewValue }; Invalidate(); };
+        Controls.Add(_hScrollBar);
+        Controls.Add(_vScrollBar);
+        _hScrollBar.Scroll += (_, e) => { _scroll = _scroll with { X = e.NewValue }; Invalidate(); };
+        _vScrollBar.Scroll += (_, e) => { _scroll = _scroll with { Y = e.NewValue }; Invalidate(); };
         _autoScroll.Tick += (_, _) => AutoScrollStep();
         RebuildFontResources();
     }
@@ -104,10 +116,10 @@ public sealed class FileListView : Control
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public string DropFolder { get; set; } = "";
 
-    /// <summary>R-110: ファイル表示パネルの中の項目の上へ落とせるか。MainForm が設定から当てる。</summary>
+    /// <summary>R-110: ファイル表示パネルの中の項目の上へ落とせるか。SetView が系統の設定から当てる。</summary>
     [System.ComponentModel.Browsable(false)]
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
-    public bool InPanelDragDrop { get; set; }
+    public bool InPanelDragDrop => _mode == FileViewMode.Details ? _views.Details.InPanelDragDrop : _views.List.InPanelDragDrop;
 
     /// <summary>ファイルが落とされた（T8-2）。修飾キーはドロップの時点の値（R-111-2）。</summary>
     public readonly record struct Drop(string[] Files, string Destination, DragDropEffects Allowed, bool Ctrl, bool Shift);
@@ -126,9 +138,11 @@ public sealed class FileListView : Control
     }
 
     /// <summary>N-06: キーボードから開くポップアップを出す位置（カーソル行の直下・クライアント座標）。</summary>
-    public Point PopupAnchor() => new(
-        _layout.XOf(_state.CursorIndex) - _layout.ScrollOffset(_scroll).X + _icons.Size,
-        _layout.YOf(_state.CursorIndex) + _layout.RowHeight);
+    public Point PopupAnchor()
+    {
+        var (x, y, _, h) = FileViewScroll.ToVisible(_layout, _scroll, _layout.IconBounds(_state.CursorIndex));
+        return new Point(x + _icons.Size, y + h);
+    }
 
     /// <summary>カーソルを移す。スクロールと再描画とイベント通知まで面倒を見る。</summary>
     public void MoveCursorTo(int index)
@@ -139,7 +153,7 @@ public sealed class FileListView : Control
     }
 
     /// <param name="keepScroll">
-    /// 同じフォルダの再表示。横スクロール位置を保つ。
+    /// 同じフォルダの再表示。スクロール位置（縦横）を保つ。
     /// 自動更新のたびにカーソル列へ引き戻されると、右の方を見ている最中に読めなくなる（R-10）
     /// </param>
     public void SetEntries(IReadOnlyList<Entry> entries, int cursorIndex = 0, bool keepScroll = false)
@@ -149,13 +163,12 @@ public sealed class FileListView : Control
         _rightDown = null;
         _markOnRelease.Cancel();
         _dragIndex = -1;
-        var scroll = _scroll.X;
+        var scroll = _scroll;
         _state = new ListState(entries);
         _state.MoveCursor(cursorIndex);
-        _scroll = _scroll with { X = keepScroll ? scroll : 0 };
+        _scroll = keepScroll ? scroll : default;
         if (!keepScroll) _wheel.Reset();
         RecomputeLayout();
-        _scroll = _scroll with { X = Math.Clamp(_scroll.X, 0, MaxScrollColumn) };   // 件数が減って列が消えた場合
         // 見えている位置ならこの中で何も起きない。カーソルが画面外のときだけ動く
         EnsureCursorVisible();
         Invalidate();
@@ -173,15 +186,9 @@ public sealed class FileListView : Control
     /// 見た目を詰めたい／広げたいときはここ 1 箇所を変える。</summary>
     private int ColumnPaddingValue => Scaled(4);
 
-    /// <summary>左端は常に列の境界。列幅の途中で止めない（実機確認・2026-09-09）。</summary>
-    private int ScrollX => _layout.ScrollOffset(_scroll).X;
-
-    /// <summary>丸ごと収まる列の数。端数の列は右端で切れるが、それは実機と同じ。</summary>
-    private int VisibleColumns => Math.Max(1, ClientSize.Width / Math.Max(1, _layout.ColumnWidth));
-
-    private int MaxScrollColumn => _layout.MaxScrollPosition(_state.Count, ClientSize.Width, ViewportHeight).X;
-
-    private int ViewportHeight => Math.Max(0, ClientSize.Height - (_scrollBar.Visible ? _scrollBar.Height : 0));
+    /// <summary>項目を描ける領域（見出しとスクロールバーを除く）。</summary>
+    private int ViewportWidth => Math.Max(0, ClientSize.Width - (_vScrollBar.Visible ? _vScrollBar.Width : 0));
+    private int ViewportHeight => Math.Max(0, ClientSize.Height - _layout.HeaderHeight - (_hScrollBar.Visible ? _hScrollBar.Height : 0));
 
     private void RebuildFontResources()
     {
@@ -193,46 +200,51 @@ public sealed class FileListView : Control
         _icons = new ShellIcons(Scaled(16));
     }
 
-    private void RecomputeLayout()
+    /// <summary>
+    /// R-112-4: 表示モードと系統ごとの設定を当てる。項目・カーソル・マークは保ち（フォルダを開き直さない。R-40-2）、
+    /// スクロールは新しいレイアウトでカーソルが見える位置に直す（前のモードの段の数は持ち越さない）。
+    /// </summary>
+    public void SetView(FileViewMode mode, FileViewSettings views, IReadOnlyDictionary<string, int?> columnWidths, SortOrder sortOrder)
     {
-        // R-01-3: 列幅はウィンドウ幅から独立し、フォルダの最長のファイル名で決まる
-        _layout = EntryMetrics.Layout(
-            _state.Entries, _measure,
-            viewportHeight: ViewportHeight,
-            iconWidth: _icons.Size,
-            gap: Gap,
-            rowPadding: RowPadding,
-            columnPadding: ColumnPaddingValue);
-
-        UpdateScrollBar();
+        var modeChanged = mode != _mode;
+        (_mode, _views, _columnWidths, _sortOrder) = (mode, views, columnWidths, sortOrder);
+        if (modeChanged) { _scroll = default; _wheel.Reset(); }
+        RecomputeLayout();
+        EnsureCursorVisible();
+        Invalidate();
     }
 
-    private void UpdateScrollBar()
+    private void RecomputeLayout()
     {
-        var total = _layout.TotalWidth;
-        var needed = total > ClientSize.Width;
-        if (_scrollBar.Visible != needed)
+        var textStart = ColumnPaddingValue + _icons.Size + Gap;
+        // R-113: 「自動」はパネルの幅（名前の文字の外側を引いたもの）、「最大文字数」は数字 0 の幅 × 文字数（Q9）
+        var cap = NameWidths.TextCap(_views.List.NameWidth, _measure.Width("0"), ClientSize.Width - textStart - ColumnPaddingValue);
+        _layout = EntryMetrics.Layout(_state.Entries, _measure, ClientSize.Width, ClientSize.Height, _hScrollBar.Height,
+            _icons.Size, Gap, RowPadding, ColumnPaddingValue, cap);
+        UpdateScrollBars();
+    }
+
+    /// <summary>スクロールバーの要・不要はレイアウトが決める（ScrollBars）。単位は段（一覧は列、詳細の縦は行・横は StepWidth）。</summary>
+    private void UpdateScrollBars()
+    {
+        var (horizontal, vertical) = _layout.ScrollBars;
+        _hScrollBar.Visible = horizontal;
+        _vScrollBar.Visible = vertical;
+        var max = _layout.MaxScrollPosition(_state.Count, ViewportWidth, ViewportHeight);
+        var page = _layout.VisibleSteps(ViewportWidth, ViewportHeight);
+        _scroll = new ScrollPosition(horizontal ? Math.Clamp(_scroll.X, 0, max.X) : 0, vertical ? Math.Clamp(_scroll.Y, 0, max.Y) : 0);
+        Configure(_hScrollBar, max.X, page.X, _scroll.X);
+        Configure(_vScrollBar, max.Y, page.Y, _scroll.Y);
+
+        static void Configure(ScrollBar bar, int max, int page, int value)
         {
-            _scrollBar.Visible = needed;
-            // 表示の有無でビューポート高が変わるため、行数を計算し直す
-            _layout = EntryMetrics.Layout(
-                _state.Entries, _measure,
-                viewportHeight: ViewportHeight,
-                iconWidth: _icons.Size,
-                gap: Gap,
-                rowPadding: RowPadding,
-                columnPadding: ColumnPaddingValue);
-            total = _layout.TotalWidth;
+            if (!bar.Visible) return;
+            bar.Minimum = 0;
+            bar.LargeChange = Math.Max(1, page);
+            bar.SmallChange = 1;
+            bar.Maximum = max + bar.LargeChange - 1;   // WinForms は Maximum - LargeChange + 1 までしか動かない
+            bar.Value = Math.Clamp(value, 0, max);
         }
-
-        if (!needed) { _scroll = _scroll with { X = 0 }; return; }
-
-        // スクロールバーの単位も列にする
-        _scrollBar.Minimum = 0;
-        _scrollBar.Maximum = Math.Max(0, _layout.ColumnCount - 1);
-        _scrollBar.LargeChange = VisibleColumns;
-        _scrollBar.SmallChange = 1;
-        SyncScrollBar();
     }
 
     protected override void OnResize(EventArgs e)
@@ -244,18 +256,9 @@ public sealed class FileListView : Control
 
     private void EnsureCursorVisible()
     {
-        if (!_scrollBar.Visible || _state.Count == 0) return;
-
-        var cursorColumn = _layout.ColumnOf(_state.CursorIndex);
-        if (cursorColumn < _scroll.X) _scroll = _scroll with { X = cursorColumn };
-        else if (cursorColumn > _scroll.X + VisibleColumns - 1) _scroll = _scroll with { X = cursorColumn - VisibleColumns + 1 };
-        SyncScrollBar();
-    }
-
-    private void SyncScrollBar()
-    {
-        _scroll = _scroll with { X = Math.Clamp(_scroll.X, 0, MaxScrollColumn) };
-        if (_scrollBar.Visible) _scrollBar.Value = Math.Min(_scroll.X, _scrollBar.Maximum);
+        if (_state.Count == 0) return;
+        _scroll = _layout.Reveal(_state.CursorIndex, _scroll, ViewportWidth, ViewportHeight);
+        UpdateScrollBars();
     }
 
     // ---- 描画 -------------------------------------------------------------
@@ -264,67 +267,101 @@ public sealed class FileListView : Control
     {
         e.Graphics.Clear(_theme.Background);
         if (_state.Count == 0) return;
-
-        // 可視範囲の列だけを描く（件数に依存しない・R-01）。
-        // 右端で切れる 1 列ぶんを余分に描く（R-01-4: 切れるのはウィンドウの右端）
-        var firstColumn = _scroll.X;
-        var lastColumn = Math.Min(_layout.ColumnCount - 1, _scroll.X + VisibleColumns);
-
-        for (var column = firstColumn; column <= lastColumn; column++)
-        {
-            for (var row = 0; row < _layout.RowsPerColumn; row++)
-            {
-                var index = column * _layout.RowsPerColumn + row;
-                if (index >= _state.Count) break;
-                DrawRow(e.Graphics, index, Gap);
-            }
-        }
+        var (ox, oy) = _layout.ScrollOffset(_scroll);
+        // R-01-4: 右端で切れる列も描く（切れるのはウィンドウの右端）。IndexesIn は交わる項目を返すのでそのまま入る。
+        // カーソルの項目は最後に描く（全部描くときに右隣へ重ねるため）
+        var visible = _layout.IndexesIn(ox, oy, ViewportWidth, ViewportHeight, _state.Count);
+        foreach (var index in visible.Where(i => i != _state.CursorIndex)) DrawRow(e.Graphics, index);
+        if (visible.Contains(_state.CursorIndex)) DrawRow(e.Graphics, _state.CursorIndex);
     }
 
-    private void DrawRow(Graphics g, int index, int gap)
+    private void DrawRow(Graphics g, int index)
     {
         var entry = _state.Entries[index];
         var isCursor = index == _state.CursorIndex;
         var isMarked = _state.Marks.Contains(index);
+        var rect = ToRectangle(FileViewScroll.VisibleBounds(_layout, _scroll, index));
 
-        // N-04-4: 塗りつぶしの範囲は文字列の長さではなく列の幅で決まる
-        // R-110-2: 矩形はレイアウトから取る。縦横どちらのずれも引く
-        var (x, y, width, height) = FileViewScroll.VisibleBounds(_layout, _scroll, index);
-        var rect = new Rectangle(x, y, width, height);
-
-        // R-11-6: カーソルとマークが重なる行は背景をカーソル色にし、★は残す
         var (background, foreground) = RowColors.Of(_theme, AttributeColorRule.Classify(entry.Attributes), isCursor, isMarked);
-        using (var brush = new SolidBrush(background))
-            g.FillRectangle(brush, rect);
+        // Q12 / R-113: 一覧のカーソルの項目が省略されていたら、帯を名前の終わりまで右へ広げて右隣の上に重ねる
+        var full = DrawsFullName(index);
+        var band = full ? rect with { Width = Math.Max(rect.Width, FullNameWidth(entry)) } : rect;
+        using (var brush = new SolidBrush(background)) g.FillRectangle(brush, band);
 
-        var iconRect = new Rectangle(rect.X + _layout.ColumnPadding,
-            rect.Y + (rect.Height - _icons.Size) / 2, _icons.Size, _icons.Size);
+        var iconRect = ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, _layout.IconBounds(index)));
         var icon = entry.Kind == EntryKind.File ? _icons.ForFile(entry.FullPath) : _icons.ForFolder();
-        if (icon is not null) g.DrawImage(icon, iconRect);
+        if (icon is not null) g.DrawImage(icon, iconRect with { Y = rect.Y + (rect.Height - _icons.Size) / 2, Width = _icons.Size, Height = _icons.Size });
         if (isMarked) MarkStar.Draw(g, iconRect, _theme.MarkStarColor);   // R-11-5
 
-        var textTop = rect.Y + (rect.Height - _measure.LineHeight()) / 2;
-        var baseX = rect.X + _layout.ColumnPadding + _icons.Size + gap;
+        DrawName(g, index, entry, foreground, full, band);
 
-        // R-01-4: 省略記号を使わない。列の矩形でクリップする
-        var baseRect = new Rectangle(baseX, textTop, Math.Max(0, rect.X + _layout.ExtensionOffset - baseX), _layout.RowHeight);
-        TextRenderer.DrawText(g, entry.BaseName, _font, baseRect, foreground, TextMeasure.Flags);
-
-        // R-01-6 / R-07: 拡張子は列の先頭からの固定オフセット。フォルダは Extension が空なので何も出ない
-        if (entry.Extension.Length > 0)
-        {
-            var extRect = new Rectangle(
-                rect.X + _layout.ExtensionOffset, textTop,
-                Math.Max(0, rect.Right - (rect.X + _layout.ExtensionOffset)), _layout.RowHeight);
-            TextRenderer.DrawText(g, entry.Extension, _font, extRect, foreground, TextMeasure.Flags);
-        }
-
-        // R-110-2: 落とす先はその項目の文字の色の枠。塗りはカーソルとマークが使っているので使わない
-        if (index == _dropTarget)
+        if (index == _dropTarget)   // R-110-2
         {
             using var pen = new Pen(RowColors.Frame(background, foreground), Scaled(2)) { Alignment = PenAlignment.Inset };
             g.DrawRectangle(pen, rect);
         }
+    }
+
+    /// <summary>
+    /// R-01-4 / R-01-6 / R-113: 本体は名前の領域の左から、拡張子は揃えた位置から。収まらなければ本体の末尾を「…」で省略し、
+    /// 拡張子は残す（拡張子そのものが入らなければ拡張子も「…」）。全部描く（full）ときは揃えから外して続けて描く（R-01-6 の例外）。
+    /// ponytail: 省略は GDI の EndEllipsis 任せ。結合文字で崩れる例が見つかったら、書記素に切って自前で測る形に変える。
+    /// </summary>
+    private void DrawName(Graphics g, int index, Entry entry, Color foreground, bool full, Rectangle band)
+    {
+        var name = ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, _layout.NameBounds(index)));
+        var ext = ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, _layout.ExtensionBounds(index)));
+        var top = name.Y + (name.Height - _measure.LineHeight()) / 2;
+        if (full)
+        {
+            var all = new Rectangle(name.X + Gap, top, band.Right - name.X - Gap, _measure.LineHeight());
+            TextRenderer.DrawText(g, entry.Name, _font, all, foreground, TextMeasure.Flags);
+            return;
+        }
+
+        var showExtension = ext.Width > 0 && entry.Extension.Length > 0;
+        var baseText = showExtension ? entry.BaseName : NameWithoutAlignment(entry);
+        var baseRight = showExtension ? ext.X - Gap : name.Right;
+        var baseRect = new Rectangle(name.X + Gap, top, Math.Max(0, baseRight - name.X - Gap), _measure.LineHeight());
+        TextRenderer.DrawText(g, baseText, _font, baseRect, foreground, TextMeasure.Flags | TextFormatFlags.EndEllipsis);
+        if (showExtension)
+            TextRenderer.DrawText(g, entry.Extension, _font, ext with { Y = top, Height = _measure.LineHeight() }, foreground,
+                TextMeasure.Flags | TextFormatFlags.EndEllipsis);
+    }
+
+    /// <summary>揃えた拡張子を出さないとき（詳細表示で名前に拡張子を出さない設定）の名前。一覧では常に本体（拡張子は揃えて出す）。</summary>
+    private string NameWithoutAlignment(Entry entry) => entry.BaseName;
+
+    /// <summary>R-113: 省略して描いているか。本体の実測が本体の領域より広いか、拡張子の実測が拡張子の領域より広いとき。</summary>
+    internal bool IsTruncated(int index)
+    {
+        if (index < 0 || index >= _state.Count) return false;
+        var entry = _state.Entries[index];
+        var (nx, _, nw, _) = _layout.NameBounds(index);
+        var (ex, _, ew, _) = _layout.ExtensionBounds(index);
+        var showExtension = ew > 0 && entry.Extension.Length > 0;
+        var baseWidth = (showExtension ? ex - Gap : nx + nw) - nx - Gap;
+        return _measure.Width(showExtension ? entry.BaseName : NameWithoutAlignment(entry)) > baseWidth
+               || showExtension && _measure.Width(entry.Extension) > ew;
+    }
+
+    /// <summary>
+    /// Q12 / Q27 / R-113: カーソルの項目を省略せず全部描くか。描くのは一覧と小〜特大アイコンだけ（Phase 15 では一覧）。
+    /// 詳細表示では、名前を右へ重ねるとその行自身のサイズ・日時が隠れるので描かない。
+    /// </summary>
+    internal bool DrawsFullName(int index) => index == _state.CursorIndex && _mode == FileViewMode.List && IsTruncated(index);
+
+    /// <summary>カーソルの項目を全部描くときの帯の幅（左の余白・アイコン・間・名前・右の余白）。</summary>
+    private int FullNameWidth(Entry entry) => ColumnPaddingValue + _icons.Size + Gap + _measure.Width(entry.Name) + ColumnPaddingValue;
+
+    private static Rectangle ToRectangle((int X, int Y, int Width, int Height) r) => new(r.X, r.Y, r.Width, r.Height);
+
+    /// <summary>見えている座標の点の、項目と押した所の種類。見出しの上なら (-1, None)。</summary>
+    private (int Index, FileViewArea Area) HitAt(Point point)
+    {
+        if (point.Y < _layout.HeaderHeight) return (-1, FileViewArea.None);
+        var offset = _layout.ScrollOffset(_scroll);
+        return _layout.HitTest(point.X + offset.X, point.Y - _layout.HeaderHeight + offset.Y, _state.Count);
     }
 
     // ---- 固定キー -----------------------------------------------------------
@@ -358,17 +395,21 @@ public sealed class FileListView : Control
         if (_state.Count == 0) { CommandKey?.Invoke(this, e); return; }
 
         // 同じ計算を 2 か所に持たない（片方だけ 0 除算の防御が無かった。V-14）
-        var page = _layout.RowsPerColumn * VisibleColumns;
+        var page = _layout.PageItems(ViewportWidth, ViewportHeight);
         var before = _state.CursorIndex;
         var marksChanged = false;
 
         switch (e.KeyCode)
         {
-            case Keys.Up: _state.MoveCursorBy(-1); break;
-            case Keys.Down: _state.MoveCursorBy(1); break;
-            // R-01-5: 隣の列の同じ高さへ。隣に項目が無ければ動かさない
-            case Keys.Left: _state.MoveCursorToNeighborColumn(-_layout.RowsPerColumn); break;
-            case Keys.Right: _state.MoveCursorToNeighborColumn(_layout.RowsPerColumn); break;
+            case Keys.Up: _state.MoveCursor(_layout.Arrow(_state.CursorIndex, 0, -1, _state.Count)); break;
+            case Keys.Down: _state.MoveCursor(_layout.Arrow(_state.CursorIndex, 0, 1, _state.Count)); break;
+            // R-01-5 / Q28: 一覧は隣の列の同じ高さへ（隣が無ければ動かない）。詳細は横スクロールでカーソルは動かさない
+            case Keys.Left or Keys.Right when _layout.ArrowsScrollHorizontally:
+                ScrollBy(e.KeyCode == Keys.Left ? -1 : 1, 0);
+                e.Handled = true;
+                return;
+            case Keys.Left: _state.MoveCursor(_layout.Arrow(_state.CursorIndex, -1, 0, _state.Count)); break;
+            case Keys.Right: _state.MoveCursor(_layout.Arrow(_state.CursorIndex, 1, 0, _state.Count)); break;
             // ponytail: ページ = 1 画面分（列数 × 行数）。卓駆の実測と食い違うようなら 1 列分に変える
             case Keys.PageUp: _state.MoveCursorBy(-page); break;
             case Keys.PageDown: _state.MoveCursorBy(page); break;
@@ -407,7 +448,7 @@ public sealed class FileListView : Control
         base.OnMouseDown(e);
         Focus();
 
-        var index = _layout.IndexAt(e.X + ScrollX, e.Y, _state.Count);
+        var index = HitAt(e.Location).Index;
 
         if (e.Button == MouseButtons.Right)
         {
@@ -425,8 +466,10 @@ public sealed class FileListView : Control
     /// </summary>
     internal void PressLeft(Point location, bool shift)
     {
-        var (index, area) = _layout.HitTest(location.X + ScrollX, location.Y, _state.Count);
+        var (index, area) = HitAt(location);
         if (index < 0) return;
+
+        _pressArea = area;
 
         _dragOrigin = location;
         _dragIndex = index;
@@ -466,11 +509,14 @@ public sealed class FileListView : Control
             return;
         }
 
+        if (e.Button == MouseButtons.None) UpdateNameTip(e.Location);
         if (e.Button != MouseButtons.Left || _dragIndex < 0) return;
 
         var moved = Math.Abs(e.X - _dragOrigin.X) >= SystemInformation.DragSize.Width
                  || Math.Abs(e.Y - _dragOrigin.Y) >= SystemInformation.DragSize.Height;
         if (!moved) return;
+        // INV-DETAILS-ROW-HIT: 名前以外を押したままのドラッグは D&D にしない（マークも変えない）
+        if (_pressArea == FileViewArea.Other) { _markOnRelease.Moved(); _dragIndex = -1; return; }
 
         // R-65-2 / R-11-2: 対象は実効対象の規則。マークがあればマーク集合、
         // なければ押した位置のエントリ。Shift+クリックはカーソルを押した時点で動かさないので、
@@ -486,6 +532,22 @@ public sealed class FileListView : Control
         // R-78: 画像付きで始める。画像の無いドラッグには、落とす先が説明（「◯◯へ移動」）を出せない
         using var image = DragImage(targets);
         ShellDrag.Start(this, targets.Select(target => target.FullPath).ToList(), image, new Point(Scaled(8), Scaled(8)));
+    }
+
+    /// <summary>Q12: 省略している名前の項目の上では、全部の名前をツールチップに出す。</summary>
+    private void UpdateNameTip(Point location)
+    {
+        var index = HitAt(location).Index;
+        if (index == _tipIndex) return;
+        _tipIndex = index;
+        _nameTip.SetToolTip(this, index >= 0 && IsTruncated(index) ? _state.Entries[index].Name : "");
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        _tipIndex = -1;
+        _nameTip.SetToolTip(this, "");
     }
 
     /// <summary>R-78: ドラッグ中にカーソルに付ける画像。先頭の項目のアイコンと名前、複数なら件数。</summary>
@@ -529,7 +591,7 @@ public sealed class FileListView : Control
         var frame = e.Effect != DragDropEffects.None && DropRouting.TargetsItem(InPanelDragDrop, hit) ? index : -1;
         if (frame != _dropTarget) { _dropTarget = frame; Invalidate(); }
         var point = PointToClient(new Point(e.X, e.Y));
-        SetAutoScroll(InPanelDragDrop ? _layout.AutoScrollDirection(point.X, point.Y, ClientSize.Width, ViewportHeight) : (0, 0));
+        SetAutoScroll(InPanelDragDrop ? _layout.AutoScrollDirection(point.X, point.Y - _layout.HeaderHeight, ViewportWidth, ViewportHeight) : (0, 0));
     }
 
     private void EndDrop()
@@ -549,10 +611,10 @@ public sealed class FileListView : Control
     /// <summary>R-110-3: 1 段。向きも段の量もレイアウトが決める（今の一覧では横に 1 列）。スクロールできる端まで来たら止める。</summary>
     private void AutoScrollStep()
     {
-        var next = FileViewScroll.Next(_layout, _scroll, _autoScrollDirection, _state.Count, ClientSize.Width, ViewportHeight);
+        var next = FileViewScroll.Next(_layout, _scroll, _autoScrollDirection, _state.Count, ViewportWidth, ViewportHeight);
         if (next == _scroll) { SetAutoScroll((0, 0)); return; }
         _scroll = next;
-        SyncScrollBar();
+        UpdateScrollBars();
         Invalidate();   // 枠の位置は次の DragOver で決め直す（OLE はマウスが止まっていても DragOver を呼び続ける）
     }
 
@@ -577,7 +639,7 @@ public sealed class FileListView : Control
         if (e.Button != MouseButtons.Left) return;
         // 項目の無い余白では何も起こさない。OnMouseDown は余白でカーソルを動かさないので、
         // ここで見ないと「余白を叩いたらカーソル位置の項目が起動した」になる（V-09）
-        if (_layout.IndexAt(e.X + ScrollX, e.Y, _state.Count) < 0) return;
+        if (HitAt(e.Location).Index < 0) return;
         if (_state.Cursor is { } cursor) EntryActivated?.Invoke(this, cursor);
     }
 
@@ -599,7 +661,9 @@ public sealed class FileListView : Control
             // R-11-2: Shift の範囲マークは、離した時点でカーソルも押した項目へ動く（MarkOnRelease.Release の中で）。
             // 動いたかどうかは離す前のカーソル位置と比べる必要があるので、Release より前に取っておく
             var before = _state.CursorIndex;
-            if (_markOnRelease.Release(_state)) Commit(before, marksChanged: true);
+            var marksChanged = _markOnRelease.Release(_state);
+            // INV-DETAILS-ROW-HIT: 名前以外はマークを変えずにカーソルだけ動く
+            if (marksChanged || _state.CursorIndex != before) Commit(before, marksChanged);
         }
     }
 
@@ -607,7 +671,7 @@ public sealed class FileListView : Control
     {
         base.OnMouseWheel(e);
         // スクロールできない間にたまった分が、後でまとめて効かないようにする
-        if (!_scrollBar.Visible) { _wheel.Reset(); return; }
+        if (!_hScrollBar.Visible) { _wheel.Reset(); return; }
         // R-76: 1 ノッチ = 1 列。左端は常に列の境界に揃う
         ScrollColumns(_wheel.Add(e.Delta, SystemInformation.MouseWheelScrollDelta));
     }
@@ -616,12 +680,16 @@ public sealed class FileListView : Control
     /// カーソルを動かさずに横スクロールだけ進める（テスト用にホイールの計算から切り出した。R-11-2）。
     /// delta の符号は WheelAccumulator.Add の戻り値と同じ（正で列 0 の方向へ戻る）。
     /// </summary>
-    internal void ScrollColumns(int delta)
+    internal void ScrollColumns(int delta) => ScrollBy(-delta, 0);
+
+    private void ScrollBy(int dx, int dy)
     {
-        _scroll = _scroll with { X = _scroll.X - delta };
-        SyncScrollBar();
+        _scroll = new ScrollPosition(_scroll.X + dx, _scroll.Y + dy);
+        UpdateScrollBars();   // 範囲へのクランプもここ
         Invalidate();
     }
+
+    internal new IFileViewLayout Layout => _layout;
 
     internal ScrollPosition ScrollPosition => _scroll;
 
@@ -655,6 +723,7 @@ public sealed class FileListView : Control
             _measure?.Dispose();
             _icons?.Dispose();
             _autoScroll.Dispose();
+            _nameTip.Dispose();
         }
         base.Dispose(disposing);
     }
