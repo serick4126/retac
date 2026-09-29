@@ -77,7 +77,7 @@ public sealed class MainForm : Form, IBookmarkHost
     private bool _fullExit;
     /// <summary>R-84: 実行中のコマンドの記録。コマンドの外（元に戻す処理を含む）では null で、何も集めない。</summary>
     private UndoRecorder? _recorder;
-    /// <summary>R-74: マウスボタン3/4/5 を窓全体で受ける。解除は FormClosed で行う。</summary>
+    /// <summary>R-75-2: マウスボタン3/4/5 を窓全体で受ける。解除は FormClosed で行う。</summary>
     private readonly MouseButtonFilter _mouseButtons;
     /// <summary>R-80: ステータスバーの一段上。検索中だけ出す。</summary>
     private readonly IncrementalSearchBar _search;
@@ -248,7 +248,7 @@ public sealed class MainForm : Form, IBookmarkHost
             UpdatePreview();   // R-99 / Q46: 最小化（常駐を含む）で解放し、戻したら今のカーソルから読み直す
         };
 
-        // R-74: マウスボタン3/4/5 は一覧・ドライブバー・ステータスバーのどこで押しても効かせる
+        // R-75-2: マウスボタン3/4/5 は一覧・ドライブバー・ステータスバーのどこで押しても効かせる
         _mouseButtons = new MouseButtonFilter(this, PressMouseButton);
         Application.AddMessageFilter(_mouseButtons);
 
@@ -466,7 +466,7 @@ public sealed class MainForm : Form, IBookmarkHost
     }
 
     /// <summary>
-    /// R-74: マウスボタンの押下。キーと同じく <see cref="KeyMap.Resolve"/> の 1 経路で解決する（R-12）。
+    /// R-75-2: マウスボタンの押下。キーと同じく <see cref="KeyMap.Resolve"/> の 1 経路で解決する（R-12）。
     /// R-75: カーソルは動かさない。対象はキーを押したときと同じ（マークがあればマーク集合、
     /// 無ければカーソル位置の 1 件）。クリックした場所は対象の決定に使わない。
     /// </summary>
@@ -1932,7 +1932,7 @@ public sealed class MainForm : Form, IBookmarkHost
 
     string IBookmarkHost.KeyOf(CommandTarget target) =>
         _keyMap.Bindings
-            // R-73: マウスのボタンは設定ファイル用の表記（XButton1）になり、利用者には読めないので出さない
+            // R-75-1: マウスのボタンは設定ファイル用の表記（XButton1）になり、利用者には読めないので出さない
             .Where(b => Equals(b.Value, target) && b.Key.VirtualKey is not (Vk.MButton or Vk.XButton1 or Vk.XButton2))
             .Select(b => KeySlots.Label(b.Key))
             .OrderBy(label => label.Length)

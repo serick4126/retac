@@ -4,7 +4,7 @@ using ReTAC.Domain.Keys;
 namespace ReTAC.App;
 
 /// <summary>
-/// R-74: マウスボタン3/4/5 の押下をウィンドウ全体で受ける。
+/// R-75-2: マウスボタン3/4/5 の押下をウィンドウ全体で受ける。
 /// FileListView / DriveBar / StatusBar の 3 箇所に同じ処理を書き写さず 1 経路に集約する。
 /// 一覧の余白でもドライブバーの上でも同じように効かせるための選択。
 /// 左（VK_LBUTTON）と右（VK_RBUTTON）は固定なので一切見ない。

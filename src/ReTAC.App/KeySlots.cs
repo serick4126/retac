@@ -27,7 +27,7 @@ public static class KeySlots
             >= Keys.D0 and <= Keys.D9 => $"{(char)('0' + (key - Keys.D0))}（上段）",
             Keys.Return => "Enter",
             Keys.Back => "BackSpace",
-            // R-73: XButton1 のままでは何のことか分からない。一方で「戻る側」のような
+            // R-75-1: XButton1 のままでは何のことか分からない。一方で「戻る側」のような
             // 既定の意味は名前に焼き付けない。割り当ては変えられるので嘘になる。
             // 「（ホイール押し込み）」まで書くと列幅（Scaled(90)）に収まらず途中で切れる
             Keys.MButton => "マウスボタン3",

@@ -7,7 +7,7 @@ namespace ReTAC.Domain.Keys;
 public static class Vk
 {
     /// <summary>
-    /// R-73: マウスのボタン。VK_MBUTTON / VK_XBUTTON1 / VK_XBUTTON2 で、
+    /// R-75-1: マウスのボタン。VK_MBUTTON / VK_XBUTTON1 / VK_XBUTTON2 で、
     /// WinForms の <c>Keys.MButton</c> などと同じ値。キーと同じ枠に入れるためここに置く。
     /// 左（0x01）と右（0x02）は割り当ての対象にしないので定数も作らない。
     /// </summary>
@@ -36,7 +36,7 @@ public static class Vk
 /// 結果: ReTAC では Esc を割り当て枠に含めないため、修飾なし・Shift の 64 枠のうち 40 枠が有効、24 枠が空。
 /// Ctrl の 47 枠（F-06。Ctrl+Z は R-83 で枠から外した）には、Ctrl+F（B-18）・Ctrl+L（B-19）・Ctrl+B（B-21）・
 /// Ctrl+A（B-23）を除いて既定の割り当てを付けない。
-/// B-17: マウスの 3 枠（R-73）はボタン4/5 の 2 枠が有効。ボタン3 は空。
+/// B-17: マウスの 3 枠（R-75-1）はボタン4/5 の 2 枠が有効。ボタン3 は空。
 /// F-01: E / Shift+Enter / V / Z / F3 は、初期登録の外部ツール（<see cref="DefaultExternalTools"/>）を指す。
 /// </summary>
 public static class DefaultKeyMap
@@ -88,7 +88,7 @@ public static class DefaultKeyMap
         // B-23: 卓駆の利用者の設定を引き継いだ全選択／選択解除は、一般の利用者が期待する削除と食い違っていた
         yield return Key(new KeyBinding(Vk.Delete), CommandId.Delete);
 
-        // B-17 / R-73: マウスのサイドボタン。エクスプローラー・ブラウザを含め Windows 全体で
+        // B-17 / R-75-1: マウスのサイドボタン。エクスプローラー・ブラウザを含め Windows 全体で
         // 「戻る」「進む」が標準なので、INV-NO-PREFERENCE-DEFAULTS の例外条項に当たる。
         // ホイール押し込み（ボタン3）は標準の挙動がアプリごとに違うため空のままにする
         yield return Key(new KeyBinding(Vk.XButton1), CommandId.GoBack);

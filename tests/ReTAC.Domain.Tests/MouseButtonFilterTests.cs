@@ -3,7 +3,7 @@ using ReTAC.Domain.Keys;
 
 namespace ReTAC.Domain.Tests;
 
-/// <summary>R-74: Win32 のメッセージからどのマウスボタンかを取り出す</summary>
+/// <summary>R-75-2: Win32 のメッセージからどのマウスボタンかを取り出す</summary>
 public class MouseButtonFilterTests
 {
     [Theory]

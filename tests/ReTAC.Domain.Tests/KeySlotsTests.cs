@@ -3,7 +3,7 @@ using ReTAC.Domain.Keys;
 
 namespace ReTAC.Domain.Tests;
 
-/// <summary>R-73: マウスの枠の表記。設定ファイルの表記は後から変えられない（読めなくなる）</summary>
+/// <summary>R-75-1: マウスの枠の表記。設定ファイルの表記は後から変えられない（読めなくなる）</summary>
 public class KeySlotsTests
 {
     [Theory]

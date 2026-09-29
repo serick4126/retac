@@ -1029,7 +1029,7 @@
       "id": "type:ReTAC.Domain.Keys.DefaultKeyMap",
       "kind": "static class",
       "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
-      "doc": "R-14: 現行の TACKEY.KFM 全 65 件を初期キーマップとして組み込む。 スコープ外の 6 件（F=内蔵検索 / P=圧縮 / U=書庫復元 / Y=絞込み / F2=CTRL+キー実行 / F10=サブ関連付け）は 未割り当てとする（X-01・X-03）。 結果: ReTAC では Esc を割り当て枠に含めないため、修飾なし・Shift の 64 枠のうち 40 枠が有効、24 枠が空。 Ctrl の 47 枠（F-06。Ctrl+Z は R-83 で枠から外した）には、Ctrl+F（B-18）・Ctrl+L（B-19）・Ctrl+B（B-21）・ Ctrl+A（B-23）を除いて既定の割り当てを付けない。 B-17: マウスの 3 枠（R-73）はボタン4/5 の 2 枠が有効。ボタン3 は空。 F-01: E / Shift+Enter / V / Z / F3 は、初期登録の外部ツール（）を指す。"
+      "doc": "R-14: 現行の TACKEY.KFM 全 65 件を初期キーマップとして組み込む。 スコープ外の 6 件（F=内蔵検索 / P=圧縮 / U=書庫復元 / Y=絞込み / F2=CTRL+キー実行 / F10=サブ関連付け）は 未割り当てとする（X-01・X-03）。 結果: ReTAC では Esc を割り当て枠に含めないため、修飾なし・Shift の 64 枠のうち 40 枠が有効、24 枠が空。 Ctrl の 47 枠（F-06。Ctrl+Z は R-83 で枠から外した）には、Ctrl+F（B-18）・Ctrl+L（B-19）・Ctrl+B（B-21）・ Ctrl+A（B-23）を除いて既定の割り当てを付けない。 B-17: マウスの 3 枠（R-75-1）はボタン4/5 の 2 枠が有効。ボタン3 は空。 F-01: E / Shift+Enter / V / Z / F3 は、初期登録の外部ツール（）を指す。"
     },
     "ReTAC.Domain.Keys.KeyBinding": {
       "id": "type:ReTAC.Domain.Keys.KeyBinding",
@@ -1079,7 +1079,7 @@
       "id": "type:ReTAC.Domain.Keys.KeySlotList",
       "kind": "static class",
       "file": "src/ReTAC.Domain/Keys/KeySlotList.cs",
-      "doc": "キー割り当ての枠（5-2 節 / F-06）。表示と保存の表記は App の KeySlots が受け持つ。 修飾なし・Shift の 64 枠: 英字 26 ＋ 数字 10 ＋ F キー 12 ＋ Shift+F キー 12 ＋ その他 4（Enter・Shift+Enter・BackSpace・Delete）。 卓駆の `TACKEY.KFM` は 65 枠だが、Esc は割り当てさせない（R-18 により常に「中止」として働く）。 Ctrl の 47 枠: 英字 22（C / X / V / Z は固定のキー・R-25 / R-83）＋ 数字 10 ＋ F キー 12 ＋ Enter・BackSpace・Delete。Ctrl+Shift は作らない。 マウスの 3 枠（R-73）: ボタン3（ホイール押し込み）・ボタン4・ボタン5。左右のボタンは固定なので枠に無い。"
+      "doc": "キー割り当ての枠（5-2 節 / F-06）。表示と保存の表記は App の KeySlots が受け持つ。 修飾なし・Shift の 64 枠: 英字 26 ＋ 数字 10 ＋ F キー 12 ＋ Shift+F キー 12 ＋ その他 4（Enter・Shift+Enter・BackSpace・Delete）。 卓駆の `TACKEY.KFM` は 65 枠だが、Esc は割り当てさせない（R-18 により常に「中止」として働く）。 Ctrl の 47 枠: 英字 22（C / X / V / Z は固定のキー・R-25 / R-83）＋ 数字 10 ＋ F キー 12 ＋ Enter・BackSpace・Delete。Ctrl+Shift は作らない。 マウスの 3 枠（R-75-1）: ボタン3（ホイール押し込み）・ボタン4・ボタン5。左右のボタンは固定なので枠に無い。"
     },
     "ReTAC.Domain.Keys.Vk": {
       "id": "type:ReTAC.Domain.Keys.Vk",
@@ -9117,7 +9117,13 @@
         "line": 16
       }
     ],
-    "R-73": [
+    "R-75": [
+      {
+        "file": "src/ReTAC.App/MainForm.cs",
+        "line": 470
+      }
+    ],
+    "R-75-1": [
       {
         "file": "src/ReTAC.App/KeySlots.cs",
         "line": 30
@@ -9151,7 +9157,7 @@
         "line": 34
       }
     ],
-    "R-74": [
+    "R-75-2": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 80
@@ -9167,12 +9173,6 @@
       {
         "file": "src/ReTAC.App/MouseButtonFilter.cs",
         "line": 7
-      }
-    ],
-    "R-75": [
-      {
-        "file": "src/ReTAC.App/MainForm.cs",
-        "line": 470
       }
     ],
     "R-76": [

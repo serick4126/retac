@@ -302,7 +302,7 @@ public static class MenuBar
         var labels = new Dictionary<CommandTarget, string>();
         foreach (var (binding, target) in keyMap.Bindings)
         {
-            // R-73: マウスのボタンはキーボードのショートカット欄に出さない。
+            // R-75-1: マウスのボタンはキーボードのショートカット欄に出さない。
             // ここに出るのは設定ファイル用の表記（XButton1）で、利用者には読めない
             if (binding.VirtualKey is Vk.MButton or Vk.XButton1 or Vk.XButton2) continue;
 

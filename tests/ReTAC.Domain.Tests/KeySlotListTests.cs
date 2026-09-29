@@ -18,7 +18,7 @@ public class KeySlotListTests
     [Fact]
     public void マウスはボタン3と4と5の3枠だけで修飾付きは無い()
     {
-        // R-73: 左（VK_LBUTTON = 0x01）と右（VK_RBUTTON = 0x02）は固定なので枠に入れない
+        // R-75-1: 左（VK_LBUTTON = 0x01）と右（VK_RBUTTON = 0x02）は固定なので枠に入れない
         Assert.Contains(new KeyBinding(Vk.MButton), KeySlotList.All);
         Assert.Contains(new KeyBinding(Vk.XButton1), KeySlotList.All);
         Assert.Contains(new KeyBinding(Vk.XButton2), KeySlotList.All);
