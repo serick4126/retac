@@ -33,8 +33,23 @@ public class FileListViewDetailsTests
         using var list = Details(0);
         Assert.NotEmpty(list.Layout.Header);
         list.PressLeft(new Point(50, list.Layout.HeaderHeight + 5), shift: false);
-        using var bitmap = new Bitmap(500, 200);
-        list.DrawToBitmap(bitmap, new Rectangle(0, 0, 500, 200));
+        // DrawToBitmap はハンドルを作り、OnHandleCreated の AllowDrop が OLE を呼ぶ。xunit のスレッドは MTA なので
+        // そこで例外になり、WinForms の例外ダイアログが出てテストの実行が止まる。描画は STA のスレッドで行う
+        Exception? error = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                using var bitmap = new Bitmap(500, 200);
+                using var drawn = Details(0);
+                drawn.DrawToBitmap(bitmap, new Rectangle(0, 0, 500, 200));
+            }
+            catch (Exception e) { error = e; }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        Assert.Null(error);
     }
 
     [Fact]
