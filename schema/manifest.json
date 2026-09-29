@@ -461,6 +461,12 @@
       "file": "src/ReTAC.Domain/Entries/AttributeColorRule.cs",
       "doc": "R-06: システム ＞ 書込禁止 ＞ 隠し ＞ NTFS圧縮／暗号化 ＞ 通常。"
     },
+    "ReTAC.Domain.Entries.CloudFiles": {
+      "id": "type:ReTAC.Domain.Entries.CloudFiles",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Entries/CloudFiles.cs",
+      "doc": "R-117 / INV-THUMBNAIL-NO-CLOUD-DOWNLOAD: クラウドのプレースホルダー（OneDrive などのオンラインのみのファイル・フォルダ）の判定。 FileSystemInfo.Attributes は OS の生の値をそのまま持つので、列挙にない RECALL の 2 つのビットも残っている。"
+    },
     "ReTAC.Domain.Entries.Entry": {
       "id": "type:ReTAC.Domain.Entries.Entry",
       "kind": "sealed record",
@@ -8485,6 +8491,10 @@
       }
     ],
     "R-117": [
+      {
+        "file": "src/ReTAC.Domain/Entries/CloudFiles.cs",
+        "line": 4
+      },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
         "line": 94

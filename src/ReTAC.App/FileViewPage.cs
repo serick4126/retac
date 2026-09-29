@@ -54,7 +54,7 @@ public sealed class FileViewPage : UserControl
     internal ListBox Groups { get; } = new() { Bounds = new Rectangle(14, 14, 220, 428), IntegralHeight = false };
 
     // 共通
-    private readonly CheckBox _overlays = Check("同期状態などの印をアイコンに表示する(&O)");
+    internal CheckBox Overlays { get; } = Check("同期状態などの印をアイコンに表示する(&O)");
     private readonly CheckBox _hideKnownExtensions = Check("登録されている拡張子は表示しない(&X)");
     // 一覧
     private readonly CheckBox _listAlignExtension = Check("拡張子を揃えて表示する(&X)");
@@ -75,20 +75,20 @@ public sealed class FileViewPage : UserControl
     private readonly ComboBox _mediumSize = SizeCombo();
     private readonly ComboBox _largeSize = SizeCombo();
     private readonly ComboBox _extraLargeSize = SizeCombo();
-    private readonly ComboBox _iconsCheckBoxes = Combo(CheckBoxModes, 200);
-    private readonly CheckBox _iconsThumbnails = Check("サムネイルを表示する(&T)");
-    private readonly CheckBox _iconsFolderThumbnails = Check("フォルダに中身のサムネイルを表示する(&H)");
-    private readonly NumericUpDown _nameLines = new() { Width = 60, Minimum = FileViewLimits.MinNameLines, Maximum = FileViewLimits.MaxNameLines };
-    private readonly ComboBox _smallIconWidth = Combo(WidthModes, 130);
-    private readonly NumericUpDown _smallIconChars = Chars();
+    internal ComboBox IconsCheckBoxes { get; } = Combo(CheckBoxModes, 200);
+    internal CheckBox IconsThumbnails { get; } = Check("サムネイルを表示する(&T)");
+    internal CheckBox IconsFolderThumbnails { get; } = Check("フォルダに中身のサムネイルを表示する(&H)");
+    internal NumericUpDown NameLines { get; } = new() { Width = 60, Minimum = FileViewLimits.MinNameLines, Maximum = FileViewLimits.MaxNameLines };
+    internal ComboBox SmallIconWidth { get; } = Combo(WidthModes, 130);
+    internal NumericUpDown SmallIconChars { get; } = Chars();
     // 並べて表示・コンテンツ
     private readonly CheckBox _tilesDragDrop = Check("ファイル表示パネル内でドラッグ＆ドロップを使用する(&D)");
     private readonly CheckedListBox _tileInfo = new() { Size = new Size(200, 106), CheckOnClick = true, IntegralHeight = false };
     private readonly ComboBox _tilesSize = SizeCombo();
     private readonly ComboBox _contentSize = SizeCombo();
-    private readonly ComboBox _tilesCheckBoxes = Combo(CheckBoxModes, 200);
-    private readonly CheckBox _tilesThumbnails = Check("サムネイルを表示する(&T)");
-    private readonly CheckBox _tilesFolderThumbnails = Check("フォルダに中身のサムネイルを表示する(&H)");
+    internal ComboBox TilesCheckBoxes { get; } = Combo(CheckBoxModes, 200);
+    internal CheckBox TilesThumbnails { get; } = Check("サムネイルを表示する(&T)");
+    internal CheckBox TilesFolderThumbnails { get; } = Check("フォルダに中身のサムネイルを表示する(&H)");
 
     public FileViewPage(SettingsDraft draft)
     {
@@ -100,7 +100,7 @@ public sealed class FileViewPage : UserControl
         // アクセスキーはパネルの中で重ねず、ダイアログの「適用(&S)」の S と、ダイアログで避けている A は使わない
         _panels =
         [
-            Arrange(new Panel(), (_overlays, 0), (_hideKnownExtensions, 32)),
+            Arrange(new Panel(), (Overlays, 0), (_hideKnownExtensions, 32)),
             Arrange(new Panel(),
                 (ListDragDrop, 0),
                 (Row("名前の列の幅(&W):", _listWidth), 36),
@@ -121,21 +121,21 @@ public sealed class FileViewPage : UserControl
                 (Row("中アイコンの大きさ(&M):", _mediumSize), 36),
                 (Row("大アイコンの大きさ(&L):", _largeSize), 36 + RowHeight),
                 (Row("特大アイコンの大きさ(&E):", _extraLargeSize), 36 + RowHeight * 2),
-                (Row("チェックボックス(&K):", _iconsCheckBoxes), 36 + RowHeight * 3),
-                (_iconsThumbnails, 172),
-                (_iconsFolderThumbnails, 200),
-                (Row("名前の行数(&I):", _nameLines), 234),
-                (Row("小アイコンの項目の幅(&W):", _smallIconWidth), 234 + RowHeight),
-                (Row("文字数(&R):", _smallIconChars), 234 + RowHeight * 2)),
+                (Row("チェックボックス(&K):", IconsCheckBoxes), 36 + RowHeight * 3),
+                (IconsThumbnails, 172),
+                (IconsFolderThumbnails, 200),
+                (Row("名前の行数(&I):", NameLines), 234),
+                (Row("小アイコンの項目の幅(&W):", SmallIconWidth), 234 + RowHeight),
+                (Row("文字数(&R):", SmallIconChars), 234 + RowHeight * 2)),
             Arrange(new Panel(),
                 (_tilesDragDrop, 0),
                 (Caption("名前の横に出す情報(&I):"), 36),
                 (_tileInfo, 56),
                 (Row("並べて表示のアイコンの大きさ(&Z):", _tilesSize), 176),
                 (Row("コンテンツのアイコンの大きさ(&C):", _contentSize), 176 + RowHeight),
-                (Row("チェックボックス(&K):", _tilesCheckBoxes), 176 + RowHeight * 2),
-                (_tilesThumbnails, 280),
-                (_tilesFolderThumbnails, 308)),
+                (Row("チェックボックス(&K):", TilesCheckBoxes), 176 + RowHeight * 2),
+                (TilesThumbnails, 280),
+                (TilesFolderThumbnails, 308)),
         ];
 
         foreach (var name in new[] { "共通", "一覧", "詳細", "アイコン", "並べて表示・コンテンツ" }) Groups.Items.Add(name);
@@ -175,7 +175,7 @@ public sealed class FileViewPage : UserControl
         _loading = true;
         var views = _draft.FileViews;
 
-        _overlays.Checked = views.Common.ShowOverlays;
+        Overlays.Checked = views.Common.ShowOverlays;
         _hideKnownExtensions.Checked = views.Common.HideKnownExtensions;
         _listAlignExtension.Checked = views.List.AlignExtension;
         _detailsAlignExtension.Checked = views.Details.AlignExtension;
@@ -193,11 +193,11 @@ public sealed class FileViewPage : UserControl
         LoadSize(_mediumSize, views.Icons.MediumSize);
         LoadSize(_largeSize, views.Icons.LargeSize);
         LoadSize(_extraLargeSize, views.Icons.ExtraLargeSize);
-        _iconsCheckBoxes.SelectedIndex = (int)views.Icons.CheckBoxes;
-        _iconsThumbnails.Checked = views.Icons.Thumbnails;
-        _iconsFolderThumbnails.Checked = views.Icons.FolderThumbnails;
-        _nameLines.Value = Math.Clamp(views.Icons.NameLines, FileViewLimits.MinNameLines, FileViewLimits.MaxNameLines);
-        LoadWidth(_smallIconWidth, _smallIconChars, views.Icons.SmallIconWidth);
+        IconsCheckBoxes.SelectedIndex = (int)views.Icons.CheckBoxes;
+        IconsThumbnails.Checked = views.Icons.Thumbnails;
+        IconsFolderThumbnails.Checked = views.Icons.FolderThumbnails;
+        NameLines.Value = Math.Clamp(views.Icons.NameLines, FileViewLimits.MinNameLines, FileViewLimits.MaxNameLines);
+        LoadWidth(SmallIconWidth, SmallIconChars, views.Icons.SmallIconWidth);
 
         _tilesDragDrop.Checked = views.Tiles.InPanelDragDrop;
         // R-115: 並びは候補の順で固定。選ぶだけで並べ替えはしない
@@ -205,16 +205,16 @@ public sealed class FileViewPage : UserControl
             _tileInfo.Items.Add(new Choice<TileInfo>(info, InfoNames[info]), views.Tiles.Info.Contains(info));
         LoadSize(_tilesSize, views.Tiles.TilesSize);
         LoadSize(_contentSize, views.Tiles.ContentSize);
-        _tilesCheckBoxes.SelectedIndex = (int)views.Tiles.CheckBoxes;
-        _tilesThumbnails.Checked = views.Tiles.Thumbnails;
-        _tilesFolderThumbnails.Checked = views.Tiles.FolderThumbnails;
+        TilesCheckBoxes.SelectedIndex = (int)views.Tiles.CheckBoxes;
+        TilesThumbnails.Checked = views.Tiles.Thumbnails;
+        TilesFolderThumbnails.Checked = views.Tiles.FolderThumbnails;
 
         _loading = false;
     }
 
     private void Wire()
     {
-        OnCheck(_overlays, (v, on) => v with { Common = v.Common with { ShowOverlays = on } });
+        OnCheck(Overlays, (v, on) => v with { Common = v.Common with { ShowOverlays = on } });
         OnCheck(_hideKnownExtensions, (v, on) => v with { Common = v.Common with { HideKnownExtensions = on } });
         OnCheck(_listAlignExtension, (v, on) => v with { List = v.List with { AlignExtension = on } });
 
@@ -234,12 +234,12 @@ public sealed class FileViewPage : UserControl
         OnSize(_mediumSize, (v, size) => v with { Icons = v.Icons with { MediumSize = size } });
         OnSize(_largeSize, (v, size) => v with { Icons = v.Icons with { LargeSize = size } });
         OnSize(_extraLargeSize, (v, size) => v with { Icons = v.Icons with { ExtraLargeSize = size } });
-        _iconsCheckBoxes.SelectedIndexChanged += (_, _) =>
-            Change(v => v with { Icons = v.Icons with { CheckBoxes = (CheckBoxMode)_iconsCheckBoxes.SelectedIndex } });
-        OnCheck(_iconsThumbnails, (v, on) => v with { Icons = v.Icons with { Thumbnails = on } });
-        OnCheck(_iconsFolderThumbnails, (v, on) => v with { Icons = v.Icons with { FolderThumbnails = on } });
-        _nameLines.ValueChanged += (_, _) => Change(v => v with { Icons = v.Icons with { NameLines = (int)_nameLines.Value } });
-        OnWidth(_smallIconWidth, _smallIconChars, (v, w) => v with { Icons = v.Icons with { SmallIconWidth = w } });
+        IconsCheckBoxes.SelectedIndexChanged += (_, _) =>
+            Change(v => v with { Icons = v.Icons with { CheckBoxes = (CheckBoxMode)IconsCheckBoxes.SelectedIndex } });
+        OnCheck(IconsThumbnails, (v, on) => v with { Icons = v.Icons with { Thumbnails = on } });
+        OnCheck(IconsFolderThumbnails, (v, on) => v with { Icons = v.Icons with { FolderThumbnails = on } });
+        NameLines.ValueChanged += (_, _) => Change(v => v with { Icons = v.Icons with { NameLines = (int)NameLines.Value } });
+        OnWidth(SmallIconWidth, SmallIconChars, (v, w) => v with { Icons = v.Icons with { SmallIconWidth = w } });
 
         OnCheck(_tilesDragDrop, (v, on) => v with { Tiles = v.Tiles with { InPanelDragDrop = on } });
         _tileInfo.ItemCheck += (_, e) =>
@@ -252,10 +252,10 @@ public sealed class FileViewPage : UserControl
         };
         OnSize(_tilesSize, (v, size) => v with { Tiles = v.Tiles with { TilesSize = size } });
         OnSize(_contentSize, (v, size) => v with { Tiles = v.Tiles with { ContentSize = size } });
-        _tilesCheckBoxes.SelectedIndexChanged += (_, _) =>
-            Change(v => v with { Tiles = v.Tiles with { CheckBoxes = (CheckBoxMode)_tilesCheckBoxes.SelectedIndex } });
-        OnCheck(_tilesThumbnails, (v, on) => v with { Tiles = v.Tiles with { Thumbnails = on } });
-        OnCheck(_tilesFolderThumbnails, (v, on) => v with { Tiles = v.Tiles with { FolderThumbnails = on } });
+        TilesCheckBoxes.SelectedIndexChanged += (_, _) =>
+            Change(v => v with { Tiles = v.Tiles with { CheckBoxes = (CheckBoxMode)TilesCheckBoxes.SelectedIndex } });
+        OnCheck(TilesThumbnails, (v, on) => v with { Tiles = v.Tiles with { Thumbnails = on } });
+        OnCheck(TilesFolderThumbnails, (v, on) => v with { Tiles = v.Tiles with { FolderThumbnails = on } });
     }
 
     private void Change(Func<FileViewSettings, FileViewSettings> change)
