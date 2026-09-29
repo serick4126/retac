@@ -51,3 +51,37 @@ public sealed class LenientEnumListConverter<T> : JsonConverter<IReadOnlyList<T>
         writer.WriteEndArray();
     }
 }
+
+/// <summary>
+/// R-114 / V6: 手動の列幅。整数と null の値だけを読み、それ以外（文字列・小数・真偽・配列・オブジェクト）はそのキーだけ捨てる。
+/// 標準の読み方では 1 つの値の型違いで JsonException になり、AppSettings.Load が設定ファイル全体を捨てて既定値で起動してしまう。
+/// </summary>
+public sealed class LenientColumnWidthsConverter : JsonConverter<Dictionary<string, int?>>
+{
+    public override Dictionary<string, int?>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.Null) return null;
+        var widths = new Dictionary<string, int?>();
+        if (reader.TokenType != JsonTokenType.StartObject) { reader.Skip(); return widths; }
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var key = reader.GetString()!;
+            reader.Read();
+            if (reader.TokenType == JsonTokenType.Null) widths[key] = null;
+            else if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out var width)) widths[key] = width;
+            else reader.Skip();   // 開始トークンなら対の終わりまで進む
+        }
+        return widths;
+    }
+
+    public override void Write(Utf8JsonWriter writer, Dictionary<string, int?> value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        foreach (var (key, width) in value)
+        {
+            if (width is { } w) writer.WriteNumber(key, w);
+            else writer.WriteNull(key);
+        }
+        writer.WriteEndObject();
+    }
+}

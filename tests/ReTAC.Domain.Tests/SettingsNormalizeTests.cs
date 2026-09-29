@@ -175,4 +175,25 @@ public class SettingsNormalizeTests
         empty.Normalize();
         Assert.Empty(empty.DetailsColumnWidths);
     }
+
+    [Fact]
+    public void 列幅に数値でない値があってもそのキーだけ捨てて他の設定は保つ()
+    {
+        // R-114: 1 つの値の型違いで設定ファイル全体を捨てない
+        var settings = JsonSerializer.Deserialize<AppSettings>("""
+            { "ViewMode": "Details",
+              "DetailsColumnWidths": { "Name": "300", "Size": 80, "Modified": { "a": [1, 2] }, "Type": 1.5,
+                                       "Attributes": true, "Extra": [1], "Auto": null },
+              "FolderHistory": [ "D:/a" ] }
+            """, Json)!;
+
+        settings.Normalize();
+
+        Assert.Equal(FileViewMode.Details, settings.ViewMode);
+        Assert.Equal(["D:/a"], settings.FolderHistory);
+        Assert.Equal(80, Assert.Single(settings.DetailsColumnWidths, w => w.Value is not null).Value);
+        Assert.DoesNotContain("Name", settings.DetailsColumnWidths.Keys);
+        Assert.DoesNotContain("Modified", settings.DetailsColumnWidths.Keys);
+        Assert.DoesNotContain("Type", settings.DetailsColumnWidths.Keys);
+    }
 }

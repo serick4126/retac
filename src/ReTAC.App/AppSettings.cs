@@ -91,8 +91,9 @@ public sealed class AppSettings
 
     /// <summary>
     /// R-114 / V6: 詳細表示の手動の列幅（論理列 ID → 96 dpi の論理ピクセル）。見出しの境界のドラッグで更新する。
-    /// 値を null にしても設定ファイル全体を捨てないよう int? で読み、Normalize で捨てる。
+    /// 値を null にしても設定ファイル全体を捨てないよう int? で読み、Normalize で捨てる。整数・null 以外の値は寛容な変換器がそのキーだけ捨てる。
     /// </summary>
+    [JsonConverter(typeof(LenientColumnWidthsConverter))]
     public Dictionary<string, int?> DetailsColumnWidths { get; set; } = [];
 
     /// <summary>ブックマークビューで展開しているグループの安定 ID。</summary>
