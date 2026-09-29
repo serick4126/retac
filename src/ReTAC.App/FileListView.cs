@@ -82,7 +82,7 @@ public sealed class FileListView : Control
         Controls.Add(_vScrollBar);
         _hScrollBar.Scroll += (_, e) => { _scroll = _scroll with { X = e.NewValue }; Invalidate(); };
         _vScrollBar.Scroll += (_, e) => { _scroll = _scroll with { Y = e.NewValue }; Invalidate(); };
-        _autoScroll.Tick += (_, _) => AutoScrollStep();
+        _autoScroll.Tick += (_, _) => AutoScrollTick();
         ShellFileType.Resolved += OnTypeResolved;
         RebuildFontResources();
     }
@@ -199,6 +199,8 @@ public sealed class FileListView : Control
         // 自動更新などでボタンを押したまま一覧が入れ替わることがある。押した時点の添字は
         // 別の項目を指すことになるので、離した時点の処理（マーク・右ボタンのドラッグ／メニュー）は捨てる
         ResetNameTip();
+        CancelLasso();   // R-120: 押した時点の中身の座標は別の項目を指す
+        HotIndex = -1;
         _rightDown = null;
         _markOnRelease.Cancel();
         _dragIndex = -1;
@@ -547,6 +549,14 @@ public sealed class FileListView : Control
         var visible = _layout.IndexesIn(ox, oy, ViewportWidth, ViewportHeight, _state.Count);
         foreach (var index in visible.Where(i => i != _state.CursorIndex)) DrawRow(e.Graphics, index);
         if (visible.Contains(_state.CursorIndex)) DrawRow(e.Graphics, _state.CursorIndex);
+        if (_lasso.Active is not null)   // R-120: 項目の後に、枠と半透明の塗りを重ねる
+        {
+            var r = ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, LassoRect));
+            var (stroke, fill) = ItemFrames.LassoColors(_theme);
+            using (var brush = new SolidBrush(fill)) e.Graphics.FillRectangle(brush, r);
+            using var pen = new Pen(stroke);
+            e.Graphics.DrawRectangle(pen, r.X, r.Y, Math.Max(0, r.Width - 1), Math.Max(0, r.Height - 1));
+        }
         e.Graphics.ResetClip();
     }
 
@@ -616,7 +626,7 @@ public sealed class FileListView : Control
     {
         var entry = _state.Entries[index];
         var isCursor = index == _state.CursorIndex;
-        var isMarked = _state.Marks.Contains(index);
+        var isMarked = IsMarkedForDisplay(index);
         var rect = ToRectangle(FileViewScroll.VisibleBounds(_layout, _scroll, index));
         if (IsIconMode) { DrawGridItem(g, index); return; }
 
@@ -661,8 +671,97 @@ public sealed class FileListView : Control
     internal string SmallIconNameText(int index) =>
         DrawsFullName(index) ? FullNameText(_state.Entries[index]) : NameLinesFor(index).Lines.FirstOrDefault() ?? "";
 
-    /// <summary>投げ縄の仮のマークを含む表示上のマーク（Task 8 で中身を入れる）。</summary>
-    internal bool IsMarkedForDisplay(int index) => _state.Marks.Contains(index);
+    /// <summary>R-120: 投げ縄の間は、囲んだ項目を仮のマークで描く（マークの集合は変えない）。</summary>
+    internal bool IsMarkedForDisplay(int index)
+    {
+        var marked = _state.Marks.Contains(index);
+        if (_lasso.Active is not { } lasso) return marked;
+        _lassoCovered ??= lasso.Covered(_layout, _state.Count).ToHashSet();
+        return _lassoCovered.Contains(index) ? !lasso.Remove : marked;
+    }
+
+    // ---- 投げ縄（R-120） -----------------------------------------------------
+
+    private readonly LassoGesture _lasso = new();
+    private Point _lassoMouse;             // 自動スクロールの間も最後のマウスの位置で矩形を伸ばす
+    private HashSet<int>? _lassoCovered;   // 仮のマークの対象。矩形・スクロールが変わったら作り直す
+
+    internal bool LassoActive => _lasso.Active is not null;
+    internal (int X, int Y, int Width, int Height) LassoRect => _lasso.Active?.Rect ?? default;
+
+    private (int X, int Y) ToContent(Point p)
+    {
+        var (ox, oy) = _layout.ScrollOffset(_scroll);
+        return (p.X + ox, p.Y - _layout.HeaderHeight + oy);
+    }
+
+    /// <summary>R-120: 項目の無い所（詳細表示では名前以外も。INV-DETAILS-ROW-HIT）で押したら、閾値を超えたときに投げ縄を始める。</summary>
+    internal void LassoPress(Point location, bool ctrl)
+    {
+        var (index, area) = HitAt(location);
+        var starts = location.Y >= _layout.HeaderHeight && (index < 0 || area == FileViewArea.Other);
+        var (x, y) = ToContent(location);
+        _lasso.Press(location.X, location.Y, x, y, starts, ctrl);
+        _lassoCovered = null;
+    }
+
+    internal void LassoMove(Point location)
+    {
+        var wasActive = LassoActive;
+        var (x, y) = ToContent(location);
+        if (!_lasso.Move(location.X, location.Y, x, y, SystemInformation.DragSize.Width, SystemInformation.DragSize.Height)) return;
+        if (!wasActive) _markOnRelease.Moved();   // 詳細表示の名前以外で押していたら、保留したカーソルの移動を捨てる
+        _lassoMouse = location;
+        _lassoCovered = null;
+        SetAutoScroll(_layout.AutoScrollDirection(location.X, location.Y - _layout.HeaderHeight, ViewportWidth, ViewportHeight));
+        Invalidate();
+    }
+
+    internal void LassoRelease()
+    {
+        var active = LassoActive;
+        var before = _state.CursorIndex;
+        var changed = _lasso.Release(_state, _layout);
+        EndLassoCommon();
+        if (active) Commit(before, changed);
+    }
+
+    /// <summary>R-120: Esc・右ボタン・フォーカスの喪失・キャプチャの喪失・一覧の入れ替わり。マークは変えない。</summary>
+    private void CancelLasso()
+    {
+        if (!LassoActive) { _lasso.Cancel(); return; }
+        _lasso.Cancel();
+        EndLassoCommon();
+    }
+
+    private void EndLassoCommon()
+    {
+        _lassoCovered = null;
+        SetAutoScroll((0, 0));
+        if (IsHandleCreated && Capture) Capture = false;   // 状態を消してから放す（CaptureChanged が来ても二重に動かない）
+        Invalidate();
+    }
+
+    internal void LoseFocus() => CancelLasso();
+    internal void CaptureLost() => CancelLasso();
+
+    internal void RaiseMouseDown(MouseEventArgs e) => OnMouseDown(e);
+    internal void RaiseMouseMove(MouseEventArgs e) => OnMouseMove(e);
+    internal void RaiseMouseUp(MouseEventArgs e) => OnMouseUp(e);
+    internal void RaiseLostFocus() => OnLostFocus(EventArgs.Empty);
+    internal void RaiseCaptureChanged() => OnMouseCaptureChanged(EventArgs.Empty);
+
+    protected override void OnLostFocus(EventArgs e)
+    {
+        base.OnLostFocus(e);
+        LoseFocus();
+    }
+
+    protected override void OnMouseCaptureChanged(EventArgs e)
+    {
+        base.OnMouseCaptureChanged(e);
+        if (!Capture) CaptureLost();
+    }
 
     /// <summary>
     /// R-116 / R-119: 格子の項目。GridLayers の順に描く。矩形はすべてレイアウトに聞く（INV-LAYOUT-GEOMETRY-SINGLE-SOURCE）。
@@ -910,6 +1009,7 @@ public sealed class FileListView : Control
 
     protected override bool IsInputKey(Keys keyData) => (keyData & Keys.KeyCode) switch
     {
+        Keys.Escape when LassoActive => true,   // R-120: フォームの既定の処理に取られない
         Keys.Up or Keys.Down or Keys.Left or Keys.Right => true,
         Keys.PageUp or Keys.PageDown or Keys.Home or Keys.End => true,
         Keys.Enter or Keys.Space or Keys.Back => true,
@@ -933,6 +1033,7 @@ public sealed class FileListView : Control
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+        if (e.KeyCode == Keys.Escape && LassoActive) { CancelLasso(); e.Handled = true; return; }   // R-120
         // 空のフォルダでも移動系のコマンドは効く必要がある
         if (_state.Count == 0) { CommandKey?.Invoke(this, e); return; }
 
@@ -1007,12 +1108,20 @@ public sealed class FileListView : Control
 
         if (e.Button == MouseButtons.Right)
         {
-            _rightDown = (index, e.Location, ModifierKeys.HasFlag(Keys.Shift));
+            PressRight(e.Location);
             return;
         }
+        if (e.Button == MouseButtons.Left) LassoPress(e.Location, ModifierKeys.HasFlag(Keys.Control));
         if (e.Button != MouseButtons.Left || index < 0) return;
 
         PressLeft(e.Location, ModifierKeys.HasFlag(Keys.Shift));
+    }
+
+    /// <summary>右ボタンを押した処理。投げ縄の途中なら取り消す（R-120）。</summary>
+    internal void PressRight(Point location)
+    {
+        CancelLasso();
+        _rightDown = (HitAt(location).Index, location, ModifierKeys.HasFlag(Keys.Shift));
     }
 
     /// <summary>
@@ -1061,6 +1170,11 @@ public sealed class FileListView : Control
             RecomputeLayout();
             Invalidate();
             return;
+        }
+        if (e.Button == MouseButtons.Left)
+        {
+            LassoMove(e.Location);   // R-120: 投げ縄の間は D&D・ツールチップに進まない
+            if (LassoActive) return;
         }
         if (e.Button == MouseButtons.None && _layout.HeaderHeight > 0)
         {
@@ -1196,11 +1310,17 @@ public sealed class FileListView : Control
     }
 
     /// <summary>R-110-3: 1 段。向きも段の量もレイアウトが決める（今の一覧では横に 1 列）。スクロールできる端まで来たら止める。</summary>
-    private void AutoScrollStep()
+    internal void AutoScrollTick()
     {
         var next = FileViewScroll.Next(_layout, _scroll, _autoScrollDirection, _state.Count, ViewportWidth, ViewportHeight);
         if (next == _scroll) { SetAutoScroll((0, 0)); return; }
         _scroll = next;
+        if (LassoActive)   // R-120: 中身がずれたぶん、最後のマウスの位置から矩形を伸ばす
+        {
+            var (cx, cy) = ToContent(_lassoMouse);
+            _lasso.Scrolled(cx, cy);
+            _lassoCovered = null;
+        }
         UpdateScrollBars();
         Invalidate();   // 枠の位置は次の DragOver で決め直す（OLE はマウスが止まっていても DragOver を呼び続ける）
     }
@@ -1278,7 +1398,12 @@ public sealed class FileListView : Control
             return;
         }
 
-        if (e.Button == MouseButtons.Left) ReleaseLeft();
+        if (e.Button == MouseButtons.Left)
+        {
+            if (LassoActive) { LassoRelease(); return; }
+            _lasso.Cancel();   // 押しただけの保留を消す
+            ReleaseLeft();
+        }
     }
 
     /// <summary>左ボタンを離した処理（R-11-2）。テストから呼べるように OnMouseUp から切り出した（挙動は変えない）。</summary>
