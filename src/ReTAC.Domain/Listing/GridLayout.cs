@@ -187,6 +187,9 @@ public sealed record GridLayout : IFileViewLayout
 
     public (int X, int Y) VisibleSteps(int viewportWidth, int viewportHeight) => (0, VisibleRows(viewportHeight));
 
+    /// <summary>R-76: 1 段が項目 1 行分（150〜320px）なので、1 ノッチで 1 行。</summary>
+    public int WheelSteps(int notchLines, int viewportWidth, int viewportHeight) => 1;
+
     /// <summary>R-10: カーソルの行が見えていなければ、その行が端に来るまで動かす。</summary>
     public ScrollPosition Reveal(int index, ScrollPosition current, int viewportWidth, int viewportHeight)
     {

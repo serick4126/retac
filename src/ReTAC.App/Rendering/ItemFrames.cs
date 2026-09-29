@@ -17,7 +17,7 @@ public static class ItemFrames
         var (fill, line) = CheckBoxColors(background, foreground);
         using (var brush = new SolidBrush(fill)) g.FillRectangle(brush, box);
         using var pen = new Pen(line, stroke) { Alignment = PenAlignment.Inset };
-        g.DrawRectangle(pen, box);
+        g.DrawRectangle(pen, InsideStroke(box));   // DrawRectangle は右・下を 1px 外へ描くので、下地の内に収める
         if (!isChecked) return;
         var s = box.Width;
         var smoothing = g.SmoothingMode;
@@ -36,8 +36,10 @@ public static class ItemFrames
     public static void DrawCursorFrame(Graphics g, Rectangle item, Color background, Color foreground, int width)
     {
         using var pen = new Pen(CursorFrameColor(background, foreground), width) { Alignment = PenAlignment.Inset };
-        g.DrawRectangle(pen, item);
+        g.DrawRectangle(pen, InsideStroke(item));
     }
+
+    private static Rectangle InsideStroke(Rectangle r) => new(r.X, r.Y, Math.Max(0, r.Width - 1), Math.Max(0, r.Height - 1));
 
     /// <summary>R-120: 投げ縄の枠は背景に対する文字の色（RowColors.Frame）、塗りは同じ色の不透明度 25%。</summary>
     public static (Color Stroke, Color Fill) LassoColors(Theme theme)

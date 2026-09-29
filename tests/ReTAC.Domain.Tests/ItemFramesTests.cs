@@ -62,4 +62,32 @@ public class ItemFramesTests
         // 枠の上の 1 点が、地と違う色になっている
         Assert.NotEqual(background.ToArgb(), bitmap.GetPixel(10, 18).ToArgb());
     }
+
+    private static Bitmap Canvas() => new(24, 24, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+    [Fact]
+    public void チェックボックスの線は箱の右と下の外へはみ出さない()
+    {
+        using var bitmap = Canvas();
+        using var g = Graphics.FromImage(bitmap);
+        ItemFrames.DrawCheckBox(g, new Rectangle(2, 2, 16, 16), Color.White, Color.Black, isChecked: true, stroke: 1);
+        for (var i = 0; i < 24; i++)
+        {
+            Assert.Equal(0, bitmap.GetPixel(18, i).A);   // 箱は 2..17
+            Assert.Equal(0, bitmap.GetPixel(i, 18).A);
+        }
+        Assert.NotEqual(0, bitmap.GetPixel(17, 10).A);   // 右端の内側の線は描かれる
+    }
+
+    [Fact]
+    public void カーソルの枠は項目の右と下の外へはみ出さない()
+    {
+        using var bitmap = Canvas();
+        using var g = Graphics.FromImage(bitmap);
+        ItemFrames.DrawCursorFrame(g, new Rectangle(2, 2, 16, 16), Color.White, Color.Black, 1);
+        Assert.Equal(0, bitmap.GetPixel(18, 10).A);
+        Assert.Equal(0, bitmap.GetPixel(10, 18).A);
+        Assert.NotEqual(0, bitmap.GetPixel(17, 10).A);
+        Assert.NotEqual(0, bitmap.GetPixel(10, 17).A);
+    }
 }

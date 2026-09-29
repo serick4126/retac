@@ -2,7 +2,7 @@ using ReTAC.Domain.Listing;
 
 namespace ReTAC.Domain.Tests;
 
-/// <summary>R-119 / R-120 / 仕様書の格子の既定: 格子の配置の境界。</summary>
+/// <summary>R-119 / R-120: 格子の配置の境界（間隔・余白・チェックボックスの大きさはコードに固定）。</summary>
 public class GridLayoutTests
 {
     private static GridLayout Grid(int count, int clientWidth, int clientHeight = 150, int textWidth = 36,
@@ -91,5 +91,13 @@ public class GridLayoutTests
         Assert.Equal((0, -1), grid.AutoScrollDirection(100, 5, 273, 150));
         Assert.Equal((0, 1), grid.AutoScrollDirection(100, 140, 273, 150));
         Assert.Equal((0, 0), grid.AutoScrollDirection(2, 75, 273, 150));   // 左右の端では横に動かない
+    }
+
+    [Fact]
+    public void ホイールは1ノッチで1行だけ進む()
+    {
+        var grid = Grid(200, 600, 400);
+        Assert.Equal(1, grid.WheelSteps(3, 600, 400));
+        Assert.Equal(1, grid.WheelSteps(1, 600, 20));
     }
 }

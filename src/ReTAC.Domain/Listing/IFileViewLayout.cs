@@ -62,6 +62,8 @@ public interface IFileViewLayout
     ScrollPosition Reveal(int index, ScrollPosition current, int viewportWidth, int viewportHeight);
     /// <summary>スクロールバーの LargeChange（軸ごとの段数）。</summary>
     (int X, int Y) VisibleSteps(int viewportWidth, int viewportHeight);
+    /// <summary>R-76: マウスホイール 1 ノッチで縦に進める段数。既定はホイールの行数どおり。1 段が大きいレイアウトは自分で決める。</summary>
+    int WheelSteps(int notchLines, int viewportWidth, int viewportHeight) => notchLines;
 }
 
 /// <summary>R-110-1〜R-110-3: ドロップの処理が使う、スクロールのずれを縦横とも入れた計算。</summary>

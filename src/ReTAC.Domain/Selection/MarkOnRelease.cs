@@ -35,8 +35,8 @@ public sealed class MarkOnRelease
     public void DragStarted() => _kind = Kind.None;
 
     /// <summary>
-    /// 閾値を超えて動いた。名前以外で押したときは、保留していたカーソルの移動と範囲マークを捨てる
-    /// 。名前以外（詳細表示）で押して動かしたら投げ縄になる。投げ縄の開始は FileListView が Lasso を作る。行頭アイコン・名前・チェックボックスでは D&amp;D になるので DragStarted と同じ。
+    /// 閾値を超えて動いた。名前以外で押したときは、保留していたカーソルの移動と範囲マークを捨てる。
+    /// 名前以外（詳細表示）で押して動かしたら投げ縄になる。投げ縄の開始は FileListView が Lasso を作る。行頭アイコン・名前・チェックボックスでは D&amp;D になるので DragStarted と同じ。
     /// </summary>
     public void Moved() => _kind = Kind.None;
 
