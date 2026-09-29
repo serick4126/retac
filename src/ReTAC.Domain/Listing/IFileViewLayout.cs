@@ -3,8 +3,8 @@ namespace ReTAC.Domain.Listing;
 /// <summary>R-110-3: スクロール位置。軸ごとに「段」の数で持つ。1 段の量はレイアウトが決める（一覧は横に 1 列、縦のレイアウトは 1 行）。</summary>
 public readonly record struct ScrollPosition(int X, int Y);
 
-/// <summary>R-11-2 / INV-DETAILS-ROW-HIT: 押した所の種類。マウスの操作の表の行を決める。</summary>
-public enum FileViewArea { None, MarkIcon, Name, Other }
+/// <summary>R-11-2 / INV-DETAILS-ROW-HIT / R-116: 押した所の種類。マウスの操作の表の行を決める。</summary>
+public enum FileViewArea { None, MarkIcon, Name, Other, CheckBox }
 
 /// <summary>R-114: 見出しのセル 1 つ（中身の座標の x と幅）。Column が null なら名前の列。</summary>
 public readonly record struct HeaderCell(DetailsColumn? Column, int X, int Width);
@@ -40,6 +40,8 @@ public interface IFileViewLayout
     (int X, int Y, int Width, int Height) NameBounds(int index);
     /// <summary>揃えた拡張子の矩形。出さないなら幅 0。</summary>
     (int X, int Y, int Width, int Height) ExtensionBounds(int index);
+    /// <summary>R-116: マークのチェックボックスの矩形（項目の左上）。チェックボックスの無いレイアウトは null。描くかどうか（ホバー・設定）は描く側が決める。</summary>
+    (int X, int Y, int Width, int Height)? CheckBoxBounds(int index) => null;
     /// <summary>
     /// 行のセルの矩形（左右の余白を除いた文字の領域）。列は論理列 ID で指す。名前の列・その列が無い・見出しの無いレイアウトは null。
     /// </summary>

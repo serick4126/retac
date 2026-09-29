@@ -1643,12 +1643,13 @@
       "id": "type:ReTAC.Domain.Listing.FileViewArea",
       "kind": "enum",
       "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
-      "doc": "R-11-2 / INV-DETAILS-ROW-HIT: 押した所の種類。マウスの操作の表の行を決める。",
+      "doc": "R-11-2 / INV-DETAILS-ROW-HIT / R-116: 押した所の種類。マウスの操作の表の行を決める。",
       "members": [
         "None",
         "MarkIcon",
         "Name",
-        "Other"
+        "Other",
+        "CheckBox"
       ]
     },
     "ReTAC.Domain.Listing.FileViewCommonSettings": {
@@ -1763,6 +1764,283 @@
       "kind": "static class",
       "file": "src/ReTAC.Domain/Listing/FolderListing.cs",
       "doc": "R-04 / R-05: 親フォルダ項目を先頭に固定し、フォルダ優先で並べる。"
+    },
+    "ReTAC.Domain.Listing.GridArrangement": {
+      "id": "type:ReTAC.Domain.Listing.GridArrangement",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+      "doc": "R-119 / R-120: 格子の並べ方。小アイコンはアイコンが左、中・大・特大はアイコンが上。",
+      "members": [
+        "IconLeft",
+        "IconTop"
+      ]
+    },
+    "ReTAC.Domain.Listing.GridLayout": {
+      "id": "type:ReTAC.Domain.Listing.GridLayout",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+      "doc": "R-119 / R-120 / INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: 小〜特大アイコンの格子。行ごとに左から右へ並べ、縦にスクロールする。 横にはスクロールしない（項目がパネルより広ければ縮める）。縦のスクロールの 1 段は格子の 1 行。",
+      "fields": [
+        {
+          "name": "Arrangement",
+          "type": "ReTAC.Domain.Listing.GridArrangement",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "IconSize",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "TextWidth",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "NameHeight",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "PaddingX",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "PaddingY",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "Gap",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "CheckBoxSize",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "CellWidth",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "CellHeight",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "Columns",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "Rows",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "VerticalBar",
+          "type": "bool",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "EdgeBand",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "ViewportHeight",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init",
+          "doc": "項目を描ける高さ（見出しは無い）。"
+        },
+        {
+          "name": "PitchX",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "PitchY",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "HeaderHeight",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "Header",
+          "type": "IReadOnlyList<ReTAC.Domain.Listing.HeaderCell>",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "ScrollBars",
+          "type": "ValueTuple<bool, bool>",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "ArrowsScrollHorizontally",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        }
+      ]
+    },
+    "ReTAC.Domain.Listing.GridLayoutInput": {
+      "id": "type:ReTAC.Domain.Listing.GridLayoutInput",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+      "doc": "GridLayout の入力。文字の実測・dpi の換算は呼び出し側（描画層）が行い、結果の数値だけを渡す（R-66-3）。",
+      "fields": [
+        {
+          "name": "EntryCount",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "Arrangement",
+          "type": "ReTAC.Domain.Listing.GridArrangement",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "IconSize",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "LineHeight",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "NameLines",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init",
+          "doc": "R-119: 名前の行数（IconTop）。IconLeft は 1。"
+        },
+        {
+          "name": "TextWidth",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init",
+          "doc": "名前の領域の幅。パネルより広ければ Compute が縮める。"
+        },
+        {
+          "name": "PaddingX",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "PaddingY",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "Gap",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init",
+          "doc": "項目の間と外周の余白。ここは「項目の無い所」（投げ縄を始められる）。"
+        },
+        {
+          "name": "CheckBoxSize",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init",
+          "doc": "R-116: チェックボックスの 1 辺。0 なら無し（小アイコン）。"
+        },
+        {
+          "name": "ClientWidth",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "ClientHeight",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "VerticalBarWidth",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init"
+        },
+        {
+          "name": "EdgeBand",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init",
+          "doc": "R-110-3: 自動スクロールの上下の端の幅。"
+        }
+      ]
     },
     "ReTAC.Domain.Listing.HeaderCell": {
       "id": "type:ReTAC.Domain.Listing.HeaderCell",
@@ -3318,6 +3596,39 @@
       "type": "1:1",
       "fk": {
         "field": "Tiles",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.GridLayout",
+      "to": "type:ReTAC.Domain.Listing.GridArrangement",
+      "type": "1:1",
+      "fk": {
+        "field": "Arrangement",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.GridLayout",
+      "to": "type:ReTAC.Domain.Listing.HeaderCell",
+      "type": "1:N",
+      "fk": {
+        "field": "Header",
+        "container": "IReadOnlyList<ReTAC.Domain.Listing.HeaderCell>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Listing.GridLayoutInput",
+      "to": "type:ReTAC.Domain.Listing.GridArrangement",
+      "type": "1:1",
+      "fk": {
+        "field": "Arrangement",
         "container": null,
         "unique": null
       },
@@ -5424,6 +5735,10 @@
       {
         "file": "src/ReTAC.Domain/Listing/DetailsLayout.cs",
         "line": 123
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 144
       }
     ],
     "B-09": [
@@ -6712,8 +7027,12 @@
         "line": 178
       },
       {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 190
+      },
+      {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
-        "line": 59
+        "line": 61
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListState.cs",
@@ -7812,6 +8131,10 @@
         "line": 123
       },
       {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 144
+      },
+      {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
         "line": 6
       },
@@ -7933,11 +8256,11 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
-        "line": 65
+        "line": 67
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
-        "line": 78
+        "line": 80
       }
     ],
     "R-110-2": [
@@ -7963,7 +8286,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
-        "line": 86
+        "line": 88
       }
     ],
     "R-110-3": [
@@ -7992,16 +8315,20 @@
         "line": 177
       },
       {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 26
+      },
+      {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
         "line": 3
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
-        "line": 65
+        "line": 67
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
-        "line": 68
+        "line": 70
       }
     ],
     "R-111": [
@@ -8488,6 +8815,18 @@
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
         "line": 10
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 21
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+        "line": 43
       }
     ],
     "R-117": [
@@ -8526,6 +8865,22 @@
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
         "line": 98
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 3
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 13
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 31
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 111
       }
     ],
     "R-12": [
@@ -8582,6 +8937,24 @@
       {
         "file": "src/ReTAC.App/MenuBar.cs",
         "line": 97
+      }
+    ],
+    "R-120": [
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 3
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 31
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 161
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 167
       }
     ],
     "R-13": [
@@ -9869,6 +10242,10 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/ColumnLayout.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
         "line": 6
       }
     ],
