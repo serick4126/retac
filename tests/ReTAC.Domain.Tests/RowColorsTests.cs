@@ -15,6 +15,8 @@ public class RowColorsTests
 
     public static TheoryData<string> Palettes => ["custom", "light", "dark", "high-contrast"];
 
+    internal static Theme PaletteOf(string name) => Palette(name);
+
     private static Theme Palette(string name) => name switch
     {
         "custom" => Theme.Default,
