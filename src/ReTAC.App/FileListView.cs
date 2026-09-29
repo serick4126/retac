@@ -425,20 +425,16 @@ public sealed class FileListView : Control
     /// </summary>
     internal void PressLeft(Point location, bool shift)
     {
-        var index = _layout.IndexAt(location.X + ScrollX, location.Y, _state.Count);
+        var (index, area) = _layout.HitTest(location.X + ScrollX, location.Y, _state.Count);
         if (index < 0) return;
 
         _dragOrigin = location;
         _dragIndex = index;
 
-        // R-11-2 / B-07: 先頭の余白もアイコンの当たり判定に含める。
-        // 卓駆も左端の余白でマークがトグルする
-        var onIcon = location.X - (_layout.ColumnOf(index) - _scroll.X) * _layout.ColumnWidth
-                     < _layout.ColumnPadding + _icons.Size;
-
-        // Q7: マークを変えるのは離した時点（MarkOnRelease）。押した時点ではカーソルだけ移す
+        // Q7: マークを変えるのは離した時点（MarkOnRelease）。押した時点ではカーソルだけ移す。
+        // 行頭アイコンの当たり判定（左の余白を含む。B-07）はレイアウトが決める
         var before = _state.CursorIndex;
-        _markOnRelease.Press(_state, index, onIcon, shift);
+        _markOnRelease.Press(_state, index, area, shift);
         // R-11-2: Shift の押下ではカーソルが動かない（Press が動かさない）。ここで無条件に Commit すると、
         // EnsureCursorVisible が古いカーソル（横スクロールでは画面外かもしれない）の列へ表示を戻してしまい、
         // 押した項目の真下からマウスがずれる。動いていなければ何もしない
