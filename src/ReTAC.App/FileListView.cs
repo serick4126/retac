@@ -253,7 +253,7 @@ public sealed class FileListView : Control
         // R-113: 「自動」はパネルの幅（名前の文字の外側を引いたもの）、「最大文字数」は数字 0 の幅 × 文字数（Q9）
         var cap = NameWidths.TextCap(_views.List.NameWidth, _measure.Width("0"), ClientSize.Width - textStart - ColumnPaddingValue);
         _layout = EntryMetrics.Layout(_state.Entries, _measure, ClientSize.Width, ClientSize.Height, _hScrollBar.Height,
-            _icons.Size, Gap, RowPadding, ColumnPaddingValue, cap, Style);
+            _icons.Size, Gap, RowPadding, ColumnPaddingValue, cap, AlignExtension, HidesExtension);
         UpdateScrollBars();
     }
 
@@ -266,14 +266,13 @@ public sealed class FileListView : Control
     {
         var details = _views.Details;
         var pad = ColumnPaddingValue;
-        var style = Style;
-        var showExtension = style == ExtensionStyle.Aligned;
+        var showExtension = AlignExtension;
         var maxBase = 0;
         var maxExt = 0;
         foreach (var entry in _state.Entries)
         {
             maxBase = Math.Max(maxBase, _measure.Width(NameText(entry)));
-            if (showExtension) maxExt = Math.Max(maxExt, _measure.Width(entry.Extension));
+            if (showExtension && !HidesExtension(entry)) maxExt = Math.Max(maxExt, _measure.Width(entry.Extension));
         }
         var nameTextStart = pad + _icons.Size + Gap;
         var naturalText = maxBase + (maxExt > 0 ? Gap + maxExt : 0);
@@ -505,7 +504,7 @@ public sealed class FileListView : Control
             return;
         }
 
-        var showExtension = ext.Width > 0 && entry.Extension.Length > 0;
+        var showExtension = ext.Width > 0 && entry.Extension.Length > 0 && !HidesExtension(entry);
         var baseRight = showExtension ? ext.X - Gap : name.Right;
         var baseRect = new Rectangle(name.X + Gap, top, Math.Max(0, baseRight - name.X - Gap), _measure.LineHeight());
         // R-01-4: すべて表示では「…」を出さない。実際に収まらないときだけ EndEllipsis を付ける（1px の測り違いで出さない）
@@ -513,24 +512,36 @@ public sealed class FileListView : Control
         var ellipsis = truncated ? TextFormatFlags.EndEllipsis : 0;
         var baseText = showExtension ? entry.BaseName : NameText(entry);
         // R-01-6: 続けて描くときの省略は、拡張子を残して本体の末尾を「…」にする（拡張子が入らなければ全体の末尾）
-        if (truncated && !showExtension && Style == ExtensionStyle.Together) baseText = TogetherText(entry, baseRect.Width);
+        if (truncated && !showExtension && !AlignExtension && !HidesExtension(entry)) baseText = TogetherText(entry, baseRect.Width);
         TextRenderer.DrawText(g, baseText, _font, baseRect, foreground, TextMeasure.Flags | ellipsis);
         if (showExtension)
             TextRenderer.DrawText(g, entry.Extension, _font, ext with { Y = top, Height = _measure.LineHeight() }, foreground,
                 TextMeasure.Flags | ellipsis);
     }
 
-    /// <summary>R-01-6 / R-01-7: いまのモードでの名前の描き方。拡張子を出さない設定が優先し、そのうえで揃えるかを見る。</summary>
-    private ExtensionStyle Style =>
-        !_views.Common.ShowExtension ? ExtensionStyle.Hidden
-        : (_mode == FileViewMode.Details ? _views.Details.AlignExtension : _views.List.AlignExtension)
-            ? ExtensionStyle.Aligned : ExtensionStyle.Together;
+    /// <summary>R-01-6 / Q35: いまのモードで拡張子を揃えて描くか（ビューごとの設定）。</summary>
+    private bool AlignExtension => _mode == FileViewMode.Details ? _views.Details.AlignExtension : _views.List.AlignExtension;
 
-    /// <summary>R-01-7: カーソルの項目を全部描くときの文字。揃えから外して続けて描くが、拡張子を表示しない設定なら本体だけ。</summary>
-    internal string FullNameText(Entry entry) => Style == ExtensionStyle.Hidden ? entry.BaseName : entry.Name;
+    /// <summary>
+    /// R-01-7 / Q20: この項目の拡張子を隠すか（項目ごと）。設定がオンで、ファイルで、拡張子があり、OS に登録されているとき。
+    /// フォルダの「.」は拡張子として扱わない。
+    /// </summary>
+    internal bool HidesExtension(Entry entry) =>
+        _views.Common.HideKnownExtensions && entry.Kind == EntryKind.File && RegisteredExtensions.IsRegistered(entry.Extension);
+
+    /// <summary>R-01-7: カーソルの項目を全部描くときの文字。揃えから外して続けて描くが、隠す項目は本体だけ。</summary>
+    internal string FullNameText(Entry entry) => HidesExtension(entry) ? entry.BaseName : entry.Name;
 
     /// <summary>揃えた拡張子の領域を使わないときに、名前の領域へ描く文字。</summary>
-    internal string NameText(Entry entry) => Style == ExtensionStyle.Together ? entry.Name : entry.BaseName;
+    internal string NameText(Entry entry) => !HidesExtension(entry) && !AlignExtension ? entry.Name : entry.BaseName;
+
+    /// <summary>
+    /// Q12 / Q20: 名前のツールチップを出すか。拡張子を隠す設定のあいだは、ファイルなら省略していなくても出す
+    /// （隠していない項目も含む。何のファイルかを拡張子で確かめられるように）。それ以外は省略しているときだけ。
+    /// </summary>
+    internal bool ShowsNameTip(int index) =>
+        index >= 0 && index < _state.Count
+        && ((_views.Common.HideKnownExtensions && _state.Entries[index].Kind == EntryKind.File) || IsTruncated(index));
 
     /// <summary>
     /// 続けて描く名前が width に入らないときの文字。「本体…」に拡張子を続ける。
@@ -552,7 +563,7 @@ public sealed class FileListView : Control
         var entry = _state.Entries[index];
         var (nx, _, nw, _) = _layout.NameBounds(index);
         var (ex, _, ew, _) = _layout.ExtensionBounds(index);
-        var showExtension = ew > 0 && entry.Extension.Length > 0;
+        var showExtension = ew > 0 && entry.Extension.Length > 0 && !HidesExtension(entry);
         var baseWidth = (showExtension ? ex - Gap : nx + nw) - nx - Gap;
         return _measure.Width(showExtension ? entry.BaseName : NameText(entry)) > baseWidth
                || showExtension && _measure.Width(entry.Extension) > ew;
@@ -787,7 +798,7 @@ public sealed class FileListView : Control
         var index = HitAt(location).Index;
         if (index == _tipIndex) return;
         _tipIndex = index;
-        _nameTip.SetToolTip(this, index >= 0 && IsTruncated(index) ? _state.Entries[index].Name : "");
+        _nameTip.SetToolTip(this, ShowsNameTip(index) ? _state.Entries[index].Name : "");
     }
 
     private void ResetNameTip()

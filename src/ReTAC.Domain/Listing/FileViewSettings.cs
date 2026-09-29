@@ -45,8 +45,11 @@ public sealed record FileViewCommonSettings
 {
     /// <summary>R-118: 同期状態などの OS の印をアイコンに重ねる。</summary>
     public bool ShowOverlays { get; init; } = true;
-    /// <summary>R-01-7 / Q20: 名前に拡張子を表示する。オフなら、どのモードでも本体だけを描く（表示だけ。名前の変更・検索・並べ替えは拡張子込み）。</summary>
-    public bool ShowExtension { get; init; } = true;
+    /// <summary>
+    /// R-01-7 / Q20: OS に登録されている拡張子は表示しない（既定はオフ）。隠すのは表示だけで、名前の変更・検索・並べ替えは拡張子込み。
+    /// オンのあいだ、ファイルには拡張子込みの名前をいつもツールチップに出す。
+    /// </summary>
+    public bool HideKnownExtensions { get; init; }
 }
 
 public sealed record ListViewSettings
@@ -54,7 +57,7 @@ public sealed record ListViewSettings
     /// <summary>R-110: 一覧だけ既定はオフ（今の動作。B-05）。</summary>
     public bool InPanelDragDrop { get; init; }
     public NameWidthSetting NameWidth { get; init; } = new();
-    /// <summary>R-01-6 / Q35: 拡張子を揃えた位置に表示する。オフなら本体に続けて描く。ShowExtension がオフのときは効かない。</summary>
+    /// <summary>R-01-6 / Q35: 拡張子を揃えた位置に表示する。オフなら本体に続けて描く（登録済みの拡張子を隠す設定で隠れた項目は本体だけ）。</summary>
     public bool AlignExtension { get; init; } = true;
 }
 
@@ -62,7 +65,7 @@ public sealed record DetailsViewSettings
 {
     public bool InPanelDragDrop { get; init; } = true;
     public NameWidthSetting NameWidth { get; init; } = new();
-    /// <summary>R-01-6 / Q35: 拡張子を揃えた位置に表示する。オフなら本体に続けて描く。ShowExtension がオフのときは効かない。</summary>
+    /// <summary>R-01-6 / Q35: 拡張子を揃えた位置に表示する。オフなら本体に続けて描く（登録済みの拡張子を隠す設定で隠れた項目は本体だけ）。</summary>
     public bool AlignExtension { get; init; } = true;
     public IReadOnlyList<DetailsColumnSetting> Columns { get; init; } = DefaultColumns;
     public bool FitColumnsToWindow { get; init; }

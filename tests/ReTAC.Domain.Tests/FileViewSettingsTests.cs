@@ -20,7 +20,7 @@ public class FileViewSettingsTests
         Assert.True(s.Tiles.InPanelDragDrop);
         Assert.Equal(new NameWidthSetting { Mode = NameWidthMode.ShowAll, MaxChars = 40 }, s.List.NameWidth);
         Assert.Equal(new NameWidthSetting { Mode = NameWidthMode.ShowAll, MaxChars = 40 }, s.Details.NameWidth);
-        Assert.True(s.Common.ShowExtension);                                                 // R-01-7
+        Assert.False(s.Common.HideKnownExtensions);                                          // R-01-7
         Assert.True(s.List.AlignExtension);                                                  // R-01-6
         Assert.True(s.Details.AlignExtension);
         Assert.Equal([DetailsColumn.Size, DetailsColumn.Modified, DetailsColumn.Type, DetailsColumn.Attributes],
@@ -47,7 +47,7 @@ public class FileViewSettingsTests
         Assert.True(s.List.InPanelDragDrop);
         Assert.Equal(new NameWidthSetting(), s.List.NameWidth);
         Assert.Equal(new FileViewCommonSettings(), s.Common);
-        Assert.True(s.Common.ShowExtension);
+        Assert.False(s.Common.HideKnownExtensions);
         Assert.True(s.List.AlignExtension);       // 欠けた R-01-6 の項目は既定値
         Assert.True(s.Details.AlignExtension);
         Assert.True(s.Details.InPanelDragDrop);
@@ -274,7 +274,7 @@ public class FileViewSettingsTests
         var baseline = new FileViewSettings();
         var changed = new FileViewSettings
         {
-            Common = new() { ShowOverlays = false, ShowExtension = false },
+            Common = new() { ShowOverlays = false, HideKnownExtensions = true },
             List = new() { AlignExtension = false, InPanelDragDrop = true, NameWidth = new() { Mode = NameWidthMode.Auto, MaxChars = 11 } },
             Details = new()
             {
