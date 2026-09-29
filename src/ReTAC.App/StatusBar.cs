@@ -19,7 +19,8 @@ public sealed class StatusBar : Control
 {
     private string _capacity = "";
     private ListSummary _summary;
-    private string _cursorInfo = "";
+    private string _cursorName = "";
+    private string _cursorRest = "";
     private string _queueText = "";
     /// <summary>キューの区画の左端。クリックの判定に使う。出していなければ int.MaxValue</summary>
     private int _queueLeft = int.MaxValue;
@@ -76,18 +77,18 @@ public sealed class StatusBar : Control
     {
         _message = "";
         _summary = ListSummary.Of(state);
-        _cursorInfo = DescribeCursor(state.Cursor);
+        (_cursorName, _cursorRest) = DescribeCursor(state.Cursor);
         Invalidate();
         LoadCapacityInBackground(currentFolder);
     }
 
-    private static string DescribeCursor(Entry? entry)
+    /// <summary>R-34 ④: 名前・サイズ・更新日時・種別。名前を先頭に常に出す。フォルダはサイズなし、親フォルダは何も出さない。</summary>
+    internal static (string Name, string Detail) DescribeCursor(Entry? entry)
     {
-        if (entry is null || entry.IsParent) return "";
+        if (entry is null || entry.IsParent) return ("", "");
         var type = ShellFileType.TypeName(entry.FullPath, entry.Kind == EntryKind.Folder);
-        // R-34: フォルダの場合はサイズを表示しない
         var size = entry.Kind == EntryKind.Folder ? "" : Display.Size(entry.Size) + "  ";
-        return $"{size}{Display.Timestamp(entry.LastWriteTime)}  {type}";
+        return (entry.Name, $"{size}{Display.Timestamp(entry.LastWriteTime)}  {type}");
     }
 
     private string _capacityRoot = "";
@@ -156,11 +157,28 @@ public sealed class StatusBar : Control
         x = DrawSection(e.Graphics, x, $"{_summary.FolderCount}個", Icon.Folder, _summary.FolderFromMarks);
         x = DrawSection(e.Graphics, x, $"{_summary.FileCount}個 {Display.Size(_summary.TotalSize)}",
             Icon.File, _summary.FileFromMarks);
-        DrawSection(e.Graphics, x, _message.Length > 0 ? _message : _cursorInfo, icon: null, marked: false);
+        if (_message.Length > 0) DrawSection(e.Graphics, x, _message, icon: null, marked: false);
+        else DrawCursorSection(e.Graphics, x, right);
         e.Graphics.ResetClip();
     }
 
     private enum Icon { Folder, File }
+
+    /// <summary>R-34 ④: 入らないときは名前だけを「…」で省略し、サイズ・日時・種別は残す。</summary>
+    private void DrawCursorSection(Graphics g, int x, int right)
+    {
+        if (_cursorName.Length == 0) return;
+        var pad = Scaled(6);
+        g.DrawLine(SystemPens.ControlDark, x - pad / 2, Scaled(3), x - pad / 2, Height - Scaled(3));
+        var rest = "  " + _cursorRest;
+        var measure = TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
+        var restWidth = TextRenderer.MeasureText(g, rest, Font, Size.Empty, measure).Width;
+        var nameWidth = Math.Max(0, Math.Min(TextRenderer.MeasureText(g, _cursorName, Font, Size.Empty, measure).Width,
+            right - x - restWidth - pad));
+        var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
+        TextRenderer.DrawText(g, _cursorName, Font, new Rectangle(x, 0, nameWidth, Height), ForeColor, flags | TextFormatFlags.EndEllipsis);
+        TextRenderer.DrawText(g, rest, Font, new Rectangle(x + nameWidth, 0, restWidth, Height), ForeColor, flags);
+    }
 
     private int DrawSection(Graphics g, int x, string text, Icon? icon, bool marked)
     {

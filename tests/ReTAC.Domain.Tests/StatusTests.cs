@@ -123,3 +123,15 @@ public class ListSummaryTests
         Assert.True(summary.FileFromMarks);
     }
 }
+
+public class StatusBarCursorTests
+{
+    [Fact]
+    public void ステータスバーの項目の情報は名前を先頭に出す()
+    {
+        var (name, rest) = ReTAC.App.StatusBar.DescribeCursor(TestEntries.File("資料.xlsx"));
+        Assert.Equal("資料.xlsx", name);
+        Assert.DoesNotContain("資料", rest);
+        Assert.Equal(("", ""), ReTAC.App.StatusBar.DescribeCursor(null));
+    }
+}

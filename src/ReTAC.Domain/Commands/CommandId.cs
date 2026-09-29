@@ -104,6 +104,10 @@ public enum CommandId
     CheckForUpdate = 0x9014,
     /// <summary>R-112-2: 統合した設定画面を「ファイルビュー」ページで開く。既定のキーは無い。</summary>
     FileViewSettings = 0x9015,
+    /// <summary>R-112-4 / V9: 表示モードを一覧にする（全ウィンドウ）。既定のキーは無い。</summary>
+    ViewList = 0x9016,
+    /// <summary>R-112-4 / V9: 表示モードを詳細にする（全ウィンドウ）。既定のキーは無い。</summary>
+    ViewDetails = 0x9017,
     ColorAndFontSettings = 0x8151,
     KeyAssignSettings = 0x8155,
     VisibleDriveSettings = 0x814C,

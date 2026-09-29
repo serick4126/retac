@@ -84,6 +84,10 @@ public static class MenuBar
             [LeftPanelViewKind.Bookmarks] = RadioItem("ブックマーク(&B)", CommandId.ShowBookmarksView),
             [LeftPanelViewKind.Preview] = RadioItem("プレビュー(&P)", CommandId.ShowPreview),
         };
+        // R-112-4 / V9: ビューはファイル表示パネルのサブメニューに並べる。チェックは開くたびに MainForm が付ける（DropDownOpening）
+        var fileViewPanel = Top("ファイル表示パネル(&P)",
+            Item("一覧(&L)", CommandId.ViewList, radio: true),
+            Item("詳細(&D)", CommandId.ViewDetails, radio: true));
         var leftPanel = Top("左パネル(&L)", [leftToggle, Separator(), .. leftViews.Values]);
         // R-82 / R-83: Ctrl+Z は固定のキーなので、キーマップの逆引きでは出ない。表示を直接与える
         var undo = Item("元に戻す(&U)", CommandId.Undo);
@@ -190,6 +194,7 @@ public static class MenuBar
                 addressBar,
                 bookmarkBar,
                 leftPanel,
+                fileViewPanel,
                 Separator(),
                 // R-104-1: ソート・ファイルタイプをサブメニューに
                 sortMenu,

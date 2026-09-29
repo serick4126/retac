@@ -193,7 +193,22 @@ public sealed class MainForm : Form, IBookmarkHost
         _list.Theme = _settings.ToScreenTheme(Program.StartupColorMode, Program.StartupOs);   // 5-1 節・R-108
         ApplyLeftPanelFont(_list.Theme);                         // R-101: 左パネルは一覧とは別のフォント
         _driveBar.SetVisibility(_settings.ToHiddenDrives(), _settings.ShowDesktopButton);   // 16.7 節
-        _list.SetView(FileViewMode.List, _settings.FileViews, _settings.DetailsColumnWidths, _sortOrder);   // R-110
+        ApplyView();   // R-110 / R-112
+        _list.ViewModeWheel += (_, notches) => SetViewMode(FileViewModes.Step(_settings.ViewMode, notches));
+        _list.HeaderClicked += (_, column) => { if (HeaderSort.Click(_sortOrder, column) is { } order) ApplySortOrder(order); };
+        // R-114 / V6: 列幅と列の表示はアプリ全体で 1 つ。変えたら保存して全ウィンドウへ当てる
+        _list.ColumnWidthChanged += (_, change) => ChangeColumnWidths(widths =>
+        {
+            if (change.Width is { } width) widths[change.Key] = width; else widths.Remove(change.Key);
+        });
+        _list.ColumnWidthsReset += (_, _) => ChangeColumnWidths(widths => widths.Clear());
+        _list.ColumnVisibilityChanged += (_, change) => ChangeFileViews(views => views with
+        {
+            Details = views.Details with
+            {
+                Columns = views.Details.Columns.Select(c => c.Column == change.Column ? c with { Visible = change.Visible } : c).ToList(),
+            },
+        });
         _list.CommandKey += (_, e) => OnCommandKey(e);
         _list.RightClicked += (_, click) => OnRightClick(click);
         // Step5: 左パネルが表示中のときだけ往復する。非表示なら CentralDisplayArea.LeftPanelVisible が false のまま何もしない
@@ -641,6 +656,7 @@ public sealed class MainForm : Form, IBookmarkHost
         CommandId.KeyAssignSettings => ShowSettings(SettingsPage.KeyAssign),
         CommandId.VisibleDriveSettings => ShowSettings(SettingsPage.DriveVisibility),
         CommandId.FileViewSettings => ShowSettings(SettingsPage.FileView),
+        CommandId.ViewList or CommandId.ViewDetails => SetViewMode(ViewModeCommands.Target(command)!.Value),
         CommandId.RunCommandLine => RunCommandLine(),
         CommandId.CopyToFolder => Recording(() => Transfer(moving: false)),
         CommandId.MoveToFolder => Recording(() => Transfer(moving: true)),
@@ -740,8 +756,52 @@ public sealed class MainForm : Form, IBookmarkHost
     {
         _sortOrder = order;
         SaveSettings();   // V-13: 設定画面の変更はその場で JSON に落とす（異常終了で失わない）
+        ApplyView();      // R-114: 見出しの ▲▼ を今のソートに合わせる（ソートはウィンドウごと）
         return Reload();
     }
+
+    /// <summary>
+    /// R-112-4 / INV-VIEWMODE-APP-WIDE: 表示モードを変える唯一の処理。「表示」メニュー・モードごとのコマンド・Ctrl+ホイールがここを通る。
+    /// 全ウィンドウへ即時に当てて保存する（V-07）。同じモードなら何もしない（保存もしない）。
+    /// </summary>
+    internal bool SetViewMode(FileViewMode mode)
+    {
+        mode = FileViewModes.Normalize(mode);
+        if (mode == _settings.ViewMode) return true;
+        _settings.ViewMode = mode;
+        ApplyViewToAll();
+        ApplyView();   // テストなどで OpenForms に載っていないとき
+        SaveSettings();
+        return true;
+    }
+
+    /// <summary>今の表示モード・系統の設定・列幅・ソートをファイルリストへ当てる。</summary>
+    private void ApplyView() => _list.SetView(_settings.ViewMode, _settings.FileViews, _settings.DetailsColumnWidths, _sortOrder);
+
+    private void ChangeColumnWidths(Action<Dictionary<string, int?>> change)
+    {
+        var widths = new Dictionary<string, int?>(_settings.DetailsColumnWidths);
+        change(widths);
+        _settings.DetailsColumnWidths = Domain.Listing.DetailsColumnWidths.Normalize(widths);
+        ApplyViewToAll();
+        ApplyView();
+        SaveSettings();
+    }
+
+    private void ChangeFileViews(Func<FileViewSettings, FileViewSettings> change)
+    {
+        _settings.FileViews = change(_settings.FileViews);
+        ApplyViewToAll();
+        ApplyView();
+        SaveSettings();
+    }
+
+    private static void ApplyViewToAll()
+    {
+        foreach (var window in Application.OpenForms.OfType<MainForm>().ToList()) window.ApplyView();
+    }
+
+    internal FileListView FileList => _list;
 
     /// <summary>「表示 ＞ 並べ替え」サブメニュー（R-104-1）。開くたびに今の設定でラジオの印を作り直す。</summary>
     private IReadOnlyList<ToolStripItem> SortMenuItems()
@@ -2369,9 +2429,9 @@ public sealed class MainForm : Form, IBookmarkHost
         // R-36: 複数ウィンドウが同じ AppSettings を共有している。この窓の _keyMap は
         // 他の窓での変更を反映していない古いものかもしれないので、保存前の設定から作り直す
         _keyMap = _settings.ToKeyMap();
-        // R-110 / R-36: ファイルビューの設定も全ウィンドウで共有している。Phase 15 で表示モードを持ったら、表示中の系統の値を当てる
-        foreach (var window in Application.OpenForms.OfType<MainForm>().ToList())
-            window._list.SetView(FileViewMode.List, window._settings.FileViews, window._settings.DetailsColumnWidths, window._sortOrder);
+        // R-110 / R-112: ファイルビューの設定は全ウィンドウで共有している。表示中の系統の値を当てる
+        ApplyViewToAll();
+        ApplyView();
 
         SaveSettings();   // V-13
         if (result.ExternalToolsChanged || result.KeyBindingsChanged) RebuildMenus();
@@ -2415,6 +2475,15 @@ public sealed class MainForm : Form, IBookmarkHost
         _addressBarMenuItem.Checked = _addressBarShown;
         _bookmarkBarMenuItem.Checked = _bookmarkBarShown;
         // R-96-2: RebuildMenu は項目を作り直すので、このウィンドウの状態を毎回このメニューへ映す
+        // R-112-4: 表示モードのラジオは開くたびに今の値で付け直す（別のウィンドウで変えても合う）
+        var fileViewPanel = _menu.Items.Cast<ToolStripMenuItem>().SelectMany(top => top.DropDownItems.OfType<ToolStripMenuItem>())
+            .First(item => item.Text == "ファイル表示パネル(&P)");
+        fileViewPanel.DropDownOpening += (_, _) =>
+        {
+            foreach (var item in fileViewPanel.DropDownItems.OfType<RadioToolStripMenuItem>())
+                if (item.Tag is CommandId command && ViewModeCommands.Target(command) is { } mode)
+                    item.Checked = mode == _settings.ViewMode;
+        };
         _leftPanelMenuItems.Root.Checked = _leftPanelShown;
         _leftPanelMenuItems.Views[_leftPanel.ViewKind].Checked = true;
         // R-90: 「ツール」の前に「ブックマーク」。中身は MainForm の状態（ブックマーク・今のフォルダ）に依るのでここで足す

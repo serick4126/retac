@@ -63,7 +63,7 @@
 
     "FolderHistory": "runtime:MainForm",
 
-    "FileViews": "dialog:SettingsDialog#FileViewPage",
+    "FileViews": ["dialog:SettingsDialog#FileViewPage", "menu:FileListView#DetailsHeader"],
     "DetailsColumnWidths": "runtime:FileListView"
   },
 
@@ -548,65 +548,47 @@
     },
     {
       "id": "INV-NO-WIDTH-HANDLE-ON-ITEMS",
-      "status": "deferred",
+      "status": "enforced",
       "specIds": ["R-113"],
-      "applies": ["type:ReTAC.Domain.Listing.IFileViewLayout"],
+      "applies": ["type:ReTAC.Domain.Listing.IFileViewLayout", "type:ReTAC.Domain.Listing.DetailsLayout"],
       "rule": "ファイルリストの項目の部分には、列の幅を変える仕組みを持たせない。幅を変える操作は、詳細表示の見出しの境界と設定画面だけ。",
-      "reason": "Phase 15 の仕様で決めた（項目を選ぼうとして幅が変わるのは非常に悪い使い勝手。利用者）。詳細表示の見出しは Phase 15 で作るので、それまでは幅を変える操作自体が一覧の設定画面にしか無い。",
-      "plannedShape": {
-        "note": "レイアウトの当たり判定が幅の境界を返すのは見出しの行だけ。項目の領域の種類（行頭アイコン・名前・名前以外・チェックボックス・項目の無い所）に境界は無い。"
-      },
-      "enforcedBy": null
+      "enforcedBy": "domain:IFileViewLayout.HitTest（項目の領域の種類に境界は無い）。app:FileListView は幅の変更を見出しの行でだけ始める"
     },
     {
       "id": "INV-DETAILS-ROW-HIT",
-      "status": "deferred",
+      "status": "enforced",
       "specIds": ["R-11-2"],
-      "applies": ["type:ReTAC.Domain.Listing.IFileViewLayout"],
+      "applies": ["type:ReTAC.Domain.Listing.IFileViewLayout", "type:ReTAC.Domain.Listing.DetailsLayout"],
       "rule": "詳細表示では行全体を項目とする。行頭アイコンと名前の列（文字と列の中の余白）は押した時点でカーソルを移し、動かせば D&D。名前の列以外は、押しただけではカーソルを動かさず、動かさずに離したら移し、動かしたら投げ縄（Phase 15 の間は保留を捨てて何もしない）。",
-      "reason": "詳細表示は Phase 15 で作る。投げ縄は Phase 16。",
-      "plannedShape": {
-        "note": "レイアウトが座標から項目の番号と領域の種類を返し、MarkOnRelease が「名前以外」の保留（離したらカーソル・Shift なら範囲マーク、動いたら捨てる）を持つ。"
-      },
-      "enforcedBy": null
+      "enforcedBy": "domain:DetailsLayout.HitTest（行頭アイコン・名前の列・名前以外・項目の無い所）/ MarkOnRelease（名前以外は離したらカーソル、動いたら捨てる）",
+      "testedBy": "tests/ReTAC.Domain.Tests/DetailsLayoutTests.cs, tests/ReTAC.Domain.Tests/MarkOnReleaseTests.cs, tests/ReTAC.Domain.Tests/FileListViewDetailsTests.cs"
     },
     {
       "id": "INV-NO-COLUMN-REORDER-BY-DRAG",
-      "status": "deferred",
+      "status": "enforced",
       "specIds": ["R-114"],
       "applies": ["type:ReTAC.Domain.Listing.DetailsViewSettings"],
       "rule": "詳細表示の列の並びは、見出しのドラッグでは変えない。設定画面の ▲▼ だけで変える（ソートしようとして誤って並べ替えるため）。",
-      "reason": "詳細表示の見出しは Phase 15 で作る。設定画面の ▲▼ は Phase 14 で作成済み。",
-      "plannedShape": {
-        "note": "見出しのドラッグは境界の上でだけ幅の変更になり、それ以外の所では何もしない（クリックはソート）。"
-      },
-      "enforcedBy": null
+      "enforcedBy": "app:FileListView（見出しのドラッグは境界の上でだけ幅の変更。それ以外は離した時点のソートだけ）",
+      "note": "実機で、見出しを押したまま横へ動かしても並びが変わらないことを確かめる"
     },
     {
       "id": "INV-VIEWMODE-APP-WIDE",
-      "status": "deferred",
+      "status": "enforced",
       "specIds": ["R-112-4"],
       "applies": ["settings:ViewMode"],
       "rule": "今の表示モードはアプリ全体で 1 つ。「表示」メニュー・コマンド・Ctrl+ホイールの切り替えはすべて同じ処理を通り、全ウィンドウへ即時に当てて保存する。ウィンドウごと・フォルダごとには持たない。",
-      "reason": "表示モードの切り替えは Phase 15 で作る。設定の欄はある（切り替えの処理はまだ無い）。",
-      "plannedShape": {
-        "ViewMode": "enum（V9 の 8 モード。既定 List。知らない値・未実装のモードは List）",
-        "editedBy": "runtime:MainForm",
-        "note": "切り替えても項目・カーソル・マーク・ソートは保ち、スクロールはカーソルが見える位置に直す。"
-      },
-      "enforcedBy": null
+      "enforcedBy": "app:MainForm.SetViewMode（3 つの経路の唯一の入口。全ウィンドウへ ApplyView して保存）/ domain:FileViewModes.Normalize",
+      "testedBy": "tests/ReTAC.Domain.Tests/ViewModeSwitchTests.cs, tests/ReTAC.Domain.Tests/FileViewModeTests.cs"
     },
     {
       "id": "INV-LAYOUT-GEOMETRY-SINGLE-SOURCE",
-      "status": "deferred",
-      "specIds": [],
+      "status": "enforced",
+      "specIds": ["R-114"],
       "applies": ["type:ReTAC.Domain.Listing.IFileViewLayout", "type:ReTAC.Domain.Listing.ColumnLayout"],
       "rule": "項目・部品（行頭アイコン・名前・列のセル）・見出しの矩形はレイアウトだけが計算する。描画・当たり判定・見出しの操作・ドロップの枠は同じ答えを使い、FileListView の側で列の幅を計算し直さない。",
-      "reason": "配置の一般化は Phase 15 で作る。今の FileListView は ColumnLayout の具象のプロパティを直接読んでいる。",
-      "plannedShape": {
-        "note": "IFileViewLayout に部品の矩形と見出し（論理列 ID ごとのセルの矩形・境界の当たり判定）を足す。詳細表示だけ型を判定して別に計算する形にしない。"
-      },
-      "enforcedBy": null
+      "enforcedBy": "domain:IFileViewLayout（ColumnLayout・DetailsLayout）。app:FileListView は幾何を HitTest・ItemBounds・IconBounds・NameBounds・ExtensionBounds・Header・IndexesIn・Reveal にだけ聞く",
+      "testedBy": "tests/ReTAC.Domain.Tests/LayoutContractTests.cs, tests/ReTAC.Domain.Tests/DetailsLayoutTests.cs, tests/ReTAC.Domain.Tests/ColumnLayoutTests.cs"
     }
   ]
 }

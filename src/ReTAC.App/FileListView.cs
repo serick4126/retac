@@ -46,6 +46,8 @@ public sealed class FileListView : Control
     /// Shift は押した時点の値（R-81）。ドラッグになったら null に戻し、メニューは出さない。
     /// </summary>
     private (int Index, Point Location, bool Shift)? _rightDown;
+    /// <summary>右ボタンを見出しの上で押した。離した所が見出しでも、別の所で押していたら列のメニューは出さない。</summary>
+    private bool _headerRightDown;
     /// <summary>R-110-2: 落とす先として枠で囲む項目。-1 なら囲まない。</summary>
     private int _dropTarget = -1;
     /// <summary>R-110-3 / T5: 端で止めている間、この間隔で 1 列ずつスクロールする（実機で 0.3〜0.5 秒を比べて決めた）。</summary>
@@ -604,6 +606,7 @@ public sealed class FileListView : Control
             var x = e.X + _layout.ScrollOffset(_scroll).X;
             var border = DetailsLayout.HeaderBorderAt(_layout.Header, x, Scaled(4));
             _rightDown = null;
+            _headerRightDown = e.Button == MouseButtons.Right;
             if (e.Button != MouseButtons.Left) return;
             if (border >= 0) _headerDrag = (border, e.X, _layout.Header[border].Width);   // 幅のドラッグを始める
             else _headerPress = DetailsLayout.HeaderCellAt(_layout.Header, x);            // 離した時点でソート
@@ -611,6 +614,7 @@ public sealed class FileListView : Control
         }
 
         var index = HitAt(e.Location).Index;
+        _headerRightDown = false;
 
         if (e.Button == MouseButtons.Right)
         {
@@ -859,8 +863,9 @@ public sealed class FileListView : Control
                 HeaderClicked?.Invoke(this, _layout.Header[press].Column);
             return;
         }
-        if (e.Button == MouseButtons.Right && _rightDown is null && e.Y < _layout.HeaderHeight)
+        if (e.Button == MouseButtons.Right && _headerRightDown && e.Y < _layout.HeaderHeight)
         {
+            _headerRightDown = false;
             // 見出しの上では項目のメニューではなく列のメニュー
             DetailsHeaderMenu(DetailsLayout.HeaderCellAt(_layout.Header, e.X + _layout.ScrollOffset(_scroll).X)).Show(this, e.Location);
             return;
@@ -895,6 +900,8 @@ public sealed class FileListView : Control
             if (notches != 0) ViewModeWheel?.Invoke(this, notches);
             return;
         }
+        // Ctrl を離したあとに、たまった分が次の Ctrl+ホイールへ持ち越されないようにする
+        _modeWheel.Reset();
         var (horizontal, vertical) = _layout.ScrollBars;
         // スクロールできない間にたまった分が、後でまとめて効かないようにする
         if (!horizontal && !vertical) { _wheel.Reset(); return; }
@@ -913,7 +920,9 @@ public sealed class FileListView : Control
     {
         var menu = new ContextMenuStrip();
         var key = DetailsColumnWidths.Key(cellIndex >= 0 && cellIndex < _layout.Header.Count ? _layout.Header[cellIndex].Column : null);
-        menu.Items.Add("列のサイズを自動的に変更する", null, (_, _) => ColumnWidthChanged?.Invoke(this, (key, null)));
+        // 見出しの無い余白（cellIndex < 0）では、Key(null) が名前の列を指してしまうので、対象の列が無いこの項目は使えなくする
+        var autoWidth = menu.Items.Add("列のサイズを自動的に変更する", null, (_, _) => ColumnWidthChanged?.Invoke(this, (key, null)));
+        autoWidth.Enabled = cellIndex >= 0 && cellIndex < _layout.Header.Count;
         menu.Items.Add("すべての列のサイズを自動的に変更する", null, (_, _) => ColumnWidthsReset?.Invoke(this, EventArgs.Empty));
         menu.Items.Add(new ToolStripSeparator());
         foreach (var setting in _views.Details.Columns)
