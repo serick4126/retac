@@ -191,4 +191,38 @@ public class MarkOnReleaseTests
         Assert.Equal([2, 3, 4, 5], state.Marks.Order());
         Assert.Equal(5, state.CursorIndex);
     }
+
+    [Fact]
+    public void チェックボックスは離した時点でマークを切り替える()
+    {
+        var state = State(5);
+        var m = new MarkOnRelease();
+        m.Press(state, 2, FileViewArea.CheckBox, shift: false);
+        Assert.Equal(2, state.CursorIndex);   // 押した時点でカーソルは移る
+        Assert.Empty(state.Marks);
+        Assert.True(m.Release(state));
+        Assert.Contains(2, state.Marks);
+    }
+
+    [Fact]
+    public void チェックボックスを押したまま動かしたらマークは変えない()
+    {
+        var state = State(5);
+        state.ToggleMark(2);
+        var m = new MarkOnRelease();
+        m.Press(state, 2, FileViewArea.CheckBox, shift: false);
+        m.DragStarted();
+        Assert.False(m.Release(state));
+        Assert.Contains(2, state.Marks);
+    }
+
+    [Fact]
+    public void Shiftを押したチェックボックスは範囲マーク()
+    {
+        var state = State(5);
+        var m = new MarkOnRelease();
+        m.Press(state, 3, FileViewArea.CheckBox, shift: true);
+        Assert.True(m.Release(state));
+        Assert.Equal([0, 1, 2, 3], state.Marks.Order());
+    }
 }

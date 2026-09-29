@@ -2795,6 +2795,44 @@
       "file": "src/ReTAC.Domain/Selection/IncrementalMatch.cs",
       "doc": "R-80: インクリメンタルサーチの一致。前方一致・大文字小文字を区別しない。 親フォルダ項目は除く（名前が \"..\" なので、除かないと \".\" の入力で当たる。頭出しの規則とも揃える）。 マークには一切触れない（R-11）。"
     },
+    "ReTAC.Domain.Selection.Lasso": {
+      "id": "type:ReTAC.Domain.Selection.Lasso",
+      "kind": "sealed class",
+      "file": "src/ReTAC.Domain/Selection/Lasso.cs",
+      "doc": "R-120 / INV-MARKS-EXPLICIT-ONLY: 投げ縄。矩形は中身の座標で持つ（自動スクロールで画面の外へ出た項目も含めるため）。 ドラッグの間はマークを変えず、Commit でまとめて確定する。追加か解除かは始めた時点の Ctrl で決め、途中では変えない。 マークを入れ替えない（追加は外さず、解除は付けない）。",
+      "fields": [
+        {
+          "name": "Remove",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "Rect",
+          "type": "ValueTuple<int, int, int, int>",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only",
+          "doc": "始めた点と今の点を対角にした矩形。両端の点を含む。"
+        }
+      ]
+    },
+    "ReTAC.Domain.Selection.LassoGesture": {
+      "id": "type:ReTAC.Domain.Selection.LassoGesture",
+      "kind": "sealed class",
+      "file": "src/ReTAC.Domain/Selection/LassoGesture.cs",
+      "doc": "R-120: 投げ縄の入力の状態。押した所が項目の無い所（詳細表示では名前以外も）で、ドラッグの閾値を超えたら始める。 追加か解除かは押した時点の Ctrl で決め、Move・Release は修飾キーを受け取らない（途中で押し直しても変わらない）。 ハンドルを持たないので、FileListView のマウス・キーの配線の判断をここでテストする。",
+      "fields": [
+        {
+          "name": "Active",
+          "type": "ReTAC.Domain.Selection.Lasso",
+          "nullable": true,
+          "required": false,
+          "mutability": "get-only"
+        }
+      ]
+    },
     "ReTAC.Domain.Selection.ListState": {
       "id": "type:ReTAC.Domain.Selection.ListState",
       "kind": "sealed class",
@@ -3836,6 +3874,17 @@
         "unique": false
       },
       "visibility": "private"
+    },
+    {
+      "from": "type:ReTAC.Domain.Selection.LassoGesture",
+      "to": "type:ReTAC.Domain.Selection.Lasso",
+      "type": "1:1",
+      "fk": {
+        "field": "Active",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
     },
     {
       "from": "type:ReTAC.Domain.Selection.ListState",
@@ -6943,7 +6992,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListState.cs",
-        "line": 139
+        "line": 152
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListSummary.cs",
@@ -7067,7 +7116,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListState.cs",
-        "line": 110
+        "line": 123
       }
     ],
     "R-100": [
@@ -8175,7 +8224,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListState.cs",
-        "line": 99
+        "line": 112
       },
       {
         "file": "src/ReTAC.Domain/Selection/MarkOnRelease.cs",
@@ -8215,7 +8264,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListState.cs",
-        "line": 107
+        "line": 120
       }
     ],
     "R-11-5": [
@@ -8862,6 +8911,10 @@
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
         "line": 43
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/MarkOnRelease.cs",
+        "line": 25
       }
     ],
     "R-117": [
@@ -8994,6 +9047,22 @@
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
         "line": 167
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/Lasso.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/LassoGesture.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListState.cs",
+        "line": 61
+      },
+      {
+        "file": "src/ReTAC.Domain/Selection/ListState.cs",
+        "line": 68
       }
     ],
     "R-13": [

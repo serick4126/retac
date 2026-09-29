@@ -22,7 +22,7 @@ public sealed class MarkOnRelease
         _index = index;
         _kind = shift ? Kind.Range : area switch
         {
-            FileViewArea.MarkIcon => Kind.Toggle,
+            FileViewArea.MarkIcon or FileViewArea.CheckBox => Kind.Toggle,   // R-116: チェックボックスも行頭アイコンと同じ
             FileViewArea.Other => Kind.MoveOnRelease,
             _ => Kind.None,
         };
@@ -36,7 +36,7 @@ public sealed class MarkOnRelease
 
     /// <summary>
     /// 閾値を超えて動いた。名前以外で押したときは、保留していたカーソルの移動と範囲マークを捨てる
-    /// （Phase 15 の間の形。Phase 16 でここに投げ縄の開始が入る）。行頭アイコン・名前では D&amp;D になるので DragStarted と同じ。
+    /// 。名前以外（詳細表示）で押して動かしたら投げ縄になる。投げ縄の開始は FileListView が Lasso を作る。行頭アイコン・名前・チェックボックスでは D&amp;D になるので DragStarted と同じ。
     /// </summary>
     public void Moved() => _kind = Kind.None;
 

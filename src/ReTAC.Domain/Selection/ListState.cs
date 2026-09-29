@@ -58,6 +58,19 @@ public sealed class ListState
         if (!_marks.Remove(index)) _marks.Add(index);
     }
 
+    /// <summary>R-120: 投げ縄（追加）。範囲外と親フォルダの行はマークしない（ToggleMark と同じ）。</summary>
+    public void AddMarks(IEnumerable<int> indexes)
+    {
+        foreach (var index in indexes)
+            if (CanMark(index)) _marks.Add(index);
+    }
+
+    /// <summary>R-120: Ctrl+投げ縄（解除）。</summary>
+    public void RemoveMarks(IEnumerable<int> indexes)
+    {
+        foreach (var index in indexes) _marks.Remove(index);
+    }
+
     /// <summary>全選択／全解除（0x8307）。1 件でもマークがあれば全解除、なければ全選択。</summary>
     public void ToggleAllMarks()
     {
