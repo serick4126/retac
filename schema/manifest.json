@@ -1473,7 +1473,8 @@
           "type": "bool",
           "nullable": false,
           "required": false,
-          "mutability": "init"
+          "mutability": "init",
+          "doc": "R-117: フォルダのアイコンに中身のサムネイルを出す。"
         },
         {
           "name": "NameLines",
@@ -1705,7 +1706,8 @@
           "type": "bool",
           "nullable": false,
           "required": false,
-          "mutability": "init"
+          "mutability": "init",
+          "doc": "R-117: フォルダのアイコンに中身のサムネイルを出す。"
         }
       ]
     },
@@ -7598,7 +7600,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 114
+        "line": 116
       },
       {
         "file": "src/ReTAC.Domain/Listing/LenientEnumConverter.cs",
@@ -7678,7 +7680,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 99
+        "line": 100
       },
       {
         "file": "src/ReTAC.Domain/Listing/LenientEnumConverter.cs",
@@ -7698,7 +7700,15 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 106
+        "line": 87
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 107
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 109
       }
     ],
     "R-118": [
@@ -7714,7 +7724,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 88
+        "line": 89
       }
     ],
     "R-12": [
@@ -10858,7 +10868,7 @@
     "S-14": [
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
-        "line": 115
+        "line": 117
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",

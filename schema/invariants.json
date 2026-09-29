@@ -555,8 +555,8 @@
     {
       "id": "INV-DETAILS-ROW-HIT",
       "status": "deferred",
-      "specIds": ["R-114", "R-11-2"],
-      "applies": ["type:ReTAC.Domain.Listing.IFileViewLayout", "type:ReTAC.Domain.Listing.DetailsViewSettings"],
+      "specIds": ["R-11-2"],
+      "applies": ["type:ReTAC.Domain.Listing.IFileViewLayout"],
       "rule": "詳細表示では行全体を項目とする。行頭アイコンと名前の列（文字と列の中の余白）は押した時点でカーソルを移し、動かせば D&D。名前の列以外は、押しただけではカーソルを動かさず、動かさずに離したら移し、動かしたら投げ縄（Phase 15 の間は保留を捨てて何もしない）。",
       "reason": "詳細表示は Phase 15 で作る。投げ縄は Phase 16。",
       "plannedShape": {
@@ -579,11 +579,13 @@
     {
       "id": "INV-VIEWMODE-APP-WIDE",
       "status": "deferred",
-      "specIds": ["R-112"],
-      "applies": ["settings:FileViews"],
+      "specIds": [],
+      "applies": [],
       "rule": "今の表示モードはアプリ全体で 1 つ。「表示」メニュー・コマンド・Ctrl+ホイールの切り替えはすべて同じ処理を通り、全ウィンドウへ即時に当てて保存する。ウィンドウごと・フォルダごとには持たない。",
-      "reason": "表示モードの切り替えは Phase 15 で作る（仕様 ID は R-112-4。コードに出たら specIds と applies の settings:ViewMode を足す）。",
+      "reason": "表示モードの切り替えは Phase 15 で作る。仕様 ID と対象はまだコードに無いので plannedShape に置く（ViewMode は FileViews の外の最上位の設定）。",
       "plannedShape": {
+        "specIds": ["R-112-4"],
+        "applies": ["settings:ViewMode"],
         "ViewMode": "enum（V9 の 8 モード。既定 List。知らない値・未実装のモードは List）",
         "editedBy": "runtime:MainForm",
         "note": "切り替えても項目・カーソル・マーク・ソートは保ち、スクロールはカーソルが見える位置に直す。"
@@ -593,7 +595,7 @@
     {
       "id": "INV-LAYOUT-GEOMETRY-SINGLE-SOURCE",
       "status": "deferred",
-      "specIds": ["R-112"],
+      "specIds": [],
       "applies": ["type:ReTAC.Domain.Listing.IFileViewLayout", "type:ReTAC.Domain.Listing.ColumnLayout"],
       "rule": "項目・部品（行頭アイコン・名前・列のセル）・見出しの矩形はレイアウトだけが計算する。描画・当たり判定・見出しの操作・ドロップの枠は同じ答えを使い、FileListView の側で列の幅を計算し直さない。",
       "reason": "配置の一般化は Phase 15 で作る。今の FileListView は ColumnLayout の具象のプロパティを直接読んでいる。",

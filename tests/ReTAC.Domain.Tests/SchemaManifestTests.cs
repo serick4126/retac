@@ -263,6 +263,41 @@ public class SchemaManifestTests
             "実装漏れが残っている（直すまでこのテストは失敗し続ける）:\n" + string.Join("\n", missing));
     }
 
+    /// <summary>
+    /// deferred の間は、まだコードに無い仕様 ID・対象を plannedShape の specIds / applies に置く
+    /// （仮の参照先を specIds / applies に書くと、L6・L7 が通ったまま正しい参照へ直し忘れる）。
+    /// 予定の参照がコードに現れたら、specIds / applies へ移して status を見直させる。
+    /// </summary>
+    [Fact]
+    public void L10c_予定の参照がコードに現れたら移させる()
+    {
+        var types = Manifest["types"]!.AsObject().Select(p => "type:" + p.Key).ToHashSet();
+        var keys = Manifest["settings"]!["keys"]!.AsArray()
+            .Select(n => "settings:" + n!["key"]!.GetValue<string>()).ToHashSet();
+        var index = Manifest["specIndex"]!.AsObject();
+
+        var problems = new List<string>();
+        foreach (var rule in Rules)
+        {
+            var id = rule["id"]?.GetValue<string>();
+            var planned = rule["plannedShape"];
+            var specIds = (planned?["specIds"]?.AsArray() ?? []).Select(n => n!.GetValue<string>()).ToList();
+            var applies = (planned?["applies"]?.AsArray() ?? []).Select(n => n!.GetValue<string>()).ToList();
+            if (specIds.Count == 0 && applies.Count == 0) continue;
+
+            if (rule["status"]?.GetValue<string>() != "deferred")
+            {
+                problems.Add($"{id}: deferred でないのに plannedShape に予定の参照が残っている");
+                continue;
+            }
+            problems.AddRange(specIds.Where(index.ContainsKey).Select(s => $"{id}: {s} がコードに現れた"));
+            problems.AddRange(applies.Where(a => types.Contains(a) || keys.Contains(a)).Select(a => $"{id}: {a} がコードに現れた"));
+        }
+
+        Assert.True(problems.Count == 0,
+            string.Join("\n", problems) + "\n予定の参照を specIds / applies へ移し、実装を終えたなら status を enforced にする");
+    }
+
     // === L11・L12: 制約の欠落を自動で列挙し、分類を強制する ================
 
     [Fact]

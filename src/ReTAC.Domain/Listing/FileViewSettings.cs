@@ -84,6 +84,7 @@ public sealed record IconsViewSettings
     public CheckBoxMode CheckBoxes { get; init; } = CheckBoxMode.HoverAndMarked;
     /// <summary>R-117: 中アイコン以上でサムネイルを出す。クラウドのファイルは OS のキャッシュにあるものだけ（設定で変えられない）。</summary>
     public bool Thumbnails { get; init; } = true;
+    /// <summary>R-117: フォルダのアイコンに中身のサムネイルを出す。</summary>
     public bool FolderThumbnails { get; init; } = true;
     /// <summary>R-119: 中・大・特大の名前の行数。</summary>
     public int NameLines { get; init; } = FileViewLimits.DefaultNameLines;
@@ -105,6 +106,7 @@ public sealed record TilesViewSettings
     public CheckBoxMode CheckBoxes { get; init; } = CheckBoxMode.HoverAndMarked;
     /// <summary>R-117: 中アイコン以上でサムネイルを出す。クラウドのファイルは OS のキャッシュにあるものだけ（設定で変えられない）。</summary>
     public bool Thumbnails { get; init; } = true;
+    /// <summary>R-117: フォルダのアイコンに中身のサムネイルを出す。</summary>
     public bool FolderThumbnails { get; init; } = true;
 
     public static readonly IReadOnlyList<TileInfo> DefaultInfo = [TileInfo.Type, TileInfo.Size];
