@@ -196,6 +196,7 @@ public sealed class FileListView : Control
         _dragIndex = -1;
         var scroll = _scroll;
         _state = new ListState(entries);
+        _content = null;
         _state.MoveCursor(cursorIndex);
         _scroll = keepScroll ? scroll : default;
         if (!keepScroll) _wheel.Reset();
@@ -223,6 +224,7 @@ public sealed class FileListView : Control
 
     private void RebuildFontResources()
     {
+        _content = null;   // フォント・dpi が変わると幅が変わる
         _font?.Dispose();
         _measure?.Dispose();
         _icons?.Dispose();
@@ -264,17 +266,11 @@ public sealed class FileListView : Control
     /// <summary>R-114 / R-113 / V6: 列ごとに中身の最長と見出しの最小幅を測り、手動の幅（96 dpi の論理値）を dpi で拡大して渡す。</summary>
     private DetailsLayout ComputeDetails()
     {
-        DetailsComputeCount++;
+        var content = EnsureContent();
         var details = _views.Details;
         var pad = ColumnPaddingValue;
         var showExtension = AlignExtension;
-        var maxBase = 0;
-        var maxExt = 0;
-        foreach (var entry in _state.Entries)
-        {
-            maxBase = Math.Max(maxBase, _measure.Width(NameText(entry)));
-            if (showExtension && !HidesExtension(entry)) maxExt = Math.Max(maxExt, _measure.Width(entry.Extension));
-        }
+        var (maxBase, maxExt) = (content.MaxBase, content.MaxExt);
         var nameTextStart = pad + _icons.Size + Gap;
         var naturalText = maxBase + (maxExt > 0 ? Gap + maxExt : 0);
         // R-113: 詳細表示の「自動」は名前の列だけでパネルの幅を超えない（Q14）
@@ -285,8 +281,7 @@ public sealed class FileListView : Control
         var columns = new List<DetailsColumnInput> { Column(null, nameTextStart + text + pad) };
         foreach (var setting in details.Columns.Where(c => c.Visible))
         {
-            var auto = _state.Entries.Count == 0 ? 0 : _state.Entries.Max(e => _measure.Width(DetailsCells.Text(e, setting.Column)));
-            columns.Add(Column(setting.Column, auto + pad * 2));
+            columns.Add(Column(setting.Column, content.Auto[setting.Column] + pad * 2));
         }
 
         return DetailsLayout.Compute(new DetailsLayoutInput
@@ -316,6 +311,58 @@ public sealed class FileListView : Control
         }
     }
 
+    /// <summary>
+    /// R-114: 項目の全走査で測る中身の幅。項目・フォント・dpi・列と拡張子の設定が変わるまで使い回す
+    /// （リサイズ・スクロール・列幅のドラッグ・ソートの印では走査しない）。種類名が届いたときは、その 1 件だけを測って差し替える。
+    /// </summary>
+    private sealed class ContentMeasure
+    {
+        public required string Signature { get; init; }
+        public required int MaxBase { get; init; }
+        public required int MaxExt { get; init; }
+        public required Dictionary<DetailsColumn, int> Auto { get; init; }
+        /// <summary>種類の鍵ごとの代表の項目。届いた鍵が今の一覧にあるかを O(1) で引く。</summary>
+        public required Dictionary<string, Entry> TypeRepresentatives { get; init; }
+    }
+
+    private ContentMeasure? _content;
+
+    /// <summary>テスト用: 項目の全走査（中身の幅の測り直し）をした回数。</summary>
+    internal int ContentScanCount { get; private set; }
+
+    /// <summary>テスト用: 種類の列の文字を差し替える（既定は DetailsCells の背景取得つきの答え）。</summary>
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    internal Func<Entry, string> TypeText { get; set; } = e => DetailsCells.Text(e, DetailsColumn.Type);
+
+    private string CellText(Entry entry, DetailsColumn column) => column == DetailsColumn.Type ? TypeText(entry) : DetailsCells.Text(entry, column);
+
+    private string ContentSignature() =>
+        string.Join(',', _views.Details.Columns.Where(c => c.Visible).Select(c => c.Column)) + $"|{AlignExtension}|{_views.Common.HideKnownExtensions}";
+
+    private ContentMeasure EnsureContent()
+    {
+        var signature = ContentSignature();
+        if (_content is { } cached && cached.Signature == signature) return cached;
+        ContentScanCount++;
+        var showExtension = AlignExtension;
+        var (maxBase, maxExt) = (0, 0);
+        var visible = _views.Details.Columns.Where(c => c.Visible).Select(c => c.Column).ToList();
+        var auto = visible.ToDictionary(c => c, _ => 0);
+        var representatives = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in _state.Entries)
+        {
+            maxBase = Math.Max(maxBase, _measure.Width(NameText(entry)));
+            if (showExtension && !HidesExtension(entry)) maxExt = Math.Max(maxExt, _measure.Width(entry.Extension));
+            foreach (var column in visible) auto[column] = Math.Max(auto[column], _measure.Width(CellText(entry, column)));
+            representatives.TryAdd(ShellFileType.KeyOf(entry.FullPath, entry.Kind == EntryKind.Folder), entry);
+        }
+        return _content = new ContentMeasure
+        {
+            Signature = signature, MaxBase = maxBase, MaxExt = maxExt, Auto = auto, TypeRepresentatives = representatives,
+        };
+    }
+
     /// <summary>スクロールバーの要・不要はレイアウトが決める（ScrollBars）。単位は段（一覧は列、詳細の縦は行・横は StepWidth）。</summary>
     private void UpdateScrollBars()
     {
@@ -343,9 +390,6 @@ public sealed class FileListView : Control
     /// <summary>R-114: 背景で届いた種類の鍵。UI スレッドで反映するまでためる（作業スレッドから積まれる）。</summary>
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _resolvedKeys = new();
     private int _flushScheduled;
-    /// <summary>テスト用: 詳細表示のレイアウトを全部測り直した回数（R-114: 種類名が届くたびに測り直さない）。</summary>
-    internal int DetailsComputeCount { get; private set; }
-
     /// <summary>
     /// R-114: 背景で届いた種類（作業スレッドから呼ばれる）。破棄済み・ハンドルが無いなら何もしない。
     /// 反映の予約は 1 つだけにして、その間に届いた分はまとめて 1 回で測り直す（拡張子 U 種類 × 項目 N 件の全走査を通知ごとにしない）。
@@ -365,16 +409,30 @@ public sealed class FileListView : Control
         return Interlocked.Exchange(ref _flushScheduled, 1) == 0;
     }
 
-    /// <summary>UI スレッドでの反映。今の一覧にためた鍵が 1 つも無ければ描き直さない。</summary>
+    /// <summary>
+    /// UI スレッドでの反映。項目は走査しない: ためた鍵のうち今の一覧にあるものだけ、その種類名を 1 回測り、
+    /// 種類の列の最長より広いときだけ列幅の合計を組み直す（R-114）。詳細表示でないあいだに届いた分は、次に開いたとき測り直す。
+    /// </summary>
     internal void FlushResolvedTypes()
     {
         Volatile.Write(ref _flushScheduled, 0);
-        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var keys = new List<string>();
         foreach (var key in _resolvedKeys.Keys) if (_resolvedKeys.TryRemove(key, out _)) keys.Add(key);
-        if (IsDisposed || _mode != FileViewMode.Details || keys.Count == 0) return;
-        if (!_state.Entries.Any(e => keys.Contains(ShellFileType.KeyOf(e.FullPath, e.Kind == EntryKind.Folder)))) return;
-        RecomputeLayout();   // 種類の列の自動の幅が変わりうる
-        Invalidate();
+        if (IsDisposed || keys.Count == 0) return;
+        if (_mode != FileViewMode.Details) { _content = null; return; }
+        if (_content is not { } content) return;   // 次の RecomputeLayout が全部測る
+        var changed = false;
+        var present = false;
+        foreach (var key in keys)
+        {
+            if (!content.TypeRepresentatives.TryGetValue(key, out var entry)) continue;
+            present = true;
+            if (!content.Auto.TryGetValue(DetailsColumn.Type, out var current)) continue;   // 種類の列が非表示
+            var width = _measure.Width(TypeText(entry));
+            if (width > current) { content.Auto[DetailsColumn.Type] = width; changed = true; }
+        }
+        if (changed) { _layout = ComputeDetails(); UpdateScrollBars(); }
+        if (present) Invalidate();
     }
 
     protected override void OnResize(EventArgs e)
