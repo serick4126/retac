@@ -13,6 +13,11 @@ public sealed class ShortcutDialog : Form
     private readonly CheckBox _withSuffix = new() { Text = "ショートカット名に「へのショートカット」を付ける(&S)", AutoSize = true };
     private readonly CheckBox _withExtension = new() { Text = "ショートカット名にリンク元の拡張子を付ける(&E)", AutoSize = true };
 
+    private readonly TextBox? _destination;
+
+    /// <summary>作成先の表示（テスト用）。作成先が決まっていないときは null。</summary>
+    internal TextBox? DestinationBox => _destination;
+
     public ShortcutDialog(string? destination = null)
     {
         Text = "ショートカットファイルの作成";
@@ -20,7 +25,20 @@ public sealed class ShortcutDialog : Form
         ShowInTaskbar = false;   // ダイアログはタスクバーに出さない（既定は true）
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = MaximizeBox = false;
-        var extraHeight = destination is null ? 0 : 26;
+        // R-111-3: 作成先は途中で切らずに全部見せる。パスは空白がなく普通の折り返しでは改行されないので、
+        // どこでも折り返す読み取り専用の TextBox にする（選んでコピーもできる）。高さは文字数から先に求めて、
+        // 増えた分だけダイアログとボタンを下げる
+        const int destWidth = 368, destTop = 146;
+        var destText = destination is null ? "" : $"作成先: {destination}";
+        var destHeight = 0;
+        if (destination is not null)
+        {
+            using var font = SystemFonts.MessageBoxFont ?? Control.DefaultFont;
+            // TextBox の内側の余白（左右 各 3px 前後）を引いて測る。足りないと最終行が欠ける
+            destHeight = TextRenderer.MeasureText(destText, font, new Size(destWidth - 8, int.MaxValue),
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPadding).Height + 4;
+        }
+        var extraHeight = destination is null ? 0 : Math.Max(destHeight - 20, 0) + 6;
         ClientSize = new Size(400, 200 + extraHeight);
 
         Controls.Add(new Label
@@ -41,14 +59,20 @@ public sealed class ShortcutDialog : Form
             // R-111-3: 作成先が決まっているとき（右ドロップのメニュー）は、デスクトップへの選択肢を出さない
             _onDesktop.Checked = false;
             _onDesktop.Enabled = false;
-            Controls.Add(new Label
+            _destination = new TextBox
             {
-                Text = $"作成先: {destination}",
-                AutoEllipsis = true,
-                Size = new Size(368, 20),
-                Location = new Point(16, 146),
-                UseMnemonic = false,
-            });
+                Text = destText,
+                Multiline = true,
+                ReadOnly = true,
+                WordWrap = true,
+                BorderStyle = BorderStyle.None,
+                TabStop = false,
+                BackColor = BackColor,   // 配色・ダーク・ハイコントラストは Form の色に従わせる（固定色にしない）
+                ForeColor = ForeColor,
+                Size = new Size(destWidth, destHeight),
+                Location = new Point(16, destTop),
+            };
+            Controls.Add(_destination);
         }
 
         var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Bounds = new Rectangle(190, 156 + extraHeight, 90, 28) };
