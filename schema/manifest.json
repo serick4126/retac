@@ -6869,6 +6869,10 @@
       {
         "file": "src/ReTAC.Domain/Listing/LruCache.cs",
         "line": 4
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/LruCache.cs",
+        "line": 32
       }
     ],
     "R-01": [

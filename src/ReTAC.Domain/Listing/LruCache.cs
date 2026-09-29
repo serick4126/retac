@@ -27,7 +27,17 @@ public sealed class LruCache<TKey, TValue>(long capacity, Func<TValue, long> cos
 
     public void Add(TKey key, TValue value)
     {
-        if (_map.TryGetValue(key, out var existing)) Drop(existing);
+        if (_map.TryGetValue(key, out var existing))
+        {
+            // 同じインスタンスの再登録は解放しない（P-25。解放した値を持ち続けて返してしまう）。新しくするだけ。
+            if (ReferenceEquals(existing.Value.Value, value))
+            {
+                _order.Remove(existing);
+                _order.AddFirst(existing);
+                return;
+            }
+            Drop(existing);
+        }
         var size = cost(value);
         if (size > capacity) { evict(value); return; }
         while (Total + size > capacity && _order.Last is { } last) Drop(last);
