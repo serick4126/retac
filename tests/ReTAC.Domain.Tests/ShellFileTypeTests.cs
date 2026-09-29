@@ -54,4 +54,17 @@ public class ShellFileTypeTests : IDisposable
         Assert.True(ShellFileType.TryGetCached(@"C:\a.bad", false, out var bad));
         Assert.Equal("", bad);
     }
+
+    [Fact]
+    public void 受け取る側が例外を投げても後の問い合わせは届く()
+    {
+        ShellFileType.QueryOverride = key => "ok" + key;
+        using var second = new ManualResetEventSlim();
+        ShellFileType.Resolved += key => { if (key == ".two") second.Set(); else throw new ObjectDisposedException("x"); };
+        ShellFileType.Request(@"C:.one", false);
+        ShellFileType.Request(@"C:.two", false);
+        Assert.True(second.Wait(TimeSpan.FromSeconds(5)));
+        Assert.True(ShellFileType.TryGetCached(@"C:.two", false, out var name));
+        Assert.Equal("ok.two", name);
+    }
 }

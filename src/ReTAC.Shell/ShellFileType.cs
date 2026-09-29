@@ -33,6 +33,8 @@ public static class ShellFileType
     {
         var key = KeyOf(fullPath, isFolder);
         if (Cache.ContainsKey(key) || !Pending.TryAdd(key, 0)) return;
+        // 作業スレッドの「Cache に入れてから Pending を外す」と噛み合うと重複して積むので、積む前に見直す
+        if (Cache.ContainsKey(key)) { Pending.TryRemove(key, out _); return; }
         Queue.Add(key);
         EnsureWorker();
     }
@@ -59,15 +61,25 @@ public static class ShellFileType
 
     private static void Work(object? state)
     {
-        foreach (var key in ((BlockingCollection<string>)state!).GetConsumingEnumerable())
+        try
         {
-            string name;
-            try { name = Query(key); }
-            catch (Exception) { name = ""; }   // 1 つの失敗で列を止めない。空欄のまま（次に開いたときも問い合わせない）
-            Cache[key] = name;
-            Pending.TryRemove(key, out _);
-            Interlocked.Increment(ref _queryCount);
-            Resolved?.Invoke(key);
+            foreach (var key in ((BlockingCollection<string>)state!).GetConsumingEnumerable())
+            {
+                string name;
+                try { name = Query(key); }
+                catch (Exception) { name = ""; }   // 1 つの失敗で列を止めない。空欄のまま（次に開いたときも問い合わせない）
+                Cache[key] = name;
+                Pending.TryRemove(key, out _);
+                Interlocked.Increment(ref _queryCount);
+                // 受け取る側（破棄済みのコントロールへの BeginInvoke など）の失敗で、背景のスレッドごと落とさない
+                try { Resolved?.Invoke(key); }
+                catch (Exception) { }
+            }
+        }
+        finally
+        {
+            // どんな理由で抜けても、次の Request が新しいスレッドを起こせるようにする
+            lock (WorkerLock) { if (ReferenceEquals(_worker, Thread.CurrentThread)) _worker = null; }
         }
     }
 
@@ -89,13 +101,10 @@ public static class ShellFileType
 
     internal static void ResetForTests()
     {
-        lock (WorkerLock)
-        {
-            Queue.CompleteAdding();
-            _worker?.Join(TimeSpan.FromSeconds(5));
-            _worker = null;
-            Queue = new();
-        }
+        Thread? worker;
+        lock (WorkerLock) { Queue.CompleteAdding(); worker = _worker; }
+        worker?.Join(TimeSpan.FromSeconds(5));   // 作業スレッドは終わり際に WorkerLock を取るので、ロックの外で待つ
+        lock (WorkerLock) { _worker = null; Queue = new(); }
         Cache.Clear();
         Pending.Clear();
         Resolved = null;
