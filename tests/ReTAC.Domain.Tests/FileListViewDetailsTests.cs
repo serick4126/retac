@@ -237,4 +237,48 @@ public class FileListViewDetailsTests
 
         Assert.Equal(before, list.ContentScanCount);
     }
+
+    [Fact]
+    public void 親フォルダの行があっても拡張子の無いファイルの種類名で列が広がる()
+    {
+        var names = new Dictionary<string, string>();
+        using var list = new FileListView { Size = new Size(500, 200) };
+        list.TypeText = e => e.IsParent ? "" : names.GetValueOrDefault(e.Extension, "");
+        list.SetEntries([TestEntries.Parent(), TestEntries.File("README"), TestEntries.File("LICENSE")]);
+        list.SetView(FileViewMode.Details, new FileViewSettings(), new Dictionary<string, int?>(), SortOrder.Default);
+        var before = TypeWidth(list);
+
+        names[""] = new string('あ', 30);
+        Assert.True(list.QueueResolvedType(ReTAC.Shell.ShellFileType.KeyOf(@"C:\work\README", false)));
+        list.FlushResolvedTypes();
+
+        Assert.True(TypeWidth(list) > before);
+    }
+
+    [Fact]
+    public void 種類の列が広がって横のバーが出ても最下行のカーソルは見える範囲に残る()
+    {
+        var names = new Dictionary<string, string>();
+        using var list = new FileListView { Size = new Size(700, 200) };
+        list.TypeText = e => names.GetValueOrDefault(e.Extension, "");
+        list.SetEntries([TestEntries.File("f0.x")]);
+        list.SetView(FileViewMode.Details, new FileViewSettings(), new Dictionary<string, int?>(), SortOrder.Default);
+        // 高さを 8 行分ちょうどにして 8 件並べ、最下行へカーソルを置く（横のバーの 1 行ぶんで縦のバーが要るようになる）
+        const int rows = 8;
+        var height = list.Layout.HeaderHeight + rows * list.Layout.ItemBounds(1).Y;
+        list.Size = new Size(700, height);
+        list.SetEntries(Enumerable.Range(0, rows).Select(i => TestEntries.File($"f{i}.x")).ToList());
+        Assert.False(list.Layout.ScrollBars.Horizontal);
+        Assert.False(list.Layout.ScrollBars.Vertical);
+        list.MoveCursorTo(rows - 1);
+
+        names[".x"] = new string('あ', 60);
+        list.QueueResolvedType(ReTAC.Shell.ShellFileType.KeyOf(@"C:\work0.x", false));
+        list.FlushResolvedTypes();
+
+        Assert.True(list.Layout.ScrollBars.Horizontal);
+        var (_, y, _, h) = FileViewScroll.VisibleBounds(list.Layout, list.ScrollPosition, list.State.CursorIndex);
+        var viewportHeight = height - list.Layout.HeaderHeight - SystemInformation.HorizontalScrollBarHeight;
+        Assert.True(y >= list.Layout.HeaderHeight && y + h <= list.Layout.HeaderHeight + viewportHeight);
+    }
 }

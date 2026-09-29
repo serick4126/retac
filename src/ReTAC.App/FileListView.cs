@@ -355,7 +355,8 @@ public sealed class FileListView : Control
             maxBase = Math.Max(maxBase, _measure.Width(NameText(entry)));
             if (showExtension && !HidesExtension(entry)) maxExt = Math.Max(maxExt, _measure.Width(entry.Extension));
             foreach (var column in visible) auto[column] = Math.Max(auto[column], _measure.Width(CellText(entry, column)));
-            representatives.TryAdd(ShellFileType.KeyOf(entry.FullPath, entry.Kind == EntryKind.Folder), entry);
+            // 親フォルダの行は種類を持たない（空の文字）。拡張子の無いファイルと同じ空の鍵になるので、代表にしない
+            if (!entry.IsParent) representatives.TryAdd(ShellFileType.KeyOf(entry.FullPath, entry.Kind == EntryKind.Folder), entry);
         }
         return _content = new ContentMeasure
         {
@@ -431,7 +432,12 @@ public sealed class FileListView : Control
             var width = _measure.Width(TypeText(entry));
             if (width > current) { content.Auto[DetailsColumn.Type] = width; changed = true; }
         }
-        if (changed) { _layout = ComputeDetails(); UpdateScrollBars(); }
+        if (changed)
+        {
+            _layout = ComputeDetails();
+            UpdateScrollBars();
+            EnsureCursorVisible();   // 横のバーが出て表示の高さが 1 行減ると、最下行のカーソルが隠れる
+        }
         if (present) Invalidate();
     }
 
