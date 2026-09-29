@@ -5034,7 +5034,7 @@
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
-        "line": 86
+        "line": 90
       },
       {
         "file": "src/ReTAC.App/SortDialog.cs",
@@ -5186,7 +5186,7 @@
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
-        "line": 84
+        "line": 88
       },
       {
         "file": "src/ReTAC.App/SortDialog.cs",
@@ -7582,7 +7582,7 @@
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
-        "line": 59
+        "line": 63
       },
       {
         "file": "src/ReTAC.Domain/FileOps/ShortcutSource.cs",
@@ -8800,7 +8800,7 @@
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
-        "line": 94
+        "line": 98
       },
       {
         "file": "src/ReTAC.Domain/FileOps/ShortcutSource.cs",

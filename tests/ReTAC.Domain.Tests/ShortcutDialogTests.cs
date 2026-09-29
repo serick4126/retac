@@ -16,4 +16,14 @@ public class ShortcutDialogTests
         Assert.True(longDlg.DestinationBox.Height > shortDlg.DestinationBox!.Height);
         Assert.True(longDlg.ClientSize.Height > shortDlg.ClientSize.Height);
     }
+
+    [Theory]
+    [InlineData(@"C:")]
+    [InlineData(@"C:\VeryLongFolderNameWithoutSpaces\VeryLongFolderNameWithoutSpaces\VeryLongFolderNameWithoutSpaces\VeryLongFolderNameWithoutSpaces")]
+    public void DestinationDoesNotOverlapButtons(string path)
+    {
+        using var dlg = new ShortcutDialog(path);
+        var ok = dlg.Controls.OfType<System.Windows.Forms.Button>().First(b => b.Text == "OK");
+        Assert.True(dlg.DestinationBox!.Bottom <= ok.Top);
+    }
 }

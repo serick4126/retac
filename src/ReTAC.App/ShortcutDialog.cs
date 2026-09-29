@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Windows.Forms;
 
 namespace ReTAC.App;
@@ -33,12 +33,16 @@ public sealed class ShortcutDialog : Form
         var destHeight = 0;
         if (destination is not null)
         {
-            using var font = SystemFonts.MessageBoxFont ?? Control.DefaultFont;
-            // TextBox の内側の余白（左右 各 3px 前後）を引いて測る。足りないと最終行が欠ける
-            destHeight = TextRenderer.MeasureText(destText, font, new Size(destWidth - 8, int.MaxValue),
-                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPadding).Height + 4;
+            // 測る文字の大きさは画面の DPI で決まるので、幅も同じ倍率にして測り、結果を 96 DPI の値へ戻す
+            // （そろえないと 150% で幅が狭く測れて、ダイアログが高すぎになる）
+            var scale = DeviceDpi / 96f;
+            var measured = TextRenderer.MeasureText(destText, Font,
+                new Size((int)((destWidth - 8) * scale), int.MaxValue),
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPadding).Height;
+            destHeight = (int)Math.Ceiling(measured / scale) + 4;
         }
-        var extraHeight = destination is null ? 0 : Math.Max(destHeight - 20, 0) + 6;
+        // 元のラベル（高さ 20）を入れ替えるので、増やす量は作成先の高さ + 余白
+        var extraHeight = destination is null ? 0 : destHeight + 6;
         ClientSize = new Size(400, 200 + extraHeight);
 
         Controls.Add(new Label
