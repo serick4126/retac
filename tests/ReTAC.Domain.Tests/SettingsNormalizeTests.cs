@@ -151,4 +151,16 @@ public class SettingsNormalizeTests
         Assert.Equal(SortKey.Size, settings.SortKey);
         Assert.Equal(6, settings.FileViews.Details.Columns.Count);
     }
+
+    [Theory]
+    [InlineData("""{ "ViewMode": "Details" }""", FileViewMode.Details)]
+    [InlineData("""{ }""", FileViewMode.List)]
+    [InlineData("""{ "ViewMode": "Unknown" }""", FileViewMode.List)]
+    [InlineData("""{ "ViewMode": "Tiles" }""", FileViewMode.List)]   // まだ作っていないモード
+    public void 表示モードは知らない値と作っていないモードを一覧に直す(string json, FileViewMode expected)
+    {
+        var settings = JsonSerializer.Deserialize<AppSettings>(json, Json)!;
+        settings.Normalize();
+        Assert.Equal(expected, settings.ViewMode);
+    }
 }

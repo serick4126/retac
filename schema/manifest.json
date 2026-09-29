@@ -195,6 +195,12 @@
         "default": 280
       },
       {
+        "key": "ViewMode",
+        "type": "ReTAC.Domain.Listing.FileViewMode",
+        "nullable": false,
+        "default": "List"
+      },
+      {
         "key": "FileViews",
         "type": "ReTAC.Domain.Listing.FileViewSettings",
         "nullable": false,
@@ -1351,6 +1357,28 @@
       "kind": "static class",
       "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
       "doc": "R-113 / R-112-3 / R-115 / R-119: 範囲と候補。設定画面の部品もここから作る。"
+    },
+    "ReTAC.Domain.Listing.FileViewMode": {
+      "id": "type:ReTAC.Domain.Listing.FileViewMode",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Listing/FileViewMode.cs",
+      "doc": "R-112-4 / V9: 表示モード。並びは Ctrl+ホイールの段の順（上から）。名前は設定ファイルに載るので変えない。",
+      "members": [
+        "ExtraLargeIcons",
+        "LargeIcons",
+        "MediumIcons",
+        "SmallIcons",
+        "List",
+        "Details",
+        "Tiles",
+        "Content"
+      ]
+    },
+    "ReTAC.Domain.Listing.FileViewModes": {
+      "id": "type:ReTAC.Domain.Listing.FileViewModes",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Listing/FileViewMode.cs",
+      "doc": "R-112-4: 今の表示モードはアプリ全体で 1 つ（INV-VIEWMODE-APP-WIDE）。"
     },
     "ReTAC.Domain.Listing.FileViewScroll": {
       "id": "type:ReTAC.Domain.Listing.FileViewScroll",
@@ -3215,6 +3243,17 @@
     },
     {
       "from": "type:ReTAC.App.AppSettings",
+      "to": "type:ReTAC.Domain.Listing.FileViewMode",
+      "type": "1:1",
+      "fk": {
+        "field": "ViewMode",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.App.AppSettings",
       "to": "type:ReTAC.Domain.Listing.FileViewSettings",
       "type": "1:1",
       "fk": {
@@ -4848,11 +4887,11 @@
     "B-05": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 133
+        "line": 140
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 328
+        "line": 335
       },
       {
         "file": "src/ReTAC.App/IncrementalSearchBar.cs",
@@ -5114,7 +5153,7 @@
     "B-22": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 90
+        "line": 97
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
@@ -5228,7 +5267,7 @@
     "F-01": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 132
+        "line": 139
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
@@ -5524,7 +5563,7 @@
     "F-09": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 127
+        "line": 134
       },
       {
         "file": "src/ReTAC.App/EnvironmentPage.cs",
@@ -5736,7 +5775,7 @@
     "N-02": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 144
+        "line": 151
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -6154,7 +6193,7 @@
     "R-101": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 114
+        "line": 121
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -6676,11 +6715,11 @@
     "R-108": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 99
+        "line": 106
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 267
+        "line": 274
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -6768,19 +6807,19 @@
     "R-108-2": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 106
+        "line": 113
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 238
+        "line": 245
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 251
+        "line": 258
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 268
+        "line": 275
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -7596,7 +7635,7 @@
     "R-112": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 82
+        "line": 89
       },
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
@@ -7627,6 +7666,20 @@
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
         "line": 17
+      }
+    ],
+    "R-112-4": [
+      {
+        "file": "src/ReTAC.App/AppSettings.cs",
+        "line": 83
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewMode.cs",
+        "line": 4
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewMode.cs",
+        "line": 8
       }
     ],
     "R-113": [
@@ -7796,7 +7849,7 @@
     "R-14": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 288
+        "line": 295
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -7868,7 +7921,7 @@
     "R-20-3": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 144
+        "line": 151
       }
     ],
     "R-22": [
@@ -7914,7 +7967,7 @@
     "R-25": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 294
+        "line": 301
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -8716,7 +8769,7 @@
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 151
+        "line": 158
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -8734,11 +8787,11 @@
     "R-55-3": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 156
+        "line": 163
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 185
+        "line": 192
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -9472,7 +9525,7 @@
     "R-83": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 294
+        "line": 301
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -9676,11 +9729,11 @@
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 89
+        "line": 96
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 95
+        "line": 102
       },
       {
         "file": "src/ReTAC.App/BookmarkBar.cs",
@@ -10716,7 +10769,7 @@
     "R-98": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 362
+        "line": 369
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
@@ -10948,7 +11001,7 @@
     "V-07": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 208
+        "line": 215
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",

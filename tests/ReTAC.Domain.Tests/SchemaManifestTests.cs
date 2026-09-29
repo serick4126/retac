@@ -132,15 +132,34 @@ public class SchemaManifestTests
     public void L5_全ての設定項目に編集手段が記録されている()
     {
         var owners = Invariants["settingsOwners"]!.AsObject();
-        var missing = Manifest["settings"]!["keys"]!.AsArray()
-            .Select(n => n!["key"]!.GetValue<string>())
-            .Where(key => !owners.TryGetPropertyValue(key, out var owner)
-                       || owner!.GetValue<string>() is "UNKNOWN" or "")
-            .ToList();
+        var problems = new List<string>();
+        foreach (var key in Manifest["settings"]!["keys"]!.AsArray().Select(n => n!["key"]!.GetValue<string>()))
+        {
+            if (!owners.TryGetPropertyValue(key, out var owner) || owner is null) { problems.Add($"{key}: 所有者が無い"); continue; }
+            // R-114 / Q33: 見出しのメニューと設定画面のように、1 つの設定を 2 か所から変えるものは配列で書く
+            var list = owner is JsonArray array ? array.Select(n => n!.GetValue<string>()).ToList() : [owner.GetValue<string>()];
+            foreach (var value in list)
+            {
+                if (value is "UNKNOWN" or "") { problems.Add($"{key}: 所有者が {value}"); continue; }
+                if (WiringProblem(value) is { } wiring) problems.Add($"{key}: {wiring}");
+            }
+        }
 
-        Assert.True(missing.Count == 0,
-            $"編集手段が不明な設定項目: {string.Join(", ", missing)}。"
-            + "invariants.json の settingsOwners に dialog:/runtime:/manual: を書く");
+        Assert.True(problems.Count == 0,
+            string.Join("\n", problems) + "\ninvariants.json の settingsOwners に dialog:/menu:/runtime:/manual: を書く（Class#Member は実在するものを）");
+    }
+
+    /// <summary>所有者 kind:Class#Member の Class.cs が src/ReTAC.App に在り、その中に Member が書かれているか。manual: は見ない。</summary>
+    private static string? WiringProblem(string owner)
+    {
+        var (kind, rest) = (owner.Split(':', 2)[0], owner.Split(':', 2).ElementAtOrDefault(1) ?? "");
+        if (kind == "manual") return null;
+        var parts = rest.Split('#', 2);
+        var file = Path.Combine(Root, "src", "ReTAC.App", parts[0] + ".cs");
+        if (!File.Exists(file)) return $"{owner} の {parts[0]}.cs が無い";
+        return parts.Length == 2 && !File.ReadAllText(file).Contains(parts[1], StringComparison.Ordinal)
+            ? $"{owner} の {parts[1]} が {parts[0]}.cs に無い"
+            : null;
     }
 
     [Fact]

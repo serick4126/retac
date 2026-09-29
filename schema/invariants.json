@@ -37,7 +37,8 @@
     "ShowLeftPanel": "menu:MainForm",
     "LeftPanelView": "runtime:MainForm",
     "LeftPanelWidth": "runtime:MainForm",
-    "ExpandedBookmarkGroupIds": "runtime:BookmarkView",
+    "ViewMode": "runtime:MainForm",
+    "ExpandedBookmarkGroupIds": "runtime:BookmarkTreeView",
     "Bookmarks": "dialog:BookmarkDialog",
     "BookmarkBarStyle": "dialog:BookmarkDialog",
 
@@ -579,13 +580,11 @@
     {
       "id": "INV-VIEWMODE-APP-WIDE",
       "status": "deferred",
-      "specIds": [],
-      "applies": [],
+      "specIds": ["R-112-4"],
+      "applies": ["settings:ViewMode"],
       "rule": "今の表示モードはアプリ全体で 1 つ。「表示」メニュー・コマンド・Ctrl+ホイールの切り替えはすべて同じ処理を通り、全ウィンドウへ即時に当てて保存する。ウィンドウごと・フォルダごとには持たない。",
-      "reason": "表示モードの切り替えは Phase 15 で作る。仕様 ID と対象はまだコードに無いので plannedShape に置く（ViewMode は FileViews の外の最上位の設定）。",
+      "reason": "表示モードの切り替えは Phase 15 で作る。設定の欄はある（切り替えの処理はまだ無い）。",
       "plannedShape": {
-        "specIds": ["R-112-4"],
-        "applies": ["settings:ViewMode"],
         "ViewMode": "enum（V9 の 8 モード。既定 List。知らない値・未実装のモードは List）",
         "editedBy": "runtime:MainForm",
         "note": "切り替えても項目・カーソル・マーク・ソートは保ち、スクロールはカーソルが見える位置に直す。"

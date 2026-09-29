@@ -79,6 +79,13 @@ public sealed class AppSettings
     /// <summary>R-96: 全ビュー共通の幅を 96 DPI 論理値で保存する。</summary>
     public int LeftPanelWidth { get; set; } = 280;
 
+    /// <summary>
+    /// R-112-4: 今の表示モード。アプリ全体で 1 つ（INV-VIEWMODE-APP-WIDE）で、切り替えたら全ウィンドウへ当てて保存する。
+    /// 知らない名前で設定ファイル全体を捨てないよう、寛容な変換器で読み、Normalize で一覧に直す。
+    /// </summary>
+    [JsonConverter(typeof(LenientEnumConverter<FileViewMode>))]
+    public FileViewMode ViewMode { get; set; } = FileViewMode.List;
+
     /// <summary>R-112: ファイルビューの設定（系統ごとの欄と共通の欄）。</summary>
     public FileViewSettings FileViews { get; set; } = new();
 
@@ -361,6 +368,7 @@ public sealed class AppSettings
         BookmarkRules.DropUnknownTools(Bookmarks, ids);
         BookmarkRules.EnsureIds(Bookmarks);   // R-98: DropUnknownTools が null の項目を落とした後で
         FileViews = FileViewSettings.Normalize(FileViews);
+        ViewMode = FileViewModes.Normalize(ViewMode);
     }
 
     private static Dictionary<string, string> WithoutNulls(Dictionary<string, string>? map) =>
