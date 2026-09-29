@@ -29,6 +29,9 @@ public sealed record Entry
     public required long Size { get; init; }
     public required DateTime LastWriteTime { get; init; }
 
+    /// <summary>R-114: 詳細表示の作成日時の列。列挙で手に入る（追加の I/O は無い）。作成日時でのソートは作らない。</summary>
+    public DateTime CreationTime { get; init; }
+
     /// <summary>R-04: 親フォルダ項目はソート対象外・マーク対象外。</summary>
     public bool IsParent => Kind == EntryKind.Parent;
 
@@ -44,7 +47,7 @@ public sealed record Entry
         LastWriteTime = default,
     };
 
-    public static Entry ForFolder(string fullPath, string name, FileAttributes attributes, DateTime lastWriteTime) => new()
+    public static Entry ForFolder(string fullPath, string name, FileAttributes attributes, DateTime lastWriteTime, DateTime creationTime = default) => new()
     {
         FullPath = fullPath,
         Name = name,
@@ -54,9 +57,10 @@ public sealed record Entry
         Attributes = attributes,
         Size = 0,
         LastWriteTime = lastWriteTime,
+        CreationTime = creationTime,
     };
 
-    public static Entry ForFile(string fullPath, string name, FileAttributes attributes, long size, DateTime lastWriteTime)
+    public static Entry ForFile(string fullPath, string name, FileAttributes attributes, long size, DateTime lastWriteTime, DateTime creationTime = default)
     {
         var (baseName, extension) = SplitName(name);
         return new Entry
@@ -69,6 +73,7 @@ public sealed record Entry
             Attributes = attributes,
             Size = size,
             LastWriteTime = lastWriteTime,
+            CreationTime = creationTime,
         };
     }
 

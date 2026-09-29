@@ -12,6 +12,19 @@ public static class Display
     /// 卓駆の実測では、ファイルサイズが小数 1 桁（<c>535.1KB</c>）、
     /// ドライブ容量が小数 2 桁（<c>3725.90GB</c>）で表示されている。
     /// </summary>
+    /// <summary>R-114: 詳細表示の属性の列。立っているものだけを R H S A C E の順に詰める（エクスプローラーと同じ文字）。</summary>
+    public static string Attributes(FileAttributes attributes)
+    {
+        var text = new System.Text.StringBuilder(6);
+        if (attributes.HasFlag(FileAttributes.ReadOnly)) text.Append('R');
+        if (attributes.HasFlag(FileAttributes.Hidden)) text.Append('H');
+        if (attributes.HasFlag(FileAttributes.System)) text.Append('S');
+        if (attributes.HasFlag(FileAttributes.Archive)) text.Append('A');
+        if (attributes.HasFlag(FileAttributes.Compressed)) text.Append('C');
+        if (attributes.HasFlag(FileAttributes.Encrypted)) text.Append('E');
+        return text.ToString();
+    }
+
     public static string Size(long bytes, int decimals = 1)
     {
         if (bytes < 0) return "";

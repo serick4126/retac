@@ -1,5 +1,7 @@
 using System.IO;
 using ReTAC.Domain.Entries;
+using ReTAC.Domain.Formatting;
+using ReTAC.Domain.Listing;
 
 namespace ReTAC.Domain.Tests;
 
@@ -86,4 +88,31 @@ public class EntryTests
         // 上位属性があればそちらが勝つ
         Assert.Equal(AttributeColor.System, AttributeColorRule.Classify(FileAttributes.Encrypted | FileAttributes.System));
     }
+
+    [Fact]
+    public void 列挙は作成日時を持つ()
+    {
+        var folder = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            var path = Path.Combine(folder, "a.txt");
+            File.WriteAllText(path, "x");
+            var created = new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Local);
+            File.SetCreationTime(path, created);
+
+            var entry = FolderEnumerator.Enumerate(folder, SortOrder.Default).Single(e => e.Name == "a.txt");
+
+            Assert.Equal(created, entry.CreationTime);
+        }
+        finally { Directory.Delete(folder, recursive: true); }
+    }
+
+    [Theory]
+    [InlineData(FileAttributes.Normal, "")]
+    [InlineData(FileAttributes.Archive, "A")]
+    [InlineData(FileAttributes.ReadOnly | FileAttributes.Hidden | FileAttributes.System | FileAttributes.Archive, "RHSA")]
+    [InlineData(FileAttributes.Directory | FileAttributes.Compressed, "C")]
+    [InlineData(FileAttributes.Encrypted | FileAttributes.ReadOnly, "RE")]
+    public void 属性は立っている文字だけをRHSACEの順に詰める(FileAttributes attributes, string expected) =>
+        Assert.Equal(expected, Display.Attributes(attributes));
 }

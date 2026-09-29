@@ -35,8 +35,9 @@ public sealed class MainForm : Form, IBookmarkHost
     private readonly FileSystemWatcher _watcher = new()
     {
         IncludeSubdirectories = false,
+        // R-114: 作成日時の列・情報のために、作成日時だけの変化も拾う
         NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName
-                     | NotifyFilters.Attributes | NotifyFilters.Size | NotifyFilters.LastWrite,
+                     | NotifyFilters.Attributes | NotifyFilters.Size | NotifyFilters.LastWrite | NotifyFilters.CreationTime,
     };
     // 連続した通知をまとめる。1 件ごとに開き直すと大量コピー中に描画が追いつかない
     private readonly System.Windows.Forms.Timer _autoRefresh = new() { Interval = 300 };

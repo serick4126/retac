@@ -35,8 +35,8 @@ public static class FolderEnumerator
             try
             {
                 var entry = info is FileInfo file
-                    ? Entry.ForFile(file.FullName, file.Name, file.Attributes, file.Length, file.LastWriteTime)
-                    : Entry.ForFolder(info.FullName, info.Name, info.Attributes, info.LastWriteTime);
+                    ? Entry.ForFile(file.FullName, file.Name, file.Attributes, file.Length, file.LastWriteTime, file.CreationTime)
+                    : Entry.ForFolder(info.FullName, info.Name, info.Attributes, info.LastWriteTime, info.CreationTime);
                 if (include is null || include(entry)) entries.Add(entry);
             }
             catch (IOException)
