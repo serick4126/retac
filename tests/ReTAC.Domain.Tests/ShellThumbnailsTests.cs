@@ -227,4 +227,32 @@ public class ShellThumbnailsTests
             list => list.GetIconSize(out var cx, out var cy) == 0 ? (cx, cy) : (0, 0), (0, 0));
         Assert.Equal((256, 256), size);
     }
+
+    [Fact]
+    public void 要求より大きい画像は縦横比を保って要求の大きさへ縮め_透明を保つ()
+    {
+        using var big = new Bitmap(1024, 512, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        big.SetPixel(0, 0, System.Drawing.Color.FromArgb(0, 0, 0, 0));
+        big.SetPixel(500, 250, System.Drawing.Color.FromArgb(255, 200, 10, 10));
+        using var fitted = ShellImageWorker.FitTo(big, 256);
+        Assert.Equal((256, 128), (fitted.Width, fitted.Height));
+        Assert.Equal(System.Drawing.Imaging.PixelFormat.Format32bppArgb, fitted.PixelFormat);
+        Assert.Equal(0, fitted.GetPixel(0, 0).A);
+    }
+
+    [Fact]
+    public void 要求以下の画像はそのまま返す()
+    {
+        using var small = new Bitmap(100, 50);
+        Assert.Same(small, ShellImageWorker.FitTo(small, 256));
+    }
+
+    [Fact]
+    public void 縮めたら元の画像を解放して届ける()
+    {
+        var big = new Bitmap(512, 512);
+        using var fitted = ShellImageWorker.FitTo(big, 128);
+        Assert.Throws<ArgumentException>(() => _ = big.Width);
+        Assert.Equal(128, fitted.Width);
+    }
 }

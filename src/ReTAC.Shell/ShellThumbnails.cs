@@ -15,8 +15,7 @@ public static class ShellThumbnails
         var iid = typeof(ShellImageInterop.IShellItemImageFactory).GUID;
         ShellImageInterop.IShellItemImageFactory factory;
         try { ShellImageInterop.SHCreateItemFromParsingName(fullPath, IntPtr.Zero, ref iid, out factory); }
-        catch (COMException) { return null; }
-        catch (FileNotFoundException) { return null; }
+        catch (Exception) { return null; }   // 1 件のパスの失敗（COM 以外の例外を含む）で、同じ要求の印の結果まで捨てない
         try
         {
             var flags = ShellImageInterop.SIIGBF.ThumbnailOnly | ShellImageInterop.SIIGBF.BiggerSizeOk
@@ -25,6 +24,7 @@ public static class ShellThumbnails
                 ? ShellImageInterop.ToArgb(hbitmap)
                 : null;
         }
+        catch (Exception) { return null; }
         finally { Marshal.ReleaseComObject(factory); }
     }
 }
@@ -105,7 +105,9 @@ public sealed class ShellImageWorker : IDisposable
                 }
                 if (item is not { } taken) { _signal.WaitOne(); continue; }
                 var (version, next) = taken;
-                var get = GetOverride ?? ShellThumbnails.Get;
+                var rawGet = GetOverride ?? ShellThumbnails.Get;
+                // BiggerSizeOk は要求よりずっと大きい画像を返しうる。キャッシュの上限と描画の負担のため、届ける前に縮める
+                Bitmap? get(string path, int size, bool cacheOnly) => rawGet(path, size, cacheOnly) is { } b ? FitTo(b, size) : null;
                 var overlayOf = OverlayOverride ?? ShellOverlays.IndexOf;
                 ImageResult result;
                 try
@@ -118,8 +120,8 @@ public sealed class ShellImageWorker : IDisposable
                         var queued = false;
                         if (needsGenerate) lock (_lock) { if (version == _version) { _generate.Enqueue((version, next)); queued = true; } }
                         if (next.Thumbnail) CacheChecked?.Invoke(next.FullPath, queued);
-                        // キャッシュに無く、印も要らないなら、1 段目では知らせることが無い
-                        if (thumbnail is null && !next.Overlay) continue;
+                        // キャッシュに無く、印も要らないなら、1 段目では知らせることが無い。ただしクラウドはここが最終なので知らせる
+                        if (thumbnail is null && !next.Overlay && !(next.Thumbnail && next.Cloud)) continue;
                         result = new ImageResult(next, thumbnail, overlay);
                     }
                 }
@@ -146,6 +148,28 @@ public sealed class ShellImageWorker : IDisposable
         if (!request.Thumbnail) return (null, overlay, false);
         var thumbnail = get(request.FullPath, request.Size, true);
         return (thumbnail, overlay, thumbnail is null && !request.Cloud);
+    }
+
+    /// <summary>
+    /// 大きい側が size を超える画像を、縦横比を保って size に収まるよう縮める（32bpp ARGB・透明を保つ）。縮めたときは元を解放する。
+    /// 収まっていればそのまま返す。
+    /// </summary>
+    internal static Bitmap FitTo(Bitmap source, int size)
+    {
+        var longest = Math.Max(source.Width, source.Height);
+        if (size <= 0 || longest <= size) return source;
+        var scale = (double)size / longest;
+        var (w, h) = (Math.Max(1, (int)Math.Round(source.Width * scale)), Math.Max(1, (int)Math.Round(source.Height * scale)));
+        var fitted = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        using (var g = Graphics.FromImage(fitted))
+        {
+            g.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceCopy;   // 透明を混ぜずにそのまま写す
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+            g.DrawImage(source, new Rectangle(0, 0, w, h), 0, 0, source.Width, source.Height, GraphicsUnit.Pixel);
+        }
+        source.Dispose();
+        return fitted;
     }
 
     public void Dispose()
