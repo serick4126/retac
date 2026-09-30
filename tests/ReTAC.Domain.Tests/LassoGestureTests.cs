@@ -85,4 +85,27 @@ public class LassoGestureTests
         gesture.Scrolled(5, 140 + 76);                   // 1 行ぶんスクロールした。マウスは同じ位置
         Assert.Equal(140 + 76 - 5 + 1, gesture.Active!.Rect.Height);
     }
+
+    [Fact]
+    public void 矩形を動かすと_始めた点も今の点も同じだけ動く()
+    {
+        var gesture = new LassoGesture();
+        gesture.Press(10, 10, 10, 110, startsLasso: true, ctrl: false);
+        Assert.True(gesture.Move(60, 60, 60, 160, 4, 4));
+        Assert.Equal((10, 110, 51, 51), gesture.Active!.Rect);
+
+        gesture.Shift(0, 40);   // 前に項目が入って、中身が 40px 下へずれた
+
+        Assert.Equal((10, 150, 51, 51), gesture.Active!.Rect);
+    }
+
+    [Fact]
+    public void 押しただけの保留も動かす()
+    {
+        var gesture = new LassoGesture();
+        gesture.Press(10, 10, 10, 110, startsLasso: true, ctrl: false);
+        gesture.Shift(0, 40);
+        Assert.True(gesture.Move(60, 60, 60, 200, 4, 4));
+        Assert.Equal((10, 150, 51, 51), gesture.Active!.Rect);
+    }
 }

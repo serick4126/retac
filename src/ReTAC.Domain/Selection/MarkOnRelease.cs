@@ -41,11 +41,24 @@ public sealed class MarkOnRelease
     public void Moved() => _kind = Kind.None;
 
     /// <summary>
-    /// 押している最中に一覧が入れ替わった（自動更新など）。保留していた `_index` / `_anchor` は
-    /// もう別の項目を指しているので、離した時点で別のファイルをマークしてしまわないよう捨てる
-    /// （R-11-2 / INV-MARKS-EXPLICIT-ONLY）。
+    /// 別のフォルダへ移った。保留していた `_index` / `_anchor` はもう別の項目を指しているので、
+    /// 離した時点で別のファイルをマークしてしまわないよう捨てる（R-11-2 / INV-MARKS-EXPLICIT-ONLY）。
+    /// 同じフォルダの再表示では <see cref="Remap"/> で付け替える（R-124）。
     /// </summary>
     public void Cancel() => _kind = Kind.None;
+
+    /// <summary>
+    /// R-124: 押している最中に、同じフォルダの一覧が入れ替わった（自動更新など）。押した項目と範囲の起点を、新しい添字へ付け替える。
+    /// 見つからなければ（map が負を返す）捨てる。離した時点で別の項目をマークしてしまわないため（INV-MARKS-EXPLICIT-ONLY）。
+    /// 大量のファイルを処理しているフォルダでは 0.3 秒ごとに再表示されるので、捨てるだけだとクリックが空振りする。
+    /// </summary>
+    /// <param name="map">前の添字 → 新しい添字。無ければ負</param>
+    public void Remap(Func<int, int> map)
+    {
+        if (_kind == Kind.None) return;
+        (_index, _anchor) = (map(_index), map(_anchor));
+        if (_index < 0 || (_kind == Kind.Range && _anchor < 0)) _kind = Kind.None;
+    }
 
     /// <returns>マークを変えたか。名前以外の保留でカーソルだけ動いたときは false（呼び出し側はカーソルの位置を比べる）</returns>
     public bool Release(ListState state)

@@ -225,4 +225,54 @@ public class MarkOnReleaseTests
         Assert.True(m.Release(state));
         Assert.Equal([0, 1, 2, 3], state.Marks.Order());
     }
+
+    // ---- R-124: 押している最中に一覧が入れ替わったら、押した項目を新しい添字へ付け替える ----
+
+    private static ListState Names(params string[] names) => new(names.Select(n => TestEntries.File(n)));
+
+    [Fact]
+    public void 付け替えたあとに離すと_新しい添字の項目のマークが変わる()
+    {
+        var gesture = new MarkOnRelease();
+        gesture.Press(Names("a", "b", "c"), 1, FileViewArea.MarkIcon, shift: false);   // b を押した
+
+        var after = Names("x", "y", "a", "b", "c");                                     // 前に 2 件入った
+        gesture.Remap(i => i + 2);
+
+        Assert.True(gesture.Release(after));
+        Assert.Equal([3], after.Marks);
+    }
+
+    [Fact]
+    public void 押した項目が消えていたら_離しても何も変わらない()
+    {
+        var gesture = new MarkOnRelease();
+        gesture.Press(Names("a", "b", "c"), 1, FileViewArea.MarkIcon, shift: false);
+
+        var after = Names("a", "c");
+        gesture.Remap(_ => -1);
+
+        Assert.False(gesture.Release(after));
+        Assert.Empty(after.Marks);
+    }
+
+    [Fact]
+    public void 範囲マークは起点も付け替え_起点が消えていたら捨てる()
+    {
+        var before = Names("a", "b", "c", "d");
+        var gesture = new MarkOnRelease();
+        gesture.Press(before, 3, FileViewArea.Name, shift: true);       // 起点はカーソル（0 番の a）、押したのは d
+
+        var after = Names("x", "a", "b", "c", "d");
+        gesture.Remap(i => i + 1);
+        Assert.True(gesture.Release(after));
+        Assert.Equal([1, 2, 3, 4], after.Marks.Order());
+
+        var second = new MarkOnRelease();
+        second.Press(before, 3, FileViewArea.Name, shift: true);
+        var gone = Names("b", "c", "d");                                  // 起点の a が消えた
+        second.Remap(i => i == 0 ? -1 : i - 1);
+        Assert.False(second.Release(gone));
+        Assert.Empty(gone.Marks);
+    }
 }

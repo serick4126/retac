@@ -214,17 +214,20 @@ public sealed class FileListView : Control
     /// </param>
     public void SetEntries(IReadOnlyList<Entry> entries, int cursorIndex = 0, bool keepScroll = false, bool revealCursor = true)
     {
-        // 自動更新などでボタンを押したまま一覧が入れ替わることがある。押した時点の添字は
-        // 別の項目を指すことになるので、離した時点の処理（マーク・右ボタンのドラッグ／メニュー）は捨てる
         ResetNameTip();
-        CancelLasso();   // R-120: 押した時点の中身の座標は別の項目を指す
         HotIndex = -1;
-        _rightDown = null;
-        _markOnRelease.Cancel();
-        _dragIndex = -1;
+        if (!keepScroll)
+        {
+            // 別のフォルダへ移った。押した時点の添字も中身の座標も、もう別の項目を指すので、
+            // 離した時点の処理（マーク・右ボタンのドラッグ／メニュー・D&D・投げ縄）は捨てる
+            CancelLasso();
+            _rightDown = null;
+            _markOnRelease.Cancel();
+            _dragIndex = -1;
+        }
 
         // R-123: 入れ替える前に、先頭に見えていた項目（名前で上へ辿る並び）と、カーソルが見えていたかを控える
-        var (oldLayout, oldScroll, oldViewport) = (_layout, _scroll, (Width: ViewportWidth, Height: ViewportHeight));
+        var (oldState, oldLayout, oldScroll, oldViewport) = (_state, _layout, _scroll, (Width: ViewportWidth, Height: ViewportHeight));
         var anchorBefore = keepScroll ? FirstVisibleIndex : -1;
         var anchorNames = CursorRestore.NamesUpward(_state, anchorBefore);
         var cursorWasVisible = _state.Count == 0 || IsCursorVisible;
@@ -235,7 +238,7 @@ public sealed class FileListView : Control
         _content = null;
         _state.MoveCursor(cursorIndex);
         if (!keepScroll) { _scroll = default; _wheel.Reset(); }
-        RecomputeLayout();
+        ComputeLayout();   // R-124: 投げ縄を取り消さない方（別のフォルダへ移ったときは、上で取り消してある）
         if (keepScroll)
         {
             var anchorAfter = anchorBefore < 0 || _state.Count == 0 ? -1 : CursorRestore.IndexAfterReload(anchorNames, entries);
@@ -245,12 +248,42 @@ public sealed class FileListView : Control
         }
         // R-123: 同じフォルダの再表示では、カーソルが見えていなかったならカーソルの位置へ動かさない
         if (!keepScroll || revealCursor || cursorWasVisible) EnsureCursorVisible();
+        // R-124: スクロール位置が決まってから付け替える（カーソルを見せるために動いた分も、投げ縄の矩形に入れる）
+        if (keepScroll) RemapPress(oldState, oldLayout.ScrollOffset(oldScroll));
         RefreshHot();            // R-116: 入れ替わった一覧のマウスの下の項目
         NextImageGeneration();   // R-117: 同じ内容の読み直しでも進める（届く前の結果は別の一覧のもの）
         Invalidate();
         CursorMoved?.Invoke(this, EventArgs.Empty);
         MarksChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>
+    /// R-124: 同じフォルダの再表示。押していた操作を、押した項目のパスで新しい添字へ付け替える（見つからなければ捨てる）。
+    /// 投げ縄は続け、矩形を中身のずれの差だけ動かして画面の同じ所に保ち、仮のマークを新しい一覧で求め直す。
+    /// </summary>
+    /// <param name="oldOffset">再表示の前の、中身のずれ（ピクセル）</param>
+    private void RemapPress(ListState old, (int X, int Y) oldOffset)
+    {
+        int Map(int index) =>
+            index >= 0 && index < old.Count && _indexOfPath.TryGetValue(old.Entries[index].FullPath, out var now) ? now : -1;
+
+        _markOnRelease.Remap(Map);
+        if (_dragIndex >= 0) _dragIndex = Map(_dragIndex);
+        // 項目の無い所で押していた右ボタン（Index が負）は、背景のメニューのまま
+        if (_rightDown is { Index: >= 0 } down) _rightDown = Map(down.Index) is >= 0 and var now ? down with { Index = now } : null;
+
+        var offset = _layout.ScrollOffset(_scroll);
+        _lasso.Shift(offset.X - oldOffset.X, offset.Y - oldOffset.Y);
+        if (LassoActive)
+        {
+            var (x, y) = ToContent(_lassoMouse);
+            _lasso.Scrolled(x, y);
+        }
+        _lassoCovered = null;
+    }
+
+    /// <summary>テスト用: 右ボタンを押した項目。押していなければ null、項目の無い所なら -1。</summary>
+    internal int? RightDownIndex => _rightDown?.Index;
 
     /// <summary>R-123: 見えている範囲の先頭の項目。無ければ -1。</summary>
     internal int FirstVisibleIndex => FileViewScroll.FirstVisible(_layout, _scroll, ViewportWidth, ViewportHeight, _state.Count);
@@ -474,10 +507,22 @@ public sealed class FileListView : Control
     private (int, bool, bool, bool) ImageSettingsKey() =>
         (IconSizeFor(_mode), ThumbnailsOn, FolderThumbnailsOn, _views.Common.ShowOverlays);
 
+    /// <summary>
+    /// 大きさ・表示モード・系統の設定・見出しの幅が変わったときのレイアウトの作り直し。
+    /// R-120: 押した点の中身の座標は、新しいレイアウトでは別の項目を指す。離したときに古い矩形で新しい配置を囲まないよう、投げ縄を取り消す
+    /// </summary>
     private void RecomputeLayout()
     {
-        // R-120: 押した点の中身の座標は、新しいレイアウトでは別の項目を指す。離したときに古い矩形で新しい配置を囲まない
         CancelLasso();
+        ComputeLayout();
+    }
+
+    /// <summary>
+    /// レイアウトの計算だけ（投げ縄に触らない）。同じフォルダの再表示（R-124）は、投げ縄を続けるのでこちらを呼ぶ。
+    /// 矩形は SetEntries が、中身のずれの差だけ動かす。
+    /// </summary>
+    private void ComputeLayout()
+    {
         _nameLines.Clear();   // 名前の行は幅・行数・フォントで変わる
         if (UsesBigIcons && _bigIcons?.Size != IconSizeFor(_mode))
         {

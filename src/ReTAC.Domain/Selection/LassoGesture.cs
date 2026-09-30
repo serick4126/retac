@@ -35,6 +35,13 @@ public sealed class LassoGesture
     /// <summary>自動スクロールで中身がずれた。最後のマウスの位置から求め直した中身の座標で矩形を伸ばす。</summary>
     public void Scrolled(int contentX, int contentY) => Active?.Move(contentX, contentY);
 
+    /// <summary>R-124: 一覧が入れ替わって中身がずれた。押しただけの保留も、始めた投げ縄も、同じだけ動かす。</summary>
+    public void Shift(int dx, int dy)
+    {
+        if (_pending is { } p) _pending = p with { ContentX = p.ContentX + dx, ContentY = p.ContentY + dy };
+        Active?.Shift(dx, dy);
+    }
+
     /// <returns>マークを変えたか。投げ縄を始めていなければ何もしない</returns>
     public bool Release(ListState state, IFileViewLayout layout)
     {

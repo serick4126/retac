@@ -9,7 +9,7 @@ namespace ReTAC.Domain.Selection;
 /// </summary>
 public sealed class Lasso
 {
-    private readonly int _startX, _startY;
+    private int _startX, _startY;
     private int _x, _y;
 
     public Lasso(int x, int y, bool remove) => (_startX, _startY, _x, _y, Remove) = (x, y, x, y, remove);
@@ -17,6 +17,9 @@ public sealed class Lasso
     public bool Remove { get; }
 
     public void Move(int x, int y) => (_x, _y) = (x, y);
+
+    /// <summary>R-124: 一覧が入れ替わって中身がずれた。矩形を同じだけ動かし、画面の同じ所に保つ。</summary>
+    public void Shift(int dx, int dy) => (_startX, _startY, _x, _y) = (_startX + dx, _startY + dy, _x + dx, _y + dy);
 
     /// <summary>始めた点と今の点を対角にした矩形。両端の点を含む。</summary>
     public (int X, int Y, int Width, int Height) Rect =>
