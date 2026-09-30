@@ -66,4 +66,13 @@ public class CursorRestoreTests
         var state = new ListState(List("a.txt"));
         Assert.Empty(CursorRestore.NamesFromCursorUpward(state));
     }
+
+    [Fact]
+    public void 指定した添字から上へ名前を並べる()
+    {
+        var state = new ListState([TestEntries.Parent(), TestEntries.File("a.txt"), TestEntries.File("b.txt"), TestEntries.File("c.txt")]);
+        Assert.Equal(["b.txt", "a.txt"], CursorRestore.NamesUpward(state, 2));
+        Assert.Empty(CursorRestore.NamesUpward(state, 0));    // 親フォルダは含めない
+        Assert.Empty(CursorRestore.NamesUpward(state, -1));
+    }
 }

@@ -13,10 +13,13 @@ namespace ReTAC.Domain.Selection;
 public static class CursorRestore
 {
     /// <summary>カーソルの項目を先頭に、上へ向かって名前を並べる。親フォルダ項目は含めない。</summary>
-    public static IReadOnlyList<string> NamesFromCursorUpward(ListState state)
+    public static IReadOnlyList<string> NamesFromCursorUpward(ListState state) => NamesUpward(state, state.CursorIndex);
+
+    /// <summary>R-123: index の項目を先頭に、上へ向かって名前を並べる（再表示で、先頭に見えていた項目を探し直すのにも使う）。index が負なら空。</summary>
+    public static IReadOnlyList<string> NamesUpward(ListState state, int index)
     {
         var names = new List<string>();
-        for (var i = Math.Min(state.CursorIndex, state.Count - 1); i >= 0; i--)
+        for (var i = Math.Min(index, state.Count - 1); i >= 0; i--)
             if (!state.Entries[i].IsParent) names.Add(state.Entries[i].Name);
         return names;
     }

@@ -757,7 +757,7 @@ public sealed class MainForm : Form, IBookmarkHost
         _sortOrder = order;
         SaveSettings();   // V-13: 設定画面の変更はその場で JSON に落とす（異常終了で失わない）
         ApplyView();      // R-114: 見出しの ▲▼ を今のソートに合わせる（ソートはウィンドウごと）
-        return Reload();
+        return Reload(revealCursor: true);   // R-123: 並べ替えたあとは、カーソルの項目を見せる（今までの動作のまま）
     }
 
     /// <summary>
@@ -2661,7 +2661,8 @@ public sealed class MainForm : Form, IBookmarkHost
     /// 今のカーソルが指す名前が消えている場合だけ渡す
     /// </param>
     /// <param name="marks">付け直すマーク。改名のように名前が変わる操作でだけ渡す</param>
-    private bool Reload(string? cursorName = null, IReadOnlySet<string>? marks = null)
+    /// <param name="revealCursor">R-123: その場の再表示でも、カーソルの項目を見える位置へ出す（ソートの変更）</param>
+    private bool Reload(string? cursorName = null, IReadOnlySet<string>? marks = null, bool revealCursor = false)
     {
         if (_currentFolder.Length == 0) return false;
 
@@ -2677,7 +2678,7 @@ public sealed class MainForm : Form, IBookmarkHost
         // その場の再表示なら、カーソルとマークは列挙後に読み直す（keepCursor）。
         // 遡った場合は消えたフォルダの名前に合わせ、マークは持ち越さない
         _ = cursorName is null
-            ? OpenFolderAsync(folder, record: false, keepCursor: true)
+            ? OpenFolderAsync(folder, record: false, keepCursor: true, revealCursor: revealCursor)
             : OpenFolderAsync(folder, cursorName, record: false, restoreMarks: marks);
         return true;
     }
@@ -2926,9 +2927,13 @@ public sealed class MainForm : Form, IBookmarkHost
     /// （コンテキストメニューを開いたまま別の項目を右クリックしたときの戻り・ちらつき）
     /// </param>
     /// <param name="keepFocus">R-97-2: ツリーのマウス確定。フォーカスをツリーに残す</param>
+    /// <param name="revealCursor">
+    /// R-123: その場の再表示（keepCursor）でも、カーソルの項目を見える位置へ出す。ソートの変更が渡す
+    /// （並べ替えると全部の位置が変わるので、見ていた所ではなくカーソルを基準にする）
+    /// </param>
     public async Task OpenFolderAsync(string folder, string? selectName = null, bool record = true,
                                       IReadOnlySet<string>? restoreMarks = null, bool keepCursor = false,
-                                      bool keepFocus = false)
+                                      bool keepFocus = false, bool revealCursor = false)
     {
         // ドライブの切り替えは、開けなければ移動しないことで分かる。エラーは出さない（R-32 の運用）
         var quiet = FolderEnumerator.IsDriveRoot(folder);
@@ -2971,7 +2976,9 @@ public sealed class MainForm : Form, IBookmarkHost
             restoreMarks = current.Marks.Select(i => current.Entries[i].Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
 
-        Apply(folder, entries, selectName, record, restoreMarks);
+        // R-123: その場の再表示（keepCursor。自動更新・W・F5・ファイル操作のあと）では、見ている所を動かさない。
+        // コマンドがカーソルを置く項目を決めた再表示（名前の変更・新規作成の直後）と、ソートの変更は、カーソルの項目を見せる
+        Apply(folder, entries, selectName, record, restoreMarks, revealCursor: !keepCursor || revealCursor);
 
         // その場の再表示（keepCursor）ではフォーカスに触らない。
         // 自動更新もこの経路を通るので、`L` でドライブバーへ移った直後に
@@ -2985,7 +2992,7 @@ public sealed class MainForm : Form, IBookmarkHost
         Apply(folder, FolderEnumerator.Enumerate(folder, _sortOrder, Include), null, record: true, restoreMarks: null);
 
     private void Apply(string folder, IReadOnlyList<Entry> entries, string? selectName, bool record,
-                       IReadOnlySet<string>? restoreMarks)
+                       IReadOnlySet<string>? restoreMarks, bool revealCursor = true)
     {
         // N-02: 移動の履歴とコピー先の履歴は共通のひとつ
         var previous = _currentFolder;
@@ -3010,7 +3017,7 @@ public sealed class MainForm : Form, IBookmarkHost
 
         _list.DropFolder = folder;   // R-78: ドロップの説明に使う
         var sameFolder = PathEquals(previous, folder);
-        _list.SetEntries(entries, cursor, keepScroll: sameFolder);
+        _list.SetEntries(entries, cursor, keepScroll: sameFolder, revealCursor: revealCursor);
         // R-80: 検索中の再表示は一致を求め直す。別のフォルダへ移ったら、元の位置は意味を失うので確定として閉じる
         if (sameFolder) _search.Rematch();
         else _search.Close(restore: false);

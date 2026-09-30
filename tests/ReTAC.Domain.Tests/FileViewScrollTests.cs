@@ -183,4 +183,57 @@ public class FileViewScrollTests
             VerticalBarWidth = 17, HorizontalBarHeight = 17, ExtensionOffset = 150,
         }).AutoScrollBand);
     }
+
+    // ---- R-123: 再表示で、先頭に見えていた項目の段を保つ ----
+
+    [Fact]
+    public void 見えている範囲のいちばん小さい添字が先頭の項目()
+    {
+        var layout = Columns();
+        Assert.Equal(0, FileViewScroll.FirstVisible(layout, default, 500, 500, 100));
+        Assert.Equal(50, FileViewScroll.FirstVisible(layout, new ScrollPosition(2, 0), 500, 500, 100));   // 3 列目の先頭
+        Assert.Equal(-1, FileViewScroll.FirstVisible(layout, default, 500, 500, 0));
+    }
+
+    [Fact]
+    public void 前に項目が足されても_先頭に見えていた項目の列が左端に来る()
+    {
+        var layout = Columns();
+        var position = new ScrollPosition(2, 0);          // 先頭は 50 番
+        // 30 件が前に足され、50 番だった項目は 80 番（4 列目）になった
+        var after = ColumnLayout.Compute(130, maxBaseWidth: 100, maxExtensionWidth: 30, lineHeight: 18, viewportHeight: 500,
+            iconWidth: 16, gap: 4, rowPadding: 2, columnPadding: 4);
+        var kept = FileViewScroll.KeepAnchor(layout, position, 50, after, 80, 130, 500, 500);
+        Assert.Equal(new ScrollPosition(3, 0), kept);
+    }
+
+    [Fact]
+    public void スクロールしていない軸は0のままにする()
+    {
+        var layout = Columns();
+        var after = ColumnLayout.Compute(130, maxBaseWidth: 100, maxExtensionWidth: 30, lineHeight: 18, viewportHeight: 500,
+            iconWidth: 16, gap: 4, rowPadding: 2, columnPadding: 4);
+        // 先頭にいる（0 段）。先頭だった 0 番が 30 番（2 列目）になっても、0 段のまま
+        Assert.Equal(default, FileViewScroll.KeepAnchor(layout, default, 0, after, 30, 130, 500, 500));
+    }
+
+    [Fact]
+    public void 範囲の外になるときは範囲に収め_先頭の項目が無ければ座標を収めるだけ()
+    {
+        var layout = Columns();
+        var small = ColumnLayout.Compute(10, maxBaseWidth: 100, maxExtensionWidth: 30, lineHeight: 18, viewportHeight: 500,
+            iconWidth: 16, gap: 4, rowPadding: 2, columnPadding: 4);
+        Assert.Equal(default, FileViewScroll.KeepAnchor(layout, new ScrollPosition(2, 0), 50, small, 5, 10, 500, 500));
+        Assert.Equal(default, FileViewScroll.KeepAnchor(layout, new ScrollPosition(2, 0), -1, small, -1, 0, 500, 500));
+    }
+
+    [Fact]
+    public void 縦横にスクロールするレイアウトでは_横の段はそのまま縦だけ合わせる()
+    {
+        var layout = new GridLayout();                     // この試験用の入れ子のレイアウト（行高 20・横の 1 段 100px）
+        var position = new ScrollPosition(3, 10);          // 先頭は 10 行目
+        // 同じレイアウトで、10 行目だった項目が 14 行目になった
+        var kept = FileViewScroll.KeepAnchor(layout, position, 10, layout, 14, 100, 500, 200);
+        Assert.Equal(new ScrollPosition(3, 14), kept);
+    }
 }

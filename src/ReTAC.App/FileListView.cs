@@ -205,10 +205,14 @@ public sealed class FileListView : Control
     }
 
     /// <param name="keepScroll">
-    /// 同じフォルダの再表示。スクロール位置（縦横）を保つ。
-    /// 自動更新のたびにカーソル列へ引き戻されると、右の方を見ている最中に読めなくなる（R-10）
+    /// 同じフォルダの再表示。見ている所を動かさない（R-123）: 先頭に見えていた項目を名前で探し直し、画面の同じ段に置く。
+    /// 自動更新のたびにカーソルの位置へ引き戻されると、離れた所を見ている最中に操作できなくなる
     /// </param>
-    public void SetEntries(IReadOnlyList<Entry> entries, int cursorIndex = 0, bool keepScroll = false)
+    /// <param name="revealCursor">
+    /// 同じフォルダの再表示で、カーソルの項目を見える位置へ出すか。コマンドがカーソルを置く項目を決めた再表示（名前の変更・新規作成の直後）は true。
+    /// 自動更新・W・F5 は false で、そのときは再表示の前にカーソルが見えていた場合だけ見えるように保つ
+    /// </param>
+    public void SetEntries(IReadOnlyList<Entry> entries, int cursorIndex = 0, bool keepScroll = false, bool revealCursor = true)
     {
         // 自動更新などでボタンを押したまま一覧が入れ替わることがある。押した時点の添字は
         // 別の項目を指すことになるので、離した時点の処理（マーク・右ボタンのドラッグ／メニュー）は捨てる
@@ -218,23 +222,42 @@ public sealed class FileListView : Control
         _rightDown = null;
         _markOnRelease.Cancel();
         _dragIndex = -1;
-        var scroll = _scroll;
+
+        // R-123: 入れ替える前に、先頭に見えていた項目（名前で上へ辿る並び）と、カーソルが見えていたかを控える
+        var (oldLayout, oldScroll, oldViewport) = (_layout, _scroll, (Width: ViewportWidth, Height: ViewportHeight));
+        var anchorBefore = keepScroll ? FirstVisibleIndex : -1;
+        var anchorNames = CursorRestore.NamesUpward(_state, anchorBefore);
+        var cursorWasVisible = _state.Count == 0 || IsCursorVisible;
+
         _state = new ListState(entries);
         _indexOfPath = new(StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < _state.Count; i++) _indexOfPath[_state.Entries[i].FullPath] = i;
         _content = null;
         _state.MoveCursor(cursorIndex);
-        _scroll = keepScroll ? scroll : default;
-        if (!keepScroll) _wheel.Reset();
+        if (!keepScroll) { _scroll = default; _wheel.Reset(); }
         RecomputeLayout();
-        // 見えている位置ならこの中で何も起きない。カーソルが画面外のときだけ動く
-        EnsureCursorVisible();
+        if (keepScroll)
+        {
+            var anchorAfter = anchorBefore < 0 || _state.Count == 0 ? -1 : CursorRestore.IndexAfterReload(anchorNames, entries);
+            _scroll = FileViewScroll.KeepAnchor(oldLayout, oldScroll, anchorBefore, _layout, anchorAfter, _state.Count,
+                oldViewport.Width, oldViewport.Height);
+            UpdateScrollBars();   // 範囲へのクランプもここ
+        }
+        // R-123: 同じフォルダの再表示では、カーソルが見えていなかったならカーソルの位置へ動かさない
+        if (!keepScroll || revealCursor || cursorWasVisible) EnsureCursorVisible();
         RefreshHot();            // R-116: 入れ替わった一覧のマウスの下の項目
         NextImageGeneration();   // R-117: 同じ内容の読み直しでも進める（届く前の結果は別の一覧のもの）
         Invalidate();
         CursorMoved?.Invoke(this, EventArgs.Empty);
         MarksChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>R-123: 見えている範囲の先頭の項目。無ければ -1。</summary>
+    internal int FirstVisibleIndex => FileViewScroll.FirstVisible(_layout, _scroll, ViewportWidth, ViewportHeight, _state.Count);
+
+    /// <summary>R-123: カーソルの項目が、スクロールしなくても見えているか（レイアウトが「動かさなくてよい」と答えるか）。</summary>
+    internal bool IsCursorVisible =>
+        _state.Count > 0 && _layout.Reveal(_state.CursorIndex, _scroll, ViewportWidth, ViewportHeight) == _scroll;
 
     // ---- サムネイルと OS の印（R-117 / R-118） ----------------------------------
 
@@ -746,9 +769,11 @@ public sealed class FileListView : Control
         }
         if (changed)
         {
+            // R-123: カーソルが見えていなかったなら、列が広がってもカーソルの位置へ動かさない
+            var cursorWasVisible = IsCursorVisible;
             _layout = ComputeDetails();
             UpdateScrollBars();
-            EnsureCursorVisible();   // 横のバーが出て表示の高さが 1 行減ると、最下行のカーソルが隠れる
+            if (cursorWasVisible) EnsureCursorVisible();   // 横のバーが出て表示の高さが 1 行減ると、最下行のカーソルが隠れる
         }
         if (present) Invalidate();
     }

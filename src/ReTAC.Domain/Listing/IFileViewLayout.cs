@@ -118,4 +118,49 @@ public static class FileViewScroll
         var offset = layout.ScrollOffset(position);
         return (bounds.X - offset.X, bounds.Y - offset.Y + layout.HeaderHeight, bounds.Width, bounds.Height);
     }
+
+    /// <summary>
+    /// R-123: 見えている範囲の先頭の項目（いちばん小さい添字。一覧なら左端の列の先頭、ほかは先頭の行の左端）。無ければ -1。
+    /// viewport は見出しとスクロールバーを除いた、項目を描ける領域の大きさ。
+    /// </summary>
+    public static int FirstVisible(IFileViewLayout layout, ScrollPosition position, int viewportWidth, int viewportHeight, int entryCount)
+    {
+        var (x, y) = layout.ScrollOffset(position);
+        var visible = layout.IndexesIn(x, y, viewportWidth, viewportHeight, entryCount);
+        return visible.Count == 0 ? -1 : visible.Min();
+    }
+
+    /// <summary>
+    /// R-123: 同じフォルダの再表示で、先頭に見えていた項目（anchor）が画面の同じ段に来るスクロール位置。
+    /// スクロールの座標をそのまま保つと、見えている所より前に項目が足されたり消えたりしたとき、画面の中の項目がずれる。
+    /// その軸でスクロールしていなければ（0 段）0 段のまま（先頭にいるとき、前に入った項目を隠す向きへ勝手に動かさない）。
+    /// 範囲の外になるときは範囲に収める。anchor が無い（どちらかが負）なら、座標を範囲に収めるだけ。
+    /// </summary>
+    public static ScrollPosition KeepAnchor(IFileViewLayout before, ScrollPosition position, int anchorBefore,
+        IFileViewLayout after, int anchorAfter, int entryCountAfter, int viewportWidth, int viewportHeight)
+    {
+        var max = after.MaxScrollPosition(entryCountAfter, viewportWidth, viewportHeight);
+        if (anchorBefore < 0 || anchorAfter < 0)
+            return new ScrollPosition(Math.Clamp(position.X, 0, max.X), Math.Clamp(position.Y, 0, max.Y));
+
+        var was = before.ItemBounds(anchorBefore);
+        var offset = before.ScrollOffset(position);
+        var now = after.ItemBounds(anchorAfter);
+        // 画面の中での位置（中身の座標 − ずれ）を保つずれを求め、それを段に直す
+        var x = position.X == 0 ? 0 : StepFor(step => after.ScrollOffset(new ScrollPosition(step, 0)).X, now.X - (was.X - offset.X), max.X);
+        var y = position.Y == 0 ? 0 : StepFor(step => after.ScrollOffset(new ScrollPosition(0, step)).Y, now.Y - (was.Y - offset.Y), max.Y);
+        return new ScrollPosition(x, y);
+    }
+
+    /// <summary>ずれが target 以上になる最小の段（ずれは段に対して単調に増える）。max を超えない。</summary>
+    private static int StepFor(Func<int, int> offsetOf, int target, int max)
+    {
+        var (low, high) = (0, max);
+        while (low < high)
+        {
+            var middle = (low + high) / 2;
+            if (offsetOf(middle) < target) low = middle + 1; else high = middle;
+        }
+        return low;
+    }
 }

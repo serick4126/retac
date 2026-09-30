@@ -593,6 +593,19 @@
       "testedBy": "tests/ReTAC.Domain.Tests/LayoutContractTests.cs, tests/ReTAC.Domain.Tests/DetailsLayoutTests.cs, tests/ReTAC.Domain.Tests/ColumnLayoutTests.cs, tests/ReTAC.Domain.Tests/GridLayoutTests.cs, tests/ReTAC.Domain.Tests/ContentLayoutTests.cs, tests/ReTAC.Domain.Tests/FileListViewTilesTests.cs, tests/ReTAC.Domain.Tests/FileListViewContentTests.cs"
     },
     {
+      "id": "INV-REDISPLAY-KEEPS-VIEW",
+      "status": "enforced",
+      "specIds": ["R-123", "R-70"],
+      "applies": [
+        "type:ReTAC.Domain.Listing.FileViewScroll",
+        "type:ReTAC.Domain.Selection.CursorRestore"
+      ],
+      "rule": "同じフォルダの再表示（自動更新・W・F5・ファイル操作のあと）では、見ている所を動かさない。先頭に見えていた項目を名前で探し直して画面の同じ段に置き（消えていたら、その前にあって残っている最も近い項目）、その軸でスクロールしていなければ先頭のままにする。カーソルが画面の外にあるとき、カーソルの位置へスクロールを寄せない。カーソルを見せるのは、別のフォルダへ移ったとき・コマンドがカーソルを置く項目を決めたとき・ソートを変えたとき・再表示の前にカーソルが見えていたときだけ。",
+      "enforcedBy": "domain:FileViewScroll.FirstVisible・KeepAnchor / domain:CursorRestore.NamesUpward・IndexAfterReload / app:FileListView.SetEntries（keepScroll・revealCursor）・FlushResolvedTypes / app:MainForm.OpenFolderAsync（keepCursor なら、呼び出し側が revealCursor を渡したときだけカーソルを見せる。ApplySortOrder が渡す）",
+      "testedBy": "tests/ReTAC.Domain.Tests/FileViewScrollTests.cs, tests/ReTAC.Domain.Tests/CursorRestoreTests.cs, tests/ReTAC.Domain.Tests/FileListViewRedisplayTests.cs",
+      "note": "再表示のあとに無条件で EnsureCursorVisible を呼ぶと、離れた所を見ている最中に自動更新のたびにカーソルの位置へ引き戻され、大量のファイルを処理しているフォルダで操作できなくなる（Phase 18 で直した）。"
+    },
+    {
       "id": "INV-THUMBNAIL-NO-CLOUD-DOWNLOAD",
       "status": "enforced",
       "specIds": ["R-117", "R-118"],
