@@ -39,7 +39,8 @@ public static class PathResolver
     private static string? ResolveCore(string currentFolder, string input)
     {
         // 全角空白だけの入力は名前として意味があるので IsNullOrWhiteSpace では弾けない
-        input = InputText.TrimEdge(input);
+        // R-127: 囲みの二重引用符も外す。パスを入れる欄はどれもここを通るので、ここ 1 か所で全部の欄に効く
+        input = InputText.Unquote(input);
         if (input.Length == 0) return null;
 
         // 絶対パス・UNC は明示的な指定なのでそのまま採る（R-52-4 と同じ考え方）

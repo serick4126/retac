@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Windows.Forms;
+using ReTAC.Domain.Navigation;
 using ReTAC.Domain.Tools;
 using ReTAC.Shell;
 
@@ -15,6 +16,9 @@ namespace ReTAC.App;
 /// </summary>
 public sealed class ExternalToolPage : UserControl
 {
+    /// <summary>R-127: 実行ファイルの欄の文字列を、保存・確認に使う形にする。囲みの二重引用符（「パスのコピー」の形）と端の空白を落とす。</summary>
+    internal static string NormalizePath(string text) => InputText.Unquote(text).Trim();
+
     private readonly SettingsDraft _draft;
     /// <summary>右の欄に出している項目。-1 なら無し</summary>
     private int _editing = -1;
@@ -174,7 +178,7 @@ public sealed class ExternalToolPage : UserControl
         tools[_editing] = tools[_editing] with
         {
             Name = _name.Text.Trim(),
-            Path = _path.Text.Trim(),
+            Path = NormalizePath(_path.Text),
             Arguments = _arguments.Text.Trim(),
             LaunchPerItem = _perItem.Checked,
             ShowInPopup = _popup.Checked,
@@ -226,7 +230,7 @@ public sealed class ExternalToolPage : UserControl
     private async Task CheckPathAsync()
     {
         var editing = _editing;
-        var path = _path.Text.Trim();
+        var path = NormalizePath(_path.Text);
         _pathWarning = "";
         _pathIsScript = false;
         RenderWarning();
@@ -241,7 +245,7 @@ public sealed class ExternalToolPage : UserControl
         });
 
         // 調べている間に別のツールを選んだ・パスを打ち直したなら、この結果は捨てる
-        if (IsDisposed || editing != _editing || path != _path.Text.Trim()) return;
+        if (IsDisposed || editing != _editing || path != NormalizePath(_path.Text)) return;
 
         var messages = new List<string>();
         if (!found) messages.Add("パスが見つかりません（後でインストールする場合は、このまま保存できます）。");

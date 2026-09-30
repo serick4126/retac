@@ -56,7 +56,7 @@ public sealed class QuickAccessEntryDialog : Form
         FormClosing += (_, e) =>
         {
             if (DialogResult != DialogResult.OK) return;
-            if (Directory.Exists(InputText.TrimEdge(_path.Text))) return;
+            if (Directory.Exists(InputText.Unquote(_path.Text))) return;
             // R-48: 誤りは操作を中止せず入力欄に戻す
             MessageBox.Show(this, $"{_path.Text} は存在しません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             e.Cancel = true;
@@ -70,7 +70,8 @@ public sealed class QuickAccessEntryDialog : Form
         AutoScaleMode = AutoScaleMode.Dpi;   // R-66: DPI に追従させる
     }
 
-    public QuickAccessEntry Entry => new(InputText.TrimEdge(_title.Text), InputText.TrimEdge(_path.Text));
+    // R-127: この欄はパスの解決の処理を通らないので、囲みの二重引用符をここで外す
+    public QuickAccessEntry Entry => new(InputText.TrimEdge(_title.Text), InputText.Unquote(_path.Text));
 
     /// <summary>フォルダ名をタイトルの初期値にする。ドライブ直下は名前が無いのでパスをそのまま。</summary>
     private static string TitleFrom(string path)
@@ -81,7 +82,7 @@ public sealed class QuickAccessEntryDialog : Form
 
     private void Browse()
     {
-        if (FolderBrowser.Select(this, InputText.TrimEdge(_path.Text), _currentFolder) is { } selected)
+        if (FolderBrowser.Select(this, InputText.Unquote(_path.Text), _currentFolder) is { } selected)
         {
             _path.Text = selected;   // R-52-3: 選んだ結果は入力欄へ流し込む
             _path.SelectAll();

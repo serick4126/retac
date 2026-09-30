@@ -77,6 +77,24 @@ public class PathResolverTests
     {
         Assert.Equal(@"C:\work\sub", PathResolver.Resolve(@"C:\work", "  sub  "));
     }
+
+    [Theory]
+    [InlineData(@"C:\work", "\"C:\\other\\dir\"", @"C:\other\dir")]
+    [InlineData(@"C:\work", "\"..\\other\"", @"C:\other")]           // 相対パス（R-61）
+    [InlineData(@"C:\work", "\"sub\"", @"C:\work\sub")]
+    [InlineData(@"C:\work", "\"\\\\server\\share\\dir\"", @"\\server\share\dir")]
+    [InlineData(@"C:\work", "\"C:\\other\\dir", @"C:\other\dir")]    // 片方だけ
+    public void 二重引用符で囲んだパスも解決できる(string current, string input, string expected) =>
+        Assert.Equal(expected, PathResolver.Resolve(current, input));
+
+    [Theory]
+    [InlineData("\"C:\\a\" \"C:\\b\"")]   // 複数のパスを 1 つとして読まない
+    [InlineData("C:\\a\"b\\c")]
+    [InlineData("\"\"C:\\a\"\"")]         // 二重に囲んだものは、残った引用符で解決できない
+    [InlineData("\"\"")]
+    [InlineData("\"")]
+    public void 途中に引用符が残る入力と_引用符だけの入力は解決できない(string input) =>
+        Assert.Null(PathResolver.Resolve(@"C:\work", input));
 }
 
 public class ConflictResolverTests

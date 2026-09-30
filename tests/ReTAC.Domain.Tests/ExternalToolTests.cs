@@ -1,3 +1,4 @@
+using ReTAC.App;
 using ReTAC.Domain.Selection;
 using ReTAC.Domain.Tools;
 
@@ -41,4 +42,13 @@ public class ExternalToolTests
     {
         Assert.Equal(expected, LaunchTargets.NeedsConfirmation(count));
     }
+
+    [Theory]
+    [InlineData("\"C:\\tools\\my tool.exe\"", @"C:\tools\my tool.exe")]   // R-127: 「パスのコピー」の形
+    [InlineData("  \"notepad.exe\"  ", "notepad.exe")]
+    [InlineData(@"C:\tools\a.exe", @"C:\tools\a.exe")]
+    [InlineData("  notepad.exe ", "notepad.exe")]
+    [InlineData("", "")]
+    public void 外部ツールの実行ファイルの欄は_囲みの引用符を外して保存する(string input, string expected) =>
+        Assert.Equal(expected, ExternalToolPage.NormalizePath(input));
 }

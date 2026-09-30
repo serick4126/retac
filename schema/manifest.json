@@ -6549,11 +6549,11 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 184
+        "line": 188
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 207
+        "line": 211
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
@@ -6595,7 +6595,7 @@
     "F-02": [
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 10
+        "line": 11
       },
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentExpander.cs",
@@ -6691,7 +6691,7 @@
     "F-04": [
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 9
+        "line": 10
       },
       {
         "file": "src/ReTAC.App/MacroReferenceDialog.cs",
@@ -6987,7 +6987,7 @@
     "M-1": [
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 37
+        "line": 41
       },
       {
         "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
@@ -7085,7 +7085,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 223
+        "line": 227
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -7185,7 +7185,7 @@
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 93
+        "line": 94
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -7605,7 +7605,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 9
+        "line": 10
       },
       {
         "file": "src/ReTAC.App/FileViewPage.cs",
@@ -7659,7 +7659,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 63
+        "line": 67
       },
       {
         "file": "src/ReTAC.App/FileViewPage.cs",
@@ -8223,7 +8223,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 38
+        "line": 42
       },
       {
         "file": "src/ReTAC.App/IncrementalSearchBar.cs",
@@ -8249,7 +8249,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 38
+        "line": 42
       },
       {
         "file": "src/ReTAC.App/GroupedListView.cs",
@@ -10148,6 +10148,24 @@
         "line": 131
       }
     ],
+    "R-127": [
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 19
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 73
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/InputText.cs",
+        "line": 20
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
+        "line": 42
+      }
+    ],
     "R-13": [
       {
         "file": "src/ReTAC.Domain/Commands/CommandId.cs",
@@ -11029,7 +11047,7 @@
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 86
+        "line": 87
       },
       {
         "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
@@ -11039,7 +11057,7 @@
     "R-52-4": [
       {
         "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
-        "line": 45
+        "line": 46
       }
     ],
     "R-52-5": [
@@ -11097,7 +11115,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 59
+        "line": 63
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -11285,7 +11303,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
-        "line": 60
+        "line": 61
       }
     ],
     "R-62": [

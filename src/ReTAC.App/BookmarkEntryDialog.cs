@@ -132,7 +132,7 @@ public sealed class BookmarkEntryDialog : Form
                 _command.Text = CommandText();
                 return;
             case BookmarkKind.Folder:
-                if (FolderBrowser.Select(this, InputText.TrimEdge(_path.Text), _currentFolder) is not { } folder) return;
+                if (FolderBrowser.Select(this, InputText.Unquote(_path.Text), _currentFolder) is not { } folder) return;
                 _path.Text = folder;   // R-52-3: 選んだ結果は入力欄へ流し込む
                 break;
             case BookmarkKind.File:

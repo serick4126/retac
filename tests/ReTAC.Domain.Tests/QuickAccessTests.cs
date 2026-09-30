@@ -1,3 +1,4 @@
+using ReTAC.App;
 using ReTAC.Domain.Navigation;
 
 namespace ReTAC.Domain.Tests;
@@ -118,5 +119,12 @@ public class QuickAccessTests
         list.ReplaceAll([new QuickAccessEntry("仕事", @"D:\work"), new QuickAccessEntry("別名", @"D:\work")]);
 
         Assert.Equal(["仕事"], list.Items.Select(e => e.Title));
+    }
+
+    [Fact]
+    public void 登録のダイアログは_引用符で囲んだパスから引用符を外して登録する()
+    {
+        using var dialog = new QuickAccessEntryDialog(new QuickAccessEntry("win", "\"C:\\Windows\""), @"C:\");
+        Assert.Equal(@"C:\Windows", dialog.Entry.Path);
     }
 }

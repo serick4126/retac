@@ -27,4 +27,12 @@ public class JumpInputTests
     [InlineData("a|b")]           // 名前に使えない文字
     [InlineData("")]
     public void 見つからない入力は行き先なし(string input) => Assert.Null(Decide(input));
+
+    [Fact]
+    public void 引用符で囲んだフォルダのパスは_そのフォルダへ() =>
+        Assert.Equal(new JumpTarget(@"C:\Work\Sub", null), Decide("\"C:\\Work\\Sub\""));
+
+    [Fact]
+    public void 引用符で囲んだファイルのパスは_そのフォルダへ移ってカーソルを合わせる() =>
+        Assert.Equal(new JumpTarget(@"C:\Work", "a.txt"), Decide("\"C:\\Work\\a.txt\""));
 }
