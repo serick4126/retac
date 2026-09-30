@@ -312,6 +312,11 @@ public class FileListViewLassoTests
         list.RaiseMouseMove(new MouseEventArgs(MouseButtons.Left, 1, x - 30, list.Layout.HeaderHeight + row * 5 + 2, 0));
         Assert.True(list.LassoActive);
 
+        // スクロールの前に仮のマークを一度作らせる（キャッシュ。AfterScroll が捨てないと古いまま残る）
+        var (bx, by, bw, bh) = list.LassoRect;
+        var before = list.Layout.IndexesIn(bx, by, bw, bh, list.State.Count).ToHashSet();
+        for (var i = 0; i < list.State.Count; i++) Assert.Equal(before.Contains(i), list.IsMarkedForDisplay(i));
+
         list.ScrollWheel(-2);   // 中身がずれる。マウスは動かない
 
         var (rx, ry, rw, rh) = list.LassoRect;
@@ -333,13 +338,16 @@ public class FileListViewLassoTests
         var start = new Point(x, list.Layout.HeaderHeight + row * 2 + 2);
         list.LassoPress(start, ctrl: false);
         list.PressLeft(start, shift: false);
+        Assert.True(list.PendingDragIndex >= 0);   // 名前以外の行の上で押した = D&D の始まりの候補が付いている
         var end = new Point(x - 30, list.Layout.HeaderHeight + row * 4 + 2);
         list.RaiseMouseMove(new MouseEventArgs(MouseButtons.Left, 1, end.X, end.Y, 0));
         list.RaiseMouseUp(new MouseEventArgs(MouseButtons.Left, 1, end.X, end.Y, 0));
         Assert.False(list.LassoActive);
         Assert.Null(started);
+        // 離した時点で押した状態が消えている（次の MouseMove の分岐に頼らない）
+        Assert.Equal(-1, list.PendingDragIndex);
 
-        // ボタンを押さずに動かしても、前の投げ縄の状態でドラッグは始まらない
+        // 離した後に動かしても、前の投げ縄の状態でドラッグは始まらない
         list.RaiseMouseMove(new MouseEventArgs(MouseButtons.Left, 1, end.X + 80, end.Y, 0));
         Assert.Null(started);
 

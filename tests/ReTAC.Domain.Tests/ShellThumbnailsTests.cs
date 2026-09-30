@@ -298,4 +298,43 @@ public class ShellThumbnailsTests
         }
         finally { ShellImageWorker.UnexpectedError = before; }
     }
+
+    [Fact]
+    public void 知らせる側が例外を投げても_スレッドは続き_次の項目が届く()
+    {
+        var before = ShellImageWorker.UnexpectedError;
+        ShellImageWorker.UnexpectedError = _ => throw new InvalidOperationException("retac-test-reporter");
+        try
+        {
+            using var worker = new ShellImageWorker();
+            worker.OverlayOverride = path => path == "bad" ? throw new NullReferenceException("retac-test-unexpected2") : 3;
+            using var done = new ManualResetEventSlim(false);
+            worker.Completed += r => { if (r.Request.FullPath == "good") done.Set(); };
+            worker.Replace([Req("bad", thumbnail: false), Req("good", thumbnail: false)]);
+            Assert.True(done.Wait(TimeSpan.FromSeconds(5)));
+        }
+        finally { ShellImageWorker.UnexpectedError = before; }
+    }
+
+    [Fact]
+    public void 普通の失敗は知らされない()
+    {
+        var reported = new ConcurrentQueue<Exception>();
+        var before = ShellImageWorker.UnexpectedError;
+        ShellImageWorker.UnexpectedError = reported.Enqueue;
+        try
+        {
+            using var worker = new ShellImageWorker();
+            worker.GetOverride = (_, _, _) => null;   // サムネイルが無い。例外は出ない
+            worker.OverlayOverride = _ => 3;
+            using var done = new ManualResetEventSlim(false);
+            worker.Completed += r => { if (r.Request.FullPath == "good") done.Set(); };
+            // 先の要求（null の失敗）を処理し終えたあとの "good" が届いたら、先の分も終わっている
+            worker.Replace([Req("plain"), Req("good", thumbnail: false)]);
+            Assert.True(done.Wait(TimeSpan.FromSeconds(5)));
+            // static なので、ほかのテストが投げた例外（メッセージが retac-test- で始まる）は混ざりうる。それ以外が届いていなければよい
+            Assert.DoesNotContain(reported, e => !e.Message.StartsWith("retac-test-"));
+        }
+        finally { ShellImageWorker.UnexpectedError = before; }
+    }
 }

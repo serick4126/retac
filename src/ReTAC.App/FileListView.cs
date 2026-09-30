@@ -1609,6 +1609,9 @@ public sealed class FileListView : Control
     private Point _dragOrigin;
     private int _dragIndex = -1;
 
+    /// <summary>テスト用: D&amp;D の始まりとして押している項目。無ければ -1。</summary>
+    internal int PendingDragIndex => _dragIndex;
+
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
