@@ -889,7 +889,8 @@ public sealed class FileListView : Control
         if (!wasActive) _markOnRelease.Moved();   // 詳細表示の名前以外で押していたら、保留したカーソルの移動を捨てる
         _lassoMouse = location;
         _lassoCovered = null;
-        SetAutoScroll(_layout.AutoScrollDirection(location.X, location.Y - _layout.HeaderHeight, ViewportWidth, ViewportHeight));
+        var direction = _layout.AutoScrollDirection(location.X, location.Y - _layout.HeaderHeight, ViewportWidth, ViewportHeight);
+        SetAutoScroll(direction, LassoScrollInterval(direction));
         Invalidate();
     }
 
@@ -1511,13 +1512,25 @@ public sealed class FileListView : Control
         if (_dropTarget != -1) { _dropTarget = -1; Invalidate(); }
     }
 
-    private void SetAutoScroll((int X, int Y) direction)
+    /// <summary>
+    /// D&amp;D は一定（R-110-3）。投げ縄は端からの深さで間隔を変える（Phase 16 §10）ので、始めるときに interval を渡す。
+    /// 向きが同じ間は Interval に触れない（動かすたびに触ると、Timer が数えなおして永久に鳴らない）。途中の変更は Tick の終わりで行う。
+    /// </summary>
+    internal void SetAutoScroll((int X, int Y) direction, int interval = AutoScrollInterval)
     {
         if (direction == _autoScrollDirection) return;
         _autoScrollDirection = direction;
         _autoScroll.Stop();
-        if (direction != (0, 0)) _autoScroll.Start();
+        if (direction == (0, 0)) return;
+        _autoScroll.Interval = interval;
+        _autoScroll.Start();
     }
+
+    internal int AutoScrollTimerInterval => _autoScroll.Interval;
+
+    /// <summary>Phase 16 §10: 最後のマウスの位置での投げ縄の自動スクロールの間隔。帯の幅はレイアウトが答える。</summary>
+    private int LassoScrollInterval((int X, int Y) direction) => FileViewScroll.LassoInterval(
+        _layout.AutoScrollBand, direction, _lassoMouse.X, _lassoMouse.Y - _layout.HeaderHeight, ViewportWidth, ViewportHeight);
 
     /// <summary>R-110-3: 1 段。向きも段の量もレイアウトが決める（今の一覧では横に 1 列）。スクロールできる端まで来たら止める。</summary>
     internal void AutoScrollTick()
@@ -1527,6 +1540,7 @@ public sealed class FileListView : Control
         _scroll = next;
         UpdateScrollBars();
         AfterScroll();   // 枠の位置は次の DragOver で決め直す（OLE はマウスが止まっていても DragOver を呼び続ける）
+        if (LassoActive) _autoScroll.Interval = LassoScrollInterval(_autoScrollDirection);   // 動いたマウスの深さを次の 1 段から反映する
     }
 
     /// <summary>

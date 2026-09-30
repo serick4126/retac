@@ -16,6 +16,7 @@ public class FileViewScrollTests
         private const int RowHeight = 20, RowWidth = 800, HorizontalStep = 100;
         public int IndexAt(int x, int y, int entryCount) => x < RowWidth && y / RowHeight < entryCount ? y / RowHeight : -1;
         public (int X, int Y, int Width, int Height) ItemBounds(int index) => (0, index * RowHeight, RowWidth, RowHeight);
+        public int AutoScrollBand => RowHeight;
         public (int X, int Y) AutoScrollDirection(int x, int y, int viewportWidth, int viewportHeight) =>
             (x < RowHeight ? -1 : x >= viewportWidth - RowHeight ? 1 : 0, y < RowHeight ? -1 : y >= viewportHeight - RowHeight ? 1 : 0);
         public (int X, int Y) ScrollOffset(ScrollPosition position) => (position.X * HorizontalStep, position.Y * RowHeight);
@@ -142,5 +143,44 @@ public class FileViewScrollTests
         Assert.Equal(20 + 2 * 20, y);
         Assert.Equal(5, FileViewScroll.IndexAt(layout, scrolled, x + 1, y + 1, 50));
         Assert.Equal(5, FileViewScroll.IndexAt(layout, scrolled, x + w - 1, y + h - 1, 50));
+    }
+
+    [Theory]
+    [InlineData(24, 200)]    // 帯に入った所（深さ 0）
+    [InlineData(23, 200 - 170 / 48)]   // 深さ 1
+    [InlineData(0, 200 - 170 * 24 / 48)]   // 深さ 24（帯の幅）は中間
+    [InlineData(-24, 30)]    // 帯の幅の 2 倍（コントロールの外へ 24）
+    [InlineData(-500, 30)]   // それより深くても下限
+    [InlineData(300, 200)]   // 帯の外（向きが 0 の軸は見ない）
+    public void 投げ縄の自動スクロールの間隔は帯からの深さで直線に縮む_上端(int y, int expected)
+    {
+        var direction = y < 24 ? (0, -1) : (0, 0);
+        Assert.Equal(expected, FileViewScroll.LassoInterval(24, direction, 100, y, 500, 500));
+    }
+
+    [Fact]
+    public void 投げ縄の自動スクロールの間隔は下端と右端でも同じ深さの数え方で_軸ごとに深いほうを取る()
+    {
+        // 下端: 帯は 476 から。深さ 0 → 200、48 → 30
+        Assert.Equal(200, FileViewScroll.LassoInterval(24, (0, 1), 100, 476, 500, 500));
+        Assert.Equal(30, FileViewScroll.LassoInterval(24, (0, 1), 100, 524, 500, 500));
+        Assert.Equal(30, FileViewScroll.LassoInterval(24, (0, 1), 100, 900, 500, 500));
+        // 右下の角: 縦は浅く（深さ 0）、横は深い（48）→ 深いほう
+        Assert.Equal(30, FileViewScroll.LassoInterval(24, (1, 1), 524, 476, 500, 500));
+        Assert.Equal(200, FileViewScroll.LassoInterval(24, (1, 1), 476, 476, 500, 500));
+        // 向きが 0 の軸はどれだけ外へ出ていても見ない
+        Assert.Equal(200, FileViewScroll.LassoInterval(24, (0, 1), 9999, 476, 500, 500));
+    }
+
+    [Fact]
+    public void すべてのレイアウトが自動スクロールの帯の幅を答える()
+    {
+        Assert.Equal(20, Columns().AutoScrollBand);
+        Assert.Equal(20, DetailsLayout.Compute(new DetailsLayoutInput
+        {
+            EntryCount = 5, RowHeight = 20, IconWidth = 16, ColumnPadding = 4, HeaderHeight = 20, StepWidth = 32,
+            Columns = [new(null, 200, 60, null)], FitToWindow = false, ClientWidth = 500, ClientHeight = 200,
+            VerticalBarWidth = 17, HorizontalBarHeight = 17, ExtensionOffset = 150,
+        }).AutoScrollBand);
     }
 }

@@ -174,6 +174,8 @@ public sealed record DetailsLayout : IFileViewLayout
         return new((overflow + StepWidth - 1) / StepWidth, Math.Max(0, entryCount - VisibleRows(viewportHeight)));
     }
 
+    public int AutoScrollBand => RowHeight;
+
     /// <summary>R-110-3: 端（項目 1 行分の高さ）で縦横それぞれの向き。横は横スクロールバーがあるときだけ。</summary>
     public (int X, int Y) AutoScrollDirection(int x, int y, int viewportWidth, int viewportHeight) => (
         !ScrollBars.Horizontal ? 0 : x < RowHeight ? -1 : x >= viewportWidth - RowHeight ? 1 : 0,

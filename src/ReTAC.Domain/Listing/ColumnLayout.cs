@@ -29,6 +29,8 @@ public sealed record ColumnLayout : IFileViewLayout
     /// <summary>R-110-2: 項目の矩形（中身の座標）。落とす先の枠に使う。</summary>
     public (int X, int Y, int Width, int Height) ItemBounds(int index) => (XOf(index), YOf(index), ColumnWidth, RowHeight);
 
+    public int AutoScrollBand => RowHeight;
+
     /// <summary>R-110-3: 一覧は横スクロールだけなので、左右の端（項目 1 行分の高さ）だけで横の向きを返す。縦は常に 0。</summary>
     public (int X, int Y) AutoScrollDirection(int x, int y, int viewportWidth, int viewportHeight) =>
         (x < RowHeight ? -1 : x >= viewportWidth - RowHeight ? 1 : 0, 0);

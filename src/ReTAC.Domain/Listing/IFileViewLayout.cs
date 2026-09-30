@@ -22,6 +22,8 @@ public interface IFileViewLayout
     /// <param name="y">見出しを引いた項目の領域での座標。viewportHeight も見出しを除いた高さ</param>
     /// <returns>軸ごとに -1 は前へ、1 は後ろへ、0 はスクロールしない。端はその軸の端から項目 1 行分の高さ。角なら両方</returns>
     (int X, int Y) AutoScrollDirection(int x, int y, int viewportWidth, int viewportHeight);
+    /// <summary>Phase 16 §10: AutoScrollDirection が向きを返す端の帯の幅（ピクセル）。投げ縄の自動スクロールの速さは、この帯からの深さで決める。</summary>
+    int AutoScrollBand { get; }
     /// <summary>スクロール位置のときに、中身をどれだけずらして見せるか（ピクセル。縦横）。</summary>
     (int X, int Y) ScrollOffset(ScrollPosition position);
     /// <summary>いちばん後ろのスクロール位置（軸ごと）。</summary>
@@ -77,6 +79,24 @@ public static class FileViewScroll
         return new ScrollPosition(
             Math.Clamp(position.X + Math.Sign(direction.X), 0, max.X),
             Math.Clamp(position.Y + Math.Sign(direction.Y), 0, max.Y));
+    }
+
+    /// <summary>投げ縄の自動スクロールの間隔（ミリ秒）。端の帯に入った所（深さ 0）で遅い方、帯の幅の 2 倍の深さで速い方。</summary>
+    public const int LassoSlowInterval = 200, LassoFastInterval = 30;
+
+    /// <summary>
+    /// Phase 16 §10: 投げ縄の自動スクロールの間隔。深さは帯の内側の境界から測り、帯の外・コントロールの外へ出た分も数える
+    /// （マウスをつかんでいるので座標は範囲の外になる）。深さ 0 で 200ms、帯の幅の 2 倍以上で 30ms、その間は直線。
+    /// 軸ごとに向きのある軸だけを見て、深いほうを取る。x・y・viewport は AutoScrollDirection と同じ座標。
+    /// </summary>
+    public static int LassoInterval(int band, (int X, int Y) direction, int x, int y, int viewportWidth, int viewportHeight)
+    {
+        var depth = Math.Max(
+            direction.X < 0 ? band - x : direction.X > 0 ? x - (viewportWidth - band) : 0,
+            direction.Y < 0 ? band - y : direction.Y > 0 ? y - (viewportHeight - band) : 0);
+        var full = Math.Max(1, band * 2);
+        var ratio = Math.Clamp(depth, 0, full);
+        return LassoSlowInterval - (LassoSlowInterval - LassoFastInterval) * ratio / full;
     }
 
     /// <summary>R-110-1: 見えている範囲の点にある項目。縦横どちらのずれも足し、見出しの分を引く。見出しの上なら -1。</summary>

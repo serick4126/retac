@@ -197,6 +197,8 @@ public sealed record GridLayout : IFileViewLayout
         return target;
     }
 
+    public int AutoScrollBand => EdgeBand;
+
     public (int X, int Y) AutoScrollDirection(int x, int y, int viewportWidth, int viewportHeight) =>
         (0, y < EdgeBand ? -1 : y >= viewportHeight - EdgeBand ? 1 : 0);
 

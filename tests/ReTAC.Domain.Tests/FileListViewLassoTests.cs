@@ -274,4 +274,25 @@ public class FileListViewLassoTests
         list.SetEntries(Enumerable.Range(0, 2).Select(i => TestEntries.File($"new{i}.txt")).ToList());
         Assert.Equal(-1, list.HotIndex);
     }
+
+    [Fact]
+    public void 投げ縄の自動スクロールは帯の深さで速くなり_D_Dは0_4秒のまま()
+    {
+        using var list = View(FileViewMode.LargeIcons, 200);
+        var band = list.Layout.AutoScrollBand;
+        list.RaiseMouseDown(Mouse(MouseButtons.Left, new Point(1, 1)));
+        list.RaiseMouseMove(Mouse(MouseButtons.Left, new Point(10, 395)));
+        Assert.Equal(FileViewScroll.LassoInterval(band, (0, 1), 10, 395, 600, 400), list.AutoScrollTimerInterval);
+        Assert.InRange(list.AutoScrollTimerInterval, 31, 199);
+        // 帯の 2 倍より深く（コントロールの外へ）引いたら、次の 1 段から最速
+        list.RaiseMouseMove(Mouse(MouseButtons.Left, new Point(10, 400 + band * 3)));
+        list.AutoScrollTick();
+        Assert.Equal(FileViewScroll.LassoFastInterval, list.AutoScrollTimerInterval);
+        list.RaiseMouseUp(Mouse(MouseButtons.Left, new Point(10, 500)));   // 終わったら止まる
+
+        list.SetAutoScroll((0, 1));   // D&D の始め方（interval は渡さない）
+        Assert.Equal(400, list.AutoScrollTimerInterval);
+        list.SetAutoScroll((0, 0));
+        Assert.False(list.IsHandleCreated);
+    }
 }
