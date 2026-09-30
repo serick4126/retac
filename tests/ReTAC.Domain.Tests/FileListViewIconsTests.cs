@@ -147,9 +147,9 @@ public class FileListViewIconsTests
     }
 
     [Fact]
-    public void カーソルの枠と落とす先の枠は名前がはみ出しても項目の矩形()
+    public void カーソルの枠は名前がはみ出したら帯まで囲み_落とす先の枠は項目の矩形のまま()
     {
-        // INV-LAYOUT-GEOMETRY-SINGLE-SOURCE / 仕様書の矩形の使い分け: 名前を全部描く帯は項目の外へ広がるが、枠は ItemBounds のまま
+        // INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: 枠の下辺が名前の帯を横切る線に見えないよう、カーソルの枠だけ帯を囲む
         var views = new FileViewSettings { Icons = new() { NameLines = 1 } };
         using var list = new FileListView { Size = new Size(600, 400) };
         list.SetView(FileViewMode.MediumIcons, views, new Dictionary<string, int?>(), SortOrder.Default);
@@ -157,8 +157,21 @@ public class FileListViewIconsTests
         Assert.True(list.NameLinesFor(0).Lines.Count > 1);   // 帯ははみ出す
         var (x, y, w, h) = FileViewScroll.VisibleBounds(list.Layout, list.ScrollPosition, 0);
         var item = new Rectangle(x, y, w, h);
-        Assert.Equal(item, list.CursorFrameBounds(0));
+        var frame = list.CursorFrameBounds(0);
         Assert.Equal(item, list.DropFrameBounds(0));
+        Assert.True(frame.Bottom > item.Bottom);
+        Assert.Equal(item, Rectangle.Intersect(frame, item));   // 項目は枠の中
+        list.MoveCursorTo(1);
+        Assert.Equal(item, list.CursorFrameBounds(0));          // カーソルでなければはみ出さない
+    }
+
+    [Fact]
+    public void 名前の帯は行が収まるなら項目のまま_収まらなければ下へ広げる()
+    {
+        var item = new Rectangle(0, 0, 100, 150);
+        var name = new Rectangle(5, 100, 90, 32);
+        Assert.Equal(item, FileListView.NameOverflowBand(item, name, 2, 16, 4));
+        Assert.Equal(new Rectangle(0, 0, 100, 100 + 3 * 16 + 4), FileListView.NameOverflowBand(item, name, 3, 16, 4));
     }
 
     [Fact]

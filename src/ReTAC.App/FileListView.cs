@@ -811,9 +811,26 @@ public sealed class FileListView : Control
     internal static readonly IReadOnlyList<GridLayer> GridLayers =
         [GridLayer.Fill, GridLayer.Image, GridLayer.Overlay, GridLayer.CheckBox, GridLayer.CursorFrame, GridLayer.DropFrame];
 
-    /// <summary>INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: カーソルの枠・落とす先の枠は、名前を全部描く帯ではなく項目の矩形（ItemBounds）。</summary>
-    internal Rectangle CursorFrameBounds(int index) => ToRectangle(FileViewScroll.VisibleBounds(_layout, _scroll, index));
+    /// <summary>
+    /// INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: 落とす先の枠は項目の矩形（ItemBounds）。
+    /// カーソルの枠は、中〜特大で名前を項目の下へはみ出して描くときだけ、はみ出した帯まで囲む
+    /// （項目の矩形に描くと、枠の下辺が帯を横切って線に見えた）。塗りと枠と描き直しの範囲は、この 1 か所の答えを使う。
+    /// </summary>
+    internal Rectangle CursorFrameBounds(int index)
+    {
+        var item = DropFrameBounds(index);
+        if (_layout is not GridLayout { Arrangement: GridArrangement.IconTop }) return item;
+        var nameRect = ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, _layout.NameBounds(index)));
+        return NameOverflowBand(item, nameRect, NameLinesFor(index).Lines.Count, _measure.LineHeight(), Scaled(4));
+    }
+
     internal Rectangle DropFrameBounds(int index) => ToRectangle(FileViewScroll.VisibleBounds(_layout, _scroll, index));
+
+    /// <summary>R-119: 名前の行が名前の領域に収まらないとき、項目と（はみ出した名前の）矩形の和。収まるなら項目のまま。</summary>
+    internal static Rectangle NameOverflowBand(Rectangle item, Rectangle nameRect, int lineCount, int lineHeight, int padding) =>
+        lineCount * lineHeight > nameRect.Height
+            ? Rectangle.Union(item, nameRect with { Height = lineCount * lineHeight + padding })
+            : item;
 
     /// <summary>R-119 / R-113: 小アイコンで描く 1 行。カーソルの項目で省略されていれば全部（一覧と同じく右へ帯を広げる）。</summary>
     internal string SmallIconNameText(int index) =>
@@ -913,7 +930,7 @@ public sealed class FileListView : Control
 
     /// <summary>
     /// R-116 / R-119: 格子の項目。GridLayers の順に描く。矩形はすべてレイアウトに聞く（INV-LAYOUT-GEOMETRY-SINGLE-SOURCE）。
-    /// 塗りと名前は帯（カーソルの項目の名前を全部描くときは項目の外へ広がる）に、枠は項目の矩形に描く。
+    /// 塗り・名前・カーソルの枠は帯（カーソルの項目の名前を全部描くときは項目の外へ広がる）に、落とす先の枠は項目の矩形に描く。
     /// </summary>
     private void DrawGridItem(Graphics g, int index)
     {
@@ -921,7 +938,7 @@ public sealed class FileListView : Control
         var isCursor = index == _state.CursorIndex;
         var isMarked = IsMarkedForDisplay(index);   // 投げ縄の仮のマークを含む
         var small = _mode == FileViewMode.SmallIcons;
-        var item = CursorFrameBounds(index);
+        var item = DropFrameBounds(index);
         var (background, foreground) = RowColors.Of(_theme, AttributeColorRule.Classify(entry.Attributes), isCursor, isMarked);
         var nameRect = ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, _layout.NameBounds(index)));
         var iconRect = ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, _layout.IconBounds(index)));
@@ -930,9 +947,7 @@ public sealed class FileListView : Control
         IReadOnlyList<string> names = small ? [SmallIconNameText(index)] : NameLinesFor(index).Lines;
         var band = small
             ? DrawsFullName(index) ? item with { Width = Math.Max(item.Width, FullNameWidth(entry)) } : item
-            : names.Count * lineHeight > nameRect.Height
-                ? Rectangle.Union(item, nameRect with { Height = names.Count * lineHeight + Scaled(4) })
-                : item;
+            : NameOverflowBand(item, nameRect, names.Count, lineHeight, Scaled(4));
 
         foreach (var layer in GridLayers)
             switch (layer)
@@ -961,7 +976,7 @@ public sealed class FileListView : Control
                             isChecked: isMarked, stroke: Math.Max(1, Scaled(1)));
                     break;
                 case GridLayer.CursorFrame:
-                    if (isCursor && !small) ItemFrames.DrawCursorFrame(g, item, background, foreground, Math.Max(1, Scaled(1)));
+                    if (isCursor && !small) ItemFrames.DrawCursorFrame(g, band, background, foreground, Math.Max(1, Scaled(1)));
                     break;
                 case GridLayer.DropFrame:
                     if (index == _dropTarget)   // R-110-2
