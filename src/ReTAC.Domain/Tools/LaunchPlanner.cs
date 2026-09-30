@@ -26,28 +26,23 @@ public static class LaunchPlanner
     public const int ManyLaunchThreshold = 10;
 
     /// <summary>
-    /// F-09: 渡す対象。全体の設定「連続起動はしない」が ON ならカーソル位置の 1 件、
-    /// OFF ならマークしたもの（表示順）。マークが無ければカーソル位置の 1 件で、<c>..</c> でも含める
-    /// （<c>${path}</c> をカレントフォルダにするため）。
+    /// F-09 / R-68: 渡す対象。マークがあればマークしたもの（表示順）、無ければカーソル位置の 1 件で、<c>..</c> でも含める
+    /// （<c>${path}</c> をカレントフォルダにするため）。カーソルの 1 件だけを渡したいツールは、引数に <c>${cursorPath}</c> などを書く。
     /// </summary>
-    public static IReadOnlyList<Entry> TargetsFor(ListState state, bool suppressMultiple)
+    public static IReadOnlyList<Entry> TargetsFor(ListState state)
     {
-        if (!suppressMultiple && state.Marks.Count > 0) return state.EffectiveTarget();
+        if (state.Marks.Count > 0) return state.EffectiveTarget();
         return state.Cursor is { } cursor ? [cursor] : [];
     }
-
-    /// <summary>F-09: ツールのチェックは全体の設定が OFF のときだけ効く。</summary>
-    public static bool RunsPerItem(ExternalTool tool, bool suppressMultiple) =>
-        tool.LaunchPerItem && !suppressMultiple;
 
     /// <returns>起動の並び。<c>!</c> で起動しないと決まったものは含めない</returns>
     public static IReadOnlyList<LaunchRequest> Plan(
         ExternalTool tool, ArgumentTemplate template, IReadOnlyList<Entry> targets, Entry? cursor,
-        string currentFolder, IReadOnlyList<string> answers, bool suppressMultiple, Func<string, string>? pathForm = null)
+        string currentFolder, IReadOnlyList<string> answers, Func<string, string>? pathForm = null)
     {
         var requests = new List<LaunchRequest>();
 
-        if (RunsPerItem(tool, suppressMultiple))
+        if (tool.LaunchPerItem)
         {
             foreach (var target in targets) Add([target], target.Name);
         }
@@ -64,6 +59,6 @@ public static class LaunchPlanner
         }
     }
 
-    public static bool NeedsManyConfirmation(ExternalTool tool, bool suppressMultiple, int requestCount) =>
-        RunsPerItem(tool, suppressMultiple) && requestCount >= ManyLaunchThreshold;
+    public static bool NeedsManyConfirmation(ExternalTool tool, int requestCount) =>
+        tool.LaunchPerItem && requestCount >= ManyLaunchThreshold;
 }

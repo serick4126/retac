@@ -107,7 +107,6 @@ public class SettingsDraftTests
         draft.Resident = !settings.Resident;
         draft.StartMinimized = !settings.StartMinimized;
         draft.KeepLastFolder = !settings.KeepLastFolder;
-        draft.SuppressMultipleToolLaunch = !settings.SuppressMultipleToolLaunch;
         draft.Theme = Theme.Default with { FontSize = 20f };
         draft.HiddenDrives = ['D'];
         draft.ShowDesktopButton = !settings.ShowDesktopButton;
@@ -115,7 +114,6 @@ public class SettingsDraftTests
         Assert.False(settings.Resident);
         Assert.False(settings.StartMinimized);
         Assert.True(settings.KeepLastFolder);
-        Assert.True(settings.SuppressMultipleToolLaunch);
         Assert.Equal(16f, settings.ToTheme().FontSize);
         Assert.Empty(settings.HiddenDrives);
         Assert.True(settings.ShowDesktopButton);
@@ -127,20 +125,6 @@ public class SettingsDraftTests
     {
         Assert.False(new AppSettings().Resident);
         Assert.False(new SettingsDraft().Resident);
-    }
-
-    [Fact]
-    public void SuppressMultipleChangedは値が変わったときだけ上がる()
-    {
-        var draft = new SettingsDraft { SuppressMultipleToolLaunch = true };
-        var raised = 0;
-        draft.SuppressMultipleChanged += (_, _) => raised++;
-
-        draft.SuppressMultipleToolLaunch = true;   // 同じ値
-        Assert.Equal(0, raised);
-
-        draft.SuppressMultipleToolLaunch = false;
-        Assert.Equal(1, raised);
     }
 
     [Fact]

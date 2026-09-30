@@ -12,8 +12,8 @@ public class LaunchPlannerTests
     private static ExternalTool Tool(string arguments, bool perItem = false) =>
         new() { Id = 7, Name = "テスト", Path = "tool.exe", Arguments = arguments, LaunchPerItem = perItem };
 
-    private static IReadOnlyList<LaunchRequest> Plan(ExternalTool tool, Entry[] targets, bool suppress = false) =>
-        LaunchPlanner.Plan(tool, ArgumentTemplate.Parse(tool.Arguments), targets, targets.FirstOrDefault(), Cwd, [], suppress);
+    private static IReadOnlyList<LaunchRequest> Plan(ExternalTool tool, Entry[] targets) =>
+        LaunchPlanner.Plan(tool, ArgumentTemplate.Parse(tool.Arguments), targets, targets.FirstOrDefault(), Cwd, []);
 
     [Fact]
     public void 初期登録はOS標準の3件()
@@ -54,14 +54,14 @@ public class LaunchPlannerTests
     }
 
     [Fact]
-    public void 全体の設定がONならマークがあってもカーソルの1件()
+    public void マークがあればマークしたもの_無ければカーソルの1件()
     {
         var state = new ListState([TestEntries.Parent(), TestEntries.File("a.txt"), TestEntries.File("b.txt")]);
-        state.ToggleMark(1);
         state.MoveCursor(2);
+        Assert.Equal(["b.txt"], TestEntries.Names(LaunchPlanner.TargetsFor(state)));
 
-        Assert.Equal(["b.txt"], TestEntries.Names(LaunchPlanner.TargetsFor(state, suppressMultiple: true)));
-        Assert.Equal(["a.txt"], TestEntries.Names(LaunchPlanner.TargetsFor(state, suppressMultiple: false)));
+        state.ToggleMark(1);
+        Assert.Equal(["a.txt"], TestEntries.Names(LaunchPlanner.TargetsFor(state)));
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public class LaunchPlannerTests
     {
         // ${path} をカレントフォルダにするため。プロパティ表示の LaunchTargets.For とはここが違う
         var state = new ListState([TestEntries.Parent(), TestEntries.File("a.txt")]);
-        Assert.Equal([".."], TestEntries.Names(LaunchPlanner.TargetsFor(state, suppressMultiple: false)));
+        Assert.Equal([".."], TestEntries.Names(LaunchPlanner.TargetsFor(state)));
     }
 
     [Fact]
@@ -89,10 +89,14 @@ public class LaunchPlannerTests
     }
 
     [Fact]
-    public void 全体の設定がONなら項目ごとの指定は効かない()
+    public void カーソルのマクロは_マークが複数あってもカーソルの1件だけを渡す()
     {
-        Assert.False(LaunchPlanner.RunsPerItem(Tool("", perItem: true), suppressMultiple: true));
-        Assert.Single(Plan(Tool("${file}", perItem: true), [TestEntries.File("a.txt"), TestEntries.File("b.txt")], suppress: true));
+        var targets = new[] { TestEntries.File("a.txt"), TestEntries.File("b.txt") };
+        var template = ArgumentTemplate.Parse("${cursorFile}");
+        var requests = LaunchPlanner.Plan(Tool("${cursorFile}"), template, targets, cursor: TestEntries.File("c.txt"), Cwd, []);
+
+        var request = Assert.Single(requests);
+        Assert.Equal([@"C:\work\c.txt"], request.Arguments);
     }
 
     [Fact]
@@ -115,7 +119,7 @@ public class LaunchPlannerTests
     [InlineData(false, 50, false)]   // まとめて 1 回なら何件でも確認しない
     public void 実際に10回以上起動するときだけ確認する(bool perItem, int count, bool expected)
     {
-        Assert.Equal(expected, LaunchPlanner.NeedsManyConfirmation(Tool("", perItem), suppressMultiple: false, count));
+        Assert.Equal(expected, LaunchPlanner.NeedsManyConfirmation(Tool("", perItem), count));
     }
 
     [Fact]

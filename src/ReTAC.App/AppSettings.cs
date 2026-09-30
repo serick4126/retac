@@ -137,12 +137,6 @@ public sealed class AppSettings
     public Dictionary<string, string> KeyBindings { get; set; } = [];
 
     // --- 操作 -------------------------------------------------------------
-    /// <summary>
-    /// F-09: 複数選択の時外部ツールの連続起動はしない。ON ならすべての操作（外部ツール・プロパティ表示）で
-    /// カーソル位置の 1 件だけを渡す。処理の種類で振る舞いを変えない。
-    /// </summary>
-    public bool SuppressMultipleToolLaunch { get; set; } = true;
-
     // --- 外部ツール（F-01） -------------------------------------------------
     /// <summary>件数可変。並びはメニューと `G` の「外部ツール ▶」の並び。初期状態は OS 標準の 3 件（B-05）。</summary>
     public List<ExternalTool> ExternalTools { get; set; } = DefaultExternalTools.Create();
@@ -160,7 +154,7 @@ public sealed class AppSettings
 
     // ---------------------------------------------------------------------
 
-    private static readonly JsonSerializerOptions Json = new()
+    internal static readonly JsonSerializerOptions Json = new()
     {
         WriteIndented = true,                         // R-55: 人が読んで直せること
         Converters = { new JsonStringEnumConverter() },

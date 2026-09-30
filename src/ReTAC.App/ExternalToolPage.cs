@@ -10,9 +10,7 @@ namespace ReTAC.App;
 /// 知らないマクロは保存させない（F-02）。パスが見つからない・実行できない種類は注意だけ出す
 /// （後でインストールする・関連付けのアプリで開くことを狙う使い方がある）。
 ///
-/// 一覧・次の ID・削除は <see cref="SettingsDraft"/> へ直接向ける。「マークした項目ごとに起動する」の
-/// 灰色表示は下書きの <see cref="SettingsDraft.SuppressMultipleToolLaunch"/> に従い、
-/// <see cref="SettingsDraft.SuppressMultipleChanged"/> で塗り直す（F-09）。
+/// 一覧・次の ID・削除は <see cref="SettingsDraft"/> へ直接向ける。
 /// 確定前の検証は他のページと違いここだけ必要なので、<see cref="Validate"/> に残す。
 /// </summary>
 public sealed class ExternalToolPage : UserControl
@@ -106,9 +104,6 @@ public sealed class ExternalToolPage : UserControl
         foreach (var box in new[] { _perItem, _popup, _keepOpen, _confirm })
             box.CheckedChanged += (_, _) => Commit();
 
-        // F-09: 動作環境ページで「連続起動はしない」が変わったら灰色表示を塗り直す
-        _draft.SuppressMultipleChanged += (_, _) => _perItem.Enabled = _editing >= 0 && !_draft.SuppressMultipleToolLaunch;
-
         RefillList(_draft.ExternalTools.Count > 0 ? 0 : -1);
     }
 
@@ -165,9 +160,8 @@ public sealed class ExternalToolPage : UserControl
         _confirm.Checked = tool?.ConfirmBeforeRun ?? false;
 
         var editable = tool is not null;
-        foreach (Control control in new Control[] { _name, _path, _browse, _arguments, _macros, _popup, _keepOpen, _confirm, _delete, _up, _down })
+        foreach (Control control in new Control[] { _name, _path, _browse, _arguments, _macros, _perItem, _popup, _keepOpen, _confirm, _delete, _up, _down })
             control.Enabled = editable;
-        _perItem.Enabled = editable && !_draft.SuppressMultipleToolLaunch;
 
         _loading = false;
         _ = CheckPathAsync();

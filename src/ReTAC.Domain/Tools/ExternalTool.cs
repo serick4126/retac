@@ -12,7 +12,7 @@ public sealed record ExternalTool
     public string Path { get; init; } = "";
     /// <summary>マクロを書ける（F-02）</summary>
     public string Arguments { get; init; } = "";
-    /// <summary>全体の設定「連続起動はしない」が OFF のときだけ効く。外部ツールキューで順番に処理する（F-05）</summary>
+    /// <summary>マークした項目ごとに 1 回ずつ起動する。外部ツールキューで順番に処理する（F-05）</summary>
     public bool LaunchPerItem { get; init; }
     /// <summary><c>G</c> →「外部ツール ▶」に出す（F-08）</summary>
     public bool ShowInPopup { get; init; } = true;

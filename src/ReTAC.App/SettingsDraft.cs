@@ -23,22 +23,6 @@ public sealed class SettingsDraft
     public bool StartMinimized { get; set; }
     public bool KeepLastFolder { get; set; } = true;
 
-    private bool _suppressMultipleToolLaunch = true;
-    /// <summary>
-    /// F-09: 外部ツールの連続起動をしない。外部ツールページの「マークした項目ごとに起動する」の
-    /// 灰色表示はこの値に従うので、変わったら <see cref="SuppressMultipleChanged"/> を上げる。
-    /// </summary>
-    public bool SuppressMultipleToolLaunch
-    {
-        get => _suppressMultipleToolLaunch;
-        set
-        {
-            if (_suppressMultipleToolLaunch == value) return;
-            _suppressMultipleToolLaunch = value;
-            SuppressMultipleChanged?.Invoke(this, EventArgs.Empty);
-        }
-    }
-
     // --- 配色・フォント（ColorFontPage） ----------------------------------
     /// <summary>保存される独自の配色とフォント。OS の色で解決したものは入れない（<see cref="Theme.Resolve"/>）。</summary>
     public Theme Theme { get; set; } = Theme.Default;
@@ -106,8 +90,6 @@ public sealed class SettingsDraft
     // --- ページ間のつながり ------------------------------------------
     /// <summary>外部ツールの一覧が変わった（追加・改名・削除）。キー割り当て・クイックアクセスページが一覧を出し直す合図。</summary>
     public event EventHandler? ToolsChanged;
-    /// <summary>「連続起動はしない」が変わった。外部ツールページの灰色表示を更新する合図（F-09）。</summary>
-    public event EventHandler? SuppressMultipleChanged;
 
     /// <summary>共有の設定・キーマップ・テーマ・クイックアクセスから下書きを作る。</summary>
     public static SettingsDraft From(AppSettings settings, KeyMap keyMap, Theme theme, QuickAccessList quickAccess)
@@ -117,7 +99,6 @@ public sealed class SettingsDraft
             Resident = settings.Resident,
             StartMinimized = settings.StartMinimized,
             KeepLastFolder = settings.KeepLastFolder,
-            SuppressMultipleToolLaunch = settings.SuppressMultipleToolLaunch,
             Theme = theme,
             ColorMode = settings.ColorMode,
             SystemLight = settings.ToSystemTheme(dark: false),
@@ -150,7 +131,6 @@ public sealed class SettingsDraft
         settings.Resident = Resident;
         settings.StartMinimized = StartMinimized;
         settings.KeepLastFolder = KeepLastFolder;
-        settings.SuppressMultipleToolLaunch = SuppressMultipleToolLaunch;
 
         // R-36: 全ウィンドウのメニューの作り直しは重いので、実際に変わったときだけ MainForm に伝える
         var externalToolsChanged = !ExternalTools.SequenceEqual(settings.ExternalTools);

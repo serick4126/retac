@@ -882,8 +882,7 @@ public sealed class MainForm : Form, IBookmarkHost
         }
 
         // 押した時点の対象で起動する。入力の間にカーソルやマークが動いても変わらない
-        var suppress = _settings.SuppressMultipleToolLaunch;
-        var targets = TreeOverrideTargets() ?? LaunchPlanner.TargetsFor(_list.State, suppress);
+        var targets = TreeOverrideTargets() ?? LaunchPlanner.TargetsFor(_list.State);
         var cursor = _list.State.Cursor;
         var folder = _currentFolder;
 
@@ -898,11 +897,11 @@ public sealed class MainForm : Form, IBookmarkHost
 
         // 値を求めるのは「待つことがある処理」として扱う（将来 git の値を取る）。UI を止めない
         var requests = await Task.Run(() =>
-            LaunchPlanner.Plan(tool, template, targets, cursor, folder, answers, suppress, ToolLauncher.TargetPath));
+            LaunchPlanner.Plan(tool, template, targets, cursor, folder, answers, ToolLauncher.TargetPath));
         if (requests.Count == 0 || IsDisposed) return;
-        if (!await ConfirmLaunchAsync(tool, requests, suppress)) return;
+        if (!await ConfirmLaunchAsync(tool, requests)) return;
 
-        if (LaunchPlanner.RunsPerItem(tool, suppress))
+        if (tool.LaunchPerItem)
         {
             // F-05: 前の 1 件の終了を待ってから次を起動する（変換系の CPU・git の index.lock の奪い合いを避ける）
             ToolQueueHost.Queue.Enqueue(requests);
@@ -912,13 +911,13 @@ public sealed class MainForm : Form, IBookmarkHost
     }
 
     /// <summary>F-03: 「実行前に確認する」と、実際に 10 回以上起動するときの確認（R-56-3）を 1 回にまとめる。</summary>
-    private async Task<bool> ConfirmLaunchAsync(ExternalTool tool, IReadOnlyList<LaunchRequest> requests, bool suppress)
+    private async Task<bool> ConfirmLaunchAsync(ExternalTool tool, IReadOnlyList<LaunchRequest> requests)
     {
-        var many = LaunchPlanner.NeedsManyConfirmation(tool, suppress, requests.Count);
+        var many = LaunchPlanner.NeedsManyConfirmation(tool, requests.Count);
         if (!tool.ConfirmBeforeRun && !many) return true;
 
         var nl = Environment.NewLine;
-        var message = LaunchPlanner.RunsPerItem(tool, suppress)
+        var message = tool.LaunchPerItem
             ? $"「{tool.Name}」を {requests.Count} 回起動します。よろしいですか。{nl}{nl}1 件目:{nl}{requests[0].DisplayCommandLine()}"
             : $"「{tool.Name}」を起動します。よろしいですか。{nl}{nl}{requests[0].DisplayCommandLine()}";
         using var dialog = new ConfirmDialog(message);
@@ -1527,10 +1526,10 @@ public sealed class MainForm : Form, IBookmarkHost
         if (text.Length > 0) TryClipboard(() => Clipboard.SetText(text));
     }
 
-    /// <summary>`R`（プロパティ・0x82F2）。R-56-2: 複数時の扱いは外部ツールと同じ規則。</summary>
+    /// <summary>`R`（プロパティ・0x82F2）。R-56-2: 実効対象すべてを一度に開く（10 件以上は確認。R-56-3）。</summary>
     private bool ShowProperties()
     {
-        var targets = TreeOverrideTargets() ?? LaunchTargets.For(_list.State, _settings.SuppressMultipleToolLaunch);
+        var targets = TreeOverrideTargets() ?? LaunchTargets.For(_list.State);
         if (targets.Count == 0 || !ConfirmManyWindows(targets.Count)) return true;
 
         foreach (var target in targets)

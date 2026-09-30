@@ -52,7 +52,6 @@
     "LeftPanelFontSize": "dialog:SettingsDialog#ColorFontPage",
 
     "KeyBindings": "dialog:SettingsDialog#KeyAssignPage",
-    "SuppressMultipleToolLaunch": "dialog:SettingsDialog#EnvironmentPage",
 
     "ExternalTools": "dialog:SettingsDialog#ExternalToolPage",
     "NextExternalToolId": "dialog:SettingsDialog#ExternalToolPage",
