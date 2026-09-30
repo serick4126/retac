@@ -12,11 +12,20 @@ public class CloudHydrationTests
 {
     private static readonly string? Dir = Environment.GetEnvironmentVariable("RETAC_CLOUD_DIR");
 
-    [Fact]
+    /// <summary>未設定のまま「合格」に見えないよう、スキップとして数える（xunit 2 には Assert.Skip が無い）。</summary>
+    private sealed class CloudFactAttribute : FactAttribute
+    {
+        public CloudFactAttribute()
+        {
+            if (string.IsNullOrEmpty(Dir))
+                Skip = "RETAC_CLOUD_DIR が未設定。OneDrive の技術確認（INV-THUMBNAIL-NO-CLOUD-DOWNLOAD）は未実施";
+        }
+    }
+
+    [CloudFact]
     public void 印とキャッシュだけのサムネイルは取り込みを起こさない()
     {
-        if (string.IsNullOrEmpty(Dir)) return;
-        var targets = Directory.EnumerateFileSystemEntries(Dir)
+        var targets = Directory.EnumerateFileSystemEntries(Dir!)
             .Where(p => CloudFiles.IsPlaceholder(File.GetAttributes(p))).ToList();
         Assert.NotEmpty(targets);   // オンラインのみの項目を置き忘れていないか
         foreach (var path in targets)
