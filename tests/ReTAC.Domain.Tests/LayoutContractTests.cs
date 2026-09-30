@@ -220,7 +220,7 @@ public class LayoutContractTests
         {
             var (x, y, w, h) = layout.ItemBounds(i);
             // 項目の右下の 1px（どの部品にも入らない余白）だけに交わる 1×1 の矩形
-            Assert.Contains(i, layout.IndexesIn(x + w - 1, y + h - 1, 1, 1, count));
+            Assert.True(layout.IndexesIn(x + w - 1, y + h - 1, 1, 1, count).Contains(i), $"{name} の {i}");
             // 項目の外に 1px ずらすと対象にならない（1px でも交われば対象、交わらなければ対象外）
             Assert.DoesNotContain(i, layout.IndexesIn(x + w, y + h, 1, 1, count));
         }
@@ -234,7 +234,7 @@ public class LayoutContractTests
         for (var i = 0; i < count; i++)
         {
             if (layout.CheckBoxBounds(i) is not { } box) continue;
-            Assert.Equal((i, FileViewArea.CheckBox), layout.HitTest(box.X, box.Y, count));
+            Assert.True((i, FileViewArea.CheckBox) == layout.HitTest(box.X, box.Y, count), $"{name} の {i}");
             Assert.Equal((i, FileViewArea.CheckBox), layout.HitTest(box.X + box.Width - 1, box.Y + box.Height - 1, count));
             Assert.NotEqual(FileViewArea.CheckBox, layout.HitTest(box.X + box.Width, box.Y + box.Height / 2, count).Area);
             Assert.NotEqual(FileViewArea.CheckBox, layout.HitTest(box.X + box.Width / 2, box.Y + box.Height, count).Area);
@@ -249,7 +249,7 @@ public class LayoutContractTests
         var max = layout.MaxScrollPosition(count, 200, 90);
         foreach (var scroll in new[] { new ScrollPosition(0, 0), max })
             for (var i = 0; i < count; i++)
-                Assert.Equal(FileViewScroll.ToVisible(layout, scroll, layout.ItemBounds(i)), FileViewScroll.VisibleBounds(layout, scroll, i));
+                Assert.True(FileViewScroll.ToVisible(layout, scroll, layout.ItemBounds(i)) == FileViewScroll.VisibleBounds(layout, scroll, i), $"{name} の {i}");
     }
 
     /// <summary>
