@@ -71,7 +71,9 @@ public class FileListViewTilesTests
     public void 余白から動かすと投げ縄を始め_離した時点でマークする()
     {
         using var list = View();
-        list.RaiseMouseDown(Mouse(MouseButtons.Left, Margin(list, 0)));
+        var press = Margin(list, 0);   // 実際のキーボードの Ctrl を読む OnMouseDown は通さない（Ctrl 押下中は除去の投げ縄になる）
+        list.LassoPress(press, ctrl: false);
+        list.PressLeft(press, shift: false);
         list.RaiseMouseMove(Mouse(MouseButtons.Left, Empty(list)));
         Assert.True(list.LassoActive);
         list.RaiseMouseUp(Mouse(MouseButtons.Left, Empty(list)));

@@ -60,7 +60,9 @@ public class FileListViewContentTests
         list.RaiseMouseUp(Mouse(MouseButtons.Left, Other(list, 2)));
         Assert.Equal(2, list.State.CursorIndex);
 
-        list.RaiseMouseDown(Mouse(MouseButtons.Left, Other(list, 0)));
+        var press = Other(list, 0);   // 実際のキーボードの Ctrl を読む OnMouseDown は通さない（Ctrl 押下中は除去の投げ縄になる）
+        list.LassoPress(press, ctrl: false);
+        list.PressLeft(press, shift: false);
         list.RaiseMouseMove(Mouse(MouseButtons.Left, Below(list)));
         Assert.True(list.LassoActive);
         list.RaiseMouseUp(Mouse(MouseButtons.Left, Below(list)));
@@ -226,9 +228,9 @@ public class FileListViewContentTests
         using var list = View(views);
         var started = 0;
         list.StartDragOverride = _ => started++;
-        foreach (var from in new[] { Other(list, 0), In(list, Rows(list).RightInfoBounds(0, 0)!.Value) })
+        foreach (var start in new[] { Other(list, 0), In(list, Rows(list).RightInfoBounds(0, 0)!.Value) })
         {
-            list.RaiseMouseDown(Mouse(MouseButtons.Left, from));
+            list.RaiseMouseDown(Mouse(MouseButtons.Left, start));
             list.RaiseMouseMove(Mouse(MouseButtons.Left, Below(list)));
             Assert.True(list.LassoActive);
             list.RaiseMouseUp(Mouse(MouseButtons.Left, Below(list)));

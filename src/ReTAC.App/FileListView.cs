@@ -1034,10 +1034,6 @@ public sealed class FileListView : Control
     }
 
     /// <summary>
-    /// R-116 / R-119: 格子の項目。GridLayers の順に描く。矩形はすべてレイアウトに聞く（INV-LAYOUT-GEOMETRY-SINGLE-SOURCE）。
-    /// 塗り・名前・カーソルの枠は帯（カーソルの項目の名前を全部描くときは項目の外へ広がる）に、落とす先の枠は項目の矩形に描く。
-    /// </summary>
-    /// <summary>
     /// R-122: コンテンツの行。左の欄に名前と情報の 1 つ目、右の欄に 2 つ目・3 つ目（見出し付き）。値が欄より長ければ末尾を「…」。
     /// 区切り線は行の下の隙間（パネルの地）に引き、行の塗りの上には引かない（ハイコントラストでマークの地と同じ色になって消えるため）。
     /// </summary>
@@ -1097,6 +1093,10 @@ public sealed class FileListView : Control
             }
     }
 
+    /// <summary>
+    /// R-116 / R-119: 格子の項目。GridLayers の順に描く。矩形はすべてレイアウトに聞く（INV-LAYOUT-GEOMETRY-SINGLE-SOURCE）。
+    /// 塗り・名前・カーソルの枠は帯（カーソルの項目の名前を全部描くときは項目の外へ広がる）に、落とす先の枠は項目の矩形に描く。
+    /// </summary>
     private void DrawGridItem(Graphics g, int index)
     {
         var entry = _state.Entries[index];
