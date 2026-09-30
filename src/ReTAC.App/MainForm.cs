@@ -1161,10 +1161,7 @@ public sealed class MainForm : Form, IBookmarkHost
         timing?.Mark("record");   // 転送のあと、結果を元に戻すの記録へ入れる時間（項目ごとに宛先を問い合わせる）
         timing?.Write($"{(moving ? "move" : "copy")} items={plan.Items.Count} folders={plan.Folders.Count} first-item={firstItem?.ToString() ?? "-"}ms");
 
-        // R-125: 中をたどった転送元のフォルダだけを、空になっていたら消す。フォルダごと渡した項目の配下は見ない。
-        // 宛先が変わって中止したときは、後片付けをしない: 何も転送していないのに消すと、元から空だった転送元のフォルダが消える
-        // （転送 0 件の記録は残らないので、戻せない）。途中で止まった移動は、もう一度実行すれば続きから進む
-        if (moving && changed is null) TransferExecution.RemoveEmptySources(plan, f => _recorder?.AddRemovedFolder(f));
+        TransferExecution.Finish(plan, moving, changed, f => _recorder?.AddRemovedFolder(f));
 
         if (changed is null) return completed;
         // R-125: 計画の後に宛先が変わっていた。複写条件の判断が当てはまらないので、上書きせずに中止したことを知らせる。
@@ -1239,6 +1236,8 @@ public sealed class MainForm : Form, IBookmarkHost
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
+            // R-125: 例外でも、変わっていた宛先を呼び出し側へ渡す（渡さないと、中止したのに移動の後片付けが走りうる）
+            if (operation is not null) finished?.Invoke(operation);
             if (operation is not null) _recorder?.AddResults(operation.Results);
             // 6 章: エラーを提示し、ReTAC 本体は継続動作する
             MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);

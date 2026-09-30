@@ -56,10 +56,9 @@ public sealed class TransferExecutionTests : IDisposable
                 var changedFolder = TransferExecution.Register(plan, moving, operation, recorder);
                 var completed = operation.Execute();
                 recorder.AddResults(operation.Results);
-                // 宛先が変わって中止したときは、後片付けをしない（本番と同じ）
-                if (moving && changedFolder is null && operation.ChangedDestination is null)
-                    TransferExecution.RemoveEmptySources(plan, f => { recorder.AddRemovedFolder(f); removed.Add(f); });
-                result = (completed && changedFolder is null, changedFolder ?? operation.ChangedDestination);
+                var changed = changedFolder ?? operation.ChangedDestination;
+                TransferExecution.Finish(plan, moving, changed, f => { recorder.AddRemovedFolder(f); removed.Add(f); });
+                result = (completed && changedFolder is null, changed);
             }
             catch (Exception ex) { failure = ex; }
         });

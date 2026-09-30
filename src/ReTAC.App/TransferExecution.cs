@@ -40,11 +40,22 @@ internal static class TransferExecution
     }
 
     /// <summary>
+    /// 転送のあとの片付け。移動で、宛先が変わって中止していないときだけ、空になった転送元のフォルダを消す（R-125）。
+    /// 宛先が変わって中止したときに消すと、何も転送していないのに、元から空だった転送元のフォルダが消える
+    /// （転送 0 件の記録は残らないので、戻せない）。途中で止まった移動は、もう一度実行すれば続きから進む。
+    /// </summary>
+    /// <param name="changed">計画の後に変わっていた宛先（フォルダの確かめ・項目の確かめのどちらでも）。無ければ null</param>
+    public static void Finish(CopyPlan plan, bool moving, string? changed, Action<string> removed)
+    {
+        if (moving && changed is null) RemoveEmptySources(plan, removed);
+    }
+
+    /// <summary>
     /// 移動のあと片付け。<b>中身が残っているフォルダには触らない。</b>
     /// 見るのは、計画が中をたどった転送元のフォルダだけ（深い順）。フォルダごと渡した項目の配下は見ない:
     /// 中止・失敗で動かなかったフォルダの、元から空だった入れ子を消してしまう（宛先には無いので、戻せない）。
     /// </summary>
-    public static void RemoveEmptySources(CopyPlan plan, Action<string> removed)
+    private static void RemoveEmptySources(CopyPlan plan, Action<string> removed)
     {
         foreach (var folder in plan.Folders.Select(f => f.Source).OfType<string>().OrderByDescending(f => f.Length))
         {
