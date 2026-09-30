@@ -78,7 +78,12 @@ public sealed record GridLayout : IFileViewLayout
         var outside = input.Arrangement == GridArrangement.IconLeft ? input.PaddingX * 3 + input.IconSize : input.PaddingX * 2;
         var maxCell = Math.Max(1, width - gap * 2);
         var text = Math.Max(0, Math.Min(input.TextWidth, maxCell - outside));
-        var cellWidth = Math.Max(1, Math.Min(maxCell, outside + text));
+        // R-119 / INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: アイコン・チェックボックスは項目の矩形の中に置く。
+        // 狭いパネルでは部品を縮めず、項目がパネルからはみ出す（コントロールが切る。横スクロールは出さない）
+        var minCell = Math.Max(
+            input.Arrangement == GridArrangement.IconLeft ? outside : input.PaddingX * 2 + input.IconSize,
+            input.CheckBoxSize > 0 ? input.PaddingY + input.CheckBoxSize : 0);
+        var cellWidth = Math.Max(Math.Max(1, minCell), Math.Min(maxCell, outside + text));
         var cellHeight = input.Arrangement == GridArrangement.IconLeft
             ? Math.Max(input.IconSize, nameHeight) + input.PaddingY * 2
             : input.PaddingY * 3 + input.IconSize + nameHeight;

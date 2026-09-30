@@ -43,6 +43,37 @@ public class LayoutContractTests
         }
     }
 
+    /// <summary>格子の狭いパネル。部品が項目の矩形の中に収まる境目（幅 0・1・アイコンより狭い・ちょうど・余裕あり）を通す。</summary>
+    public static TheoryData<string, IFileViewLayout, int> NarrowGrids()
+    {
+        var data = new TheoryData<string, IFileViewLayout, int>();
+        foreach (var width in new[] { 0, 1, 10, 40, 60, 100, 250 })
+            foreach (var left in new[] { true, false })
+                data.Add($"{(left ? "小" : "中")}アイコン 幅{width}", GridLayout.Compute(new GridLayoutInput
+                {
+                    EntryCount = 23, Arrangement = left ? GridArrangement.IconLeft : GridArrangement.IconTop,
+                    IconSize = left ? 16 : 32, LineHeight = left ? 16 : 14, NameLines = left ? 1 : 2,
+                    TextWidth = left ? 60 : 48, PaddingX = left ? 4 : 6, PaddingY = left ? 2 : 4, Gap = 4, CheckBoxSize = left ? 0 : 12,   // 小アイコンにチェックボックスは付かない（既存の「小アイコン」と同じ）
+                    ClientWidth = width, ClientHeight = 150, VerticalBarWidth = 17, EdgeBand = 24,
+                }), 23);
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(NarrowGrids))]
+    public void 狭いパネルでも部品は項目の矩形の中にある(string name, IFileViewLayout layout, int count) =>
+        部品は項目の矩形の中にある(name, layout, count);
+
+    [Theory]
+    [MemberData(nameof(NarrowGrids))]
+    public void 狭いパネルでも項目の矩形の中心を当てるとその項目(string name, IFileViewLayout layout, int count) =>
+        項目の矩形の中心を当てるとその項目(name, layout, count);
+
+    [Theory]
+    [MemberData(nameof(NarrowGrids))]
+    public void 狭いパネルでも範囲の項目は矩形が交わる項目と一致する(string name, IFileViewLayout layout, int count) =>
+        範囲の項目は矩形が交わる項目と一致する(name, layout, count);
+
     [Theory]
     [MemberData(nameof(Layouts))]
     public void 部品は項目の矩形の中にある(string name, IFileViewLayout layout, int count)
