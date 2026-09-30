@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using ReTAC.App.Rendering;
 using ReTAC.Domain.Entries;
 using ReTAC.Domain.FileOps;
+using ReTAC.Domain.Formatting;
 using ReTAC.Domain.Listing;
 using ReTAC.Domain.Selection;
 using ReTAC.Shell;
@@ -464,6 +465,7 @@ public sealed class FileListView : Control
             UpdateScrollBars();
             return;
         }
+        if (_mode == FileViewMode.Content) { _layout = ComputeContent(); UpdateScrollBars(); return; }
         if (_mode == FileViewMode.Details) { _layout = ComputeDetails(); UpdateScrollBars(); return; }
         var textStart = ColumnPaddingValue + _icons.Size + Gap;
         // R-113: 「自動」はパネルの幅（名前の文字の外側を引いたもの）、「最大文字数」は数字 0 の幅 × 文字数（Q9）
@@ -472,6 +474,36 @@ public sealed class FileListView : Control
             _icons.Size, Gap, RowPadding, ColumnPaddingValue, cap, AlignExtension, HidesExtension);
         UpdateScrollBars();
     }
+
+    /// <summary>
+    /// R-122: コンテンツのレイアウト。右の欄の幅は、情報ごとに「見出し: 」と見本の値を測る（値が長ければ描くときに「…」）。
+    /// 左の欄の最小幅は名前 10 文字ぶん（数字 0 の幅 × 10）。
+    /// </summary>
+    private ContentLayout ComputeContent()
+    {
+        var zero = _measure.Width("0");
+        var rights = _views.Tiles.Info.Skip(1).Take(2).Select(info => _measure.Width(RightInfoText(info, SampleValue(info)))).ToList();
+        return ContentLayout.Compute(new ContentLayoutInput
+        {
+            EntryCount = _state.Count, IconSize = IconSizeFor(_mode), LineHeight = _measure.LineHeight(),
+            PaddingX = Scaled(6), PaddingY = Scaled(4), Gap = Math.Max(1, Scaled(1)), CheckBoxSize = CheckBoxSize,
+            RightWidths = rights, MinLeftWidth = zero * 10,
+            ClientWidth = ClientSize.Width, ClientHeight = ClientSize.Height, VerticalBarWidth = _vScrollBar.Width, EdgeBand = EdgeBand,
+        });
+    }
+
+    /// <summary>R-122: 右の欄の文字（「更新日時: 2026/09/28 12:34」の形）。</summary>
+    internal string RightInfoText(TileInfo info, string value) => $"{DetailsCells.Header(DetailsCells.Column(info))}: {value}";
+
+    /// <summary>R-122: 右の欄の幅を決める見本の値。日時は最も広い月日・時刻、サイズは大きな値、属性はすべて。種類は長さが決まらないので数字 0 × 16。</summary>
+    private string SampleValue(TileInfo info) => info switch
+    {
+        TileInfo.Modified or TileInfo.Created => Display.Timestamp(new DateTime(2026, 12, 28, 23, 59, 59)),
+        TileInfo.Size => Display.Size(999_999_999_999),
+        TileInfo.Attributes => Display.Attributes(FileAttributes.ReadOnly | FileAttributes.Hidden | FileAttributes.System
+            | FileAttributes.Archive | FileAttributes.Compressed | FileAttributes.Encrypted),
+        _ => new string('0', 16),
+    };
 
     /// <summary>R-119 / R-113 / Q6: 格子のレイアウト。小アイコンは名前の列の方式で項目の幅を決め、中〜特大は max(アイコン, 数字 0 × 9)。</summary>
     private GridLayout ComputeGrid()
@@ -763,7 +795,19 @@ public sealed class FileListView : Control
         if (range != _imageRange) { _imageRange = range; UpdateImageQueue(); }
     }
 
-    private bool IntersectsClip(Rectangle clip, int index) => ToRectangle(FileViewScroll.VisibleBounds(_layout, _scroll, index)).IntersectsWith(clip);
+    private bool IntersectsClip(Rectangle clip, int index) => PaintBounds(index).IntersectsWith(clip);
+
+    /// <summary>
+    /// 部分の描き直しで、その項目を描くかを決める矩形。ふだんは項目の矩形。R-122: コンテンツは行の下の区切り線もその行が描くので、
+    /// 線の隙間を含める（OnPaint の最初の塗りつぶしで線だけが消され、行の矩形に交わらないクリップで描き直されないのを防ぐ）。
+    /// </summary>
+    internal Rectangle PaintBounds(int index)
+    {
+        var item = DropFrameBounds(index);
+        return _layout is ContentLayout content && content.SeparatorBounds(index) is { } separator
+            ? Rectangle.Union(item, ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, separator)))
+            : item;
+    }
 
     /// <summary>
     /// R-114: 見出しは縦にスクロールせず、横だけ中身と一緒に動く。ソート中の列の上端に山形（HeaderSort.ShowsArrow。Q36）。
@@ -834,6 +878,7 @@ public sealed class FileListView : Control
         var isMarked = IsMarkedForDisplay(index);
         var rect = ToRectangle(FileViewScroll.VisibleBounds(_layout, _scroll, index));
         if (IsGridMode) { DrawGridItem(g, index); return; }
+        if (_mode == FileViewMode.Content) { DrawContentRow(g, index); return; }
 
         var (background, foreground) = RowColors.Of(_theme, AttributeColorRule.Classify(entry.Attributes), isCursor, isMarked);
         // Q12 / R-113: 一覧のカーソルの項目が省略されていたら、帯を名前の終わりまで右へ広げて右隣の上に重ねる
@@ -992,6 +1037,66 @@ public sealed class FileListView : Control
     /// R-116 / R-119: 格子の項目。GridLayers の順に描く。矩形はすべてレイアウトに聞く（INV-LAYOUT-GEOMETRY-SINGLE-SOURCE）。
     /// 塗り・名前・カーソルの枠は帯（カーソルの項目の名前を全部描くときは項目の外へ広がる）に、落とす先の枠は項目の矩形に描く。
     /// </summary>
+    /// <summary>
+    /// R-122: コンテンツの行。左の欄に名前と情報の 1 つ目、右の欄に 2 つ目・3 つ目（見出し付き）。値が欄より長ければ末尾を「…」。
+    /// 区切り線は行の下の隙間（パネルの地）に引き、行の塗りの上には引かない（ハイコントラストでマークの地と同じ色になって消えるため）。
+    /// </summary>
+    private void DrawContentRow(Graphics g, int index)
+    {
+        var layout = (ContentLayout)_layout;
+        var entry = _state.Entries[index];
+        var isCursor = index == _state.CursorIndex;
+        var isMarked = IsMarkedForDisplay(index);
+        var item = DropFrameBounds(index);
+        var (background, foreground) = RowColors.Of(_theme, AttributeColorRule.Classify(entry.Attributes), isCursor, isMarked);
+        var iconRect = ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, _layout.IconBounds(index)));
+        Rectangle Visible((int X, int Y, int Width, int Height) r) => ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, r));
+        var ellipsis = TextMeasure.Flags | TextFormatFlags.Left | TextFormatFlags.EndEllipsis;
+
+        if (layout.SeparatorBounds(index) is { } separator)   // 行と行の間だけ。最後の行の下には引かない
+        {
+            using var pen = new Pen(RowColors.Separator(_theme, Program.StartupOs.HighContrast));
+            var sep = Visible(separator);
+            g.DrawLine(pen, sep.X, sep.Y, sep.Right - 1, sep.Y);
+        }
+        foreach (var layer in GridLayers)
+            switch (layer)
+            {
+                case GridLayer.Fill:
+                    using (var brush = new SolidBrush(background)) g.FillRectangle(brush, item);
+                    // R-119 / R-122: 名前は 1 行。省略は表示している拡張子だけを残す（隠した拡張子は NameLinesFor が出さない）
+                    TextRenderer.DrawText(g, NameLinesFor(index).Lines.FirstOrDefault() ?? "", _font, Visible(layout.NameBounds(index)),
+                        foreground, TextMeasure.Flags | TextFormatFlags.Left);
+                    var infos = InfoTexts(index);
+                    if (infos.Count > 0) TextRenderer.DrawText(g, infos[0], _font, Visible(layout.LeftInfoBounds(index)), foreground, ellipsis);
+                    for (var row = 0; row < layout.RightCount && row + 1 < infos.Count; row++)
+                        if (infos[row + 1].Length > 0 && layout.RightInfoBounds(index, row) is { } right)
+                            TextRenderer.DrawText(g, RightInfoText(_views.Tiles.Info[row + 1], infos[row + 1]), _font, Visible(right),
+                                foreground, ellipsis);
+                    break;
+                case GridLayer.Image:
+                    DrawItemImage(g, entry, iconRect);
+                    break;
+                case GridLayer.Overlay:
+                    DrawOverlay(g, entry, iconRect);
+                    break;
+                case GridLayer.CheckBox:
+                    if (ShowsCheckBox(index) && _layout.CheckBoxBounds(index) is { } box)
+                        ItemFrames.DrawCheckBox(g, Visible(box), background, foreground, isChecked: isMarked, stroke: Math.Max(1, Scaled(1)));
+                    break;
+                case GridLayer.CursorFrame:
+                    if (isCursor) ItemFrames.DrawCursorFrame(g, item, background, foreground, Math.Max(1, Scaled(1)));   // V4
+                    break;
+                case GridLayer.DropFrame:
+                    if (index == _dropTarget)   // R-110-2
+                    {
+                        using var pen = new Pen(RowColors.Frame(background, foreground), Scaled(2)) { Alignment = PenAlignment.Inset };
+                        g.DrawRectangle(pen, item);
+                    }
+                    break;
+            }
+    }
+
     private void DrawGridItem(Graphics g, int index)
     {
         var entry = _state.Entries[index];

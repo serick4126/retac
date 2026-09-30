@@ -362,4 +362,18 @@ public class LayoutContractTests
         var specIds = invariant.GetProperty("specIds").EnumerateArray().Select(a => a.GetString()).ToHashSet();
         Assert.Superset(new HashSet<string?> { "R-114", "R-110-2", "R-116", "R-117", "R-119", "R-120", "R-121", "R-122" }, specIds);
     }
+
+    /// <summary>INV-DETAILS-ROW-HIT: 行全体を項目にするレイアウト（詳細・コンテンツ）は、不変条件の applies と specIds に載っている。</summary>
+    [Fact]
+    public void 行全体が項目のレイアウトは行の当たり判定の不変条件に載っている()
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(SchemaManifest.RepoRoot(), "schema", "invariants.json")));
+        var invariant = doc.RootElement.GetProperty("invariants").EnumerateArray()
+            .Single(e => e.GetProperty("id").GetString() == "INV-DETAILS-ROW-HIT");
+        var applies = invariant.GetProperty("applies").EnumerateArray().Select(a => a.GetString()).ToHashSet();
+        Assert.Contains("type:" + typeof(DetailsLayout).FullName, applies);
+        Assert.Contains("type:" + typeof(ContentLayout).FullName, applies);
+        var specIds = invariant.GetProperty("specIds").EnumerateArray().Select(a => a.GetString()).ToHashSet();
+        Assert.Superset(new HashSet<string?> { "R-11-2", "R-122" }, specIds);
+    }
 }
