@@ -159,6 +159,13 @@ public sealed record ContentLayout : IFileViewLayout
 
     public int PageItems(int viewportWidth, int viewportHeight) => VisibleRows(viewportHeight);
 
+    /// <summary>
+    /// R-76 / R-122: 1 段は 1 行で、大きいアイコンの行は高い。ホイールの行数どおりに進むと 1 画面を超えて、見ていない行を飛ばしてしまう。
+    /// そこで 1 画面より 1 行少ない数までに抑える（行が小さければホイールの行数のまま）。
+    /// </summary>
+    public int WheelSteps(int notchLines, int viewportWidth, int viewportHeight) =>
+        Math.Clamp(notchLines, 1, Math.Max(1, VisibleRows(viewportHeight) - 1));
+
     public (int X, int Y) VisibleSteps(int viewportWidth, int viewportHeight) => (0, VisibleRows(viewportHeight));
 
     /// <summary>R-10: カーソルの行が見えていなければ、その行が端に来るまで動かす。</summary>

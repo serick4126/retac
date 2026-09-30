@@ -12,7 +12,7 @@ public static class FileViewModes
     /// Q29: 作ったビューから順に切り替えの段へ足した。3.0.0 で 8 つすべてがそろった（R-121・R-122）。
     /// 並びは列挙の順（Ctrl+ホイールの段の順）を保つ。
     /// </summary>
-    public static readonly IReadOnlyList<FileViewMode> Built = Enum.GetValues<FileViewMode>();
+    public static readonly IReadOnlyList<FileViewMode> Built = [.. Enum.GetValues<FileViewMode>()];
 
     /// <summary>知らない値は一覧に直す（手で書いた設定ファイルでだけ起こる）。</summary>
     public static FileViewMode Normalize(FileViewMode mode) => Built.Contains(mode) ? mode : FileViewMode.List;

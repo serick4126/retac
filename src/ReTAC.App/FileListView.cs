@@ -442,6 +442,8 @@ public sealed class FileListView : Control
         EnsureCursorVisible();
         // R-117 / R-118: 変わっていなくても、レイアウトが変わって見えている範囲が変わりうるので出し直す
         if (ImageSettingsKey() != imagesBefore) NextImageGeneration(); else UpdateImageQueue();
+        // 項目の位置が変わるので、マウスが動くまで古い項目にホバー（チェックボックスの表示）が残らないよう付け直す
+        RefreshHot();
         Invalidate();
     }
 

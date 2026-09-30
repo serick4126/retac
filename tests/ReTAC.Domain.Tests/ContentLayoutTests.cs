@@ -180,6 +180,17 @@ public class ContentLayoutTests
         Assert.Equal(new ScrollPosition(0, 0), layout.MaxScrollPosition(0, 800, 300));
     }
 
+    [Theory]
+    [InlineData(16, 300, 3, 3)]     // 行が小さい: ホイールの行数のまま（7 行見える）
+    [InlineData(256, 600, 3, 1)]    // 行が高い: 2 行しか収まらないので 1 行
+    [InlineData(48, 300, 0, 1)]
+    [InlineData(48, 300, -2, 1)]
+    public void ホイールは1画面より1行少ない数までに抑える(int iconSize, int clientHeight, int notchLines, int expected)
+    {
+        var layout = Content(iconSize: iconSize, clientHeight: clientHeight);
+        Assert.Equal(expected, layout.WheelSteps(notchLines, 800, clientHeight));
+    }
+
     [Fact]
     public void 高さを超えると縦のバーを出し_その幅を引いて配置する()
     {
