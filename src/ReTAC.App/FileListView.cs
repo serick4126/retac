@@ -1909,10 +1909,18 @@ public sealed class FileListView : Control
     protected override void OnMouseWheel(MouseEventArgs e)
     {
         base.OnMouseWheel(e);
-        // V9: Ctrl+ホイールは表示モードの段（奥へ回すと上の段）。スクロールはしない
-        if (ModifierKeys.HasFlag(Keys.Control))
+        Wheel(e.Delta, ModifierKeys.HasFlag(Keys.Control));
+    }
+
+    /// <summary>ホイールの処理。Ctrl は ModifierKeys（実際のキーボード）なので、テストが届けられるように引数にして切り出した。</summary>
+    internal void Wheel(int delta, bool ctrl)
+    {
+        if (ctrl)
         {
-            ModeWheel(e.Delta);
+            // V9: Ctrl+ホイールは表示モードの段（奥へ回すと上の段）。スクロールはしない。
+            // R-128: 設定でオフなら何もしない。回した分もためない（あとでオンにしたとき・次の Ctrl+ホイールへ持ち越さない）
+            if (_views.Common.CtrlWheelSwitchesView) ModeWheel(delta);
+            else _modeWheel.Reset();
             return;
         }
         // Ctrl を離したあとに、たまった分が次の Ctrl+ホイールへ持ち越されないようにする
@@ -1921,7 +1929,7 @@ public sealed class FileListView : Control
         // スクロールできない間にたまった分が、後でまとめて効かないようにする
         if (!horizontal && !vertical) { _wheel.Reset(); return; }
         // R-76: 一覧は 1 ノッチ = 1 列（左端は常に列の境界に揃う）。詳細は縦のバーがあれば縦に MouseWheelScrollLines 行、無ければ横に 1 段
-        ScrollWheel(_wheel.Add(e.Delta, SystemInformation.MouseWheelScrollDelta));
+        ScrollWheel(_wheel.Add(delta, SystemInformation.MouseWheelScrollDelta));
     }
 
     /// <summary>Ctrl+ホイールの処理。Ctrl は ModifierKeys（実際のキーボード）なので、テストが届けられるように切り出した。</summary>

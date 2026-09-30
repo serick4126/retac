@@ -57,6 +57,7 @@ public sealed class FileViewPage : UserControl
     // 共通
     internal CheckBox Overlays { get; } = Check("同期状態などの印をアイコンに表示する(&O)");
     private readonly CheckBox _hideKnownExtensions = Check("登録されている拡張子は表示しない(&X)");
+    internal CheckBox CtrlWheel { get; } = Check("Ctrl+ホイールでビューを切り替える(&W)");
     // 一覧
     private readonly CheckBox _listAlignExtension = Check("拡張子を揃えて表示する(&X)");
     internal CheckBox ListDragDrop { get; } = Check("ファイル表示パネル内でドラッグ＆ドロップを使用する(&D)");
@@ -105,7 +106,7 @@ public sealed class FileViewPage : UserControl
         // アクセスキーはパネルの中で重ねず、ダイアログの「適用(&S)」の S と、ダイアログで避けている A は使わない
         _panels =
         [
-            Arrange(new Panel(), (Overlays, 0), (_hideKnownExtensions, 32)),
+            Arrange(new Panel(), (Overlays, 0), (_hideKnownExtensions, 32), (CtrlWheel, 64)),
             Arrange(new Panel(),
                 (ListDragDrop, 0),
                 (ListRange, 28),
@@ -186,6 +187,7 @@ public sealed class FileViewPage : UserControl
 
         Overlays.Checked = views.Common.ShowOverlays;
         _hideKnownExtensions.Checked = views.Common.HideKnownExtensions;
+        CtrlWheel.Checked = views.Common.CtrlWheelSwitchesView;
         _listAlignExtension.Checked = views.List.AlignExtension;
         _detailsAlignExtension.Checked = views.Details.AlignExtension;
 
@@ -229,6 +231,7 @@ public sealed class FileViewPage : UserControl
     {
         OnCheck(Overlays, (v, on) => v with { Common = v.Common with { ShowOverlays = on } });
         OnCheck(_hideKnownExtensions, (v, on) => v with { Common = v.Common with { HideKnownExtensions = on } });
+        OnCheck(CtrlWheel, (v, on) => v with { Common = v.Common with { CtrlWheelSwitchesView = on } });
         OnCheck(_listAlignExtension, (v, on) => v with { List = v.List with { AlignExtension = on } });
 
         OnCheck(ListRange, (v, on) => v with { List = v.List with { RangeSelection = on } });

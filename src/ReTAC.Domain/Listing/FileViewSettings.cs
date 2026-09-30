@@ -50,6 +50,12 @@ public sealed record FileViewCommonSettings
     /// オンのあいだ、ファイルには拡張子込みの名前をいつもツールチップに出す。
     /// </summary>
     public bool HideKnownExtensions { get; init; }
+    /// <summary>
+    /// R-128: Ctrl+ホイールでビューを切り替える（既定はオン。エクスプローラーと同じ）。オフなら Ctrl+ホイールは何もしない。
+    /// スクロールにもしない（Ctrl を押したまま回して意図せずスクロールする、という別の誤操作を作らないため）。
+    /// メニューとビューごとのコマンドでの切り替えには効かない。
+    /// </summary>
+    public bool CtrlWheelSwitchesView { get; init; } = true;
 }
 
 public sealed record ListViewSettings

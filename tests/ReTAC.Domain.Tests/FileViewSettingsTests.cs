@@ -275,7 +275,7 @@ public class FileViewSettingsTests
         var baseline = new FileViewSettings();
         var changed = new FileViewSettings
         {
-            Common = new() { ShowOverlays = false, HideKnownExtensions = true },
+            Common = new() { ShowOverlays = false, HideKnownExtensions = true, CtrlWheelSwitchesView = false },
             List = new() { AlignExtension = false, InPanelDragDrop = true, RangeSelection = false, NameWidth = new() { Mode = NameWidthMode.Auto, MaxChars = 11 } },
             Details = new()
             {
@@ -307,5 +307,17 @@ public class FileViewSettingsTests
         Assert.True(s.Details.RangeSelection);
         var back = JsonSerializer.Deserialize<FileViewSettings>(JsonSerializer.Serialize(s, Json), Json)!;
         Assert.False(back.Icons.RangeSelection);
+    }
+
+    [Fact]
+    public void Ctrlホイールでのビューの切り替えは既定でオンで_保存して読み直せる()
+    {
+        Assert.True(new FileViewSettings().Common.CtrlWheelSwitchesView);   // R-128: 今の動作（エクスプローラーと同じ）
+        // 項目の無い設定ファイルでもオン（欠けたキーは既定値で埋まる）
+        var missing = JsonSerializer.Deserialize<FileViewSettings>("""{ "Common": { "ShowOverlays": false } }""", Json)!;
+        Assert.True(missing.Common.CtrlWheelSwitchesView);
+        var off = new FileViewSettings { Common = new() { CtrlWheelSwitchesView = false } };
+        var read = JsonSerializer.Deserialize<FileViewSettings>(JsonSerializer.Serialize(off, Json), Json)!;
+        Assert.False(read.Common.CtrlWheelSwitchesView);
     }
 }

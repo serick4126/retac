@@ -59,7 +59,7 @@ public class FileViewPageTests
     }
 
     public static TheoryData<string> Phase16Controls =>
-        ["Overlays", "IconsCheckBoxes", "IconsThumbnails", "IconsFolderThumbnails", "NameLines", "SmallIconWidth", "SmallIconChars",
+        ["Overlays", "CtrlWheel", "IconsCheckBoxes", "IconsThumbnails", "IconsFolderThumbnails", "NameLines", "SmallIconWidth", "SmallIconChars",
          "TilesCheckBoxes", "TilesThumbnails", "TilesFolderThumbnails"];
 
     /// <summary>R-116〜R-119: Phase 16 の設定の部品は、下書きの自分の系統の欄だけを変える。</summary>
@@ -73,6 +73,7 @@ public class FileViewPageTests
         switch (control)
         {
             case "Overlays": page.Overlays.Checked = false; break;
+            case "CtrlWheel": page.CtrlWheel.Checked = false; break;
             case "IconsCheckBoxes": page.IconsCheckBoxes.SelectedIndex = 1; break;
             case "IconsThumbnails": page.IconsThumbnails.Checked = false; break;
             case "IconsFolderThumbnails": page.IconsFolderThumbnails.Checked = false; break;
@@ -87,6 +88,7 @@ public class FileViewPageTests
         var (changed, group) = control switch
         {
             "Overlays" => (!after.Common.ShowOverlays, "Common"),
+            "CtrlWheel" => (!after.Common.CtrlWheelSwitchesView, "Common"),
             "IconsCheckBoxes" => (after.Icons.CheckBoxes == CheckBoxMode.Always, "Icons"),
             "IconsThumbnails" => (!after.Icons.Thumbnails, "Icons"),
             "IconsFolderThumbnails" => (!after.Icons.FolderThumbnails, "Icons"),
