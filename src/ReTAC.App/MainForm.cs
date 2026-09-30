@@ -1106,88 +1106,87 @@ public sealed class MainForm : Form, IBookmarkHost
         // 移動もコピーと同じ道を通す（R-51: 差異は文言のみ）
         var timing = TransferTiming.Start();
         CopyPlan plan;
-        if (differentialOnly)
+        try
         {
-            plan = CopyPlanner.Build(sources, destination, CopyCondition.NewerOnly, moving: moving);
-        }
-        else
-        {
-            // 衝突のたびに問う（R-41-5）。「以降全て」を押されたらそれ以降は問わない（R-50）
-            CopyCondition? applyToAll = null;
-            var cancelled = false;
-            plan = CopyPlanner.Build(sources, destination, conflict =>
+            if (differentialOnly)
             {
-                if (cancelled) return CopyCondition.Skip;
-                if (applyToAll is { } fixedCondition) return fixedCondition;
+                plan = CopyPlanner.Build(sources, destination, CopyCondition.NewerOnly, ScanProgress(), moving);
+            }
+            else
+            {
+                // 衝突のたびに問う（R-41-5）。「以降全て」を押されたらそれ以降は問わない（R-50）
+                CopyCondition? applyToAll = null;
+                var cancelled = false;
+                plan = CopyPlanner.Build(sources, destination, conflict =>
+                {
+                    if (cancelled) return CopyCondition.Skip;
+                    if (applyToAll is { } fixedCondition) return fixedCondition;
 
-                using var conflictDialog = new ConflictDialog(conflict, ConflictResolver.Default);
-                if (conflictDialog.ShowDialog(this) != DialogResult.OK) { cancelled = true; return CopyCondition.Skip; }
-                if (conflictDialog.ApplyToAll) applyToAll = conflictDialog.Condition;
-                return conflictDialog.Condition;
-            }, moving: moving);
-            if (cancelled) return false;
+                    using var conflictDialog = new ConflictDialog(conflict, ConflictResolver.Default);
+                    if (conflictDialog.ShowDialog(this) != DialogResult.OK) { cancelled = true; return CopyCondition.Skip; }
+                    if (conflictDialog.ApplyToAll) applyToAll = conflictDialog.Condition;
+                    return conflictDialog.Condition;
+                }, ScanProgress(), moving);
+                if (cancelled) return false;
+            }
         }
-
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // 転送元・宛先を読めない（権限・切断）。起こりうる失敗なので、普通のエラーとして知らせる（6 章）。
+            // 受け止めないと「想定外の例外」として異常終了の記録（R-126）に載り、場所の案内まで付く
+            MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+        finally
+        {
+            RefreshStatus();   // R-125: 「調べています」を消す。衝突の確認でキャンセルしたとき・読めなかったときにも残さない
+        }
         timing?.Mark("plan");
 
         // 複写条件で全件が対象外になるのは差分更新では普通のこと。いちいち知らせない
         if (plan.Items.Count == 0) return true;
 
-        // 判定済みなので OS には衝突を問わせない（R-41-4）。フォルダごと渡すかは計画が項目ごとに決めている（R-125）
         long? firstItem = null;
+        string? changed = null;
+        // 判定済みなので OS には衝突を問わせない（R-41-4）
         var completed = RunOperation(silentOverwrite: true, operation =>
         {
-            foreach (var folder in plan.Folders)
-            {
-                if (folder.Expected.Kind == DestinationKind.Folder) continue;   // 既にある。作り直さない
-                if (folder.Expected.Kind == DestinationKind.Absent) _recorder?.AddCreatedFolder(folder.FullPath);
-                Directory.CreateDirectory(folder.FullPath);
-            }
-            timing?.Mark("mkdir");
-            foreach (var item in plan.Items)
-            {
-                // 上書きの有無は計画が持つ。転送の直前にファイルごとに確かめ直さない（R-125）
-                if (item.Expected.Kind == DestinationKind.File) _recorder?.MarkOverwrite(item.Target);
-                if (moving) operation.Move(item.Source, item.DestinationFolder, item.NewName);
-                else operation.Copy(item.Source, item.DestinationFolder, item.NewName);
-            }
+            changed = TransferExecution.Register(plan, moving, operation, _recorder);
             timing?.Mark("register");
         }, operation =>
         {
-            firstItem = operation.FirstItemMilliseconds;
-            timing?.Mark("execute");   // OS の転送が終わるまで
+            (firstItem, changed) = (operation.FirstItemMilliseconds, changed ?? operation.ChangedDestination);
+            timing?.Mark("execute");
         });
-        timing?.Mark("record");        // 転送のあと、結果を元に戻すの記録へ入れる時間（項目ごとに宛先を問い合わせる。画面のスレッド）
+        timing?.Mark("record");   // 転送のあと、結果を元に戻すの記録へ入れる時間（項目ごとに宛先を問い合わせる）
         timing?.Write($"{(moving ? "move" : "copy")} items={plan.Items.Count} folders={plan.Folders.Count} first-item={firstItem?.ToString() ?? "-"}ms");
 
-        // R-125: 中をたどった転送元のフォルダだけを、空になっていたら消す。フォルダごと渡した項目の配下は見ない
-        // （中止・失敗で動かなかったフォルダの、元から空だった入れ子を消してしまう。宛先には無いので、戻せない）
-        if (moving) RemoveEmptySourceFolders(plan.Folders.Select(f => f.Source).OfType<string>(), f => _recorder?.AddRemovedFolder(f));
+        // R-125: 中をたどった転送元のフォルダだけを、空になっていたら消す。フォルダごと渡した項目の配下は見ない。
+        // 宛先が変わって中止したときは、後片付けをしない: 何も転送していないのに消すと、元から空だった転送元のフォルダが消える
+        // （転送 0 件の記録は残らないので、戻せない）。途中で止まった移動は、もう一度実行すれば続きから進む
+        if (moving && changed is null) TransferExecution.RemoveEmptySources(plan, f => _recorder?.AddRemovedFolder(f));
 
-        return completed;
+        if (changed is null) return completed;
+        // R-125: 計画の後に宛先が変わっていた。複写条件の判断が当てはまらないので、上書きせずに中止したことを知らせる。
+        // もう一度実行すれば、変わった宛先は衝突として複写条件の判定を通る
+        MessageBox.Show(this, "転送先が変わったため、中止しました。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        return false;
     }
 
     /// <summary>
-    /// 移動のあと片付け。<b>中身が残っているフォルダには触らない。</b>
-    /// 計画が中をたどった転送元のフォルダだけを、深い方から順に見る（R-125。配下を自分でたどらない）。
+    /// R-125: 転送の計画を作っている間、ステータスバーに「調べています」を出す。走査は画面のスレッドで行うので、
+    /// 自分で描かせる（Update）。0.2 秒より細かくは描き直さない。
     /// </summary>
-    private static void RemoveEmptySourceFolders(IEnumerable<string> walkedSources, Action<string> removed)
+    private Action<int> ScanProgress()
     {
-        foreach (var folder in walkedSources.OrderByDescending(f => f.Length))
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        return folders =>
         {
-            try
-            {
-                if (Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any())
-                {
-                    Directory.Delete(folder);
-                    removed(folder);
-                }
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                // 消せないなら残しておくだけでよい
-            }
-        }
+            if (watch.ElapsedMilliseconds < 200) return;
+            watch.Restart();
+            _statusBar.ShowMessage($"調べています（{folders} フォルダ）");
+            ((Control)_statusBar).Update();   // StatusBar には同名の Update(state, folder) があるので、Control の Update を呼ぶ
+        };
     }
 
     /// <summary>`D`（削除・0x82DF）。R-19: ごみ箱経由。確認は Windows 標準（R-44）。</summary>

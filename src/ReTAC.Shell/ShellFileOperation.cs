@@ -1,5 +1,6 @@
 using System.IO;
 using System.Runtime.InteropServices;
+using ReTAC.Domain.FileOps;
 
 namespace ReTAC.Shell;
 
@@ -29,29 +30,46 @@ public sealed class ShellFileOperation : IDisposable
     /// <param name="silentOverwrite">
     /// 衝突の確認を OS に出させない。複写条件を自前で判定済みの転送で使う（R-41-4）。
     /// </param>
-    public ShellFileOperation(IntPtr owner, bool silentOverwrite)
+    /// <param name="noUi">進捗・エラー・フォルダ作成の確認を出さない（テスト用。ハンドルの無い所から呼ぶ）</param>
+    public ShellFileOperation(IntPtr owner, bool silentOverwrite, bool noUi = false)
     {
         var type = Type.GetTypeFromCLSID(CLSID_FileOperation)
             ?? throw new InvalidOperationException("IFileOperation を作成できません。");
         _operation = (IFileOperation)Activator.CreateInstance(type)!;
-        Check(_operation.SetOwnerWindow(owner));
+        if (owner != IntPtr.Zero) Check(_operation.SetOwnerWindow(owner));
 
         var flags = FOF_ALLOWUNDO;                       // R-19: 削除はごみ箱経由
         if (silentOverwrite) flags |= FOF_NOCONFIRMATION;
+        if (noUi) flags |= FOF_SILENT | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
         Check(_operation.SetOperationFlags(flags));
         Check(_operation.Advise(_sink, out _cookie));
+    }
+
+    /// <summary>R-125: 転送先の、計画の時点の状態を登録する。OS がその宛先へ転送する直前に今の状態と比べ、違えば以降の転送を止める。</summary>
+    public void Expect(string target, DestinationState state) => _sink.Expect(target, state);
+
+    /// <summary>R-125: 計画の後に変わっていた宛先。無ければ null。Execute の後に読む。</summary>
+    public string? ChangedDestination => _sink.ChangedDestination;
+
+    /// <summary>R-125: 宛先のフォルダは、1 回の操作の中で 1 回だけ解決する（同じフォルダへ何千件も送るとき、ネットワークの宛先を件数ぶん解決しない）。</summary>
+    private readonly Dictionary<string, IShellItem> _destinations = new(StringComparer.OrdinalIgnoreCase);
+
+    private IShellItem Destination(string folder)
+    {
+        if (!_destinations.TryGetValue(folder, out var item)) _destinations[folder] = item = Item(folder);
+        return item;
     }
 
     /// <param name="newName">別名で複写する場合の名前。元の名前のままなら null</param>
     public void Copy(string source, string destinationFolder, string? newName = null)
     {
-        Check(_operation.CopyItem(Item(source), Item(destinationFolder), newName, IntPtr.Zero));
+        Check(_operation.CopyItem(Item(source), Destination(destinationFolder), newName, IntPtr.Zero));
         _hasWork = true;
     }
 
     public void Move(string source, string destinationFolder, string? newName = null)
     {
-        Check(_operation.MoveItem(Item(source), Item(destinationFolder), newName, IntPtr.Zero));
+        Check(_operation.MoveItem(Item(source), Destination(destinationFolder), newName, IntPtr.Zero));
         _hasWork = true;
     }
 
@@ -128,6 +146,9 @@ public sealed class ShellFileOperation : IDisposable
     /// <summary>コピーエンジンが返す中止。OS の確認ダイアログを Esc で閉じるとこれ。</summary>
     private const int COPYENGINE_E_USER_CANCELLED = unchecked((int)0x80270000);
 
+    private const uint FOF_SILENT = 0x0004;
+    private const uint FOF_NOCONFIRMMKDIR = 0x0200;
+    private const uint FOF_NOERRORUI = 0x0400;
     private const uint FOF_NOCONFIRMATION = 0x0010;
     private const uint FOF_ALLOWUNDO = 0x0040;
 

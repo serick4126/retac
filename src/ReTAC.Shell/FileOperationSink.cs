@@ -1,4 +1,6 @@
+using System.IO;
 using System.Runtime.InteropServices;
+using ReTAC.Domain.FileOps;
 
 namespace ReTAC.Shell;
 
@@ -28,16 +30,58 @@ internal sealed class FileOperationSink : IFileOperationProgressSink
     /// <summary>R-125: 最初の項目の通知が来た時刻（Stopwatch の値）。転送が実際に始まるまでの時間を測る。</summary>
     public long? FirstItemTimestamp { get; private set; }
 
-    public int PreMoveItem(uint flags, IntPtr item, IntPtr destinationFolder, string? newName) => Begin();
-    public int PostMoveItem(uint flags, IntPtr item, IntPtr destinationFolder, string? newName, int hrMove, IntPtr created) =>
-        Add(OperationKind.Move, item, hrMove, created);
-    public int PreCopyItem(uint flags, IntPtr item, IntPtr destinationFolder, string? newName) => Begin();
+    /// <summary>
+    /// R-125: 転送先のパス → 計画の時点の状態（登録した順）。登録の無い宛先（フォルダごと渡した中身など）は確かめない。
+    /// 列で持つのは、同じ宛先へ 2 件送る計画（別のフォルダの同じ名前のファイル）があるため。
+    /// 後の項目の「計画の時点の状態」は、先の項目を転送したあとの状態であり、1 件目の通知で 2 件目の状態と比べてはならない。
+    /// </summary>
+    private readonly Dictionary<string, Queue<DestinationState>> _expected = new(StringComparer.OrdinalIgnoreCase);
 
-    private int Begin()
+    /// <summary>R-125: 計画の後に変わっていた宛先。見つけたら、以降の項目はすべて止める。</summary>
+    public string? ChangedDestination { get; private set; }
+
+    public void Expect(string target, DestinationState state)
+    {
+        if (!_expected.TryGetValue(target, out var queue)) _expected[target] = queue = new Queue<DestinationState>();
+        queue.Enqueue(state);
+    }
+
+    public int PreMoveItem(uint flags, IntPtr item, IntPtr destinationFolder, string? newName) => Guard(item, destinationFolder, newName);
+    public int PreCopyItem(uint flags, IntPtr item, IntPtr destinationFolder, string? newName) => Guard(item, destinationFolder, newName);
+
+    /// <summary>
+    /// R-125: OS が項目を転送する直前に、宛先の今の状態を計画の時点の状態と比べる。違えば失敗を返す。
+    /// 失敗を返すと OS は残りの操作をすべて取り消す（1 件だけを飛ばす手段は無い）。取り消さない場合に備えて、
+    /// 1 件見つけたあとは残りの通知でも失敗を返し続ける。返す値は「利用者の中止」（OS はエラーの画面を出さない）。
+    /// </summary>
+    private int Guard(IntPtr item, IntPtr destinationFolder, string? newName)
     {
         FirstItemTimestamp ??= System.Diagnostics.Stopwatch.GetTimestamp();
-        return 0;
+        if (ChangedDestination is not null) return Cancelled;
+        if (_expected.Count == 0) return 0;
+        // 通知の中で投げると OS の処理を止めてしまう。確かめられなかった項目は、そのまま通す（OS が自分の失敗として知らせる）
+        try
+        {
+            if (PathOf(destinationFolder) is not { } folder) return 0;
+            var name = newName is { Length: > 0 } ? newName : Path.GetFileName(PathOf(item));
+            if (string.IsNullOrEmpty(name)) return 0;
+            var target = Path.Combine(folder, name);
+            if (!_expected.TryGetValue(target, out var queue) || queue.Count == 0) return 0;
+            if (DestinationState.Of(target) == queue.Dequeue()) return 0;
+            ChangedDestination = target;
+            return Cancelled;
+        }
+        catch (Exception ex) when (ex is COMException or IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return 0;
+        }
     }
+
+    /// <summary>COPYENGINE_E_USER_CANCELLED。</summary>
+    private const int Cancelled = unchecked((int)0x80270000);
+
+    public int PostMoveItem(uint flags, IntPtr item, IntPtr destinationFolder, string? newName, int hrMove, IntPtr created) =>
+        Add(OperationKind.Move, item, hrMove, created);
     public int PostCopyItem(uint flags, IntPtr item, IntPtr destinationFolder, string? newName, int hrCopy, IntPtr created) =>
         Add(OperationKind.Copy, item, hrCopy, created);
     public int PreDeleteItem(uint flags, IntPtr item) => 0;
