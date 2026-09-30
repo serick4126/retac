@@ -12,7 +12,7 @@ public sealed record GridLayoutInput
     public required int LineHeight { get; init; }
     /// <summary>R-119: 名前の行数（IconTop）。IconLeft は 1。</summary>
     public required int NameLines { get; init; }
-    /// <summary>名前の領域の幅。パネルより広ければ Compute が縮める。</summary>
+    /// <summary>名前の領域の幅。項目がパネルより広ければ Compute が縮める（0 まで。アイコン・チェックボックスは縮めない）。</summary>
     public required int TextWidth { get; init; }
     public required int PaddingX { get; init; }
     public required int PaddingY { get; init; }
@@ -29,7 +29,8 @@ public sealed record GridLayoutInput
 
 /// <summary>
 /// R-119 / R-120 / INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: 小〜特大アイコンの格子。行ごとに左から右へ並べ、縦にスクロールする。
-/// 横にはスクロールしない（項目がパネルより広ければ縮める）。縦のスクロールの 1 段は格子の 1 行。
+/// 横にはスクロールしない（項目がパネルより広ければ名前の幅を縮め、それでも部品が収まらないほど狭ければ、はみ出した部分を切る）。
+/// 縦のスクロールの 1 段は格子の 1 行。
 /// </summary>
 public sealed record GridLayout : IFileViewLayout
 {

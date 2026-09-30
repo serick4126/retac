@@ -34,6 +34,19 @@ public class GridLayoutTests
         Assert.Equal(3, grid.Rows);
     }
 
+    [Theory]
+    [InlineData(GridArrangement.IconTop)]
+    [InlineData(GridArrangement.IconLeft)]
+    public void 部品より狭いパネルでは項目がはみ出すが横にはスクロールしない(GridArrangement arrangement)
+    {
+        var grid = Grid(3, 10, arrangement: arrangement);
+        Assert.True(grid.CellWidth > 10);   // 部品を縮めずにはみ出す（R-119）
+        Assert.False(grid.ScrollBars.Horizontal);
+        Assert.Equal(0, grid.MaxScrollPosition(3, 10, 150).X);
+        Assert.Equal(0, grid.ScrollOffset(new ScrollPosition(5, 0)).X);
+        Assert.Equal(0, grid.AutoScrollDirection(9, 50, 10, 150).X);
+    }
+
     [Fact]
     public void パネルより広い項目はパネルの幅まで縮めて横にはみ出さない()
     {

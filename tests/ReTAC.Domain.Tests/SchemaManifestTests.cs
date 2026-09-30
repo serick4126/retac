@@ -63,6 +63,17 @@ public class SchemaManifestTests
         }
     }
 
+    /// <summary>
+    /// 単純名だけで引いていたころの取り違え（入れ子の Result が別ファイルの Result に、ジェネリックが null に）。
+    /// 上の検査は単純名の宣言しか見ないので、同じ名前が別ファイルにあると取り違えを見逃す。対応先を直接確かめる
+    /// </summary>
+    [Theory]
+    [InlineData("ReTAC.Domain.Listing.NameWrap+Result", "src/ReTAC.Domain/Listing/NameWrap.cs")]
+    [InlineData("ReTAC.Domain.Listing.LruCache`2", "src/ReTAC.Domain/Listing/LruCache.cs")]
+    [InlineData("ReTAC.Domain.Listing.LenientEnumConverter`1", "src/ReTAC.Domain/Listing/LenientEnumConverter.cs")]
+    public void 入れ子とジェネリックの型は宣言したファイルを指す(string type, string file) =>
+        Assert.Equal(file, Manifest["types"]![type]!["file"]!.GetValue<string>());
+
     [Fact]
     public void マニフェストが実装と一致する()
     {

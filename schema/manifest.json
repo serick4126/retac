@@ -1783,7 +1783,7 @@
       "id": "type:ReTAC.Domain.Listing.GridLayout",
       "kind": "sealed record",
       "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-      "doc": "R-119 / R-120 / INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: 小〜特大アイコンの格子。行ごとに左から右へ並べ、縦にスクロールする。 横にはスクロールしない（項目がパネルより広ければ縮める）。縦のスクロールの 1 段は格子の 1 行。",
+      "doc": "R-119 / R-120 / INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: 小〜特大アイコンの格子。行ごとに左から右へ並べ、縦にスクロールする。 横にはスクロールしない（項目がパネルより広ければ名前の幅を縮め、それでも部品が収まらないほど狭ければ、はみ出した部分を切る）。 縦のスクロールの 1 段は格子の 1 行。",
       "fields": [
         {
           "name": "Arrangement",
@@ -1983,7 +1983,7 @@
           "nullable": false,
           "required": true,
           "mutability": "init",
-          "doc": "名前の領域の幅。パネルより広ければ Compute が縮める。"
+          "doc": "名前の領域の幅。項目がパネルより広ければ Compute が縮める（0 まで。アイコン・チェックボックスは縮めない）。"
         },
         {
           "name": "PaddingX",
@@ -5872,7 +5872,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 149
+        "line": 150
       }
     ],
     "B-09": [
@@ -7184,7 +7184,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 198
+        "line": 199
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
@@ -8292,7 +8292,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 149
+        "line": 150
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
@@ -9264,11 +9264,11 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 81
+        "line": 82
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 116
+        "line": 117
       },
       {
         "file": "src/ReTAC.Domain/Listing/NameWrap.cs",
@@ -9394,11 +9394,11 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 166
+        "line": 167
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 172
+        "line": 173
       },
       {
         "file": "src/ReTAC.Domain/Selection/Lasso.cs",
@@ -10862,7 +10862,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 195
+        "line": 196
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
