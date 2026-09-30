@@ -84,6 +84,8 @@ public static class CommandGlyphs
         [CommandId.ViewSmallIcons] = '',
         [CommandId.ViewList] = '\uEA37',
         [CommandId.ViewDetails] = '\uE8A9',
+        [CommandId.ViewTiles] = '\uECA5',
+        [CommandId.ViewContent] = '\uE7C3',
         [CommandId.EnvironmentSettings] = '\uE713',
         [CommandId.OpenSettings] = '\uE713',
         [CommandId.NewWindow] = '\uE78B',
