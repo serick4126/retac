@@ -1104,6 +1104,7 @@ public sealed class MainForm : Form, IBookmarkHost
 
         // R-41-4: 衝突の判定は必ず自前でやる。OS の衝突解決 UI に丸投げしない。
         // 移動もコピーと同じ道を通す（R-51: 差異は文言のみ）
+        var timing = TransferTiming.Start();
         CopyPlan plan;
         if (differentialOnly)
         {
@@ -1127,6 +1128,8 @@ public sealed class MainForm : Form, IBookmarkHost
             if (cancelled) return false;
         }
 
+        timing?.Mark("plan");
+
         // 複写条件で全件が対象外になるのは差分更新では普通のこと。いちいち知らせない
         if (plan.Items.Count == 0) return true;
 
@@ -1136,11 +1139,13 @@ public sealed class MainForm : Form, IBookmarkHost
         var wholesale = moving && plan.Conflicts == 0 && !plan.Folders.Any(Path.Exists);
 
         // 判定済みなので OS には衝突を問わせない（R-41-4）
+        long? firstItem = null;
         var completed = RunOperation(silentOverwrite: true, operation =>
         {
             if (wholesale)
             {
                 foreach (var source in sources) operation.Move(source, destination);
+                timing?.Mark("register");
                 return;
             }
 
@@ -1149,6 +1154,7 @@ public sealed class MainForm : Form, IBookmarkHost
                 if (!Directory.Exists(folder)) _recorder?.AddCreatedFolder(folder);
                 Directory.CreateDirectory(folder);
             }
+            timing?.Mark("mkdir");
             foreach (var item in plan.Items)
             {
                 var target = Path.Combine(item.DestinationFolder, item.NewName ?? Path.GetFileName(item.Source));
@@ -1156,7 +1162,14 @@ public sealed class MainForm : Form, IBookmarkHost
                 if (moving) operation.Move(item.Source, item.DestinationFolder, item.NewName);
                 else operation.Copy(item.Source, item.DestinationFolder, item.NewName);
             }
+            timing?.Mark("register");
+        }, operation =>
+        {
+            firstItem = operation.FirstItemMilliseconds;
+            timing?.Mark("execute");   // OS の転送が終わるまで
         });
+        timing?.Mark("record");        // 転送のあと、結果を元に戻すの記録へ入れる時間（項目ごとに宛先を問い合わせる。画面のスレッド）
+        timing?.Write($"{(moving ? "move" : "copy")} items={plan.Items.Count} folders={plan.Folders.Count} first-item={firstItem?.ToString() ?? "-"}ms");
 
         // ファイル単位で動かしたときだけ、空になった転送元のフォルダが残る。
         // フォルダごと渡したときは元ごと消えているので触らない
@@ -1226,7 +1239,7 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <param name="silentOverwrite">複写条件を自前で判定済みか（R-41-4）</param>
     /// <param name="build">操作を積む。ここで投げた例外もまとめて受ける</param>
     /// <returns>すべて実行できたら true。中断・失敗なら false（呼び出し側はマークを外さない）。</returns>
-    private bool RunOperation(bool silentOverwrite, Action<ShellFileOperation> build)
+    private bool RunOperation(bool silentOverwrite, Action<ShellFileOperation> build, Action<ShellFileOperation>? finished = null)
     {
         // 転送中に自動更新が何度も走らないよう、終わってから 1 回だけ開き直す
         _watcher.EnableRaisingEvents = false;
@@ -1241,6 +1254,7 @@ public sealed class MainForm : Form, IBookmarkHost
             operation = new ShellFileOperation(Handle, silentOverwrite);
             build(operation);
             var completed = operation.Execute();
+            finished?.Invoke(operation);
             _recorder?.AddResults(operation.Results);
             return completed;
         }

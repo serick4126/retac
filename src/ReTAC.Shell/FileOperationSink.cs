@@ -25,10 +25,19 @@ internal sealed class FileOperationSink : IFileOperationProgressSink
     public int PreRenameItem(uint flags, IntPtr item, string? newName) => 0;
     public int PostRenameItem(uint flags, IntPtr item, string? newName, int hrRename, IntPtr created) =>
         Add(OperationKind.Rename, item, hrRename, created);
-    public int PreMoveItem(uint flags, IntPtr item, IntPtr destinationFolder, string? newName) => 0;
+    /// <summary>R-125: 最初の項目の通知が来た時刻（Stopwatch の値）。転送が実際に始まるまでの時間を測る。</summary>
+    public long? FirstItemTimestamp { get; private set; }
+
+    public int PreMoveItem(uint flags, IntPtr item, IntPtr destinationFolder, string? newName) => Begin();
     public int PostMoveItem(uint flags, IntPtr item, IntPtr destinationFolder, string? newName, int hrMove, IntPtr created) =>
         Add(OperationKind.Move, item, hrMove, created);
-    public int PreCopyItem(uint flags, IntPtr item, IntPtr destinationFolder, string? newName) => 0;
+    public int PreCopyItem(uint flags, IntPtr item, IntPtr destinationFolder, string? newName) => Begin();
+
+    private int Begin()
+    {
+        FirstItemTimestamp ??= System.Diagnostics.Stopwatch.GetTimestamp();
+        return 0;
+    }
     public int PostCopyItem(uint flags, IntPtr item, IntPtr destinationFolder, string? newName, int hrCopy, IntPtr created) =>
         Add(OperationKind.Copy, item, hrCopy, created);
     public int PreDeleteItem(uint flags, IntPtr item) => 0;

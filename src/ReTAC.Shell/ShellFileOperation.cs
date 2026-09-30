@@ -15,6 +15,12 @@ public sealed class ShellFileOperation : IDisposable
     private readonly FileOperationSink _sink = new();
     private readonly uint _cookie;
     private bool _hasWork;
+    private long _executeStarted;
+
+    /// <summary>R-125: Execute を呼んでから、OS が最初の項目を転送し始めるまでの時間（ミリ秒）。始まらなかったら null。</summary>
+    public long? FirstItemMilliseconds => _sink.FirstItemTimestamp is { } first
+        ? (long)System.Diagnostics.Stopwatch.GetElapsedTime(_executeStarted, first).TotalMilliseconds
+        : null;
 
     /// <summary>R-84: 成功して項目ができた操作。Execute の後に読む。中止しても成功した分は残る。</summary>
     public IReadOnlyList<OperationResult> Results => _sink.Results;
@@ -66,6 +72,7 @@ public sealed class ShellFileOperation : IDisposable
     public bool Execute()
     {
         if (!_hasWork) return true;
+        _executeStarted = System.Diagnostics.Stopwatch.GetTimestamp();
         var hr = _operation.PerformOperations();
         _operation.GetAnyOperationsAborted(out var aborted);
 
