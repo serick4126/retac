@@ -257,7 +257,8 @@ public sealed class DriveBar : Control
         }).ContinueWith(task =>
         {
             if (!task.IsCompletedSuccessfully) return;
-            if (IsDisposed) { DisposeAll(task.Result); return; }
+            // 窓ができる前に読み終えても BeginInvoke は例外になる。捨てられたタスクの例外として記録に載せない（R-126）
+            if (IsDisposed || !IsHandleCreated) { DisposeAll(task.Result); return; }
             // 参照の差し替えは UI スレッドで行う（描画中の辞書を書き換えない）
             BeginInvoke(() =>
             {

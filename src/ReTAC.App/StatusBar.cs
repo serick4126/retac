@@ -127,7 +127,8 @@ public sealed class StatusBar : Control
         }).ContinueWith(task =>
         {
             if (!task.IsCompletedSuccessfully || IsDisposed) return;
-            BeginInvoke(() => { _capacity = task.Result; Invalidate(); });
+            try { BeginInvoke(() => { _capacity = task.Result; Invalidate(); }); }
+            catch (InvalidOperationException) { }   // 窓ができる前・確かめた直後に閉じた。捨てられたタスクの例外として記録に載せない（R-126）
         });
     }
 

@@ -28,8 +28,23 @@ internal static class Program
         // fire-and-forget（`_ = OpenFolderAsync(...)`）なので、想定外の例外型はそのまま
         // UI スレッドの未処理例外になる。6 章の方針どおり、提示して動き続ける（V-03）
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
-        Application.ThreadException += (_, e) =>
-            MessageBox.Show(e.Exception.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        Application.ThreadException += (_, e) => ShowUnexpected(null, e.Exception);
+        // R-126: 画面以外のスレッドの例外は止められない（このあとプロセスが終わる）。終わる前に、同期で記録を書き切る
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            if (e.ExceptionObject is Exception exception) ErrorLog.Write(exception, "background");
+        };
+        // R-126: 待たれずに捨てられたタスクの例外。画面には出さず、記録だけ残す
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            ErrorLog.Write(e.Exception, "task");
+            Volatile.Write(ref s_unobservedLogged, 1);
+        };
+
+#if DEBUG
+        // R-126: 記録を実機とテストで確かめるための、わざと例外を起こす入口（開発用のビルドだけ）
+        if (args is ["--throw", var kind, .. var rest]) return Throw(kind, rest.FirstOrDefault());
+#endif
 
         // 開発環境のスクリーンがロックされていると CopyFromScreen が使えない。
         // 画面の確認はライブのウィンドウを撮るのではなくオフスクリーン描画で行う（--shot）。
@@ -45,7 +60,7 @@ internal static class Program
         StartupOs = Rendering.OsTheme.Capture();
         // Q10: 正規化の失敗で起動を止めない。null の補正は先に済むので、残るのは消えたツールの参照だけ
         try { settings.Normalize(); }
-        catch (Exception ex) { Debug.WriteLine(ex); }
+        catch (Exception ex) { Debug.WriteLine(ex); ErrorLog.Write(ex, "normalize"); }
         var form = new MainForm(settings: settings);
 
         // R-40-6: 起動時はウィンドウを表示しない設定
@@ -60,6 +75,58 @@ internal static class Program
         Application.Run(new ApplicationContext());
         return 0;
     }
+
+    /// <summary>捨てられたタスクの例外を記録し終えた（開発用の --throw task が、記録が済むのを待つのに使う）。</summary>
+    private static int s_unobservedLogged;
+
+    /// <summary>R-126 / V-03: 想定外の例外を記録してから、メッセージで知らせて動き続ける。</summary>
+    internal static void ShowUnexpected(IWin32Window? owner, Exception exception) =>
+        MessageBox.Show(owner, ErrorLog.Message(exception, ErrorLog.Write(exception, "ui")), "ReTAC",
+            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+#if DEBUG
+    [System.Runtime.InteropServices.DefaultDllImportSearchPaths(System.Runtime.InteropServices.DllImportSearchPath.System32)]
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    private static extern uint SetErrorMode(uint mode);
+
+    private static int Throw(string kind, string? logFolder)
+    {
+        if (logFolder is not null) ErrorLog.FolderOverride = logFolder;
+        SetErrorMode(0x0002);   // SEM_NOGPFAULTERRORBOX: 異常終了の OS の画面で止まらない（テストが待ち続けないように）
+        switch (kind)
+        {
+            case "background":
+                var thread = new Thread(() => throw new InvalidOperationException("retac-throw-background"));
+                thread.Start();
+                thread.Join();
+                return 0;   // ここへは来ない（プロセスが終わる）
+            case "task":
+                FaultedTask();
+                // 捨てられたタスクの例外は、タスクが回収されて最終化されたときに知らされる。1 回の回収で済む保証は無いので、
+                // 回数を決め打ちにせず、記録が済むまで（最長 10 秒）繰り返す
+                for (var i = 0; i < 100 && Volatile.Read(ref s_unobservedLogged) == 0; i++)
+                {
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    Thread.Sleep(100);
+                }
+                return 0;
+            default:   // "ui": 画面のスレッドの例外。メッセージを閉じ、ウィンドウを閉じると終わる
+                var form = new Form { Text = "ReTAC --throw ui" };
+                form.Shown += (_, _) => throw new InvalidOperationException("retac-throw-ui");
+                Application.Run(form);
+                return 0;
+        }
+    }
+
+    /// <summary>別のメソッドにして、タスクへの参照を残さない（開発用のビルドでは、局所変数がメソッドの終わりまで生きる）。</summary>
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static void FaultedTask()
+    {
+        var task = Task.Run(() => throw new InvalidOperationException("retac-throw-task"));
+        ((IAsyncResult)task).AsyncWaitHandle.WaitOne();
+    }
+#endif
 
     /// <summary>
     /// R-26: 引数 → 前回終了時のフォルダ（保持する設定のとき） → 固定の起動フォルダ →

@@ -861,7 +861,8 @@ public sealed class MainForm : Form, IBookmarkHost
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            if (!IsDisposed) MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            if (!IsDisposed) Program.ShowUnexpected(this, ex);
+            else ErrorLog.Write(ex, "ui");
         }
     }
 
@@ -2944,6 +2945,8 @@ public sealed class MainForm : Form, IBookmarkHost
         {
             // R-23: 列挙とソートで UI スレッドを占有しない
             var enumeration = Task.Run(() => FolderEnumerator.Enumerate(folder, _sortOrder, Include));
+            // 待つのをやめた後に切断などで失敗しても、誰も結果を見ない。ここで受け止めないと、異常終了の記録に載る（R-126）
+            ErrorLog.IgnoreFileSystemFailure(enumeration);
 
             // 6 章 / N-05: 応答しないネットワークドライブで待ち続けない。
             // ponytail: ファイルシステム I/O は中断できないので、待つのをやめるだけで
