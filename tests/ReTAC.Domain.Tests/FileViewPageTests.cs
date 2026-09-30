@@ -110,7 +110,7 @@ public class FileViewPageTests
     [Fact]
     public void 範囲選択の部品は各系統の項目だけを変える()
     {
-        // Phase 16 §10: 一覧・詳細・アイコン・並べて表示のそれぞれが自分の RangeSelection だけを持つ
+        // R-112-1: 一覧・詳細・アイコン・並べて表示のそれぞれが自分の RangeSelection だけを持つ
         var (_, draft) = Baseline();
         using var page = new FileViewPage(draft);
         Assert.All(new[] { page.ListRange, page.DetailsRange, page.IconsRange, page.TilesRange }, box => Assert.True(box.Checked));

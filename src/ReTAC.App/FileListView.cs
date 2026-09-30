@@ -160,7 +160,7 @@ public sealed class FileListView : Control
         _ => _views.Icons.InPanelDragDrop,
     };
 
-    /// <summary>Phase 16 §10: 今のモードの系統で範囲選択（投げ縄）を許すか。オフなら投げ縄を始めない（クリック・Shift+クリックは変わらない）。</summary>
+    /// <summary>R-120: 今のモードの系統で範囲選択（投げ縄）を許すか。オフなら投げ縄を始めない（クリック・Shift+クリックは変わらない）。</summary>
     [System.ComponentModel.Browsable(false)]
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public bool RangeSelection => _mode switch
@@ -874,7 +874,7 @@ public sealed class FileListView : Control
     internal void LassoPress(Point location, bool ctrl)
     {
         var (index, area) = HitAt(location);
-        // Phase 16 §10: 範囲選択がオフの系統では始めない。押した所が項目の余白・名前以外なら、動かしたときに保留のカーソル移動も捨てる（OnMouseMove）
+        // R-120: 範囲選択がオフの系統では始めない。押した所が項目の余白・名前以外なら、動かしたときに保留のカーソル移動も捨てる（OnMouseMove）
         var starts = RangeSelection && location.Y >= _layout.HeaderHeight && (index < 0 || area == FileViewArea.Other);
         var (x, y) = ToContent(location);
         _lasso.Press(location.X, location.Y, x, y, starts, ctrl);
@@ -1513,7 +1513,7 @@ public sealed class FileListView : Control
     }
 
     /// <summary>
-    /// D&amp;D は一定（R-110-3）。投げ縄は端からの深さで間隔を変える（Phase 16 §10）ので、始めるときに interval を渡す。
+    /// D&amp;D は一定（R-110-3）。投げ縄は端からの深さで間隔を変えるので、始めるときに interval を渡す。
     /// 向きが同じ間は Interval に触れない（動かすたびに触ると、Timer が数えなおして永久に鳴らない）。途中の変更は Tick の終わりで行う。
     /// </summary>
     internal void SetAutoScroll((int X, int Y) direction, int interval = AutoScrollInterval)
@@ -1528,7 +1528,7 @@ public sealed class FileListView : Control
 
     internal int AutoScrollTimerInterval => _autoScroll.Interval;
 
-    /// <summary>Phase 16 §10: 最後のマウスの位置での投げ縄の自動スクロールの間隔。帯の幅はレイアウトが答える。</summary>
+    /// <summary>R-120: 最後のマウスの位置での投げ縄の自動スクロールの間隔。帯の幅はレイアウトが答える。</summary>
     private int LassoScrollInterval((int X, int Y) direction) => FileViewScroll.LassoInterval(
         _layout.AutoScrollBand, direction, _lassoMouse.X, _lassoMouse.Y - _layout.HeaderHeight, ViewportWidth, ViewportHeight);
 

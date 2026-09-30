@@ -1554,7 +1554,7 @@
           "nullable": false,
           "required": false,
           "mutability": "init",
-          "doc": "Phase 16 §10: この系統で投げ縄（範囲選択）を始められるか。オフなら押したまま動かしても何もしない（クリック・Shift+クリックは変わらない）。"
+          "doc": "R-112-1 / R-120: この系統で投げ縄（範囲選択）を始められるか。オフなら押したまま動かしても何もしない（クリック・Shift+クリックは変わらない）。"
         },
         {
           "name": "NameWidth",
@@ -2122,7 +2122,7 @@
           "nullable": false,
           "required": false,
           "mutability": "get-only",
-          "doc": "Phase 16 §10: AutoScrollDirection が向きを返す端の帯の幅（ピクセル）。投げ縄の自動スクロールの速さは、この帯からの深さで決める。"
+          "doc": "R-120: AutoScrollDirection が向きを返す端の帯の幅（ピクセル）。投げ縄の自動スクロールの速さは、この帯からの深さで決める。"
         },
         {
           "name": "HeaderHeight",
@@ -2177,7 +2177,7 @@
           "nullable": false,
           "required": false,
           "mutability": "init",
-          "doc": "Phase 16 §10: この系統で投げ縄（範囲選択）を始められるか。オフなら押したまま動かしても何もしない（クリック・Shift+クリックは変わらない）。"
+          "doc": "R-112-1 / R-120: この系統で投げ縄（範囲選択）を始められるか。オフなら押したまま動かしても何もしない（クリック・Shift+クリックは変わらない）。"
         },
         {
           "name": "MediumSize",
@@ -2278,7 +2278,7 @@
           "nullable": false,
           "required": false,
           "mutability": "init",
-          "doc": "Phase 16 §10: この系統で投げ縄（範囲選択）を始められるか。オフなら押したまま動かしても何もしない（クリック・Shift+クリックは変わらない）。"
+          "doc": "R-112-1 / R-120: この系統で投げ縄（範囲選択）を始められるか。オフなら押したまま動かしても何もしない（クリック・Shift+クリックは変わらない）。"
         },
         {
           "name": "NameWidth",
@@ -2494,7 +2494,7 @@
           "nullable": false,
           "required": false,
           "mutability": "init",
-          "doc": "Phase 16 §10: この系統で投げ縄（範囲選択）を始められるか。オフなら押したまま動かしても何もしない（クリック・Shift+クリックは変わらない）。"
+          "doc": "R-112-1 / R-120: この系統で投げ縄（範囲選択）を始められるか。オフなら押したまま動かしても何もしない（クリック・Shift+クリックは変わらない）。"
         },
         {
           "name": "Info",
@@ -8762,6 +8762,22 @@
       {
         "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
         "line": 43
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 59
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 69
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 93
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 115
       }
     ],
     "R-112-2": [
@@ -9403,6 +9419,10 @@
     "R-120": [
       {
         "file": "src/ReTAC.App/FileListView.cs",
+        "line": 163
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
         "line": 213
       },
       {
@@ -9424,6 +9444,10 @@
       {
         "file": "src/ReTAC.App/FileListView.cs",
         "line": 873
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 877
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
@@ -9451,11 +9475,31 @@
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
+        "line": 1531
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
         "line": 1547
       },
       {
         "file": "src/ReTAC.App/Rendering/ItemFrames.cs",
         "line": 44
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 59
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 69
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 93
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/FileViewSettings.cs",
+        "line": 115
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
@@ -9476,6 +9520,14 @@
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
         "line": 189
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+        "line": 25
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
+        "line": 88
       },
       {
         "file": "src/ReTAC.Domain/Selection/Lasso.cs",

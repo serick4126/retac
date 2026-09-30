@@ -18,7 +18,7 @@ public class FileViewSettingsTests
         Assert.True(s.Details.InPanelDragDrop);
         Assert.True(s.Icons.InPanelDragDrop);
         Assert.True(s.Tiles.InPanelDragDrop);
-        Assert.True(s.List.RangeSelection && s.Details.RangeSelection && s.Icons.RangeSelection && s.Tiles.RangeSelection);   // Phase 16 §10: 既定はオン
+        Assert.True(s.List.RangeSelection && s.Details.RangeSelection && s.Icons.RangeSelection && s.Tiles.RangeSelection);   // R-112-3: 既定はオン
         Assert.Equal(new NameWidthSetting { Mode = NameWidthMode.ShowAll, MaxChars = 40 }, s.List.NameWidth);
         Assert.Equal(new NameWidthSetting { Mode = NameWidthMode.ShowAll, MaxChars = 40 }, s.Details.NameWidth);
         Assert.False(s.Common.HideKnownExtensions);                                          // R-01-7
