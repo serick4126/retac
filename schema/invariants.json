@@ -606,6 +606,19 @@
       "note": "再表示のあとに無条件で EnsureCursorVisible を呼ぶと、離れた所を見ている最中に自動更新のたびにカーソルの位置へ引き戻され、大量のファイルを処理しているフォルダで操作できなくなる（Phase 18 で直した）。"
     },
     {
+      "id": "INV-TRANSFER-NO-UNPLANNED-OVERWRITE",
+      "status": "enforced",
+      "specIds": ["R-125", "R-41-4", "R-84"],
+      "applies": [
+        "type:ReTAC.Domain.FileOps.CopyPlanItem",
+        "type:ReTAC.Domain.FileOps.DestinationState"
+      ],
+      "rule": "コピー・移動は、計画の時点の宛先の状態（無い／ファイルの更新日時とサイズ／フォルダ）と、OS が項目を転送する直前の状態が同じ項目だけを転送する。違っていたら、その項目から先の転送を中止する（上書きしない。OS の衝突の確認にも任せない）。状態は、計画の時点も直前も、親のフォルダの一覧から取る。上書きの印は、計画で上書きすると決めた項目にだけ付ける。宛先が変わって中止したときは、移動の後片付け（空になった転送元のフォルダを消す）をしない。後片付けで消すのは、計画が中をたどった転送元のフォルダだけ。",
+      "enforcedBy": "domain:CopyPlanner（項目ごとに Expected を持たせる）・DestinationState.Of / shell:FileOperationSink.Guard（PreCopyItem・PreMoveItem で比べ、違えば中止の値を返し続ける） / app:TransferExecution.Register（作る・たどったフォルダの種類を先に確かめる。上書きの印）・Finish（後片付けの判断）",
+      "testedBy": "tests/ReTAC.Domain.Tests/CopyPlannerTests.cs, tests/ReTAC.Domain.Tests/TransferExecutionTests.cs",
+      "note": "複写条件（R-41-4）の判断は計画の時点の宛先に対するもので、走査や衝突の確認のダイアログの間に宛先は変わりうる。上書きの印が無いまま上書きすると、元に戻すで元からあったファイルを消す（INV-UNDO-NO-DATA-LOSS）。"
+    },
+    {
       "id": "INV-THUMBNAIL-NO-CLOUD-DOWNLOAD",
       "status": "enforced",
       "specIds": ["R-117", "R-118"],

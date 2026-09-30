@@ -1134,6 +1134,7 @@ public sealed class MainForm : Form, IBookmarkHost
         {
             // 転送元・宛先を読めない（権限・切断）。起こりうる失敗なので、普通のエラーとして知らせる（6 章）。
             // 受け止めないと「想定外の例外」として異常終了の記録（R-126）に載り、場所の案内まで付く
+            RefreshStatus();   // R-125: メッセージを出している間に「調べています」を残さない
             MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
         }
@@ -2924,7 +2925,7 @@ public sealed class MainForm : Form, IBookmarkHost
             // R-23: 列挙とソートで UI スレッドを占有しない
             var enumeration = Task.Run(() => FolderEnumerator.Enumerate(folder, _sortOrder, Include));
             // 待つのをやめた後に切断などで失敗しても、誰も結果を見ない。ここで受け止めないと、異常終了の記録に載る（R-126）
-            ErrorLog.IgnoreFileSystemFailure(enumeration);
+            _ = ErrorLog.IgnoreFileSystemFailure(enumeration);
 
             // 6 章 / N-05: 応答しないネットワークドライブで待ち続けない。
             // ponytail: ファイルシステム I/O は中断できないので、待つのをやめるだけで

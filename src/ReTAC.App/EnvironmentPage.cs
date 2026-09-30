@@ -35,5 +35,6 @@ public sealed class EnvironmentPage : UserControl
         };
         _startMinimized.Enabled = _resident.Checked;
         _startMinimized.CheckedChanged += (_, _) => _draft.StartMinimized = _startMinimized.Checked;
-        _keepLastFolder.CheckedChanged += (_, _) => _draft.KeepLastFolder = _keepLastFolder.Checked;    }
+        _keepLastFolder.CheckedChanged += (_, _) => _draft.KeepLastFolder = _keepLastFolder.Checked;
+    }
 }

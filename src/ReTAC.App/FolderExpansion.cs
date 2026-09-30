@@ -31,7 +31,7 @@ public static class FolderExpansion
     {
         var enumeration = Task.Run(() => List(folder, enumerate));
         // 読めないフォルダは Failed として渡す。結果を見ない経路（待つ上限を過ぎた後など）で失敗を捨てると、異常終了の記録に載る（R-126）
-        ErrorLog.IgnoreFileSystemFailure(enumeration);
+        _ = ErrorLog.IgnoreFileSystemFailure(enumeration);
         Task.WhenAny(enumeration, Task.Delay(MainForm.EnumerationTimeout)).ContinueWith(done =>
         {
             // 結果は窓（フォーム）経由で UI スレッドへ戻す。閉じたドロップダウンは窓を持たないことがある

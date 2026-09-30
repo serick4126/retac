@@ -284,7 +284,7 @@ public sealed class ExternalToolPage : UserControl
         using var dialog = new OpenFileDialog
         {
             Filter = "プログラム (*.exe;*.bat;*.cmd)|*.exe;*.bat;*.cmd|すべてのファイル (*.*)|*.*",
-            FileName = _path.Text,
+            FileName = NormalizePath(_path.Text),
         };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         _path.Text = dialog.FileName;

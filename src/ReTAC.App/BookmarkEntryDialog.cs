@@ -132,6 +132,7 @@ public sealed class BookmarkEntryDialog : Form
                 _command.Text = CommandText();
                 return;
             case BookmarkKind.Folder:
+                // R-127: この欄はパスの解決の処理を通らないので、囲みの二重引用符をここで外す
                 if (FolderBrowser.Select(this, InputText.Unquote(_path.Text), _currentFolder) is not { } folder) return;
                 _path.Text = folder;   // R-52-3: 選んだ結果は入力欄へ流し込む
                 break;

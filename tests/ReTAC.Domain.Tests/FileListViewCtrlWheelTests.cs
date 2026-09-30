@@ -52,15 +52,17 @@ public class FileListViewCtrlWheelTests
     }
 
     [Fact]
-    public void オフの間に回した分はためない()
+    public void オフにしたら_それまでに回した分を捨てる()
     {
-        var (list, switched) = View(ctrlWheel: false);
+        var (list, switched) = View(ctrlWheel: true);
         using var _ = list;
-        list.Wheel(-Notch / 2, ctrl: true);
-        list.Wheel(-Notch / 2, ctrl: true);
+        list.Wheel(-Notch / 2, ctrl: true);   // ためる。まだ知らせない
+
+        list.SetView(FileViewMode.Details, Views(ctrlWheel: false), new Dictionary<string, int?>(), SortOrder.Default);
+        list.Wheel(-Notch / 2, ctrl: true);   // オフ。何も起きず、ためた分を捨てる
 
         list.SetView(FileViewMode.Details, Views(ctrlWheel: true), new Dictionary<string, int?>(), SortOrder.Default);
-        list.Wheel(-Notch / 2, ctrl: true);   // 1 ノッチ未満
+        list.Wheel(-Notch / 2, ctrl: true);   // 捨てていなければ、ここで 1 ノッチになる
 
         Assert.Empty(switched);
     }
