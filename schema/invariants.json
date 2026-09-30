@@ -322,6 +322,7 @@
         "unique:ReTAC.Domain.Tools.ArgumentTemplate#Prompts",
         "unique:ReTAC.Domain.Tools.ArgumentTemplate#Errors",
         "unique:ReTAC.Domain.FileOps.CopyPlan#Items",
+        "unique:ReTAC.Domain.FileOps.CopyPlan#Folders",
         "unique:ReTAC.Domain.Tools.TemplateArgument#Parts",
         "unique:ReTAC.Domain.Tools.ExternalToolQueue#_entries",
         "unique:ReTAC.Domain.FileOps.UndoHistory#_records",

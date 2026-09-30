@@ -1108,7 +1108,7 @@ public sealed class MainForm : Form, IBookmarkHost
         CopyPlan plan;
         if (differentialOnly)
         {
-            plan = CopyPlanner.Build(sources, destination, CopyCondition.NewerOnly);
+            plan = CopyPlanner.Build(sources, destination, CopyCondition.NewerOnly, moving: moving);
         }
         else
         {
@@ -1124,7 +1124,7 @@ public sealed class MainForm : Form, IBookmarkHost
                 if (conflictDialog.ShowDialog(this) != DialogResult.OK) { cancelled = true; return CopyCondition.Skip; }
                 if (conflictDialog.ApplyToAll) applyToAll = conflictDialog.Condition;
                 return conflictDialog.Condition;
-            });
+            }, moving: moving);
             if (cancelled) return false;
         }
 
@@ -1133,32 +1133,21 @@ public sealed class MainForm : Form, IBookmarkHost
         // 複写条件で全件が対象外になるのは差分更新では普通のこと。いちいち知らせない
         if (plan.Items.Count == 0) return true;
 
-        // 宛先に重なるものが一つも無い移動は、フォルダごと OS に渡してよい。
-        // 同一ドライブなら 1 回のリネームで終わるので、数千件でも一瞬で済む。
-        // 重なりがあるときだけファイル単位に落とす（判定はすでに自前で済ませている）
-        var wholesale = moving && plan.Conflicts == 0 && !plan.Folders.Any(Path.Exists);
-
-        // 判定済みなので OS には衝突を問わせない（R-41-4）
+        // 判定済みなので OS には衝突を問わせない（R-41-4）。フォルダごと渡すかは計画が項目ごとに決めている（R-125）
         long? firstItem = null;
         var completed = RunOperation(silentOverwrite: true, operation =>
         {
-            if (wholesale)
-            {
-                foreach (var source in sources) operation.Move(source, destination);
-                timing?.Mark("register");
-                return;
-            }
-
             foreach (var folder in plan.Folders)
             {
-                if (!Directory.Exists(folder)) _recorder?.AddCreatedFolder(folder);
-                Directory.CreateDirectory(folder);
+                if (folder.Expected.Kind == DestinationKind.Folder) continue;   // 既にある。作り直さない
+                if (folder.Expected.Kind == DestinationKind.Absent) _recorder?.AddCreatedFolder(folder.FullPath);
+                Directory.CreateDirectory(folder.FullPath);
             }
             timing?.Mark("mkdir");
             foreach (var item in plan.Items)
             {
-                var target = Path.Combine(item.DestinationFolder, item.NewName ?? Path.GetFileName(item.Source));
-                if (Path.Exists(target)) _recorder?.MarkOverwrite(target);
+                // 上書きの有無は計画が持つ。転送の直前にファイルごとに確かめ直さない（R-125）
+                if (item.Expected.Kind == DestinationKind.File) _recorder?.MarkOverwrite(item.Target);
                 if (moving) operation.Move(item.Source, item.DestinationFolder, item.NewName);
                 else operation.Copy(item.Source, item.DestinationFolder, item.NewName);
             }
@@ -1171,33 +1160,24 @@ public sealed class MainForm : Form, IBookmarkHost
         timing?.Mark("record");        // 転送のあと、結果を元に戻すの記録へ入れる時間（項目ごとに宛先を問い合わせる。画面のスレッド）
         timing?.Write($"{(moving ? "move" : "copy")} items={plan.Items.Count} folders={plan.Folders.Count} first-item={firstItem?.ToString() ?? "-"}ms");
 
-        // ファイル単位で動かしたときだけ、空になった転送元のフォルダが残る。
-        // フォルダごと渡したときは元ごと消えているので触らない
-        if (moving && !wholesale) RemoveEmptySourceFolders(sources, f => _recorder?.AddRemovedFolder(f));
+        // R-125: 中をたどった転送元のフォルダだけを、空になっていたら消す。フォルダごと渡した項目の配下は見ない
+        // （中止・失敗で動かなかったフォルダの、元から空だった入れ子を消してしまう。宛先には無いので、戻せない）
+        if (moving) RemoveEmptySourceFolders(plan.Folders.Select(f => f.Source).OfType<string>(), f => _recorder?.AddRemovedFolder(f));
 
         return completed;
     }
 
     /// <summary>
-    /// 差分移動のあと片付け。<b>中身が残っているフォルダには触らない。</b>
-    /// 転送元として指定されたフォルダとその配下だけを見る。
+    /// 移動のあと片付け。<b>中身が残っているフォルダには触らない。</b>
+    /// 計画が中をたどった転送元のフォルダだけを、深い方から順に見る（R-125。配下を自分でたどらない）。
     /// </summary>
-    private static void RemoveEmptySourceFolders(IEnumerable<string> sources, Action<string> removed)
+    private static void RemoveEmptySourceFolders(IEnumerable<string> walkedSources, Action<string> removed)
     {
-        foreach (var source in sources.Where(Directory.Exists))
-        {
-            // 深い方から順に、空になったものだけを消す
-            foreach (var folder in Directory.EnumerateDirectories(source, "*", SearchOption.AllDirectories)
-                         .OrderByDescending(f => f.Length))
-                TryRemoveEmpty(folder);
-            TryRemoveEmpty(source);
-        }
-
-        void TryRemoveEmpty(string folder)
+        foreach (var folder in walkedSources.OrderByDescending(f => f.Length))
         {
             try
             {
-                if (!Directory.EnumerateFileSystemEntries(folder).Any())
+                if (Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any())
                 {
                     Directory.Delete(folder);
                     removed(folder);
