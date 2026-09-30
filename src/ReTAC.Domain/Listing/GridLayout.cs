@@ -123,6 +123,22 @@ public sealed record GridLayout : IFileViewLayout
             : (x + PaddingX, y + PaddingY * 2 + IconSize, Math.Max(0, w - PaddingX * 2), NameHeight);
     }
 
+    /// <summary>
+    /// R-120: 名前の文字が実際に占める矩形（描いた行ごと。IconTop だけ。IconLeft は空）。行は名前の領域の中で水平に中央揃え。
+    /// 文字の幅は実測が要るので呼び出し側（描画層）から数値で受け取る（R-66-3）。領域より広い行は領域の幅で切る。
+    /// 項目の中でここにもアイコンにもチェックボックスにも当たらない所が「項目の余白」。
+    /// </summary>
+    public IReadOnlyList<(int X, int Y, int Width, int Height)> NameTextBounds(int index, IReadOnlyList<int> lineWidths, int lineHeight)
+    {
+        if (Arrangement != GridArrangement.IconTop) return [];
+        var (x, y, w, _) = NameBounds(index);
+        return [.. lineWidths.Select((width, i) =>
+        {
+            var shown = Math.Clamp(width, 0, w);
+            return (x + (w - shown) / 2, y + i * lineHeight, shown, lineHeight);
+        })];
+    }
+
     /// <summary>Q35: 格子は拡張子を揃えない。</summary>
     public (int X, int Y, int Width, int Height) ExtensionBounds(int index)
     {

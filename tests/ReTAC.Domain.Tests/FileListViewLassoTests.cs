@@ -259,7 +259,9 @@ public class FileListViewLassoTests
         using var list = View(FileViewMode.MediumIcons);
         // 先頭を親フォルダの行にする。普通の項目だと実際の D&D（OLE。STA が要る）が始まってしまう
         list.SetEntries([TestEntries.Parent(), .. Enumerable.Range(0, 4).Select(i => TestEntries.File($"file{i}.txt"))]);
-        list.RaiseMouseDown(Mouse(MouseButtons.Left, FirstItem(list)));
+        // R-120: 項目の余白（アイコン・名前の文字に当たらない所）は投げ縄の起点なので、アイコンの真ん中を押す
+        var icon = FileViewScroll.ToVisible(list.Layout, list.ScrollPosition, list.Layout.IconBounds(0));
+        list.RaiseMouseDown(Mouse(MouseButtons.Left, new Point(icon.X + icon.Width / 2, icon.Y + icon.Height / 2)));
         list.RaiseMouseMove(Mouse(MouseButtons.Left, Empty(list)));
         Assert.False(list.LassoActive);
     }

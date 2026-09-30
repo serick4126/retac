@@ -1189,8 +1189,20 @@ public sealed class FileListView : Control
     {
         if (point.Y < _layout.HeaderHeight) return (-1, FileViewArea.None);
         var offset = _layout.ScrollOffset(_scroll);
-        return _layout.HitTest(point.X + offset.X, point.Y - _layout.HeaderHeight + offset.Y, _state.Count);
+        var (x, y) = (point.X + offset.X, point.Y - _layout.HeaderHeight + offset.Y);
+        var hit = _layout.HitTest(x, y, _state.Count);
+        // R-120: 中〜特大の項目は、アイコン・描いている名前の文字・チェックボックスに当たらない所を「項目の余白」（Other）にする。
+        // 詳細表示の名前以外と同じ扱い（押しただけでは動かず、離すとカーソル、動かすと投げ縄）。文字の幅はここで測る（レイアウトは数値だけ受ける）
+        if (hit.Area == FileViewArea.Name && _layout is GridLayout { Arrangement: GridArrangement.IconTop } grid
+            && !Contains(grid.IconBounds(hit.Index), x, y)
+            && !grid.NameTextBounds(hit.Index, NameLinesFor(hit.Index).Lines.Select(_measure.Width).ToList(), _measure.LineHeight())
+                .Any(line => Contains(line, x, y)))
+            return (hit.Index, FileViewArea.Other);
+        return hit;
     }
+
+    private static bool Contains((int X, int Y, int Width, int Height) r, int x, int y) =>
+        x >= r.X && x < r.X + r.Width && y >= r.Y && y < r.Y + r.Height;
 
     // ---- 固定キー -----------------------------------------------------------
 

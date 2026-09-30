@@ -113,4 +113,15 @@ public class GridLayoutTests
         Assert.Equal(1, grid.WheelSteps(3, 600, 400));
         Assert.Equal(1, grid.WheelSteps(1, 600, 20));
     }
+
+    [Fact]
+    public void 名前の文字の矩形は各行を名前の領域の中で中央に置き_領域より広い行は切る()
+    {
+        var grid = Grid(2, 400, textWidth: 60);
+        var (nx, ny, nw, _) = grid.NameBounds(1);
+        var lines = grid.NameTextBounds(1, [20, 500], 14);
+        Assert.Equal((nx + (nw - 20) / 2, ny, 20, 14), lines[0]);
+        Assert.Equal((nx, ny + 14, nw, 14), lines[1]);   // 広すぎる行は領域の幅
+        Assert.Empty(Grid(2, 400, arrangement: GridArrangement.IconLeft).NameTextBounds(1, [20], 14));
+    }
 }
