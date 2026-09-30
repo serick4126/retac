@@ -48,6 +48,22 @@ public class SchemaManifestTests
     // === 生成と突き合わせ =================================================
 
     [Fact]
+    public void 型の宣言ファイルは実在し_その型の名前を宣言している()
+    {
+        foreach (var type in typeof(Entries.Entry).Assembly.GetExportedTypes())
+        {
+            var entry = Manifest["types"]![type.FullName!] ?? throw new Exception($"{type.FullName} がマニフェストに無い");
+            var file = entry["file"]?.GetValue<string>();
+            Assert.True(file is not null, $"{type.FullName} の file が null");
+            var path = Path.Combine(Root, file);
+            Assert.True(File.Exists(path), $"{type.FullName} の file {file} が無い");
+            var text = File.ReadAllText(path);
+            var name = type.Name.Split('`')[0];
+            Assert.Matches($@"(?:class|record|struct|enum|interface)\s+{name}\b", text);
+        }
+    }
+
+    [Fact]
     public void マニフェストが実装と一致する()
     {
         var generated = Manifest.ToJsonString(Format).ReplaceLineEndings("\n");

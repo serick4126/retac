@@ -21,6 +21,8 @@ public static class SchemaManifest
         @"^\s*(?:public|internal)\s+(?:(?:sealed|abstract|static|partial|readonly|record)\s+)*(?:class|record|struct|enum|interface)\s+(\w+)",
         RegexOptions.Compiled | RegexOptions.Multiline);
 
+    private static readonly Regex NamespacePattern = new(@"^\s*namespace\s+([\w.]+)\s*;", RegexOptions.Compiled | RegexOptions.Multiline);
+
     // ---------------------------------------------------------------------
 
     public static string RepoRoot()
@@ -66,7 +68,7 @@ public static class SchemaManifest
             {
                 ["id"] = TypeId(type),
                 ["kind"] = KindOf(type),
-                ["file"] = sources.FileOf(type.Name),
+                ["file"] = sources.FileOf(type),
             };
             if (docs.ForType(type) is { } doc) entry["doc"] = doc;
 
@@ -346,8 +348,16 @@ public static class SchemaManifest
         public Dictionary<string, string> Declarations { get; } = new(StringComparer.Ordinal);
         public Dictionary<string, List<(string File, int Line)>> SpecIds { get; } = new(StringComparer.Ordinal);
 
-        public JsonNode? FileOf(string typeName) =>
-            Declarations.TryGetValue(typeName, out var file) ? file : null;
+        /// <summary>
+        /// 型の宣言のあるファイル。名前空間つきで引く（別の名前空間の同名の型・入れ子の型を取り違えない）。
+        /// 入れ子の型は外側の型のファイル、ジェネリックの型は `2 などの元数を落とした名前で引く。
+        /// </summary>
+        public JsonNode? FileOf(Type type)
+        {
+            while (type.DeclaringType is { } outer) type = outer;
+            var name = type.Name.Split('`')[0];
+            return Declarations.TryGetValue($"{type.Namespace}.{name}", out var file) ? file : null;
+        }
     }
 
     public static SourceScan ScanSources(string repoRoot)
@@ -362,8 +372,10 @@ public static class SchemaManifest
             var relative = Path.GetRelativePath(repoRoot, path).Replace('\\', '/');
             var text = File.ReadAllText(path);
 
+            // 全ファイルがファイルスコープの namespace（BOM があっても ReadAllText が外す）
+            var ns = NamespacePattern.Match(text).Groups[1].Value;
             foreach (Match m in DeclarationPattern.Matches(text))
-                scan.Declarations.TryAdd(m.Groups[1].Value, relative);
+                scan.Declarations.TryAdd($"{ns}.{m.Groups[1].Value}", relative);
 
             var lines = text.Split('\n');
             for (var i = 0; i < lines.Length; i++)
