@@ -124,7 +124,7 @@ public sealed class FileViewPage : UserControl
                 (Row("チェックボックス(&K):", IconsCheckBoxes), 36 + RowHeight * 3),
                 (IconsThumbnails, 172),
                 (IconsFolderThumbnails, 200),
-                (Row("名前の行数(&I):", NameLines), 234),
+                (Row("ファイル名の表示行数(&I):", NameLines), 234),
                 (Row("小アイコンの項目の幅(&W):", SmallIconWidth), 234 + RowHeight),
                 (Row("文字数(&R):", SmallIconChars), 234 + RowHeight * 2)),
             Arrange(new Panel(),
