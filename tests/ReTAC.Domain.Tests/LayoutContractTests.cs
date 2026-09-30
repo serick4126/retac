@@ -30,6 +30,12 @@ public class LayoutContractTests
                 TextWidth = 48, PaddingX = 6, PaddingY = 4, Gap = 4, CheckBoxSize = 12,
                 ClientWidth = 250, ClientHeight = 150, VerticalBarWidth = 17, EdgeBand = 24,
             }), 23 },
+        { "並べて表示", GridLayout.Compute(new GridLayoutInput
+            {
+                EntryCount = 23, Arrangement = GridArrangement.Tile, IconSize = 32, LineHeight = 14, NameLines = 1, InfoLines = 2,
+                TextWidth = 100, PaddingX = 6, PaddingY = 4, Gap = 4, CheckBoxSize = 12,
+                ClientWidth = 250, ClientHeight = 150, VerticalBarWidth = 17, EdgeBand = 24,
+            }), 23 },
     };
 
     [Theory]
@@ -48,14 +54,19 @@ public class LayoutContractTests
     {
         var data = new TheoryData<string, IFileViewLayout, int>();
         foreach (var width in new[] { 0, 1, 10, 40, 60, 100, 250 })
-            foreach (var left in new[] { true, false })
-                data.Add($"{(left ? "小" : "中")}アイコン 幅{width}", GridLayout.Compute(new GridLayoutInput
+            foreach (var arrangement in new[] { GridArrangement.IconLeft, GridArrangement.IconTop, GridArrangement.Tile })
+            {
+                var left = arrangement == GridArrangement.IconLeft;
+                var tile = arrangement == GridArrangement.Tile;
+                data.Add($"{(left ? "小" : tile ? "並べて表示" : "中")} 幅{width}", GridLayout.Compute(new GridLayoutInput
                 {
-                    EntryCount = 23, Arrangement = left ? GridArrangement.IconLeft : GridArrangement.IconTop,
-                    IconSize = left ? 16 : 32, LineHeight = left ? 16 : 14, NameLines = left ? 1 : 2,
-                    TextWidth = left ? 60 : 48, PaddingX = left ? 4 : 6, PaddingY = left ? 2 : 4, Gap = 4, CheckBoxSize = left ? 0 : 12,   // 小アイコンにチェックボックスは付かない（既存の「小アイコン」と同じ）
+                    EntryCount = 23, Arrangement = arrangement,
+                    IconSize = left ? 16 : 32, LineHeight = left ? 16 : 14, NameLines = left || tile ? 1 : 2, InfoLines = tile ? 2 : 0,
+                    TextWidth = left ? 60 : tile ? 100 : 48, PaddingX = left ? 4 : 6, PaddingY = left ? 2 : 4, Gap = 4,
+                    CheckBoxSize = left ? 0 : 12,   // 小アイコンにチェックボックスは付かない（既存の「小アイコン」と同じ）
                     ClientWidth = width, ClientHeight = 150, VerticalBarWidth = 17, EdgeBand = 24,
                 }), 23);
+            }
         return data;
     }
 
@@ -83,6 +94,8 @@ public class LayoutContractTests
             var item = layout.ItemBounds(i);
             var parts = new List<(int X, int Y, int Width, int Height)> { layout.IconBounds(i), layout.NameBounds(i), layout.ExtensionBounds(i) };
             if (layout.CheckBoxBounds(i) is { } box) parts.Add(box);
+            if (layout is GridLayout { Arrangement: GridArrangement.Tile } tile)
+                for (var row = 0; row < tile.InfoLines; row++) parts.Add(tile.InfoBounds(i, row));
             foreach (var part in parts)
                 Assert.True(part.X >= item.X && part.Y >= item.Y && part.X + part.Width <= item.X + item.Width
                             && part.Y + part.Height <= item.Y + item.Height, $"{name} の {i}");

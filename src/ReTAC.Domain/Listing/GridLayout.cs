@@ -1,7 +1,7 @@
 namespace ReTAC.Domain.Listing;
 
-/// <summary>R-119 / R-120: 格子の並べ方。小アイコンはアイコンが左、中・大・特大はアイコンが上。</summary>
-public enum GridArrangement { IconLeft, IconTop }
+/// <summary>R-119 / R-120 / R-121: 格子の並べ方。小アイコンはアイコンが左、中・大・特大はアイコンが上、並べて表示はアイコンが左で右に名前と情報の行。</summary>
+public enum GridArrangement { IconLeft, IconTop, Tile }
 
 /// <summary>GridLayout の入力。文字の実測・dpi の換算は呼び出し側（描画層）が行い、結果の数値だけを渡す（R-66-3）。</summary>
 public sealed record GridLayoutInput
@@ -12,6 +12,8 @@ public sealed record GridLayoutInput
     public required int LineHeight { get; init; }
     /// <summary>R-119: 名前の行数（IconTop）。IconLeft は 1。</summary>
     public required int NameLines { get; init; }
+    /// <summary>R-121: 並べて表示の、名前の下の情報の行数（0〜2 に丸める）。ほかの並べ方は使わない。</summary>
+    public int InfoLines { get; init; }
     /// <summary>名前の領域の幅。項目がパネルより広ければ Compute が縮める（0 まで。アイコン・チェックボックスは縮めない）。</summary>
     public required int TextWidth { get; init; }
     public required int PaddingX { get; init; }
@@ -28,7 +30,7 @@ public sealed record GridLayoutInput
 }
 
 /// <summary>
-/// R-119 / R-120 / INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: 小〜特大アイコンの格子。行ごとに左から右へ並べ、縦にスクロールする。
+/// R-119 / R-120 / INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: 小〜特大アイコンと並べて表示（R-121）の格子。行ごとに左から右へ並べ、縦にスクロールする。
 /// 横にはスクロールしない（項目がパネルより広ければ名前の幅を縮め、それでも部品が収まらないほど狭ければ、はみ出した部分を切る）。
 /// 縦のスクロールの 1 段は格子の 1 行。
 /// </summary>
@@ -38,6 +40,8 @@ public sealed record GridLayout : IFileViewLayout
     public required int IconSize { get; init; }
     public required int TextWidth { get; init; }
     public required int NameHeight { get; init; }
+    /// <summary>R-121: 並べて表示の情報の行数（0〜2）。ほかの並べ方は 0。</summary>
+    public required int InfoLines { get; init; }
     public required int PaddingX { get; init; }
     public required int PaddingY { get; init; }
     public required int Gap { get; init; }
@@ -73,26 +77,29 @@ public sealed record GridLayout : IFileViewLayout
     private static GridLayout Fit(GridLayoutInput input, int width)
     {
         var gap = input.Gap;
-        var lines = input.Arrangement == GridArrangement.IconLeft ? 1 : Math.Max(1, input.NameLines);
+        var iconLeft = input.Arrangement != GridArrangement.IconTop;
+        var lines = input.Arrangement == GridArrangement.IconTop ? Math.Max(1, input.NameLines) : 1;
         var nameHeight = lines * Math.Max(1, input.LineHeight);
-        // 名前の外側（余白・アイコン）の幅。IconLeft はアイコンの右にも横の余白を置く
-        var outside = input.Arrangement == GridArrangement.IconLeft ? input.PaddingX * 3 + input.IconSize : input.PaddingX * 2;
+        var infoLines = input.Arrangement == GridArrangement.Tile ? Math.Clamp(input.InfoLines, 0, 2) : 0;
+        var textHeight = nameHeight * (1 + infoLines);
+        // 名前の外側（余白・アイコン）の幅。アイコンが左なら、アイコンの右にも横の余白を置く
+        var outside = iconLeft ? input.PaddingX * 3 + input.IconSize : input.PaddingX * 2;
         var maxCell = Math.Max(1, width - gap * 2);
         var text = Math.Max(0, Math.Min(input.TextWidth, maxCell - outside));
-        // R-119 / INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: アイコン・チェックボックスは項目の矩形の中に置く。
+        // R-119 / R-121 / INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: アイコン・チェックボックスは項目の矩形の中に置く。
         // 狭いパネルでは部品を縮めず、項目がパネルからはみ出す（コントロールが切る。横スクロールは出さない）
         var minCell = Math.Max(
-            input.Arrangement == GridArrangement.IconLeft ? outside : input.PaddingX * 2 + input.IconSize,
+            iconLeft ? outside : input.PaddingX * 2 + input.IconSize,
             input.CheckBoxSize > 0 ? input.PaddingY + input.CheckBoxSize : 0);
         var cellWidth = Math.Max(Math.Max(1, minCell), Math.Min(maxCell, outside + text));
-        var cellHeight = input.Arrangement == GridArrangement.IconLeft
-            ? Math.Max(input.IconSize, nameHeight) + input.PaddingY * 2
+        var cellHeight = iconLeft
+            ? Math.Max(input.IconSize, textHeight) + input.PaddingY * 2
             : input.PaddingY * 3 + input.IconSize + nameHeight;
         var columns = Math.Max(1, (width - gap) / Math.Max(1, cellWidth + gap));
         var rows = input.EntryCount == 0 ? 0 : (input.EntryCount + columns - 1) / columns;
         return new GridLayout
         {
-            Arrangement = input.Arrangement, IconSize = input.IconSize, TextWidth = text, NameHeight = nameHeight,
+            Arrangement = input.Arrangement, IconSize = input.IconSize, TextWidth = text, NameHeight = nameHeight, InfoLines = infoLines,
             PaddingX = input.PaddingX, PaddingY = input.PaddingY, Gap = gap, CheckBoxSize = input.CheckBoxSize,
             CellWidth = cellWidth, CellHeight = Math.Max(1, cellHeight), Columns = columns, Rows = rows,
             VerticalBar = false, EdgeBand = input.EdgeBand, ViewportHeight = input.ClientHeight,
@@ -109,33 +116,47 @@ public sealed record GridLayout : IFileViewLayout
     public (int X, int Y, int Width, int Height) IconBounds(int index)
     {
         var (x, y, w, h) = ItemBounds(index);
-        return Arrangement == GridArrangement.IconLeft
-            ? (x + PaddingX, y + (h - IconSize) / 2, IconSize, IconSize)
-            : (x + (w - IconSize) / 2, y + PaddingY, IconSize, IconSize);
+        return Arrangement == GridArrangement.IconTop
+            ? (x + (w - IconSize) / 2, y + PaddingY, IconSize, IconSize)
+            : (x + PaddingX, y + (h - IconSize) / 2, IconSize, IconSize);
     }
 
-    /// <summary>R-119: 名前の領域（IconTop は折り返しの行をすべて含む）。</summary>
+    /// <summary>R-119: 名前の領域（IconTop は折り返しの行をすべて含む）。R-121: 並べて表示は名前の 1 行（情報の行と合わせたまとまりを縦に中央）。</summary>
     public (int X, int Y, int Width, int Height) NameBounds(int index)
     {
         var (x, y, w, h) = ItemBounds(index);
-        return Arrangement == GridArrangement.IconLeft
-            ? (x + PaddingX * 2 + IconSize, y, Math.Max(0, w - PaddingX * 3 - IconSize), h)
-            : (x + PaddingX, y + PaddingY * 2 + IconSize, Math.Max(0, w - PaddingX * 2), NameHeight);
+        var textX = x + PaddingX * 2 + IconSize;
+        var textWidth = Math.Max(0, w - PaddingX * 3 - IconSize);
+        return Arrangement switch
+        {
+            GridArrangement.IconLeft => (textX, y, textWidth, h),
+            GridArrangement.Tile => (textX, y + (h - NameHeight * (1 + InfoLines)) / 2, textWidth, NameHeight),
+            _ => (x + PaddingX, y + PaddingY * 2 + IconSize, Math.Max(0, w - PaddingX * 2), NameHeight),
+        };
+    }
+
+    /// <summary>R-121: 並べて表示の情報の行（row は 0 から InfoLines - 1）。名前の行のすぐ下へ続ける。</summary>
+    public (int X, int Y, int Width, int Height) InfoBounds(int index, int row)
+    {
+        var (x, y, w, h) = NameBounds(index);
+        return (x, y + (row + 1) * h, w, h);
     }
 
     /// <summary>
-    /// R-120: 名前の文字が実際に占める矩形（描いた行ごと。IconTop だけ。IconLeft は空）。行は名前の領域の中で水平に中央揃え。
+    /// R-120 / R-121: 文字が実際に占める矩形（描いた行ごと）。IconTop は名前の行を水平に中央揃え、並べて表示は名前の行と情報の行を
+    /// 左揃えで上から順に（lineWidths も名前・情報の順）。小アイコン（IconLeft）は空。
     /// 文字の幅は実測が要るので呼び出し側（描画層）から数値で受け取る（R-66-3）。領域より広い行は領域の幅で切る。
     /// 項目の中でここにもアイコンにもチェックボックスにも当たらない所が「項目の余白」。
     /// </summary>
     public IReadOnlyList<(int X, int Y, int Width, int Height)> NameTextBounds(int index, IReadOnlyList<int> lineWidths, int lineHeight)
     {
-        if (Arrangement != GridArrangement.IconTop) return [];
+        if (Arrangement == GridArrangement.IconLeft) return [];
         var (x, y, w, _) = NameBounds(index);
+        var centered = Arrangement == GridArrangement.IconTop;
         return [.. lineWidths.Select((width, i) =>
         {
             var shown = Math.Clamp(width, 0, w);
-            return (x + (w - shown) / 2, y + i * lineHeight, shown, lineHeight);
+            return (centered ? x + (w - shown) / 2 : x, y + i * lineHeight, shown, lineHeight);
         })];
     }
 

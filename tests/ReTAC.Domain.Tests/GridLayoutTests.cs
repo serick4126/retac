@@ -124,4 +124,95 @@ public class GridLayoutTests
         Assert.Equal((nx, ny + 14, nw, 14), lines[1]);   // 広すぎる行は領域の幅
         Assert.Empty(Grid(2, 400, arrangement: GridArrangement.IconLeft).NameTextBounds(1, [20], 14));
     }
+
+    private static GridLayout Tile(int count = 23, int clientWidth = 600, int infoLines = 2, int iconSize = 32, int textWidth = 160) =>
+        GridLayout.Compute(new GridLayoutInput
+        {
+            EntryCount = count, Arrangement = GridArrangement.Tile, IconSize = iconSize, LineHeight = 16, NameLines = 1, InfoLines = infoLines,
+            TextWidth = textWidth, PaddingX = 6, PaddingY = 4, Gap = 4, CheckBoxSize = 16,
+            ClientWidth = clientWidth, ClientHeight = 300, VerticalBarWidth = 17, EdgeBand = 24,
+        });
+
+    [Fact]
+    public void 並べて表示の項目の幅は欄の幅とアイコンで決まる()
+    {
+        var layout = Tile();
+        Assert.Equal(6 * 3 + 32 + 160, layout.CellWidth);   // R-121: 名前の長さに依らない固定の幅
+    }
+
+    [Theory]
+    [InlineData(0, 32 + 8)]        // 情報なし: アイコンの高さ
+    [InlineData(1, 32 + 8)]        // 名前と 1 行 = 32
+    [InlineData(2, 16 * 3 + 8)]    // 名前と 2 行 = 48 がアイコンより高い
+    [InlineData(5, 16 * 3 + 8)]    // 3 行以上は 2 行に丸める
+    public void 並べて表示の項目の高さは文字の行とアイコンの高い方(int infoLines, int height)
+    {
+        var layout = Tile(infoLines: infoLines);
+        Assert.Equal(height, layout.CellHeight);
+        Assert.Equal(Math.Min(2, infoLines), layout.InfoLines);
+    }
+
+    [Fact]
+    public void 並べて表示の名前と情報の行は縦に続き_まとまりは縦に中央()
+    {
+        var layout = Tile(infoLines: 1, iconSize: 64);   // 高さ 64 + 8。文字は 32
+        var (x, y, _, h) = layout.ItemBounds(0);
+        var name = layout.NameBounds(0);
+        Assert.Equal(y + (h - 32) / 2, name.Y);
+        Assert.Equal(16, name.Height);
+        Assert.Equal(x + 6 * 2 + 64, name.X);
+        var info = layout.InfoBounds(0, 0);
+        Assert.Equal((name.X, name.Y + 16, name.Width, 16), info);
+    }
+
+    [Fact]
+    public void 並べて表示のアイコンは部品で行頭アイコンではない()
+    {
+        var layout = Tile();
+        var icon = layout.IconBounds(0);
+        // R-121: マークはチェックボックスで行う。アイコンは押すとカーソル、動かすと D&D（小アイコンの MarkIcon とは違う）
+        Assert.Equal((0, FileViewArea.Name), layout.HitTest(icon.X + icon.Width - 2, icon.Y + icon.Height - 2, 23));
+        var box = layout.CheckBoxBounds(0)!.Value;
+        Assert.Equal((0, FileViewArea.CheckBox), layout.HitTest(box.X, box.Y, 23));
+    }
+
+    [Fact]
+    public void 並べて表示の文字の矩形は左揃えで欄の幅で切る()
+    {
+        var layout = Tile();
+        var name = layout.NameBounds(0);
+        var lines = layout.NameTextBounds(0, [30, 50, 5000], 16);
+        Assert.Equal([(name.X, name.Y, 30, 16), (name.X, name.Y + 16, 50, 16), (name.X, name.Y + 32, name.Width, 16)], lines);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(40)]
+    [InlineData(80)]
+    [InlineData(150)]
+    public void 狭いパネルの並べて表示は横にスクロールせずアイコンを縮めず文字の欄を縮める(int clientWidth)
+    {
+        var layout = Tile(clientWidth: clientWidth, iconSize: 256);
+        Assert.False(layout.ScrollBars.Horizontal);
+        Assert.Equal(1, layout.Columns);
+        for (var i = 0; i < 3; i++)
+        {
+            Assert.Equal(256, layout.IconBounds(i).Width);
+            Assert.Equal(16, layout.CheckBoxBounds(i)!.Value.Width);
+            var icon = layout.IconBounds(i);
+            var name = layout.NameBounds(i);
+            Assert.True(name.Width >= 0);
+            Assert.True(name.X >= icon.X + icon.Width, "文字の欄はアイコンに重ならない");
+        }
+    }
+
+    [Fact]
+    public void 並べて表示が空ならバーを出さず項目も無い()
+    {
+        var layout = Tile(count: 0);
+        Assert.False(layout.ScrollBars.Vertical);
+        Assert.Equal((-1, FileViewArea.None), layout.HitTest(10, 10, 0));
+        Assert.Empty(layout.IndexesIn(0, 0, 600, 300, 0));
+    }
 }

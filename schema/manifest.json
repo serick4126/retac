@@ -1795,17 +1795,18 @@
       "id": "type:ReTAC.Domain.Listing.GridArrangement",
       "kind": "enum",
       "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-      "doc": "R-119 / R-120: 格子の並べ方。小アイコンはアイコンが左、中・大・特大はアイコンが上。",
+      "doc": "R-119 / R-120 / R-121: 格子の並べ方。小アイコンはアイコンが左、中・大・特大はアイコンが上、並べて表示はアイコンが左で右に名前と情報の行。",
       "members": [
         "IconLeft",
-        "IconTop"
+        "IconTop",
+        "Tile"
       ]
     },
     "ReTAC.Domain.Listing.GridLayout": {
       "id": "type:ReTAC.Domain.Listing.GridLayout",
       "kind": "sealed record",
       "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-      "doc": "R-119 / R-120 / INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: 小〜特大アイコンの格子。行ごとに左から右へ並べ、縦にスクロールする。 横にはスクロールしない（項目がパネルより広ければ名前の幅を縮め、それでも部品が収まらないほど狭ければ、はみ出した部分を切る）。 縦のスクロールの 1 段は格子の 1 行。",
+      "doc": "R-119 / R-120 / INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: 小〜特大アイコンと並べて表示（R-121）の格子。行ごとに左から右へ並べ、縦にスクロールする。 横にはスクロールしない（項目がパネルより広ければ名前の幅を縮め、それでも部品が収まらないほど狭ければ、はみ出した部分を切る）。 縦のスクロールの 1 段は格子の 1 行。",
       "fields": [
         {
           "name": "Arrangement",
@@ -1834,6 +1835,14 @@
           "nullable": false,
           "required": true,
           "mutability": "init"
+        },
+        {
+          "name": "InfoLines",
+          "type": "int",
+          "nullable": false,
+          "required": true,
+          "mutability": "init",
+          "doc": "R-121: 並べて表示の情報の行数（0〜2）。ほかの並べ方は 0。"
         },
         {
           "name": "PaddingX",
@@ -2005,6 +2014,14 @@
           "required": true,
           "mutability": "init",
           "doc": "R-119: 名前の行数（IconTop）。IconLeft は 1。"
+        },
+        {
+          "name": "InfoLines",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "R-121: 並べて表示の、名前の下の情報の行数（0〜2 に丸める）。ほかの並べ方は使わない。"
         },
         {
           "name": "TextWidth",
@@ -5933,7 +5950,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 166
+        "line": 187
       }
     ],
     "B-09": [
@@ -7245,7 +7262,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 217
+        "line": 238
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
@@ -8353,7 +8370,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 166
+        "line": 187
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
@@ -8553,7 +8570,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 26
+        "line": 28
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
@@ -9143,7 +9160,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 21
+        "line": 23
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
@@ -9345,15 +9362,15 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 31
+        "line": 33
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 82
+        "line": 89
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 117
+        "line": 124
       },
       {
         "file": "src/ReTAC.Domain/Listing/NameWrap.cs",
@@ -9507,19 +9524,19 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 31
+        "line": 33
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 127
+        "line": 146
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 183
+        "line": 204
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 189
+        "line": 210
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
@@ -9544,6 +9561,40 @@
       {
         "file": "src/ReTAC.Domain/Selection/ListState.cs",
         "line": 68
+      }
+    ],
+    "R-121": [
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 3
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 15
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 33
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 43
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 89
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 124
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 138
+      },
+      {
+        "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
+        "line": 146
       }
     ],
     "R-13": [
@@ -10843,7 +10894,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 128
+        "line": 148
       }
     ],
     "R-66-4": [
@@ -10995,7 +11046,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Listing/GridLayout.cs",
-        "line": 214
+        "line": 235
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
