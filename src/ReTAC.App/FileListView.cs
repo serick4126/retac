@@ -160,7 +160,17 @@ public sealed class FileListView : Control
         _ => _views.Icons.InPanelDragDrop,
     };
 
-    /// <summary>ファイルが落とされた（T8-2）。修飾キーはドロップの時点の値（R-111-2）。</summary>
+    /// <summary>Phase 16 §10: 今のモードの系統で範囲選択（投げ縄）を許すか。オフなら投げ縄を始めない（クリック・Shift+クリックは変わらない）。</summary>
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool RangeSelection => _mode switch
+    {
+        FileViewMode.Details => _views.Details.RangeSelection,
+        FileViewMode.List => _views.List.RangeSelection,
+        _ => _views.Icons.RangeSelection,
+    };
+
+        /// <summary>ファイルが落とされた（T8-2）。修飾キーはドロップの時点の値（R-111-2）。</summary>
     public readonly record struct Drop(string[] Files, string Destination, DragDropEffects Allowed, bool Ctrl, bool Shift);
 
     /// <summary>他アプリからファイルが落とされた（T8-2）。転送は呼び出し側が行う。</summary>
@@ -864,7 +874,8 @@ public sealed class FileListView : Control
     internal void LassoPress(Point location, bool ctrl)
     {
         var (index, area) = HitAt(location);
-        var starts = location.Y >= _layout.HeaderHeight && (index < 0 || area == FileViewArea.Other);
+        // Phase 16 §10: 範囲選択がオフの系統では始めない。押した所が項目の余白・名前以外なら、動かしたときに保留のカーソル移動も捨てる（OnMouseMove）
+        var starts = RangeSelection && location.Y >= _layout.HeaderHeight && (index < 0 || area == FileViewArea.Other);
         var (x, y) = ToContent(location);
         _lasso.Press(location.X, location.Y, x, y, starts, ctrl);
         _lassoCovered = null;

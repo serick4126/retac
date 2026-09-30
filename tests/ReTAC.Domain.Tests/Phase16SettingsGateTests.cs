@@ -5,7 +5,7 @@ namespace ReTAC.Domain.Tests;
 
 /// <summary>
 /// R-116〜R-119 / R-118: Phase 16 の本体が使う設定の項目は Phase 14 で先に作ってある。
-/// Phase 16 では設定のスキーマを変えない（既定値も仕様の表のまま）。
+/// Phase 16 の設定の項目は Phase 14 で先に作ってあり、既定値も仕様の表のまま（実機確認で足した RangeSelection だけが例外）。
 /// </summary>
 public class Phase16SettingsGateTests
 {

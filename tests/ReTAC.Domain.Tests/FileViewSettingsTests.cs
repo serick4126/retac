@@ -18,6 +18,7 @@ public class FileViewSettingsTests
         Assert.True(s.Details.InPanelDragDrop);
         Assert.True(s.Icons.InPanelDragDrop);
         Assert.True(s.Tiles.InPanelDragDrop);
+        Assert.True(s.List.RangeSelection && s.Details.RangeSelection && s.Icons.RangeSelection && s.Tiles.RangeSelection);   // Phase 16 §10: 既定はオン
         Assert.Equal(new NameWidthSetting { Mode = NameWidthMode.ShowAll, MaxChars = 40 }, s.List.NameWidth);
         Assert.Equal(new NameWidthSetting { Mode = NameWidthMode.ShowAll, MaxChars = 40 }, s.Details.NameWidth);
         Assert.False(s.Common.HideKnownExtensions);                                          // R-01-7
@@ -275,20 +276,20 @@ public class FileViewSettingsTests
         var changed = new FileViewSettings
         {
             Common = new() { ShowOverlays = false, HideKnownExtensions = true },
-            List = new() { AlignExtension = false, InPanelDragDrop = true, NameWidth = new() { Mode = NameWidthMode.Auto, MaxChars = 11 } },
+            List = new() { AlignExtension = false, InPanelDragDrop = true, RangeSelection = false, NameWidth = new() { Mode = NameWidthMode.Auto, MaxChars = 11 } },
             Details = new()
             {
-                InPanelDragDrop = false, NameWidth = new() { Mode = NameWidthMode.MaxChars, MaxChars = 12 }, AlignExtension = false,
+                InPanelDragDrop = false, RangeSelection = false, NameWidth = new() { Mode = NameWidthMode.MaxChars, MaxChars = 12 }, AlignExtension = false,
                 Columns = [new() { Column = DetailsColumn.Size, Visible = false }], FitColumnsToWindow = true,
             },
             Icons = new()
             {
-                InPanelDragDrop = false, MediumSize = 32, LargeSize = 64, ExtraLargeSize = 128, CheckBoxes = CheckBoxMode.Always,
+                InPanelDragDrop = false, RangeSelection = false, MediumSize = 32, LargeSize = 64, ExtraLargeSize = 128, CheckBoxes = CheckBoxMode.Always,
                 Thumbnails = false, FolderThumbnails = false, NameLines = 3, SmallIconWidth = new() { Mode = NameWidthMode.ShowAll },
             },
             Tiles = new()
             {
-                InPanelDragDrop = false, Info = [TileInfo.Created], TilesSize = 96, ContentSize = 128, CheckBoxes = CheckBoxMode.Always,
+                InPanelDragDrop = false, RangeSelection = false, Info = [TileInfo.Created], TilesSize = 96, ContentSize = 128, CheckBoxes = CheckBoxMode.Always,
                 Thumbnails = false, FolderThumbnails = false,
             },
         };
@@ -296,5 +297,15 @@ public class FileViewSettingsTests
         var merged = FileViewSettings.Merge(baseline, changed, baseline);
 
         Assert.Equal(System.Text.Json.JsonSerializer.Serialize(changed), System.Text.Json.JsonSerializer.Serialize(merged));
+    }
+
+    [Fact]
+    public void 範囲選択の項目はJSONから読め_欠けたら既定のオン()
+    {
+        var s = FileViewSettings.Normalize(JsonSerializer.Deserialize<FileViewSettings>("""{ "Icons": { "RangeSelection": false } }""", Json));
+        Assert.False(s.Icons.RangeSelection);
+        Assert.True(s.Details.RangeSelection);
+        var back = JsonSerializer.Deserialize<FileViewSettings>(JsonSerializer.Serialize(s, Json), Json)!;
+        Assert.False(back.Icons.RangeSelection);
     }
 }

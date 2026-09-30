@@ -106,4 +106,26 @@ public class FileViewPageTests
         Assert.Same(before.List, after.List);
         Assert.Same(before.Details, after.Details);
     }
+
+    [Fact]
+    public void 範囲選択の部品は各系統の項目だけを変える()
+    {
+        // Phase 16 §10: 一覧・詳細・アイコン・並べて表示のそれぞれが自分の RangeSelection だけを持つ
+        var (_, draft) = Baseline();
+        using var page = new FileViewPage(draft);
+        Assert.All(new[] { page.ListRange, page.DetailsRange, page.IconsRange, page.TilesRange }, box => Assert.True(box.Checked));
+
+        page.DetailsRange.Checked = false;
+        Assert.False(draft.FileViews.Details.RangeSelection);
+        Assert.True(draft.FileViews.List.RangeSelection);
+        Assert.True(draft.FileViews.Icons.RangeSelection);
+        Assert.True(draft.FileViews.Tiles.RangeSelection);
+
+        page.ListRange.Checked = false;
+        page.IconsRange.Checked = false;
+        page.TilesRange.Checked = false;
+        Assert.False(draft.FileViews.List.RangeSelection);
+        Assert.False(draft.FileViews.Icons.RangeSelection);
+        Assert.False(draft.FileViews.Tiles.RangeSelection);
+    }
 }

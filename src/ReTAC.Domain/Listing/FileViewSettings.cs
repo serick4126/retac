@@ -56,6 +56,8 @@ public sealed record ListViewSettings
 {
     /// <summary>R-110: 一覧だけ既定はオフ（今の動作。B-05）。</summary>
     public bool InPanelDragDrop { get; init; }
+    /// <summary>Phase 16 §10: この系統で投げ縄（範囲選択）を始められるか。オフなら押したまま動かしても何もしない（クリック・Shift+クリックは変わらない）。</summary>
+    public bool RangeSelection { get; init; } = true;
     public NameWidthSetting NameWidth { get; init; } = new();
     /// <summary>R-01-6 / Q35: 拡張子を揃えた位置に表示する。オフなら本体に続けて描く（登録済みの拡張子を隠す設定で隠れた項目は本体だけ）。</summary>
     public bool AlignExtension { get; init; } = true;
@@ -64,6 +66,8 @@ public sealed record ListViewSettings
 public sealed record DetailsViewSettings
 {
     public bool InPanelDragDrop { get; init; } = true;
+    /// <summary>Phase 16 §10: この系統で投げ縄（範囲選択）を始められるか。オフなら押したまま動かしても何もしない（クリック・Shift+クリックは変わらない）。</summary>
+    public bool RangeSelection { get; init; } = true;
     public NameWidthSetting NameWidth { get; init; } = new();
     /// <summary>R-01-6 / Q35: 拡張子を揃えた位置に表示する。オフなら本体に続けて描く（登録済みの拡張子を隠す設定で隠れた項目は本体だけ）。</summary>
     public bool AlignExtension { get; init; } = true;
@@ -86,6 +90,8 @@ public sealed record DetailsViewSettings
 public sealed record IconsViewSettings
 {
     public bool InPanelDragDrop { get; init; } = true;
+    /// <summary>Phase 16 §10: この系統で投げ縄（範囲選択）を始められるか。オフなら押したまま動かしても何もしない（クリック・Shift+クリックは変わらない）。</summary>
+    public bool RangeSelection { get; init; } = true;
     public int MediumSize { get; init; } = 48;
     public int LargeSize { get; init; } = 96;
     public int ExtraLargeSize { get; init; } = 256;
@@ -106,6 +112,8 @@ public sealed record IconsViewSettings
 public sealed record TilesViewSettings
 {
     public bool InPanelDragDrop { get; init; } = true;
+    /// <summary>Phase 16 §10: この系統で投げ縄（範囲選択）を始められるか。オフなら押したまま動かしても何もしない（クリック・Shift+クリックは変わらない）。</summary>
+    public bool RangeSelection { get; init; } = true;
     /// <summary>R-115 / Q17: 並べて表示とコンテンツで共通の 1 つ。</summary>
     [JsonConverter(typeof(LenientEnumListConverter<TileInfo>))]
     public IReadOnlyList<TileInfo> Info { get; init; } = DefaultInfo;

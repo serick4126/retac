@@ -87,4 +87,60 @@ public class FileListViewGridMarginTests
         list.RaiseMouseUp(Mouse(MouseButtons.Left, Margin(list, 3)));
         Assert.Equal([0, 1, 2, 3], list.State.Marks.Order());
     }
+
+    private static FileListView ViewWithoutRange(FileViewMode mode)
+    {
+        var list = new FileListView { Size = new Size(600, 400) };
+        var off = new FileViewSettings
+        {
+            List = new() { RangeSelection = false }, Details = new() { RangeSelection = false }, Icons = new() { RangeSelection = false },
+        };
+        list.SetView(mode, off, new Dictionary<string, int?>(), SortOrder.Default);
+        list.SetEntries(Enumerable.Range(0, 6).Select(i => TestEntries.File($"file{i:D2}.txt")).ToList());
+        return list;
+    }
+
+    [Theory]
+    [InlineData(FileViewMode.MediumIcons)]
+    [InlineData(FileViewMode.SmallIcons)]
+    [InlineData(FileViewMode.List)]
+    [InlineData(FileViewMode.Details)]
+    public void 範囲選択がオフなら項目の無い所から動かしても投げ縄にならない(FileViewMode mode)
+    {
+        using var list = ViewWithoutRange(mode);
+        Assert.False(list.RangeSelection);
+        list.RaiseMouseDown(Mouse(MouseButtons.Left, Empty(list)));
+        list.RaiseMouseMove(Mouse(MouseButtons.Left, Margin(list, 0)));
+        Assert.False(list.LassoActive);
+        list.RaiseMouseUp(Mouse(MouseButtons.Left, Margin(list, 0)));
+        Assert.Empty(list.State.Marks);
+        Assert.Equal(0, list.State.CursorIndex);
+    }
+
+    [Fact]
+    public void 範囲選択がオフなら余白から動かして離してもカーソルは移らない_動かさずに離せば移る()
+    {
+        using var list = ViewWithoutRange(FileViewMode.MediumIcons);
+        list.RaiseMouseDown(Mouse(MouseButtons.Left, Margin(list, 2)));
+        list.RaiseMouseMove(Mouse(MouseButtons.Left, Empty(list)));
+        Assert.False(list.LassoActive);
+        list.RaiseMouseUp(Mouse(MouseButtons.Left, Empty(list)));
+        Assert.Equal(0, list.State.CursorIndex);   // 動かしたので保留のカーソル移動は捨てる
+        Assert.Empty(list.State.Marks);
+
+        list.RaiseMouseDown(Mouse(MouseButtons.Left, Margin(list, 2)));
+        list.RaiseMouseUp(Mouse(MouseButtons.Left, Margin(list, 2)));
+        Assert.Equal(2, list.State.CursorIndex);   // クリックは変わらない
+    }
+
+    [Fact]
+    public void 範囲選択はモードの系統ごとの設定を見る()
+    {
+        using var list = ViewWithoutRange(FileViewMode.MediumIcons);
+        var views = new FileViewSettings { Icons = new() { RangeSelection = false } };
+        list.SetView(FileViewMode.Details, views, new Dictionary<string, int?>(), SortOrder.Default);
+        Assert.True(list.RangeSelection);   // 詳細の系統はオンのまま
+        list.SetView(FileViewMode.MediumIcons, views, new Dictionary<string, int?>(), SortOrder.Default);
+        Assert.False(list.RangeSelection);
+    }
 }

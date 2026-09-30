@@ -43,6 +43,7 @@ public sealed class FileViewPage : UserControl
         [TileInfo.Attributes] = "属性",
     };
 
+    private const string RangeText = "範囲選択を許可する(&G)";
     private const string DragDropHelp = "ON: フォルダの項目の上に落とすと、そのフォルダへコピー・移動する。\nOFF: 今のフォルダへ入れる。ファイル表示パネルの中へは落とせない。";
 
     private readonly SettingsDraft _draft;
@@ -59,10 +60,12 @@ public sealed class FileViewPage : UserControl
     // 一覧
     private readonly CheckBox _listAlignExtension = Check("拡張子を揃えて表示する(&X)");
     internal CheckBox ListDragDrop { get; } = Check("ファイル表示パネル内でドラッグ＆ドロップを使用する(&D)");
+    internal CheckBox ListRange { get; } = Check(RangeText);
     private readonly ComboBox _listWidth = Combo(WidthModes, 130);
     private readonly NumericUpDown _listChars = Chars();
     // 詳細
     private readonly CheckBox _detailsDragDrop = Check("ファイル表示パネル内でドラッグ＆ドロップを使用する(&D)");
+    internal CheckBox DetailsRange { get; } = Check(RangeText);
     private readonly ComboBox _detailsWidth = Combo(WidthModes, 130);
     private readonly NumericUpDown _detailsChars = Chars();
     private readonly CheckBox _detailsAlignExtension = Check("拡張子を揃えて表示する(&X)");
@@ -72,6 +75,7 @@ public sealed class FileViewPage : UserControl
     private readonly CheckBox _fitColumns = Check("列幅をウィンドウ幅に合わせて縮める(&F)");
     // アイコン
     private readonly CheckBox _iconsDragDrop = Check("ファイル表示パネル内でドラッグ＆ドロップを使用する(&D)");
+    internal CheckBox IconsRange { get; } = Check(RangeText);
     private readonly ComboBox _mediumSize = SizeCombo();
     private readonly ComboBox _largeSize = SizeCombo();
     private readonly ComboBox _extraLargeSize = SizeCombo();
@@ -83,6 +87,7 @@ public sealed class FileViewPage : UserControl
     internal NumericUpDown SmallIconChars { get; } = Chars();
     // 並べて表示・コンテンツ
     private readonly CheckBox _tilesDragDrop = Check("ファイル表示パネル内でドラッグ＆ドロップを使用する(&D)");
+    internal CheckBox TilesRange { get; } = Check(RangeText);
     private readonly CheckedListBox _tileInfo = new() { Size = new Size(200, 106), CheckOnClick = true, IntegralHeight = false };
     private readonly ComboBox _tilesSize = SizeCombo();
     private readonly ComboBox _contentSize = SizeCombo();
@@ -103,39 +108,43 @@ public sealed class FileViewPage : UserControl
             Arrange(new Panel(), (Overlays, 0), (_hideKnownExtensions, 32)),
             Arrange(new Panel(),
                 (ListDragDrop, 0),
-                (Row("名前の列の幅(&W):", _listWidth), 36),
-                (Row("文字数(&R):", _listChars), 36 + RowHeight),
-                (_listAlignExtension, 106)),
+                (ListRange, 28),
+                (Row("名前の列の幅(&W):", _listWidth), 64),
+                (Row("文字数(&R):", _listChars), 64 + RowHeight),
+                (_listAlignExtension, 134)),
             Arrange(new Panel(),
                 (_detailsDragDrop, 0),
-                (Row("名前の列の幅(&W):", _detailsWidth), 36),
-                (Row("文字数(&R):", _detailsChars), 36 + RowHeight),
-                (_detailsAlignExtension, 106),
-                (Caption("表示する列(&L):"), 140),
-                (DetailsColumns, 160),
-                (MoveColumnUp, 160),
-                (_moveColumnDown, 194),
-                (_fitColumns, 296)),
+                (DetailsRange, 28),
+                (Row("名前の列の幅(&W):", _detailsWidth), 64),
+                (Row("文字数(&R):", _detailsChars), 64 + RowHeight),
+                (_detailsAlignExtension, 134),
+                (Caption("表示する列(&L):"), 168),
+                (DetailsColumns, 188),
+                (MoveColumnUp, 188),
+                (_moveColumnDown, 222),
+                (_fitColumns, 324)),
             Arrange(new Panel(),
                 (_iconsDragDrop, 0),
-                (Row("中アイコンの大きさ(&M):", _mediumSize), 36),
-                (Row("大アイコンの大きさ(&L):", _largeSize), 36 + RowHeight),
-                (Row("特大アイコンの大きさ(&E):", _extraLargeSize), 36 + RowHeight * 2),
-                (Row("チェックボックス(&K):", IconsCheckBoxes), 36 + RowHeight * 3),
-                (IconsThumbnails, 172),
-                (IconsFolderThumbnails, 200),
-                (Row("ファイル名の表示行数(&I):", NameLines), 234),
-                (Row("小アイコンの項目の幅(&W):", SmallIconWidth), 234 + RowHeight),
-                (Row("文字数(&R):", SmallIconChars), 234 + RowHeight * 2)),
+                (IconsRange, 28),
+                (Row("中アイコンの大きさ(&M):", _mediumSize), 64),
+                (Row("大アイコンの大きさ(&L):", _largeSize), 64 + RowHeight),
+                (Row("特大アイコンの大きさ(&E):", _extraLargeSize), 64 + RowHeight * 2),
+                (Row("チェックボックス(&K):", IconsCheckBoxes), 64 + RowHeight * 3),
+                (IconsThumbnails, 200),
+                (IconsFolderThumbnails, 228),
+                (Row("ファイル名の表示行数(&I):", NameLines), 262),
+                (Row("小アイコンの項目の幅(&W):", SmallIconWidth), 262 + RowHeight),
+                (Row("文字数(&R):", SmallIconChars), 262 + RowHeight * 2)),
             Arrange(new Panel(),
                 (_tilesDragDrop, 0),
-                (Caption("名前の横に出す情報(&I):"), 36),
-                (_tileInfo, 56),
-                (Row("並べて表示のアイコンの大きさ(&Z):", _tilesSize), 176),
-                (Row("コンテンツのアイコンの大きさ(&C):", _contentSize), 176 + RowHeight),
-                (Row("チェックボックス(&K):", TilesCheckBoxes), 176 + RowHeight * 2),
-                (TilesThumbnails, 280),
-                (TilesFolderThumbnails, 308)),
+                (TilesRange, 28),
+                (Caption("名前の横に出す情報(&I):"), 64),
+                (_tileInfo, 84),
+                (Row("並べて表示のアイコンの大きさ(&Z):", _tilesSize), 204),
+                (Row("コンテンツのアイコンの大きさ(&C):", _contentSize), 204 + RowHeight),
+                (Row("チェックボックス(&K):", TilesCheckBoxes), 204 + RowHeight * 2),
+                (TilesThumbnails, 308),
+                (TilesFolderThumbnails, 336)),
         ];
 
         foreach (var name in new[] { "共通", "一覧", "詳細", "アイコン", "並べて表示・コンテンツ" }) Groups.Items.Add(name);
@@ -181,15 +190,18 @@ public sealed class FileViewPage : UserControl
         _detailsAlignExtension.Checked = views.Details.AlignExtension;
 
         ListDragDrop.Checked = views.List.InPanelDragDrop;
+        ListRange.Checked = views.List.RangeSelection;
         LoadWidth(_listWidth, _listChars, views.List.NameWidth);
 
         _detailsDragDrop.Checked = views.Details.InPanelDragDrop;
+        DetailsRange.Checked = views.Details.RangeSelection;
         LoadWidth(_detailsWidth, _detailsChars, views.Details.NameWidth);
         foreach (var column in views.Details.Columns)
             DetailsColumns.Items.Add(new Choice<DetailsColumn>(column.Column, ColumnNames[column.Column]), column.Visible);
         _fitColumns.Checked = views.Details.FitColumnsToWindow;
 
         _iconsDragDrop.Checked = views.Icons.InPanelDragDrop;
+        IconsRange.Checked = views.Icons.RangeSelection;
         LoadSize(_mediumSize, views.Icons.MediumSize);
         LoadSize(_largeSize, views.Icons.LargeSize);
         LoadSize(_extraLargeSize, views.Icons.ExtraLargeSize);
@@ -200,6 +212,7 @@ public sealed class FileViewPage : UserControl
         LoadWidth(SmallIconWidth, SmallIconChars, views.Icons.SmallIconWidth);
 
         _tilesDragDrop.Checked = views.Tiles.InPanelDragDrop;
+        TilesRange.Checked = views.Tiles.RangeSelection;
         // R-115: 並びは候補の順で固定。選ぶだけで並べ替えはしない
         foreach (var info in Enum.GetValues<TileInfo>())
             _tileInfo.Items.Add(new Choice<TileInfo>(info, InfoNames[info]), views.Tiles.Info.Contains(info));
@@ -218,9 +231,11 @@ public sealed class FileViewPage : UserControl
         OnCheck(_hideKnownExtensions, (v, on) => v with { Common = v.Common with { HideKnownExtensions = on } });
         OnCheck(_listAlignExtension, (v, on) => v with { List = v.List with { AlignExtension = on } });
 
+        OnCheck(ListRange, (v, on) => v with { List = v.List with { RangeSelection = on } });
         OnCheck(ListDragDrop, (v, on) => v with { List = v.List with { InPanelDragDrop = on } });
         OnWidth(_listWidth, _listChars, (v, w) => v with { List = v.List with { NameWidth = w } });
 
+        OnCheck(DetailsRange, (v, on) => v with { Details = v.Details with { RangeSelection = on } });
         OnCheck(_detailsDragDrop, (v, on) => v with { Details = v.Details with { InPanelDragDrop = on } });
         OnWidth(_detailsWidth, _detailsChars, (v, w) => v with { Details = v.Details with { NameWidth = w } });
         OnCheck(_detailsAlignExtension, (v, on) => v with { Details = v.Details with { AlignExtension = on } });
@@ -230,6 +245,7 @@ public sealed class FileViewPage : UserControl
         _moveColumnDown.Click += (_, _) => MoveColumn(1);
         OnCheck(_fitColumns, (v, on) => v with { Details = v.Details with { FitColumnsToWindow = on } });
 
+        OnCheck(IconsRange, (v, on) => v with { Icons = v.Icons with { RangeSelection = on } });
         OnCheck(_iconsDragDrop, (v, on) => v with { Icons = v.Icons with { InPanelDragDrop = on } });
         OnSize(_mediumSize, (v, size) => v with { Icons = v.Icons with { MediumSize = size } });
         OnSize(_largeSize, (v, size) => v with { Icons = v.Icons with { LargeSize = size } });
@@ -241,6 +257,7 @@ public sealed class FileViewPage : UserControl
         NameLines.ValueChanged += (_, _) => Change(v => v with { Icons = v.Icons with { NameLines = (int)NameLines.Value } });
         OnWidth(SmallIconWidth, SmallIconChars, (v, w) => v with { Icons = v.Icons with { SmallIconWidth = w } });
 
+        OnCheck(TilesRange, (v, on) => v with { Tiles = v.Tiles with { RangeSelection = on } });
         OnCheck(_tilesDragDrop, (v, on) => v with { Tiles = v.Tiles with { InPanelDragDrop = on } });
         _tileInfo.ItemCheck += (_, e) =>
         {
