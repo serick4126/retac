@@ -331,6 +331,7 @@
         "unique:ReTAC.Domain.Listing.ColumnLayout#Header",
         "unique:ReTAC.Domain.Listing.DetailsLayout#Header",
         "unique:ReTAC.Domain.Listing.GridLayout#Header",
+        "unique:ReTAC.Domain.Listing.ContentLayout#Header",
         "unique:ReTAC.Domain.Listing.DetailsLayoutInput#Columns"
       ],
       "rule": "並び順そのものに意味がある列であり、重複禁止を掛けない。",
@@ -585,11 +586,11 @@
     {
       "id": "INV-LAYOUT-GEOMETRY-SINGLE-SOURCE",
       "status": "enforced",
-      "specIds": ["R-114", "R-110-2", "R-116", "R-117", "R-119", "R-120"],
-      "applies": ["type:ReTAC.Domain.Listing.IFileViewLayout", "type:ReTAC.Domain.Listing.ColumnLayout", "type:ReTAC.Domain.Listing.DetailsLayout", "type:ReTAC.Domain.Listing.GridLayout"],
-      "rule": "項目・部品（行頭アイコン・名前・列のセル・チェックボックス・サムネイル）・見出しの矩形はレイアウトだけが計算する。部品の矩形は描画と部品の当たり判定に、項目の矩形は投げ縄・カーソルの枠・落とす先の枠に使う。FileListView の側で計算し直さない。",
-      "enforcedBy": "domain:IFileViewLayout（ColumnLayout・DetailsLayout・GridLayout）。app:FileListView は幾何を HitTest・ItemBounds・IconBounds・NameBounds・ExtensionBounds・CheckBoxBounds・CellBounds・Header・HeaderBorderAt・HeaderCellAt・IndexesIn・Reveal にだけ聞き、DetailsLayout の具象や static は Compute 以外で呼ばない",
-      "testedBy": "tests/ReTAC.Domain.Tests/LayoutContractTests.cs, tests/ReTAC.Domain.Tests/DetailsLayoutTests.cs, tests/ReTAC.Domain.Tests/ColumnLayoutTests.cs, tests/ReTAC.Domain.Tests/GridLayoutTests.cs"
+      "specIds": ["R-114", "R-110-2", "R-116", "R-117", "R-119", "R-120", "R-121", "R-122"],
+      "applies": ["type:ReTAC.Domain.Listing.IFileViewLayout", "type:ReTAC.Domain.Listing.ColumnLayout", "type:ReTAC.Domain.Listing.DetailsLayout", "type:ReTAC.Domain.Listing.GridLayout", "type:ReTAC.Domain.Listing.ContentLayout"],
+      "rule": "項目・部品（行頭アイコン・名前・列のセル・チェックボックス・サムネイル・並べて表示とコンテンツの情報の欄・コンテンツの区切り線）・見出しの矩形はレイアウトだけが計算する。部品の矩形は描画と部品の当たり判定に、項目の矩形は投げ縄・カーソルの枠・落とす先の枠に使う。FileListView の側で計算し直さない。",
+      "enforcedBy": "domain:IFileViewLayout（ColumnLayout・DetailsLayout・GridLayout・ContentLayout）。app:FileListView は幾何を HitTest・ItemBounds・IconBounds・NameBounds・ExtensionBounds・CheckBoxBounds・CellBounds・Header・HeaderBorderAt・HeaderCellAt・IndexesIn・Reveal にだけ聞き、DetailsLayout の具象や static は Compute 以外で呼ばない",
+      "testedBy": "tests/ReTAC.Domain.Tests/LayoutContractTests.cs, tests/ReTAC.Domain.Tests/DetailsLayoutTests.cs, tests/ReTAC.Domain.Tests/ColumnLayoutTests.cs, tests/ReTAC.Domain.Tests/GridLayoutTests.cs, tests/ReTAC.Domain.Tests/ContentLayoutTests.cs"
     },
     {
       "id": "INV-THUMBNAIL-NO-CLOUD-DOWNLOAD",
