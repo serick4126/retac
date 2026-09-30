@@ -58,6 +58,19 @@ public sealed class ShellImageWorker : IDisposable
 
     public event Action<ImageResult>? Completed;
 
+    /// <summary>
+    /// R-126: 背景のスレッドが受け止めた想定外の例外を知らせる口（アプリが異常終了の記録につなぐ）。
+    /// 知らせるのは、スレッドを落とさないために受け止めた例外だけ。サムネイルが無い・パスを解決できない、という普通の失敗
+    /// （ShellThumbnails.Get が null を返すもの）は知らせない。
+    /// </summary>
+    public static Action<Exception>? UnexpectedError { get; set; }
+
+    private static void Report(Exception exception)
+    {
+        try { UnexpectedError?.Invoke(exception); }
+        catch (Exception) { }   // 知らせる側の失敗でスレッドを落とさない
+    }
+
     internal Func<string, int, bool, Bitmap?>? GetOverride { get; set; }
     internal Func<string, int>? OverlayOverride { get; set; }
 
@@ -125,13 +138,13 @@ public sealed class ShellImageWorker : IDisposable
                         result = new ImageResult(next, thumbnail, overlay);
                     }
                 }
-                catch (Exception) { continue; }   // 1 件の失敗で止めない。その項目はアイコンのまま
+                catch (Exception ex) { Report(ex); continue; }   // 1 件の失敗で止めない。その項目はアイコンのまま
                 if (_stopped) { result.Thumbnail?.Dispose(); return; }
                 bool current;
                 lock (_lock) current = version == _version;
                 if (!current) { result.Thumbnail?.Dispose(); continue; }   // 差し替えた後に届いた古い結果は知らせない
                 try { Completed?.Invoke(result); }
-                catch (Exception) { result.Thumbnail?.Dispose(); }   // 受け取る側（破棄済みのコントロールなど）の失敗でスレッドを落とさない
+                catch (Exception ex) { Report(ex); result.Thumbnail?.Dispose(); }   // 受け取る側（破棄済みのコントロールなど）の失敗でスレッドを落とさない
             }
         }
         finally { _signal.Dispose(); }

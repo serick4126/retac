@@ -255,4 +255,47 @@ public class ShellThumbnailsTests
         Assert.Throws<ArgumentException>(() => _ = big.Width);
         Assert.Equal(128, fitted.Width);
     }
+
+    [Fact]
+    public void 取得が想定外の例外を出しても_スレッドは続き_ほかの項目は届き_例外は知らされる()
+    {
+        var reported = new ConcurrentQueue<Exception>();
+        var before = ShellImageWorker.UnexpectedError;
+        ShellImageWorker.UnexpectedError = reported.Enqueue;
+        try
+        {
+            using var worker = new ShellImageWorker();
+            worker.OverlayOverride = path => path == "bad" ? throw new NullReferenceException("retac-test-unexpected") : 3;
+            var delivered = new ConcurrentQueue<string>();
+            using var done = new ManualResetEventSlim(false);
+            worker.Completed += r => { delivered.Enqueue(r.Request.FullPath); if (r.Request.FullPath == "good") done.Set(); };
+
+            worker.Replace([Req("bad", thumbnail: false), Req("good", thumbnail: false)]);
+
+            Assert.True(done.Wait(TimeSpan.FromSeconds(5)));
+            Assert.DoesNotContain("bad", delivered);          // その項目はアイコンのまま
+            Assert.Contains(reported, e => e.Message == "retac-test-unexpected");
+        }
+        finally { ShellImageWorker.UnexpectedError = before; }
+    }
+
+    [Fact]
+    public void 受け取る側の例外も知らされる()
+    {
+        var reported = new ConcurrentQueue<Exception>();
+        var before = ShellImageWorker.UnexpectedError;
+        ShellImageWorker.UnexpectedError = reported.Enqueue;
+        try
+        {
+            using var worker = new ShellImageWorker();
+            worker.OverlayOverride = _ => 0;
+            var count = 0;
+            using var done = new ManualResetEventSlim(false);
+            worker.Completed += _ => { if (Interlocked.Increment(ref count) == 1) throw new InvalidOperationException("retac-test-receiver"); done.Set(); };
+            worker.Replace([Req("a", thumbnail: false), Req("b", thumbnail: false)]);
+            Assert.True(done.Wait(TimeSpan.FromSeconds(5)));
+            Assert.Contains(reported, e => e.Message == "retac-test-receiver");
+        }
+        finally { ShellImageWorker.UnexpectedError = before; }
+    }
 }

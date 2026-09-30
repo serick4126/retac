@@ -295,4 +295,62 @@ public class FileListViewLassoTests
         list.SetAutoScroll((0, 0));
         Assert.False(list.IsHandleCreated);
     }
+
+    // ---- Phase 16 から持ち越した点の固定（Phase 18） ----
+
+    [Fact]
+    public void 投げ縄の最中にホイールで動かしても_仮のマークは今の矩形に交わる項目と一致する()
+    {
+        using var list = new FileListView { Size = new Size(600, 300) };
+        list.SetView(FileViewMode.Details, new FileViewSettings(), new Dictionary<string, int?>(), SortOrder.Default);
+        list.SetEntries(Enumerable.Range(0, 200).Select(i => TestEntries.File($"f{i:D3}.txt")).ToList());
+        var (rowX, row, rowWidth, _) = list.Layout.ItemBounds(1);    // row は 1 行の高さ
+        var x = Math.Min(rowX + rowWidth - 5, list.Size.Width - 60); // 行の右端の近く = 名前以外の列
+        var start = new Point(x, list.Layout.HeaderHeight + row * 2 + 2);
+        list.LassoPress(start, ctrl: false);
+        list.PressLeft(start, shift: false);
+        list.RaiseMouseMove(new MouseEventArgs(MouseButtons.Left, 1, x - 30, list.Layout.HeaderHeight + row * 5 + 2, 0));
+        Assert.True(list.LassoActive);
+
+        list.ScrollWheel(-2);   // 中身がずれる。マウスは動かない
+
+        var (rx, ry, rw, rh) = list.LassoRect;
+        var covered = list.Layout.IndexesIn(rx, ry, rw, rh, list.State.Count).ToHashSet();
+        Assert.True(covered.Count > 4);   // スクロールした分だけ矩形が伸びている
+        for (var i = 0; i < list.State.Count; i++) Assert.Equal(covered.Contains(i), list.IsMarkedForDisplay(i));
+    }
+
+    [Fact]
+    public void 名前以外から始めた投げ縄を離したあと_次に名前を押して動かすと_その項目のドラッグが始まる()
+    {
+        using var list = new FileListView { Size = new Size(600, 300) };
+        list.SetView(FileViewMode.Details, new FileViewSettings(), new Dictionary<string, int?>(), SortOrder.Default);
+        list.SetEntries(Enumerable.Range(0, 20).Select(i => TestEntries.File($"f{i:D3}.txt")).ToList());
+        IReadOnlyList<string>? started = null;
+        list.StartDragOverride = paths => started = paths;
+        var (rowX, row, rowWidth, _) = list.Layout.ItemBounds(1);
+        var x = Math.Min(rowX + rowWidth - 5, list.Size.Width - 60);
+        var start = new Point(x, list.Layout.HeaderHeight + row * 2 + 2);
+        list.LassoPress(start, ctrl: false);
+        list.PressLeft(start, shift: false);
+        var end = new Point(x - 30, list.Layout.HeaderHeight + row * 4 + 2);
+        list.RaiseMouseMove(new MouseEventArgs(MouseButtons.Left, 1, end.X, end.Y, 0));
+        list.RaiseMouseUp(new MouseEventArgs(MouseButtons.Left, 1, end.X, end.Y, 0));
+        Assert.False(list.LassoActive);
+        Assert.Null(started);
+
+        // ボタンを押さずに動かしても、前の投げ縄の状態でドラッグは始まらない
+        list.RaiseMouseMove(new MouseEventArgs(MouseButtons.Left, 1, end.X + 80, end.Y, 0));
+        Assert.Null(started);
+
+        // 名前を押して動かすと、その項目（7 番）のドラッグが始まる（前の「名前以外」の状態が効いていない）。
+        // 投げ縄で付いたマークは消しておく（マークがあると、ドラッグの対象がマークしたものになる）
+        list.State.ClearMarks();
+        var name = FileViewScroll.ToVisible(list.Layout, list.ScrollPosition, list.Layout.NameBounds(7));
+        var press = new Point(name.X + 2, name.Y + 2);
+        list.LassoPress(press, ctrl: false);
+        list.PressLeft(press, shift: false);
+        list.RaiseMouseMove(new MouseEventArgs(MouseButtons.Left, 1, press.X + 60, press.Y, 0));
+        Assert.Equal([@"C:\work\f007.txt"], started);
+    }
 }

@@ -6133,7 +6133,7 @@
       },
       {
         "file": "src/ReTAC.App/Program.cs",
-        "line": 71
+        "line": 74
       }
     ],
     "B-04": [
@@ -8105,7 +8105,7 @@
       },
       {
         "file": "src/ReTAC.App/Program.cs",
-        "line": 55
+        "line": 58
       },
       {
         "file": "src/ReTAC.App/Rendering/Theme.cs",
@@ -8231,7 +8231,7 @@
       },
       {
         "file": "src/ReTAC.App/Program.cs",
-        "line": 57
+        "line": 60
       },
       {
         "file": "src/ReTAC.App/Rendering/Theme.cs",
@@ -10137,15 +10137,23 @@
       },
       {
         "file": "src/ReTAC.App/Program.cs",
-        "line": 45
+        "line": 43
       },
       {
         "file": "src/ReTAC.App/Program.cs",
-        "line": 82
+        "line": 48
+      },
+      {
+        "file": "src/ReTAC.App/Program.cs",
+        "line": 85
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
         "line": 131
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellThumbnails.cs",
+        "line": 62
       }
     ],
     "R-127": [
@@ -10323,7 +10331,7 @@
       },
       {
         "file": "src/ReTAC.App/Program.cs",
-        "line": 132
+        "line": 135
       }
     ],
     "R-31": [
@@ -10653,7 +10661,7 @@
       },
       {
         "file": "src/ReTAC.App/Program.cs",
-        "line": 66
+        "line": 69
       }
     ],
     "R-40-7": [
@@ -13355,7 +13363,7 @@
       },
       {
         "file": "src/ReTAC.App/Program.cs",
-        "line": 82
+        "line": 85
       },
       {
         "file": "src/ReTAC.App/ToolLauncher.cs",

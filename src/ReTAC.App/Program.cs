@@ -40,6 +40,9 @@ internal static class Program
             ErrorLog.Write(e.Exception, "task");
             Volatile.Write(ref s_unobservedLogged, 1);
         };
+        // R-126: サムネイルの背景のスレッドが受け止めた想定外の例外（画面には出さない）
+        // 同じ例外を項目の数だけ記録しない（壊れたシェル拡張のあるフォルダでは、数千件が同じ例外を出す）
+        ReTAC.Shell.ShellImageWorker.UnexpectedError = exception => ErrorLog.WriteOnce(exception, "thumbnail");
 
 #if DEBUG
         // R-126: 記録を実機とテストで確かめるための、わざと例外を起こす入口（開発用のビルドだけ）
