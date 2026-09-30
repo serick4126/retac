@@ -68,6 +68,18 @@ public class MenuReachabilityTests
             + "R-12-2: 項目を足すか、同じ機能に届く場合だけ理由付きで一覧に加える（外す方向に直さない）");
     }
 
+    /// <summary>R-112-4 / V9 / R-121 / R-122: 「表示」→「ファイル表示パネル」に、8 つの表示モードのコマンドがモードの並びで 1 つずつある。</summary>
+    [Fact]
+    public void ファイル表示パネルのサブメニューに8つの表示モードが並びどおり1つずつある()
+    {
+        using var menu = MenuBar.Create(_ => { }, new KeyMap([]), [], NoDynamicContent(),
+            out _, out _, out _, out _, () => null);
+        var view = menu.Items.OfType<ToolStripMenuItem>().Single(item => item.Text == "表示(&V)");
+        var panel = view.DropDownItems.OfType<ToolStripMenuItem>().Single(item => item.Text == "ファイル表示パネル(&P)");
+        var commands = panel.DropDownItems.OfType<ToolStripItem>().Select(item => item.Tag).OfType<CommandId>().ToList();
+        Assert.Equal(ViewModeCommands.All, commands);
+    }
+
     private static IEnumerable<CommandId> CollectCommandTags(IEnumerable<ToolStripItem> items)
     {
         foreach (var item in items)

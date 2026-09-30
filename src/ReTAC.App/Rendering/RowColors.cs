@@ -34,6 +34,12 @@ internal static class RowColors
             Blend(back, opposite, 0.06f), Blend(back, opposite, 0.12f));
     }
 
+    /// <summary>
+    /// R-122: コンテンツの行と行の間の区切り線。ふだんは見出しの線と同じ（地と文字色を混ぜた薄い色）。
+    /// ハイコントラストでは OS の文字色（テーマの文字色。混ぜると OS の配色から外れる）。線は行の間の隙間に引くので、マークの地と重ならない。
+    /// </summary>
+    public static Color Separator(Theme theme, bool highContrast) => highContrast ? theme.Foreground : Header(theme).Line;
+
     private static Color Blend(Color from, Color to, float amount) => Color.FromArgb(
         (int)Math.Round(from.R + (to.R - from.R) * amount),
         (int)Math.Round(from.G + (to.G - from.G) * amount),

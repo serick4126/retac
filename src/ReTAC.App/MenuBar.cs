@@ -91,7 +91,9 @@ public static class MenuBar
             Item("中アイコン(&M)", CommandId.ViewMediumIcons, radio: true),
             Item("小アイコン(&N)", CommandId.ViewSmallIcons, radio: true),
             Item("一覧(&L)", CommandId.ViewList, radio: true),
-            Item("詳細(&D)", CommandId.ViewDetails, radio: true));
+            Item("詳細(&D)", CommandId.ViewDetails, radio: true),
+            Item("並べて表示(&S)", CommandId.ViewTiles, radio: true),
+            Item("コンテンツ(&T)", CommandId.ViewContent, radio: true));
         var leftPanel = Top("左パネル(&L)", [leftToggle, Separator(), .. leftViews.Values]);
         // R-82 / R-83: Ctrl+Z は固定のキーなので、キーマップの逆引きでは出ない。表示を直接与える
         var undo = Item("元に戻す(&U)", CommandId.Undo);

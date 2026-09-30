@@ -221,12 +221,32 @@ public sealed class AppSettings
     /// JSON が壊れる。<see cref="Load"/> は壊れたファイルを黙って捨てて既定値で起動するので、
     /// キー割り当て・配色・クイックアクセス・履歴が予告なく全部消える（V-07）。
     /// </summary>
-    private static void WriteAtomic(string path, string json)
+    /// <remarks>
+    /// R-55-3: 続けて保存すると（Ctrl+ホイールでの表示モードの切り替えなど）、直前に書いたファイルをウイルス対策や
+    /// インデックス作成が開いている間、書き込みや差し替えが「アクセス拒否」で一時的に失敗する（書き込めるフォルダで 100 回に 1 回ほど）。
+    /// これを「書き込めない」と見なすと保存先を移して案内を出してしまうので、少し待ってやり直す。実測では 2 回目までに通る。
+    /// move と wait はテストでの差し替え用。
+    /// </remarks>
+    internal static void WriteAtomic(string path, string json, Action<string, string>? move = null, Action<int>? wait = null)
     {
         var temp = path + ".tmp";
-        File.WriteAllText(temp, json);
-        File.Move(temp, path, overwrite: true);
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                File.WriteAllText(temp, json);
+                (move ?? ((from, to) => File.Move(from, to, overwrite: true)))(temp, path);
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < WriteAttempts)
+            {
+                (wait ?? Thread.Sleep)(WriteRetryDelay);
+            }
+        }
     }
+
+    /// <summary>R-55-3: 書き込みを試す回数と、やり直す前に待つ時間（ミリ秒）。全部失敗しても UI を止めるのは 0.1 秒未満。</summary>
+    internal const int WriteAttempts = 5, WriteRetryDelay = 20;
 
     public SortOrder ToSortOrder() => new(SortKey, SortDirection, SortMode);
 

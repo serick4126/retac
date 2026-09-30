@@ -30,6 +30,18 @@ public class LayoutContractTests
                 TextWidth = 48, PaddingX = 6, PaddingY = 4, Gap = 4, CheckBoxSize = 12,
                 ClientWidth = 250, ClientHeight = 150, VerticalBarWidth = 17, EdgeBand = 24,
             }), 23 },
+        { "並べて表示", GridLayout.Compute(new GridLayoutInput
+            {
+                EntryCount = 23, Arrangement = GridArrangement.Tile, IconSize = 32, LineHeight = 14, NameLines = 1, InfoLines = 2,
+                TextWidth = 100, PaddingX = 6, PaddingY = 4, Gap = 4, CheckBoxSize = 12,
+                ClientWidth = 250, ClientHeight = 150, VerticalBarWidth = 17, EdgeBand = 24,
+            }), 23 },
+        { "コンテンツ", ContentLayout.Compute(new ContentLayoutInput
+            {
+                EntryCount = 23, IconSize = 32, LineHeight = 14, PaddingX = 6, PaddingY = 4, Gap = 1, CheckBoxSize = 12,
+                RightWidths = [60, 70], MinLeftWidth = 40,
+                ClientWidth = 250, ClientHeight = 150, VerticalBarWidth = 17, EdgeBand = 24,
+            }), 23 },
     };
 
     [Theory]
@@ -48,14 +60,19 @@ public class LayoutContractTests
     {
         var data = new TheoryData<string, IFileViewLayout, int>();
         foreach (var width in new[] { 0, 1, 10, 40, 60, 100, 250 })
-            foreach (var left in new[] { true, false })
-                data.Add($"{(left ? "小" : "中")}アイコン 幅{width}", GridLayout.Compute(new GridLayoutInput
+            foreach (var arrangement in new[] { GridArrangement.IconLeft, GridArrangement.IconTop, GridArrangement.Tile })
+            {
+                var left = arrangement == GridArrangement.IconLeft;
+                var tile = arrangement == GridArrangement.Tile;
+                data.Add($"{(left ? "小" : tile ? "並べて表示" : "中")} 幅{width}", GridLayout.Compute(new GridLayoutInput
                 {
-                    EntryCount = 23, Arrangement = left ? GridArrangement.IconLeft : GridArrangement.IconTop,
-                    IconSize = left ? 16 : 32, LineHeight = left ? 16 : 14, NameLines = left ? 1 : 2,
-                    TextWidth = left ? 60 : 48, PaddingX = left ? 4 : 6, PaddingY = left ? 2 : 4, Gap = 4, CheckBoxSize = left ? 0 : 12,   // 小アイコンにチェックボックスは付かない（既存の「小アイコン」と同じ）
+                    EntryCount = 23, Arrangement = arrangement,
+                    IconSize = left ? 16 : 32, LineHeight = left ? 16 : 14, NameLines = left || tile ? 1 : 2, InfoLines = tile ? 2 : 0,
+                    TextWidth = left ? 60 : tile ? 100 : 48, PaddingX = left ? 4 : 6, PaddingY = left ? 2 : 4, Gap = 4,
+                    CheckBoxSize = left ? 0 : 12,   // 小アイコンにチェックボックスは付かない（既存の「小アイコン」と同じ）
                     ClientWidth = width, ClientHeight = 150, VerticalBarWidth = 17, EdgeBand = 24,
                 }), 23);
+            }
         return data;
     }
 
@@ -83,6 +100,13 @@ public class LayoutContractTests
             var item = layout.ItemBounds(i);
             var parts = new List<(int X, int Y, int Width, int Height)> { layout.IconBounds(i), layout.NameBounds(i), layout.ExtensionBounds(i) };
             if (layout.CheckBoxBounds(i) is { } box) parts.Add(box);
+            if (layout is GridLayout { Arrangement: GridArrangement.Tile } tile)
+                for (var row = 0; row < tile.InfoLines; row++) parts.Add(tile.InfoBounds(i, row));
+            if (layout is ContentLayout content)
+            {
+                parts.Add(content.LeftInfoBounds(i));
+                for (var row = 0; row < content.RightCount; row++) parts.Add(content.RightInfoBounds(i, row)!.Value);
+            }
             foreach (var part in parts)
                 Assert.True(part.X >= item.X && part.Y >= item.Y && part.X + part.Width <= item.X + item.Width
                             && part.Y + part.Height <= item.Y + item.Height, $"{name} の {i}");
@@ -274,6 +298,10 @@ public class LayoutContractTests
             { "一覧", 0, 0, 1, 1 },
             { "一覧", 0, 1, 0, 5 },     // 1 列 5 行（ListFive）の隣の列
             { "一覧", 20, 1, 0, 20 },   // 隣の列が無ければ動かない
+            { "コンテンツ", 3, 1, 0, 3 },    // ← → は何もしない（横スクロールも無い）
+            { "コンテンツ", 3, -1, 0, 3 },
+            { "コンテンツ", 3, 0, 1, 4 },
+            { "コンテンツ", 22, 0, 1, 22 },
         };
         return data;
     }
@@ -288,11 +316,17 @@ public class LayoutContractTests
 
     private static IFileViewLayout ListFive() => ColumnLayout.Compute(23, 120, 30, 16, 5 * 18, 16, 4, 2, 4);
 
+    private static IFileViewLayout ContentRows() => ContentLayout.Compute(new ContentLayoutInput
+    {
+        EntryCount = 23, IconSize = 32, LineHeight = 14, PaddingX = 6, PaddingY = 4, Gap = 1, CheckBoxSize = 12,
+        RightWidths = [60, 70], MinLeftWidth = 40, ClientWidth = 250, ClientHeight = 150, VerticalBarWidth = 17, EdgeBand = 24,
+    });
+
     [Theory]
     [MemberData(nameof(ArrowCases))]
     public void 矢印キーの行き先(string kind, int from, int dx, int dy, int to)
     {
-        var layout = kind == "格子" ? GridFive() : ListFive();
+        var layout = kind switch { "格子" => GridFive(), "コンテンツ" => ContentRows(), _ => ListFive() };
         if (kind == "格子") Assert.Equal(5, ((GridLayout)layout).Columns);
         Assert.Equal(to, layout.Arrow(from, dx, dy, 23));
     }
@@ -303,11 +337,12 @@ public class LayoutContractTests
         Assert.True(DetailsFor("Size", 96).ArrowsScrollHorizontally);
         Assert.False(GridFive().ArrowsScrollHorizontally);
         Assert.False(ListFive().ArrowsScrollHorizontally);
+        Assert.False(ContentRows().ArrowsScrollHorizontally);
     }
 
     /// <summary>
     /// INV-LAYOUT-GEOMETRY-SINGLE-SOURCE: IFileViewLayout の実装はすべて、この契約テストのデータと不変条件の applies に載っている。
-    /// specIds は矩形の契約の参照元を含む（Phase 17 で並べて表示・コンテンツを足すときは、R-121・R-122 を足すかをここで決める）。
+    /// specIds は矩形の契約の参照元を含む（R-121（並べて表示）・R-122（コンテンツ）を含む）。
     /// </summary>
     [Fact]
     public void すべてのレイアウトが契約テストと不変条件に載っている()
@@ -325,6 +360,20 @@ public class LayoutContractTests
             Assert.True(applies.Contains("type:" + type.FullName), $"{type.Name} が不変条件の applies に無い");
         }
         var specIds = invariant.GetProperty("specIds").EnumerateArray().Select(a => a.GetString()).ToHashSet();
-        Assert.Superset(new HashSet<string?> { "R-114", "R-110-2", "R-116", "R-117", "R-119", "R-120" }, specIds);
+        Assert.Superset(new HashSet<string?> { "R-114", "R-110-2", "R-116", "R-117", "R-119", "R-120", "R-121", "R-122" }, specIds);
+    }
+
+    /// <summary>INV-DETAILS-ROW-HIT: 行全体を項目にするレイアウト（詳細・コンテンツ）は、不変条件の applies と specIds に載っている。</summary>
+    [Fact]
+    public void 行全体が項目のレイアウトは行の当たり判定の不変条件に載っている()
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(SchemaManifest.RepoRoot(), "schema", "invariants.json")));
+        var invariant = doc.RootElement.GetProperty("invariants").EnumerateArray()
+            .Single(e => e.GetProperty("id").GetString() == "INV-DETAILS-ROW-HIT");
+        var applies = invariant.GetProperty("applies").EnumerateArray().Select(a => a.GetString()).ToHashSet();
+        Assert.Contains("type:" + typeof(DetailsLayout).FullName, applies);
+        Assert.Contains("type:" + typeof(ContentLayout).FullName, applies);
+        var specIds = invariant.GetProperty("specIds").EnumerateArray().Select(a => a.GetString()).ToHashSet();
+        Assert.Superset(new HashSet<string?> { "R-11-2", "R-122" }, specIds);
     }
 }

@@ -88,6 +88,8 @@ public static class CommandLabels
         ("表示", CommandId.ViewSmallIcons, "小アイコンで表示"),
         ("表示", CommandId.ViewList, "一覧で表示"),
         ("表示", CommandId.ViewDetails, "詳細で表示"),
+        ("表示", CommandId.ViewTiles, "並べて表示"),
+        ("表示", CommandId.ViewContent, "コンテンツで表示"),
         ("設定", CommandId.EnvironmentSettings, "動作環境の設定"),
     ];
 

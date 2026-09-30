@@ -9,14 +9,12 @@ public enum FileViewMode { ExtraLargeIcons, LargeIcons, MediumIcons, SmallIcons,
 public static class FileViewModes
 {
     /// <summary>
-    /// Q29: 作ったビューから順に切り替えの段へ足す。3.0.0 では 8 つすべて。
+    /// Q29: 作ったビューから順に切り替えの段へ足した。3.0.0 で 8 つすべてがそろった（R-121・R-122）。
     /// 並びは列挙の順（Ctrl+ホイールの段の順）を保つ。
     /// </summary>
-    public static readonly IReadOnlyList<FileViewMode> Built = [
-        FileViewMode.ExtraLargeIcons, FileViewMode.LargeIcons, FileViewMode.MediumIcons, FileViewMode.SmallIcons,
-        FileViewMode.List, FileViewMode.Details];
+    public static readonly IReadOnlyList<FileViewMode> Built = [.. Enum.GetValues<FileViewMode>()];
 
-    /// <summary>知らない値・まだ作っていないモードは一覧に直す（手で書いた設定ファイルでだけ起こる）。</summary>
+    /// <summary>知らない値は一覧に直す（手で書いた設定ファイルでだけ起こる）。</summary>
     public static FileViewMode Normalize(FileViewMode mode) => Built.Contains(mode) ? mode : FileViewMode.List;
 
     /// <param name="notches">正なら上の段（大きいアイコンの側）へ。WheelAccumulator.Add の戻り値と同じ符号</param>

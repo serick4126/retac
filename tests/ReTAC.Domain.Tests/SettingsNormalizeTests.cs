@@ -156,8 +156,9 @@ public class SettingsNormalizeTests
     [InlineData("""{ "ViewMode": "Details" }""", FileViewMode.Details)]
     [InlineData("""{ }""", FileViewMode.List)]
     [InlineData("""{ "ViewMode": "Unknown" }""", FileViewMode.List)]
-    [InlineData("""{ "ViewMode": "Tiles" }""", FileViewMode.List)]   // まだ作っていないモード
-    public void 表示モードは知らない値と作っていないモードを一覧に直す(string json, FileViewMode expected)
+    [InlineData("""{ "ViewMode": "Tiles" }""", FileViewMode.Tiles)]
+    [InlineData("""{ "ViewMode": "Content" }""", FileViewMode.Content)]
+    public void 表示モードは知らない値だけを一覧に直す(string json, FileViewMode expected)
     {
         var settings = JsonSerializer.Deserialize<AppSettings>(json, Json)!;
         settings.Normalize();

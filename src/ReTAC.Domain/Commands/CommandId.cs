@@ -116,6 +116,10 @@ public enum CommandId
     ViewMediumIcons = 0x901A,
     /// <summary>R-112-4 / V9: 表示モードを小アイコンにする（全ウィンドウ）。既定のキーは無い。</summary>
     ViewSmallIcons = 0x901B,
+    /// <summary>R-112-4 / V9 / R-121: 表示モードを並べて表示にする（全ウィンドウ）。既定のキーは無い。</summary>
+    ViewTiles = 0x901C,
+    /// <summary>R-112-4 / V9 / R-122: 表示モードをコンテンツにする（全ウィンドウ）。既定のキーは無い。</summary>
+    ViewContent = 0x901D,
     ColorAndFontSettings = 0x8151,
     KeyAssignSettings = 0x8155,
     VisibleDriveSettings = 0x814C,

@@ -23,6 +23,16 @@ public static class DetailsCells
     /// <summary>サイズだけ右寄せ。</summary>
     public static bool RightAligned(DetailsColumn? column) => column == DetailsColumn.Size;
 
+    /// <summary>R-115: 並べて表示・コンテンツの情報は、詳細表示の同じ名前の列と同じ文字と見出しで出す。</summary>
+    public static DetailsColumn Column(TileInfo info) => info switch
+    {
+        TileInfo.Type => DetailsColumn.Type,
+        TileInfo.Size => DetailsColumn.Size,
+        TileInfo.Modified => DetailsColumn.Modified,
+        TileInfo.Created => DetailsColumn.Created,
+        _ => DetailsColumn.Attributes,
+    };
+
     /// <summary>親フォルダの行は名前以外を空欄。フォルダのサイズは空欄（R-34）。種類は届くまで空欄で、背景へ頼む。</summary>
     public static string Text(Entry entry, DetailsColumn column)
     {

@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using ReTAC.App.Rendering;
 using ReTAC.Domain.Entries;
 using ReTAC.Domain.FileOps;
+using ReTAC.Domain.Formatting;
 using ReTAC.Domain.Listing;
 using ReTAC.Domain.Selection;
 using ReTAC.Shell;
@@ -157,6 +158,7 @@ public sealed class FileListView : Control
     {
         FileViewMode.Details => _views.Details.InPanelDragDrop,
         FileViewMode.List => _views.List.InPanelDragDrop,
+        FileViewMode.Tiles or FileViewMode.Content => _views.Tiles.InPanelDragDrop,
         _ => _views.Icons.InPanelDragDrop,
     };
 
@@ -167,6 +169,7 @@ public sealed class FileListView : Control
     {
         FileViewMode.Details => _views.Details.RangeSelection,
         FileViewMode.List => _views.List.RangeSelection,
+        FileViewMode.Tiles or FileViewMode.Content => _views.Tiles.RangeSelection,
         _ => _views.Icons.RangeSelection,
     };
 
@@ -262,12 +265,16 @@ public sealed class FileListView : Control
     private bool ThumbnailsOn => _mode switch
     {
         FileViewMode.MediumIcons or FileViewMode.LargeIcons or FileViewMode.ExtraLargeIcons => _views.Icons.Thumbnails,
-        _ => false,   // 並べて表示・コンテンツは Phase 17
+        FileViewMode.Tiles or FileViewMode.Content => _views.Tiles.Thumbnails,
+        _ => false,
     };
+
+    /// <summary>R-117: 「フォルダに中身のサムネイルを出す」は系統ごと。</summary>
+    private bool FolderThumbnailsOn => IsTilesGroup ? _views.Tiles.FolderThumbnails : _views.Icons.FolderThumbnails;
 
     /// <summary>R-117: この項目にサムネイルを使うか。フォルダは「フォルダに中身のサムネイルを出す」も見る（要求と描画の両方がここを通る）。</summary>
     private bool WantsThumbnail(Entry entry) =>
-        ThumbnailsOn && !entry.IsParent && (entry.Kind == EntryKind.File || _views.Icons.FolderThumbnails);
+        ThumbnailsOn && !entry.IsParent && (entry.Kind == EntryKind.File || FolderThumbnailsOn);
 
     /// <summary>今の設定で描くサムネイル。設定でオフになったものは、キャッシュにあっても返さない。</summary>
     internal Bitmap? ThumbnailFor(Entry entry) =>
@@ -374,12 +381,23 @@ public sealed class FileListView : Control
 
     internal bool IsIconMode => _mode is FileViewMode.SmallIcons or FileViewMode.MediumIcons or FileViewMode.LargeIcons or FileViewMode.ExtraLargeIcons;
 
+    /// <summary>R-121: 格子に並べるモード（小〜特大アイコンと並べて表示）。</summary>
+    internal bool IsGridMode => IsIconMode || _mode == FileViewMode.Tiles;
+
+    /// <summary>R-112-1: 「並べて表示・コンテンツ」の系統（設定は Tiles の欄）。</summary>
+    internal bool IsTilesGroup => _mode is FileViewMode.Tiles or FileViewMode.Content;
+
+    /// <summary>中〜特大・並べて表示・コンテンツは、モードの大きさのアイコンの取り口を使う（一覧・詳細・小アイコンは 16px）。</summary>
+    private bool UsesBigIcons => _mode is not (FileViewMode.List or FileViewMode.Details or FileViewMode.SmallIcons);
+
     /// <summary>R-115: 小アイコンは 16px 固定。中・大・特大は設定の値（96 dpi の値を dpi で比例）。</summary>
     internal int IconSizeFor(FileViewMode mode) => Scaled(mode switch
     {
         FileViewMode.MediumIcons => _views.Icons.MediumSize,
         FileViewMode.LargeIcons => _views.Icons.LargeSize,
         FileViewMode.ExtraLargeIcons => _views.Icons.ExtraLargeSize,
+        FileViewMode.Tiles => _views.Tiles.TilesSize,
+        FileViewMode.Content => _views.Tiles.ContentSize,
         _ => 16,
     });
 
@@ -424,29 +442,32 @@ public sealed class FileListView : Control
         EnsureCursorVisible();
         // R-117 / R-118: 変わっていなくても、レイアウトが変わって見えている範囲が変わりうるので出し直す
         if (ImageSettingsKey() != imagesBefore) NextImageGeneration(); else UpdateImageQueue();
+        // 項目の位置が変わるので、マウスが動くまで古い項目にホバー（チェックボックスの表示）が残らないよう付け直す
+        RefreshHot();
         Invalidate();
     }
 
     /// <summary>モードそのものは含めない（一覧と詳細の切り替えで印を捨てて描き直さない）。大きさと、サムネイル・印を求めるかだけで決まる。</summary>
     private (int, bool, bool, bool) ImageSettingsKey() =>
-        (IconSizeFor(_mode), ThumbnailsOn, _views.Icons.FolderThumbnails, _views.Common.ShowOverlays);
+        (IconSizeFor(_mode), ThumbnailsOn, FolderThumbnailsOn, _views.Common.ShowOverlays);
 
     private void RecomputeLayout()
     {
         // R-120: 押した点の中身の座標は、新しいレイアウトでは別の項目を指す。離したときに古い矩形で新しい配置を囲まない
         CancelLasso();
         _nameLines.Clear();   // 名前の行は幅・行数・フォントで変わる
-        if (IsIconMode)
+        if (UsesBigIcons && _bigIcons?.Size != IconSizeFor(_mode))
         {
-            if (_mode != FileViewMode.SmallIcons && _bigIcons?.Size != IconSizeFor(_mode))
-            {
-                _bigIcons?.Dispose();
-                _bigIcons = new ShellIcons(IconSizeFor(_mode));
-            }
+            _bigIcons?.Dispose();
+            _bigIcons = new ShellIcons(IconSizeFor(_mode));
+        }
+        if (IsGridMode)
+        {
             _layout = ComputeGrid();
             UpdateScrollBars();
             return;
         }
+        if (_mode == FileViewMode.Content) { _layout = ComputeContent(); UpdateScrollBars(); return; }
         if (_mode == FileViewMode.Details) { _layout = ComputeDetails(); UpdateScrollBars(); return; }
         var textStart = ColumnPaddingValue + _icons.Size + Gap;
         // R-113: 「自動」はパネルの幅（名前の文字の外側を引いたもの）、「最大文字数」は数字 0 の幅 × 文字数（Q9）
@@ -456,12 +477,51 @@ public sealed class FileListView : Control
         UpdateScrollBars();
     }
 
+    /// <summary>
+    /// R-122: コンテンツのレイアウト。右の欄の幅は、情報ごとに「見出し: 」と見本の値を測る（値が長ければ描くときに「…」）。
+    /// 左の欄の最小幅は名前 10 文字ぶん（数字 0 の幅 × 10）。
+    /// </summary>
+    private ContentLayout ComputeContent()
+    {
+        var zero = _measure.Width("0");
+        var rights = _views.Tiles.Info.Skip(1).Take(2).Select(info => _measure.Width(RightInfoText(info, SampleValue(info)))).ToList();
+        return ContentLayout.Compute(new ContentLayoutInput
+        {
+            EntryCount = _state.Count, IconSize = IconSizeFor(_mode), LineHeight = _measure.LineHeight(),
+            PaddingX = Scaled(6), PaddingY = Scaled(4), Gap = Math.Max(1, Scaled(1)), CheckBoxSize = CheckBoxSize,
+            RightWidths = rights, MinLeftWidth = zero * 10,
+            ClientWidth = ClientSize.Width, ClientHeight = ClientSize.Height, VerticalBarWidth = _vScrollBar.Width, EdgeBand = EdgeBand,
+        });
+    }
+
+    /// <summary>R-122: 右の欄の文字（「更新日時: 2026/09/28 12:34」の形）。</summary>
+    internal string RightInfoText(TileInfo info, string value) => $"{DetailsCells.Header(DetailsCells.Column(info))}: {value}";
+
+    /// <summary>R-122: 右の欄の幅を決める見本の値。日時は最も広い月日・時刻、サイズは大きな値、属性はすべて。種類は長さが決まらないので数字 0 × 16。</summary>
+    private string SampleValue(TileInfo info) => info switch
+    {
+        TileInfo.Modified or TileInfo.Created => Display.Timestamp(new DateTime(2026, 12, 28, 23, 59, 59)),
+        TileInfo.Size => Display.Size(999_999_999_999),
+        TileInfo.Attributes => Display.Attributes(FileAttributes.ReadOnly | FileAttributes.Hidden | FileAttributes.System
+            | FileAttributes.Archive | FileAttributes.Compressed | FileAttributes.Encrypted),
+        _ => new string('0', 16),
+    };
+
     /// <summary>R-119 / R-113 / Q6: 格子のレイアウト。小アイコンは名前の列の方式で項目の幅を決め、中〜特大は max(アイコン, 数字 0 × 9)。</summary>
     private GridLayout ComputeGrid()
     {
         var small = _mode == FileViewMode.SmallIcons;
         var iconSize = IconSizeFor(_mode);
         var zero = _measure.Width("0");
+        if (_mode == FileViewMode.Tiles)
+            // R-121 / Q1: 項目の幅は固定（名前の長さに依らない）。欄の幅は数字 0 × 16 + アイコンの大きさ（アイコンに比例して広がる）
+            return GridLayout.Compute(new GridLayoutInput
+            {
+                EntryCount = _state.Count, Arrangement = GridArrangement.Tile, IconSize = iconSize, LineHeight = _measure.LineHeight(),
+                NameLines = 1, InfoLines = Math.Min(2, _views.Tiles.Info.Count), TextWidth = zero * 16 + iconSize,
+                PaddingX = Scaled(6), PaddingY = Scaled(4), Gap = GridGap, CheckBoxSize = CheckBoxSize,
+                ClientWidth = ClientSize.Width, ClientHeight = ClientSize.Height, VerticalBarWidth = _vScrollBar.Width, EdgeBand = EdgeBand,
+            });
         int textWidth;
         if (small)
         {
@@ -555,10 +615,31 @@ public sealed class FileListView : Control
     /// <summary>テスト用: 項目の全走査（中身の幅の測り直し）をした回数。</summary>
     internal int ContentScanCount { get; private set; }
 
+    /// <summary>テスト用: 登録されている拡張子の判定を差し替える（既定は OS の登録を引く）。R-01-7</summary>
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    internal Func<string, bool> IsRegisteredExtension { get; set; } = RegisteredExtensions.IsRegistered;
+
+    /// <summary>テスト用: 左ボタンのドラッグ＆ドロップを始める代わりに、対象のパスを受け取る（既定は null で ShellDrag.Start）。</summary>
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    internal Action<IReadOnlyList<string>>? StartDragOverride { get; set; }
+
     /// <summary>テスト用: 種類の列の文字を差し替える（既定は DetailsCells の背景取得つきの答え）。</summary>
     [System.ComponentModel.Browsable(false)]
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal Func<Entry, string> TypeText { get; set; } = e => DetailsCells.Text(e, DetailsColumn.Type);
+
+    /// <summary>
+    /// R-115 / R-121 / R-122: 選んだ情報の値を候補の並びの順に（並べて表示は 2 つ、コンテンツは 3 つまで）。親フォルダは空文字。
+    /// 種類は届くまで空で、届いたら描き直す（FlushResolvedTypes）。
+    /// </summary>
+    internal IReadOnlyList<string> InfoTexts(int index)
+    {
+        var max = _mode == FileViewMode.Content ? 3 : 2;
+        var entry = _state.Entries[index];
+        return [.. _views.Tiles.Info.Take(max).Select(info => entry.IsParent ? "" : CellText(entry, DetailsCells.Column(info)))];
+    }
 
     private string CellText(Entry entry, DetailsColumn column) => column == DetailsColumn.Type ? TypeText(entry) : DetailsCells.Text(entry, column);
 
@@ -650,6 +731,7 @@ public sealed class FileListView : Control
         var keys = new List<string>();
         foreach (var key in _resolvedKeys.Keys) if (_resolvedKeys.TryRemove(key, out _)) keys.Add(key);
         if (IsDisposed || keys.Count == 0) return;
+        if (IsTilesGroup) { _content = null; Invalidate(); return; }   // R-121 / R-122: 情報の種類を描き直す
         if (_mode != FileViewMode.Details) { _content = null; return; }
         if (_content is not { } content) return;   // 次の RecomputeLayout が全部測る
         var changed = false;
@@ -715,7 +797,19 @@ public sealed class FileListView : Control
         if (range != _imageRange) { _imageRange = range; UpdateImageQueue(); }
     }
 
-    private bool IntersectsClip(Rectangle clip, int index) => ToRectangle(FileViewScroll.VisibleBounds(_layout, _scroll, index)).IntersectsWith(clip);
+    private bool IntersectsClip(Rectangle clip, int index) => PaintBounds(index).IntersectsWith(clip);
+
+    /// <summary>
+    /// 部分の描き直しで、その項目を描くかを決める矩形。ふだんは項目の矩形。R-122: コンテンツは行の下の区切り線もその行が描くので、
+    /// 線の隙間を含める（OnPaint の最初の塗りつぶしで線だけが消され、行の矩形に交わらないクリップで描き直されないのを防ぐ）。
+    /// </summary>
+    internal Rectangle PaintBounds(int index)
+    {
+        var item = DropFrameBounds(index);
+        return _layout is ContentLayout content && content.SeparatorBounds(index) is { } separator
+            ? Rectangle.Union(item, ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, separator)))
+            : item;
+    }
 
     /// <summary>
     /// R-114: 見出しは縦にスクロールせず、横だけ中身と一緒に動く。ソート中の列の上端に山形（HeaderSort.ShowsArrow。Q36）。
@@ -785,7 +879,8 @@ public sealed class FileListView : Control
         var isCursor = index == _state.CursorIndex;
         var isMarked = IsMarkedForDisplay(index);
         var rect = ToRectangle(FileViewScroll.VisibleBounds(_layout, _scroll, index));
-        if (IsIconMode) { DrawGridItem(g, index); return; }
+        if (IsGridMode) { DrawGridItem(g, index); return; }
+        if (_mode == FileViewMode.Content) { DrawContentRow(g, index); return; }
 
         var (background, foreground) = RowColors.Of(_theme, AttributeColorRule.Classify(entry.Attributes), isCursor, isMarked);
         // Q12 / R-113: 一覧のカーソルの項目が省略されていたら、帯を名前の終わりまで右へ広げて右隣の上に重ねる
@@ -941,6 +1036,66 @@ public sealed class FileListView : Control
     }
 
     /// <summary>
+    /// R-122: コンテンツの行。左の欄に名前と情報の 1 つ目、右の欄に 2 つ目・3 つ目（見出し付き）。値が欄より長ければ末尾を「…」。
+    /// 区切り線は行の下の隙間（パネルの地）に引き、行の塗りの上には引かない（ハイコントラストでマークの地と同じ色になって消えるため）。
+    /// </summary>
+    private void DrawContentRow(Graphics g, int index)
+    {
+        var layout = (ContentLayout)_layout;
+        var entry = _state.Entries[index];
+        var isCursor = index == _state.CursorIndex;
+        var isMarked = IsMarkedForDisplay(index);
+        var item = DropFrameBounds(index);
+        var (background, foreground) = RowColors.Of(_theme, AttributeColorRule.Classify(entry.Attributes), isCursor, isMarked);
+        var iconRect = ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, _layout.IconBounds(index)));
+        Rectangle Visible((int X, int Y, int Width, int Height) r) => ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, r));
+        var ellipsis = TextMeasure.Flags | TextFormatFlags.Left | TextFormatFlags.EndEllipsis;
+
+        if (layout.SeparatorBounds(index) is { } separator)   // 行と行の間だけ。最後の行の下には引かない
+        {
+            using var pen = new Pen(RowColors.Separator(_theme, Program.StartupOs.HighContrast));
+            var sep = Visible(separator);
+            g.DrawLine(pen, sep.X, sep.Y, sep.Right - 1, sep.Y);
+        }
+        foreach (var layer in GridLayers)
+            switch (layer)
+            {
+                case GridLayer.Fill:
+                    using (var brush = new SolidBrush(background)) g.FillRectangle(brush, item);
+                    // R-119 / R-122: 名前は 1 行。省略は表示している拡張子だけを残す（隠した拡張子は NameLinesFor が出さない）
+                    TextRenderer.DrawText(g, NameLinesFor(index).Lines.FirstOrDefault() ?? "", _font, Visible(layout.NameBounds(index)),
+                        foreground, TextMeasure.Flags | TextFormatFlags.Left);
+                    var infos = InfoTexts(index);
+                    if (infos.Count > 0) TextRenderer.DrawText(g, infos[0], _font, Visible(layout.LeftInfoBounds(index)), foreground, ellipsis);
+                    for (var row = 0; row < layout.RightCount && row + 1 < infos.Count; row++)
+                        if (infos[row + 1].Length > 0 && layout.RightInfoBounds(index, row) is { } right)
+                            TextRenderer.DrawText(g, RightInfoText(_views.Tiles.Info[row + 1], infos[row + 1]), _font, Visible(right),
+                                foreground, ellipsis);
+                    break;
+                case GridLayer.Image:
+                    DrawItemImage(g, entry, iconRect);
+                    break;
+                case GridLayer.Overlay:
+                    DrawOverlay(g, entry, iconRect);
+                    break;
+                case GridLayer.CheckBox:
+                    if (ShowsCheckBox(index) && _layout.CheckBoxBounds(index) is { } box)
+                        ItemFrames.DrawCheckBox(g, Visible(box), background, foreground, isChecked: isMarked, stroke: Math.Max(1, Scaled(1)));
+                    break;
+                case GridLayer.CursorFrame:
+                    if (isCursor) ItemFrames.DrawCursorFrame(g, item, background, foreground, Math.Max(1, Scaled(1)));   // V4
+                    break;
+                case GridLayer.DropFrame:
+                    if (index == _dropTarget)   // R-110-2
+                    {
+                        using var pen = new Pen(RowColors.Frame(background, foreground), Scaled(2)) { Alignment = PenAlignment.Inset };
+                        g.DrawRectangle(pen, item);
+                    }
+                    break;
+            }
+    }
+
+    /// <summary>
     /// R-116 / R-119: 格子の項目。GridLayers の順に描く。矩形はすべてレイアウトに聞く（INV-LAYOUT-GEOMETRY-SINGLE-SOURCE）。
     /// 塗り・名前・カーソルの枠は帯（カーソルの項目の名前を全部描くときは項目の外へ広がる）に、落とす先の枠は項目の矩形に描く。
     /// </summary>
@@ -966,13 +1121,23 @@ public sealed class FileListView : Control
             {
                 case GridLayer.Fill:
                     using (var brush = new SolidBrush(background)) g.FillRectangle(brush, band);
+                    var tile = _layout is GridLayout { Arrangement: GridArrangement.Tile };
+                    var left = small || tile;
                     var y = nameRect.Y + (small ? (nameRect.Height - lineHeight) / 2 : 0);
                     var textWidth = small ? band.Right - nameRect.X : nameRect.Width;
-                    var flags = TextMeasure.Flags | (small ? TextFormatFlags.Left : TextFormatFlags.HorizontalCenter);
+                    var flags = TextMeasure.Flags | (left ? TextFormatFlags.Left : TextFormatFlags.HorizontalCenter);
                     foreach (var line in names)
                     {
                         TextRenderer.DrawText(g, line, _font, new Rectangle(nameRect.X, y, textWidth, lineHeight), foreground, flags);
                         y += lineHeight;
+                    }
+                    if (tile)   // R-121: 情報の行。収まらなければ末尾を「…」
+                    {
+                        var grid = (GridLayout)_layout;
+                        var infos = InfoTexts(index);
+                        for (var row = 0; row < grid.InfoLines && row < infos.Count; row++)
+                            TextRenderer.DrawText(g, infos[row], _font, ToRectangle(FileViewScroll.ToVisible(_layout, _scroll, grid.InfoBounds(index, row))),
+                                foreground, TextMeasure.Flags | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
                     }
                     break;
                 case GridLayer.Image:
@@ -1015,8 +1180,8 @@ public sealed class FileListView : Control
             g.DrawImage(thumbnail, iconRect.X + (size - w) / 2, iconRect.Y + (size - h) / 2, w, h);
             return;
         }
-        // 中〜特大の大きさの取り口は、そのモードのときだけ使う（一覧・詳細へ切り替えても _bigIcons は残る）
-        var icons = IsIconMode && _mode != FileViewMode.SmallIcons && _bigIcons is not null ? _bigIcons : _icons;
+        // モードの大きさの取り口は、そのモードのときだけ使う（一覧・詳細へ切り替えても _bigIcons は残る）
+        var icons = UsesBigIcons && _bigIcons is not null ? _bigIcons : _icons;
         var icon = entry.Kind == EntryKind.File ? icons.ForFile(entry.FullPath) : icons.ForFolder();
         if (icon is not null) g.DrawImage(icon, iconRect);
     }
@@ -1036,8 +1201,8 @@ public sealed class FileListView : Control
     /// </summary>
     internal NameWrap.Result NameLinesFor(int index)
     {
-        var small = _mode == FileViewMode.SmallIcons;
-        var lines = index == _state.CursorIndex && !small ? int.MaxValue : small ? 1 : _views.Icons.NameLines;
+        var oneLine = _mode is FileViewMode.SmallIcons or FileViewMode.Tiles or FileViewMode.Content;
+        var lines = oneLine ? 1 : index == _state.CursorIndex ? int.MaxValue : _views.Icons.NameLines;
         var width = _layout.NameBounds(index).Width;
         var entry = _state.Entries[index];
         var hides = HidesExtension(entry);
@@ -1058,7 +1223,8 @@ public sealed class FileListView : Control
     internal bool ShowsCheckBox(int index) =>
         _layout.CheckBoxBounds(index) is not null
         && !_state.Entries[index].IsParent   // 「..」はマークできないので、チェックボックスも出さない
-        && (_views.Icons.CheckBoxes == CheckBoxMode.Always || index == HotIndex || _state.Marks.Contains(index));
+        && ((IsTilesGroup ? _views.Tiles.CheckBoxes : _views.Icons.CheckBoxes) == CheckBoxMode.Always
+            || index == HotIndex || _state.Marks.Contains(index));
 
     /// <summary>今のマウスの位置でホバーを付け直す。ハンドルが無ければ位置が分からないので外す。</summary>
     internal void RefreshHot() =>
@@ -1125,7 +1291,7 @@ public sealed class FileListView : Control
     /// フォルダの「.」は拡張子として扱わない。
     /// </summary>
     internal bool HidesExtension(Entry entry) =>
-        _views.Common.HideKnownExtensions && entry.Kind == EntryKind.File && RegisteredExtensions.IsRegistered(entry.Extension);
+        _views.Common.HideKnownExtensions && entry.Kind == EntryKind.File && IsRegisteredExtension(entry.Extension);
 
     /// <summary>R-01-7: カーソルの項目を全部描くときの文字。揃えから外して続けて描くが、隠す項目は本体だけ。</summary>
     internal string FullNameText(Entry entry) => HidesExtension(entry) ? entry.BaseName : entry.Name;
@@ -1170,9 +1336,10 @@ public sealed class FileListView : Control
         if (index < 0 || index >= _state.Count) return false;
         var entry = _state.Entries[index];
         // R-119: 格子は名前の折り返しの行数で決める（中〜特大はカーソルかどうかに依らず設定の行数、小アイコンは 1 行）
-        if (IsIconMode)
+        if (IsGridMode || _mode == FileViewMode.Content)
         {
-            if (_mode == FileViewMode.SmallIcons || index != _state.CursorIndex) return NameLinesFor(index).Truncated;   // 覚えた答えと同じ行数
+            if (_mode is FileViewMode.SmallIcons or FileViewMode.Tiles or FileViewMode.Content || index != _state.CursorIndex)
+                return NameLinesFor(index).Truncated;   // 覚えた答えと同じ行数
             var (body, tail) = HidesExtension(entry) || entry.Extension.Length == 0 ? (FullNameText(entry), "") : (entry.BaseName, entry.Extension);
             return NameWrap.Lines(body, tail, _layout.NameBounds(index).Width, _views.Icons.NameLines, _measure.Width).Truncated;
         }
@@ -1203,14 +1370,21 @@ public sealed class FileListView : Control
         var offset = _layout.ScrollOffset(_scroll);
         var (x, y) = (point.X + offset.X, point.Y - _layout.HeaderHeight + offset.Y);
         var hit = _layout.HitTest(x, y, _state.Count);
-        // R-120: 中〜特大の項目は、アイコン・描いている名前の文字・チェックボックスに当たらない所を「項目の余白」（Other）にする。
+        // R-120 / R-121: 中〜特大と並べて表示の項目は、アイコン・描いている文字・チェックボックスに当たらない所を「項目の余白」（Other）にする。
         // 詳細表示の名前以外と同じ扱い（押しただけでは動かず、離すとカーソル、動かすと投げ縄）。文字の幅はここで測る（レイアウトは数値だけ受ける）
-        if (hit.Area == FileViewArea.Name && _layout is GridLayout { Arrangement: GridArrangement.IconTop } grid
+        if (hit.Area == FileViewArea.Name && _layout is GridLayout { Arrangement: GridArrangement.IconTop or GridArrangement.Tile } grid
             && !Contains(grid.IconBounds(hit.Index), x, y)
-            && !grid.NameTextBounds(hit.Index, NameLinesFor(hit.Index).Lines.Select(_measure.Width).ToList(), _measure.LineHeight())
-                .Any(line => Contains(line, x, y)))
+            && !grid.NameTextBounds(hit.Index, TextLineWidths(grid, hit.Index), _measure.LineHeight()).Any(line => Contains(line, x, y)))
             return (hit.Index, FileViewArea.Other);
         return hit;
+    }
+
+    /// <summary>R-120 / R-121: 描いている文字の行の幅。中〜特大は名前の行、並べて表示は名前の 1 行と情報の行。</summary>
+    private List<int> TextLineWidths(GridLayout grid, int index)
+    {
+        var widths = NameLinesFor(index).Lines.Select(_measure.Width).ToList();
+        if (grid.Arrangement == GridArrangement.Tile) widths.AddRange(InfoTexts(index).Take(grid.InfoLines).Select(_measure.Width));
+        return widths;
     }
 
     private static bool Contains((int X, int Y, int Width, int Height) r, int x, int y) =>
@@ -1433,6 +1607,7 @@ public sealed class FileListView : Control
         if (targets.Count == 0) return;
 
         _markOnRelease.DragStarted();   // Q7: D&D になったらマークは変えない
+        if (StartDragOverride is { } start) { start([.. targets.Select(target => target.FullPath)]); return; }
         // A-01: ドラッグしてもマークは変わらない
         // R-78: 画像付きで始める。画像の無いドラッグには、落とす先が説明（「◯◯へ移動」）を出せない
         using var image = DragImage(targets);
