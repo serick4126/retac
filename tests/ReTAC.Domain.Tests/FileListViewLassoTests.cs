@@ -183,6 +183,76 @@ public class FileListViewLassoTests
         Assert.Empty(list.State.Marks);
     }
 
+    /// <summary>右下から探した、投げ縄を始められる所（項目の無い所。詳細表示では名前以外も）。</summary>
+    private static Point PressPoint(FileListView list)
+    {
+        var (ox, oy) = list.Layout.ScrollOffset(list.ScrollPosition);
+        for (var y = 375; y > list.Layout.HeaderHeight; y -= 3)
+            for (var x = 595; x > 0; x -= 5)
+            {
+                var (index, area) = list.Layout.HitTest(x + ox, y - list.Layout.HeaderHeight + oy, list.State.Count);
+                if (index < 0 || area == FileViewArea.Other) return new Point(x, y);
+            }
+        throw new InvalidOperationException("投げ縄を始められる所が無い");
+    }
+
+    /// <summary>投げ縄を始められる所で押して中ほどまで引き、scroll で中身をずらして離す。マークされた項目の数を返す（scroll が null ならずらさない）。</summary>
+    private static (int Marked, (int X, int Y, int Width, int Height) Rect, FileListView List) ScrollDuringLasso(FileViewMode mode, Point end, Action<FileListView>? scroll)
+    {
+        var list = View(mode, 300);
+        list.RaiseMouseDown(Mouse(MouseButtons.Left, PressPoint(list)));
+        list.RaiseMouseMove(Mouse(MouseButtons.Left, end));
+        Assert.True(list.LassoActive);
+        scroll?.Invoke(list);
+        var rect = list.LassoRect;
+        list.RaiseMouseUp(Mouse(MouseButtons.Left, end));
+        Assert.False(list.LassoActive);
+        Assert.False(list.IsHandleCreated);
+        return (list.State.Marks.Count, rect, list);
+    }
+
+    [Theory]
+    [InlineData(FileViewMode.LargeIcons, "wheel")]
+    [InlineData(FileViewMode.LargeIcons, "vbar")]
+    [InlineData(FileViewMode.LargeIcons, "tick")]
+    [InlineData(FileViewMode.List, "wheel")]
+    [InlineData(FileViewMode.List, "hbar")]
+    [InlineData(FileViewMode.List, "tick")]
+    [InlineData(FileViewMode.Details, "wheel")]
+    [InlineData(FileViewMode.Details, "vbar")]
+    public void スクロールしたら投げ縄の矩形が伸び_離すと今の矩形の項目をマークする(FileViewMode mode, string how)
+    {
+        // 自動スクロールは、その向きの端（帯の中）にマウスがあるときだけ動く。他は帯の外の中ほど
+        var end = how != "tick" ? new Point(300, 200) : mode == FileViewMode.List ? new Point(595, 200) : new Point(300, 395);
+        var (baseline, baseRect, baseList) = ScrollDuringLasso(mode, end, null);
+        baseList.Dispose();
+        Action<FileListView> scroll = how switch
+        {
+            "wheel" => l => l.ScrollWheel(-3),
+            "vbar" => l => l.RaiseScrollBar(vertical: true, 3),
+            "hbar" => l => l.RaiseScrollBar(vertical: false, 3),
+            _ => l => l.AutoScrollTick(),
+        };
+        var (marked, rect, list) = ScrollDuringLasso(mode, end, l =>
+        {
+            scroll(l);
+            Assert.True(l.ScrollPosition.X > 0 || l.ScrollPosition.Y > 0);
+        });
+        list.Dispose();
+        Assert.NotEqual(baseRect, rect);        // 押した点は中身に付いているので、ずれたぶん矩形が変わる
+        Assert.NotEqual(baseline, marked);      // 離すと、ずれたあとの矩形が囲む項目が対象になる
+    }
+
+    [Fact]
+    public void スクロールバーで動かしたらホバーを付け直す()
+    {
+        using var list = View(FileViewMode.LargeIcons, 300);
+        list.HotIndex = 2;
+        list.RaiseScrollBar(vertical: true, 3);
+        Assert.Equal(-1, list.HotIndex);   // ハンドルが無ければ RefreshHot は外す。Scroll から RefreshHot へ届いた印
+        Assert.False(list.IsHandleCreated);
+    }
+
     [Fact]
     public void 項目の上から始めたら投げ縄にならない()
     {

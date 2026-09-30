@@ -80,8 +80,8 @@ public sealed class FileListView : Control
         ImeMode = ImeMode.Disable;
         Controls.Add(_hScrollBar);
         Controls.Add(_vScrollBar);
-        _hScrollBar.Scroll += (_, e) => { _scroll = _scroll with { X = e.NewValue }; Invalidate(); };
-        _vScrollBar.Scroll += (_, e) => { _scroll = _scroll with { Y = e.NewValue }; Invalidate(); };
+        _hScrollBar.Scroll += (_, e) => RaiseScrollBar(vertical: false, e.NewValue);
+        _vScrollBar.Scroll += (_, e) => RaiseScrollBar(vertical: true, e.NewValue);
         _autoScroll.Tick += (_, _) => AutoScrollTick();
         ShellFileType.Resolved += OnTypeResolved;
         RebuildFontResources();
@@ -1487,14 +1487,31 @@ public sealed class FileListView : Control
         var next = FileViewScroll.Next(_layout, _scroll, _autoScrollDirection, _state.Count, ViewportWidth, ViewportHeight);
         if (next == _scroll) { SetAutoScroll((0, 0)); return; }
         _scroll = next;
-        if (LassoActive)   // R-120: 中身がずれたぶん、最後のマウスの位置から矩形を伸ばす
+        UpdateScrollBars();
+        AfterScroll();   // 枠の位置は次の DragOver で決め直す（OLE はマウスが止まっていても DragOver を呼び続ける）
+    }
+
+    /// <summary>
+    /// スクロールしたあとの共通の後始末。R-120: 中身がずれたぶん、最後のマウスの位置から投げ縄の矩形を伸ばす
+    /// （ホイール・スクロールバー・自動スクロールのどれでも。マウスは動かないので MouseMove は来ない）。R-116: 下にある項目も変わる。
+    /// </summary>
+    private void AfterScroll()
+    {
+        if (LassoActive)
         {
             var (cx, cy) = ToContent(_lassoMouse);
             _lasso.Scrolled(cx, cy);
             _lassoCovered = null;
         }
-        UpdateScrollBars();
-        Invalidate();   // 枠の位置は次の DragOver で決め直す（OLE はマウスが止まっていても DragOver を呼び続ける）
+        RefreshHot();
+        Invalidate();
+    }
+
+    /// <summary>スクロールバーのつまみを動かした処理。ハンドル無しで試せるように Scroll イベントから切り出した。</summary>
+    internal void RaiseScrollBar(bool vertical, int value)
+    {
+        _scroll = vertical ? _scroll with { Y = value } : _scroll with { X = value };
+        AfterScroll();
     }
 
     protected override void OnDragDrop(DragEventArgs e) => DropButton.Guard(e, () =>
@@ -1657,8 +1674,7 @@ public sealed class FileListView : Control
     {
         _scroll = new ScrollPosition(_scroll.X + dx, _scroll.Y + dy);
         UpdateScrollBars();   // 範囲へのクランプもここ
-        RefreshHot();         // R-116: マウスは動かなくても、下にある項目が変わる
-        Invalidate();
+        AfterScroll();
     }
 
     internal new IFileViewLayout Layout => _layout;
