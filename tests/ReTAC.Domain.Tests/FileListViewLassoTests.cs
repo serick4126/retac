@@ -154,6 +154,35 @@ public class FileListViewLassoTests
         Assert.Empty(list.State.Marks);
     }
 
+    private static void SwitchToDetails(FileListView list) =>
+        list.SetView(FileViewMode.Details, new FileViewSettings(), new Dictionary<string, int?>(), SortOrder.Default);
+
+    [Fact]
+    public void 表示モードが変わったら投げ縄を取り消す_離しても別の配置の項目をマークしない()
+    {
+        using var list = View(FileViewMode.MediumIcons);
+        Drag(list);
+        SwitchToDetails(list);
+        Assert.False(list.LassoActive);
+        list.RaiseMouseUp(Mouse(MouseButtons.Left, FirstItem(list)));
+        Assert.Empty(list.State.Marks);
+        Assert.False(list.IsHandleCreated);
+    }
+
+    [Fact]
+    public void Ctrlホイールで表示モードが変わったら投げ縄を取り消す()
+    {
+        using var list = View(FileViewMode.MediumIcons);
+        // MainForm と同じく、届いた段でモードを進める（Ctrl は ModifierKeys なので、OnMouseWheel の手前の ModeWheel から届ける）
+        list.ViewModeWheel += (_, notches) => list.SetView(FileViewModes.Step(FileViewMode.MediumIcons, notches),
+            new FileViewSettings(), new Dictionary<string, int?>(), SortOrder.Default);
+        Drag(list);
+        list.ModeWheel(SystemInformation.MouseWheelScrollDelta);
+        Assert.False(list.LassoActive);
+        list.RaiseMouseUp(Mouse(MouseButtons.Left, FirstItem(list)));
+        Assert.Empty(list.State.Marks);
+    }
+
     [Fact]
     public void 項目の上から始めたら投げ縄にならない()
     {

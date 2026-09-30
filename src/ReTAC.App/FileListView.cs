@@ -423,6 +423,8 @@ public sealed class FileListView : Control
 
     private void RecomputeLayout()
     {
+        // R-120: 押した点の中身の座標は、新しいレイアウトでは別の項目を指す。離したときに古い矩形で新しい配置を囲まない
+        CancelLasso();
         _nameLines.Clear();   // 名前の行は幅・行数・フォントで変わる
         if (IsIconMode)
         {
@@ -1593,8 +1595,7 @@ public sealed class FileListView : Control
         // V9: Ctrl+ホイールは表示モードの段（奥へ回すと上の段）。スクロールはしない
         if (ModifierKeys.HasFlag(Keys.Control))
         {
-            var notches = _modeWheel.Add(e.Delta, SystemInformation.MouseWheelScrollDelta);
-            if (notches != 0) ViewModeWheel?.Invoke(this, notches);
+            ModeWheel(e.Delta);
             return;
         }
         // Ctrl を離したあとに、たまった分が次の Ctrl+ホイールへ持ち越されないようにする
@@ -1604,6 +1605,13 @@ public sealed class FileListView : Control
         if (!horizontal && !vertical) { _wheel.Reset(); return; }
         // R-76: 一覧は 1 ノッチ = 1 列（左端は常に列の境界に揃う）。詳細は縦のバーがあれば縦に MouseWheelScrollLines 行、無ければ横に 1 段
         ScrollWheel(_wheel.Add(e.Delta, SystemInformation.MouseWheelScrollDelta));
+    }
+
+    /// <summary>Ctrl+ホイールの処理。Ctrl は ModifierKeys（実際のキーボード）なので、テストが届けられるように切り出した。</summary>
+    internal void ModeWheel(int delta)
+    {
+        var notches = _modeWheel.Add(delta, SystemInformation.MouseWheelScrollDelta);
+        if (notches != 0) ViewModeWheel?.Invoke(this, notches);
     }
 
     /// <summary>ホイールのノッチ数（正で上・左へ）ぶん進める。1 ノッチの段数はレイアウトが答える（格子は 1 段が大きいので 1 行。INV-LAYOUT-GEOMETRY-SINGLE-SOURCE）。</summary>
