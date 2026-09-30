@@ -122,6 +122,7 @@ public class FileListViewDetailsTests
     public void 詳細表示ではカーソルの項目を全部描かない()
     {
         // Q27: 8 つのモードの表のうち Phase 15 の 2 行（一覧は FileListViewNameTests）。Phase 16・17 でモードを作るたびに行を足す
+        // 並べて表示の行（全部は描かない）は FileListViewTilesTests.名前はカーソルの項目でも1行で_全部は描かない（コンテンツの行は別に足す）
         using var list = new FileListView { Size = new Size(500, 200) };
         list.SetEntries([TestEntries.File("とても長い資料の名前がここに続いていてまだ終わらないもっと長い名前.xlsx")]);
         list.SetView(FileViewMode.Details, new FileViewSettings { Details = new() { NameWidth = new() { Mode = NameWidthMode.MaxChars, MaxChars = 10 } } },
