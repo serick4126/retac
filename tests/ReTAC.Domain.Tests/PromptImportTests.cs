@@ -143,7 +143,7 @@ public class PromptImportTests
         int[] picked = [1, 2, 3, 4];
         Assert.True(PromptImport.CanMerge(before, picked));
         var draft = PromptImport.MergeDraft(before, picked);
-        Assert.Equal((PromptItemKind.CheckBox, "-c:v", true), (draft.Kind, draft.Label, draft.InitialChecked));
+        Assert.Equal((PromptItemKind.CheckBox, "-c:v copy a b $${file}", true), (draft.Kind, draft.Label, draft.InitialChecked));   // R-134: ラベルは送る値全体（引用符なしの表示用）
         Assert.Equal("-c:v copy \"a b\" $${file}", draft.Value);
 
         var after = PromptImport.ApplyMerge(before, picked, draft);
@@ -158,6 +158,7 @@ public class PromptImportTests
         var before = Rows("x", "-c:v", "copy");
         var draft = PromptImport.MergeDraft(before, [2, 1]);
         Assert.Equal("-c:v copy", draft.Value);
+        Assert.Equal("-c:v copy", draft.Label);
         Assert.Equal(Sent(before), Sent(PromptImport.ApplyMerge(before, [2, 1], draft)));
     }
 

@@ -58,6 +58,24 @@ public class ExternalToolPagePromptTests
     }
 
     [Fact]
+    public void 空の定義は定義なしと同じに扱う()
+    {
+        var item = new PromptItem { Id = 1, Kind = PromptItemKind.Text, Label = "a" };
+        Assert.True(new PromptDefinition().IsEmpty);
+        Assert.False(new PromptDefinition { Items = [item] }.IsEmpty);
+        Assert.False(new PromptDefinition { Arguments = [PromptArgument.Fixed("x")] }.IsEmpty);
+        Assert.False(PromptDefinition.Simple("t").IsEmpty);
+    }
+
+    [Fact]
+    public void ヘルパーの結果が空なら定義を保存しない()
+    {
+        Assert.Null(ExternalToolPage.DefinitionToSave(new PromptDefinition { Title = "t", RememberLast = true }));
+        var def = PromptDefinition.Simple("t");
+        Assert.Same(def, ExternalToolPage.DefinitionToSave(def));
+    }
+
+    [Fact]
     public void マクロを含む引数の行に入れるマクロの一覧にはプロンプトを出さない()
     {
         using var all = new MacroReferenceDialog();

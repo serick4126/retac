@@ -149,7 +149,7 @@ public static class PromptImport
             && definition.Arguments[i] is { Kind: PromptArgumentKind.Fixed, Text: { Length: > 0 } text } && !text.Contains('"'));
     }
 
-    /// <summary>まとめるチェックボックスの下書き。ラベルは最初の行の値、送る値は各行を 1 つの引数の形にして送る順に半角空白でつなぐ。</summary>
+    /// <summary>まとめるチェックボックスの下書き。ラベルは選んだ行の値を送る順に半角空白でつないだもの（引用符なしの表示用。R-134）、送る値は各行を 1 つの引数の形にして送る順に半角空白でつなぐ。</summary>
     public static PromptItem MergeDraft(PromptDefinition definition, IReadOnlyList<int> indices)
     {
         var values = indices.Order().Select(i => definition.Arguments[i].Text).ToList();
@@ -157,7 +157,7 @@ public static class PromptImport
         {
             Id = definition.NextItemId(),
             Kind = PromptItemKind.CheckBox,
-            Label = values[0],
+            Label = string.Join(" ", values),
             InitialChecked = true,
             Value = string.Join(" ", values.Select(v => ArgumentSplitter.QuoteOne(v)!)),
         };

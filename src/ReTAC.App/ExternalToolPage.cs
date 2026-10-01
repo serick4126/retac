@@ -356,7 +356,7 @@ public sealed class ExternalToolPage : UserControl
 
         // 先に定義を下書きへ入れる。欄の書き換えで走る Commit は with で他の欄を残すので、定義は消えない
         var tools = Tools;
-        tools[_editing] = tools[_editing] with { Prompt = dialog.Definition };
+        tools[_editing] = tools[_editing] with { Prompt = DefinitionToSave(dialog.Definition) };
         _draft.ExternalTools = tools;
 
         if (dialog.ImportedPath is { } path)
@@ -372,6 +372,9 @@ public sealed class ExternalToolPage : UserControl
         _arguments.SelectionStart = caret;
         _arguments.SelectionLength = 0;
     }
+
+    /// <summary>R-130・R-133: ヘルパーの結果が空（項目 0・引数 0）なら定義なしとして保存する（タイトルなども捨てる）。</summary>
+    internal static PromptDefinition? DefinitionToSave(PromptDefinition result) => result.IsEmpty ? null : result;
 
     /// <summary>
     /// R-133: ヘルパーに渡す定義。引数欄に ${prompt} が無ければ渡さない（空で開く）。

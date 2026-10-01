@@ -891,7 +891,7 @@ public sealed class MainForm : Form, IBookmarkHost
         if (template.HasPrompt)
         {
             // R-130: 定義の無い ${prompt} は、ツールの名前のテキスト 1 つ
-            var definition = tool.Prompt ?? PromptDefinition.Simple(tool.Name);
+            var definition = tool.Prompt is { IsEmpty: false } custom ? custom : PromptDefinition.Simple(tool.Name);   // R-130: 空の定義は定義なしと同じ
             if (PromptDefinitionRules.Validate(definition) is { Count: > 0 } problems)
             {
                 // 設定画面は誤りを保存させないが、設定ファイルは手で直せる（R-55）
