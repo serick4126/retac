@@ -125,6 +125,22 @@ public class PromptDialogTests
         Assert.Equal(expected, PromptDialog.BrowseStart(text, @"C:\work"));
     }
 
+    [Theory]
+    [InlineData("", @"C:\work", "")]                              // 空欄
+    [InlineData(@"C:\work\sub", @"C:\work\sub", "")]              // フォルダが存在する
+    [InlineData(@"C:\work\a.txt", @"C:\work", "a.txt")]           // ファイルが存在する
+    [InlineData(@"C:\work\new.txt", @"C:\work", "")]              // ファイルは無いが親はある
+    [InlineData(@"C:\work\missing\a.txt", @"C:\work", "")]        // 親も無い
+    [InlineData("\"\"C:\\x\"\"", @"C:\work", "")]                 // 解決できないパス
+    public void ファイル参照の最初の場所とファイル名(string text, string expectedDirectory, string expectedFileName)
+    {
+        var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { @"C:\work", @"C:\work\sub" };
+        var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { @"C:\work\a.txt" };
+        var (directory, fileName) = PromptDialog.FileBrowseStart(text, @"C:\work", folders.Contains, files.Contains);
+        Assert.Equal(expectedDirectory, directory);
+        Assert.Equal(expectedFileName, fileName);
+    }
+
     [Fact]
     public void 項目が重なった定義でも組み立てで例外にしない()
     {

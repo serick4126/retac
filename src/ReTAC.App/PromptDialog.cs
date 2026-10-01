@@ -274,6 +274,20 @@ public sealed class PromptDialog : Form
     internal static string? BrowseStart(string text, string currentFolder) =>
         InputText.Unquote(text).Length == 0 ? null : PathResolver.Resolve(currentFolder, text);
 
+    /// <summary>
+    /// ファイルの参照の最初のフォルダとファイル名（R-131）。存在しないフォルダを渡すとカレントフォルダで開かないので、
+    /// ファイルが無いときは親フォルダが存在するかまで確かめる。存在の確かめ方は引数で受け取る（テストのため）。
+    /// </summary>
+    internal static (string Directory, string FileName) FileBrowseStart(
+        string text, string currentFolder, Func<string, bool> directoryExists, Func<string, bool> fileExists)
+    {
+        if (BrowseStart(text, currentFolder) is not { } resolved) return (currentFolder, "");
+        if (directoryExists(resolved)) return (resolved, "");
+        var parent = Path.GetDirectoryName(resolved);
+        if (fileExists(resolved) && parent is not null) return (parent, Path.GetFileName(resolved));
+        return parent is not null && directoryExists(parent) ? (parent, "") : (currentFolder, "");
+    }
+
     private void Browse(TextBox box)
     {
         var resolved = BrowseStart(box.Text, _currentFolder);
@@ -284,15 +298,9 @@ public sealed class PromptDialog : Form
         }
         else
         {
-            using var dialog = new OpenFileDialog
-            {
-                InitialDirectory = resolved is null ? _currentFolder
-                    : Directory.Exists(resolved) ? resolved
-                    : Path.GetDirectoryName(resolved) ?? _currentFolder,
-                FileName = resolved is not null && File.Exists(resolved) ? Path.GetFileName(resolved) : "",
-            };
-            if (dialog.ShowDialog(this) != DialogResult.OK) return;
-            box.Text = dialog.FileName;
+            var (directory, fileName) = FileBrowseStart(box.Text, _currentFolder, Directory.Exists, File.Exists);
+            if (FileBrowser.Select(this, directory, fileName) is not { } selected) return;
+            box.Text = selected;
         }
         box.SelectAll();
     }

@@ -385,8 +385,12 @@ public sealed class PromptSettingsDialog : Form
         RefillArguments([to]);
     }
 
+    // R-134: 候補を調べている間に選択や行が変わったら、古い要求の結果を捨てる
+    private readonly ConvertRequestGate _convertGate = new();
+
     private async Task ShowConvertMenuAsync()
     {
+        var generation = _convertGate.Begin();
         var selected = SelectedArguments();
         var menu = new ContextMenuStrip();
         if (selected.Count >= 2)
@@ -397,7 +401,8 @@ public sealed class PromptSettingsDialog : Form
         }
         else if (selected is [var index] && _arguments[index].Kind == PromptArgumentKind.Fixed)
         {
-            var value = _arguments[index].Text;
+            var row = _arguments[index];
+            var value = row.Text;
             // パスの存在は押した時点で確かめる。ネットワークのパスで待つことがあるので、画面のスレッドでは調べない（N-05）
             PathKind? kind = null;
             if (PromptImport.Mark(value) == ArgumentMark.Path)
@@ -407,12 +412,19 @@ public sealed class PromptSettingsDialog : Form
                     : File.Exists(resolved) ? PathKind.File
                     : Directory.Exists(resolved) ? PathKind.Folder
                     : PathKind.Missing);
-                if (IsDisposed || index >= _arguments.Count || _arguments[index].Text != value) return;   // 調べている間に変わった
+                // 調べている間に、別の要求が始まった・選択が変わった・行が入れ替わった。行は参照で見る（同じ値の行が 2 つあり得る）
+                if (IsDisposed || !_convertGate.IsCurrent(generation)
+                    || SelectedArguments() is not [var now] || !ReferenceEquals(_arguments[now], row)) return;
             }
             foreach (var candidate in PromptImport.Candidates(value, kind, _items.Count))
             {
                 var target = candidate.Target;
-                menu.Items.Add(candidate.Label, null, (_, _) => Convert(index, target));
+                menu.Items.Add(candidate.Label, null, (_, _) =>
+                {
+                    // クリックまでに行が動いた・消えたかもしれない。今の位置で変換し、無ければ何もしない
+                    var current = ConvertRequestGate.IndexOfSame(_arguments, row);
+                    if (current >= 0) Convert(current, target);
+                });
             }
             if (menu.Items.Count == 0) menu.Items.Add(new ToolStripMenuItem("変換できません") { Enabled = false });
         }

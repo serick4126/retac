@@ -7915,7 +7915,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 401
+        "line": 406
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -11238,6 +11238,10 @@
     ],
     "R-131": [
       {
+        "file": "src/ReTAC.App/FileBrowser.cs",
+        "line": 6
+      },
+      {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 904
       },
@@ -11263,7 +11267,11 @@
       },
       {
         "file": "src/ReTAC.App/PromptDialog.cs",
-        "line": 301
+        "line": 278
+      },
+      {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 309
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -11276,6 +11284,10 @@
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
         "line": 84
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellFileBrowser.cs",
+        "line": 6
       }
     ],
     "R-132": [
@@ -11289,7 +11301,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 499
+        "line": 511
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -11395,7 +11407,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 482
+        "line": 494
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinitionRules.cs",
@@ -11407,6 +11419,10 @@
       }
     ],
     "R-134": [
+      {
+        "file": "src/ReTAC.App/ConvertRequestGate.cs",
+        "line": 6
+      },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
         "line": 337
@@ -11422,6 +11438,10 @@
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
         "line": 248
+      },
+      {
+        "file": "src/ReTAC.App/PromptSettingsDialog.cs",
+        "line": 388
       },
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentSplitter.cs",
