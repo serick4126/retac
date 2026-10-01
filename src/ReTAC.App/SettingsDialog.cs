@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Windows.Forms;
+using ReTAC.Domain.Navigation;
 
 namespace ReTAC.App;
 
@@ -36,7 +37,8 @@ public sealed class SettingsDialog : Form
     private readonly Dictionary<SettingsPage, Control> _pages;
     private readonly ExternalToolPage _externalToolPage;
 
-    public SettingsDialog(SettingsDraft draft, SettingsPage initial, string currentFolder, Func<SettingsDraft, bool> apply)
+    public SettingsDialog(SettingsDraft draft, SettingsPage initial, string currentFolder, Func<SettingsDraft, bool> apply,
+        FolderHistory? history = null, QuickAccessList? quickAccess = null)
     {
         _draft = draft;
         _apply = apply;
@@ -57,7 +59,7 @@ public sealed class SettingsDialog : Form
         var colorFontPage = new ColorFontPage(draft) { Location = pageLocation };
         var fileViewPage = new FileViewPage(draft) { Location = pageLocation };
         var keyAssignPage = new KeyAssignPage(draft) { Location = pageLocation };
-        _externalToolPage = new ExternalToolPage(draft) { Location = pageLocation };
+        _externalToolPage = new ExternalToolPage(draft, currentFolder, history, quickAccess) { Location = pageLocation };
         var driveVisibilityPage = new DriveVisibilityPage(draft) { Location = pageLocation };
         var quickAccessPage = new QuickAccessPage(draft, currentFolder) { Location = pageLocation };
 

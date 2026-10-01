@@ -30,7 +30,8 @@ public sealed class MacroReferenceDialog : Form
     private readonly Button _insert = new() { Text = "挿入(&I)", DialogResult = DialogResult.OK, Bounds = new Rectangle(384, 430, 90, 28) };
 
     /// <param name="showScripts">「実行できる書き方を見る」から開いたとき、スクリプトの例を選んだ状態で開く</param>
-    public MacroReferenceDialog(bool showScripts = false)
+    /// <param name="excludePrompt">入力ダイアログの「マクロを含む引数」の行から開いたとき。${prompt} は書けない（R-130）</param>
+    public MacroReferenceDialog(bool showScripts = false, bool excludePrompt = false)
     {
         Text = "マクロの一覧";
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -45,6 +46,7 @@ public sealed class MacroReferenceDialog : Form
         var groups = new Dictionary<string, ListViewGroup>();
         foreach (var entry in MacroCatalog.Entries)
         {
+            if (excludePrompt && entry.Insert == "${prompt}") continue;
             if (!groups.TryGetValue(entry.Group, out var group))
             {
                 group = new ListViewGroup(entry.Group);
@@ -100,4 +102,7 @@ public sealed class MacroReferenceDialog : Form
         // 挿入しない項目では押せない。Enter（AcceptButton）も効かない
         _insert.Enabled = Selected?.Insert is not null;
     }
+
+    /// <summary>一覧に出している挿入する文字。</summary>
+    internal IEnumerable<string> Inserts => _entries.Items.Cast<ListViewItem>().Select(i => ((MacroCatalogEntry)i.Tag!).Insert).OfType<string>();
 }

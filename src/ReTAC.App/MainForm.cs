@@ -2434,7 +2434,7 @@ public sealed class MainForm : Form, IBookmarkHost
     {
         // R-108: _list.Theme は OS の色で解決済み。それを渡すと OS の色が独自の配色として保存される
         var draft = SettingsDraft.From(_settings, _keyMap, _settings.ToTheme(), _quickAccess);
-        using var dialog = new SettingsDialog(draft, page, _currentFolder, ApplySettings);
+        using var dialog = new SettingsDialog(draft, page, _currentFolder, ApplySettings, _history, _quickAccess);
         dialog.ShowDialog(this);
         return true;
     }
