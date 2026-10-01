@@ -3386,6 +3386,12 @@
       "file": "src/ReTAC.Domain/Tools/ArgumentExpander.cs",
       "doc": "引数の展開（F-02 / R-71 / R-72）。"
     },
+    "ReTAC.Domain.Tools.ArgumentSplitter": {
+      "id": "type:ReTAC.Domain.Tools.ArgumentSplitter",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Tools/ArgumentSplitter.cs",
+      "doc": "文字どおりの文字列を、引数欄と同じ区切りの規則で引数に分ける（R-130）。 区切るのは半角空白とタブだけ（全角空白は名前の一部）。引用符で囲んだ所は区切らず、引用符そのものは外す。 マクロ・!・$$ は解釈しない。入力ダイアログの「前に付ける」「後ろに付ける」・チェックボックスと選択肢の送る値・ インポートしたコマンドライン（R-134）に使う。ここに書いた文字は、書いたとおりに送られなければならない。"
+    },
     "ReTAC.Domain.Tools.ArgumentTemplate": {
       "id": "type:ReTAC.Domain.Tools.ArgumentTemplate",
       "kind": "sealed class",
@@ -10465,6 +10471,22 @@
       {
         "file": "src/ReTAC.Shell/ShellContextMenu.cs",
         "line": 52
+      }
+    ],
+    "R-130": [
+      {
+        "file": "src/ReTAC.Domain/Tools/ArgumentSplitter.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ArgumentSplitter.cs",
+        "line": 55
+      }
+    ],
+    "R-134": [
+      {
+        "file": "src/ReTAC.Domain/Tools/ArgumentSplitter.cs",
+        "line": 9
       }
     ],
     "R-14": [
