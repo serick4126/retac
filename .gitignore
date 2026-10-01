@@ -32,3 +32,4 @@ retac.settings.json
 
 # --- 配布用の発行物（bin/obj と同じ生成物）---
 /publish
+/.superpowers/
