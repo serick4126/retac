@@ -19,7 +19,8 @@ internal sealed class UndoRecorder
 
     public void AddResults(IEnumerable<OperationResult> results)
     {
-        foreach (var result in results)
+        // 中身を除いてから日時を取る（ネットワークドライブでは 1 件ごとの問い合わせが重い）
+        foreach (var result in UndoRecord.TopLevel(results, r => r.Created))
         {
             if (Stamp(result.Created) is not { } stamp) continue;
             var item = new UndoItem(result.Source, result.Created, stamp, _overwritten.Contains(result.Created));

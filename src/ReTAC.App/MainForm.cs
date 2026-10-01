@@ -1144,10 +1144,16 @@ public sealed class MainForm : Form, IBookmarkHost
         }
         timing?.Mark("plan");
 
-        // 複写条件で全件が対象外になるのは差分更新では普通のこと。いちいち知らせない
-        if (plan.Items.Count == 0) return true;
+        var verb = moving ? "移動" : "コピー";
+        // 複写条件で全件が対象外になるのは差分更新では普通のこと。ダイアログは出さず、ステータスバーで知らせる（R-129）
+        if (plan.Items.Count == 0)
+        {
+            _statusBar.ShowMessage($"{verb}する項目はありませんでした", CompletionHoldMilliseconds);
+            return true;
+        }
 
         long? firstItem = null;
+        var done = 0;
         string? changed = null;
         // 判定済みなので OS には衝突を問わせない（R-41-4）
         var completed = RunOperation(silentOverwrite: true, operation =>
@@ -1157,6 +1163,7 @@ public sealed class MainForm : Form, IBookmarkHost
         }, operation =>
         {
             (firstItem, changed) = (operation.FirstItemMilliseconds, changed ?? operation.ChangedDestination);
+            done = operation.Results.Count;   // フォルダごと渡した中身も 1 件ずつ数える（OS の確認の件数と同じ数え方）
             timing?.Mark("execute");
         });
         timing?.Mark("record");   // 転送のあと、結果を元に戻すの記録へ入れる時間（項目ごとに宛先を問い合わせる）
@@ -1164,12 +1171,20 @@ public sealed class MainForm : Form, IBookmarkHost
 
         TransferExecution.Finish(plan, moving, changed, f => _recorder?.AddRemovedFolder(f));
 
-        if (changed is null) return completed;
+        if (changed is null)
+        {
+            // R-129: OS の進捗は終わると黙って閉じるので、終わったことを知らせる。失敗・中止は OS か上のダイアログが知らせている
+            if (completed) _statusBar.ShowMessage($"{done:N0} 個の項目を{verb}しました", CompletionHoldMilliseconds);
+            return completed;
+        }
         // R-125: 計画の後に宛先が変わっていた。複写条件の判断が当てはまらないので、上書きせずに中止したことを知らせる。
         // もう一度実行すれば、変わった宛先は衝突として複写条件の判定を通る
         MessageBox.Show(this, "転送先が変わったため、中止しました。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         return false;
     }
+
+    /// <summary>R-129: 転送の後の再表示（非同期）で消えないよう、完了の知らせを残す時間。</summary>
+    private const int CompletionHoldMilliseconds = 5000;
 
     /// <summary>
     /// R-125: 転送の計画を作っている間、ステータスバーに「調べています」を出す。走査は画面のスレッドで行うので、

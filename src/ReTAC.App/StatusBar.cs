@@ -66,16 +66,19 @@ public sealed class StatusBar : Control
 
     /// <summary>④ の区画に代わりに出す知らせ。次の Update で消える（R-87 の「見つかりません」など）。</summary>
     private string _message = "";
+    private long _messageHeldUntil;
 
-    public void ShowMessage(string text)
+    /// <param name="holdMilliseconds">この間は Update で消さない。転送の完了（R-129）は直後の再表示で消えると読めない</param>
+    public void ShowMessage(string text, int holdMilliseconds = 0)
     {
         _message = text;
+        _messageHeldUntil = Environment.TickCount64 + holdMilliseconds;
         Invalidate();
     }
 
     public void Update(ListState state, string currentFolder)
     {
-        _message = "";
+        if (Environment.TickCount64 >= _messageHeldUntil) _message = "";
         _summary = ListSummary.Of(state);
         (_cursorName, _cursorRest) = DescribeCursor(state.Cursor);
         Invalidate();

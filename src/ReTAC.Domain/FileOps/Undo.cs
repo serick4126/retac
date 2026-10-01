@@ -45,6 +45,24 @@ public sealed record UndoRecord(
         if (copies.Count == 0) return new(UndoKind.Move, moves, createdFolders, removedFolders);
         return new(UndoKind.Move, [.. copies.Select(c => c with { Kind = UndoKind.Copy }), .. moves], createdFolders, removedFolders);
     }
+
+    /// <summary>
+    /// R-84: 別の項目の中にある項目を除く。フォルダごと渡した転送（R-125）では OS が中身の 1 件ずつも通知する。
+    /// 中身まで記録すると、戻すときにフォルダと中身を別々に消すことになり、先に消えた中身が「見つかりません」で止まる。
+    /// </summary>
+    public static List<T> TopLevel<T>(IEnumerable<T> items, Func<T, string> path)
+    {
+        var list = items.ToList();
+        var paths = list.Select(i => Path.TrimEndingDirectorySeparator(path(i))).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return list.Where(i => !HasAncestorIn(path(i), paths)).ToList();
+
+        static bool HasAncestorIn(string p, HashSet<string> paths)
+        {
+            for (var parent = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(p)); parent is not null; parent = Path.GetDirectoryName(parent))
+                if (paths.Contains(parent)) return true;
+            return false;
+        }
+    }
 }
 
 /// <summary>R-82: 履歴。設定には保存しない（INV-UNDO-NOT-PERSISTED）。上限を超えたら古いものから捨てる。</summary>

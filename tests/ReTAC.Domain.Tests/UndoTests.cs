@@ -157,6 +157,14 @@ public class UndoTests
         Assert.Equal(UndoProblem.None, Check(UndoKind.Move, item, files));
     }
 
+    [Fact]
+    public void フォルダごと渡した転送の中身は記録しない()
+    {
+        // R-84 / R-125: OS は中身の 1 件ずつも通知する。似た名前（tree2）や別の宛先は残す
+        string[] results = [@"J:\t\tree", @"J:\t\tree\d1", @"J:\t\tree\d1\f1.txt", @"J:\t\tree2", @"J:\t\x.txt", @"J:\u\tree\f.txt"];
+        Assert.Equal([@"J:\t\tree", @"J:\t\tree2", @"J:\t\x.txt", @"J:\u\tree\f.txt"], UndoRecord.TopLevel(results, p => p));
+    }
+
     // ---- 表示 ----
 
     [Fact]
