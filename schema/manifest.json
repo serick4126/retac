@@ -7045,6 +7045,10 @@
         "line": 100
       },
       {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 83
+      },
+      {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
         "line": 69
       },
@@ -7195,6 +7199,10 @@
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
         "line": 98
+      },
+      {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 82
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
@@ -10969,6 +10977,10 @@
         "line": 20
       },
       {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 270
+      },
+      {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
         "line": 73
       },
@@ -11071,6 +11083,26 @@
     ],
     "R-131": [
       {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 9
+      },
+      {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 72
+      },
+      {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 99
+      },
+      {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 193
+      },
+      {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 301
+      },
+      {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
         "line": 18
       },
@@ -11084,6 +11116,10 @@
       }
     ],
     "R-132": [
+      {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 72
+      },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
         "line": 18
@@ -11126,6 +11162,10 @@
       }
     ],
     "R-133": [
+      {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 10
+      },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinitionRules.cs",
         "line": 10
@@ -11173,6 +11213,10 @@
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
         "line": 84
+      },
+      {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 68
       },
       {
         "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
@@ -11799,6 +11843,10 @@
         "line": 57
       },
       {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 245
+      },
+      {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
         "line": 54
       },
@@ -11887,6 +11935,10 @@
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
         "line": 11
+      },
+      {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 256
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",

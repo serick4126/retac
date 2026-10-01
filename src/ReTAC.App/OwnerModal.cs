@@ -21,7 +21,7 @@ internal static class OwnerModal
         var closed = new TaskCompletionSource<DialogResult>();
 
         // モードレスでは DialogResult を持つボタンを押しても閉じない。モーダルと同じく閉じるようにする
-        foreach (var button in dialog.Controls.OfType<Button>().Where(b => b.DialogResult != DialogResult.None))
+        foreach (var button in ClosingButtons(dialog))
             button.Click += (_, _) => dialog.Close();
 
         // ダイアログ自身の FormClosing（検査で差し戻す等）より後に登録することで、
@@ -48,4 +48,15 @@ internal static class OwnerModal
         dialog.Show(owner);
         return closed.Task;
     }
+
+    /// <summary>
+    /// 閉じるボタン（DialogResult を持つボタン）。パネルの中に置いたものも含める。
+    /// フォーム直下だけを見ていると、ボタンの行をパネルに入れたダイアログ（入力ダイアログ）が OK でもキャンセルでも閉じず、
+    /// 呼び出し側が待ち続ける。Enter・Esc も AcceptButton・CancelButton のクリックを通るので、ここで閉じる
+    /// </summary>
+    internal static IEnumerable<Button> ClosingButtons(Form dialog) =>
+        Descendants(dialog).OfType<Button>().Where(b => b.DialogResult != DialogResult.None);
+
+    private static IEnumerable<Control> Descendants(Control root) =>
+        root.Controls.Cast<Control>().SelectMany(c => new[] { c }.Concat(Descendants(c)));
 }
