@@ -20,6 +20,8 @@ public sealed class PromptSettingsDialog : Form
     private readonly List<PromptArgument> _arguments;
     /// <summary>プレビューで OK した値。結果の例はこれで作る（無ければ定義の初期値）</summary>
     private IReadOnlyDictionary<int, PromptValue>? _previewValues;
+    /// <summary>元に戻すための、操作の前の状態（R-133）</summary>
+    private readonly PromptEditHistory _undo = new();
 
     private readonly TextBox _title = new() { Bounds = new Rectangle(110, 14, 300, 23) };
     private readonly CheckBox _remember = new() { Text = "前回の入力を初期値にする(&R)", AutoSize = true, Location = new Point(424, 16) };
@@ -36,6 +38,7 @@ public sealed class PromptSettingsDialog : Form
     private readonly Button _argumentUp = Side("上へ(&O)", 118);
     private readonly Button _argumentDown = Side("下へ(&W)", 150);
     private readonly Button _convert = Side("変換(&V) ▼", 182);
+    private readonly Button _undoButton = new() { Text = "元に戻す(&Z)", Bounds = new Rectangle(256, 514, 100, 28), Enabled = false };
     private readonly TextBox _example = new() { ReadOnly = true, Bounds = new Rectangle(14, 476, 612, 23) };
 
     public PromptSettingsDialog(PromptDefinition? definition, string toolName, FolderHistory history, QuickAccessList? quickAccess, string currentFolder)
@@ -79,7 +82,7 @@ public sealed class PromptSettingsDialog : Form
             new Label { Text = "タイトル(&T):", AutoSize = true, Location = new Point(14, 17) }, _title, _remember,
             items, arguments,
             new Label { Text = "結果の例:", AutoSize = true, Location = new Point(14, 456) }, _example,
-            import, preview, ok, cancel,
+            import, preview, _undoButton, ok, cancel,
         ]);
         AcceptButton = ok;
         CancelButton = cancel;
@@ -104,6 +107,7 @@ public sealed class PromptSettingsDialog : Form
 
         import.Click += (_, _) => Import();
         preview.Click += (_, _) => Preview();
+        _undoButton.Click += (_, _) => Undo();
         FormClosing += OnClosing;
 
         RefillItems(-1);
@@ -118,6 +122,40 @@ public sealed class PromptSettingsDialog : Form
 
     /// <summary>インポートしたときのツールのパス。設定ページはこれでパス欄を置き換え、引数欄を ${prompt} だけにする（R-134）。</summary>
     public string? ImportedPath { get; private set; }
+
+    internal bool CanUndo => _undo.CanUndo;
+
+    /// <summary>テキストボックスにフォーカスがあるときの Ctrl+Z は、テキストボックス自身の取り消しに任せる（R-133）。</summary>
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if (keyData == (Keys.Control | Keys.Z) && ActiveControl is not TextBoxBase)
+        {
+            Undo();
+            return true;
+        }
+        return base.ProcessCmdKey(ref msg, keyData);
+    }
+
+    /// <summary>定義を変える操作の、変更を確定する直前に呼ぶ（R-133）。タイトルと前回の入力の設定は積まない。</summary>
+    private void PushUndo()
+    {
+        _undo.Push(_items, _arguments, ImportedPath);
+        _undoButton.Enabled = true;
+    }
+
+    private void Undo()
+    {
+        if (!_undo.TryUndo(out var state)) return;
+        _items.Clear();
+        _items.AddRange(state.Items);
+        _arguments.Clear();
+        _arguments.AddRange(state.Arguments);
+        ImportedPath = state.ImportedPath;
+        _previewValues = null;   // 戻した定義には合わないので捨てる
+        _undoButton.Enabled = _undo.CanUndo;
+        RefillItems(-1);
+        RefillArguments([]);
+    }
 
     internal static string KindName(PromptItemKind kind) => kind switch
     {
@@ -231,6 +269,7 @@ public sealed class PromptSettingsDialog : Form
         var draft = new PromptItem { Id = Current().NextItemId(), Kind = kind };
         using var dialog = new PromptItemDialog(draft);
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        PushUndo();
         _items.Add(dialog.Result);
         _arguments.Add(PromptArgument.Item(dialog.Result.Id));   // 引数の末尾にも入れる（R-133）
         _previewValues = null;
@@ -244,6 +283,8 @@ public sealed class PromptSettingsDialog : Form
         if (index < 0) return;
         using var dialog = new PromptItemDialog(_items[index]);
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        if (dialog.Result == _items[index]) return;   // 何も変わらなければ積まない
+        PushUndo();
         _items[index] = dialog.Result;
         _previewValues = null;
         RefillArguments(SelectedArguments());
@@ -255,6 +296,7 @@ public sealed class PromptSettingsDialog : Form
         var index = SelectedItemIndex();
         if (index < 0) return;
         var id = _items[index].Id;
+        PushUndo();
         _items.RemoveAt(index);
         _arguments.RemoveAll(a => a.Kind == PromptArgumentKind.Item && a.ItemId == id);   // 項目を消したら、その行も消す（R-133）
         _previewValues = null;
@@ -267,6 +309,7 @@ public sealed class PromptSettingsDialog : Form
         var index = SelectedItemIndex();
         var to = index + delta;
         if (index < 0 || to < 0 || to >= _items.Count) return;
+        PushUndo();
         (_items[index], _items[to]) = (_items[to], _items[index]);
         RefillItems(to);
     }
@@ -302,6 +345,7 @@ public sealed class PromptSettingsDialog : Form
     {
         var selected = SelectedArguments();
         var at = selected.Count == 1 ? selected[0] + 1 : _arguments.Count;
+        PushUndo();
         _arguments.Insert(at, argument);
         RefillArguments([at]);
     }
@@ -317,6 +361,8 @@ public sealed class PromptSettingsDialog : Form
         }
         using var dialog = new PromptArgumentDialog(argument.Kind, argument.Text);
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        if (dialog.Value == argument.Text) return;
+        PushUndo();
         _arguments[index] = argument with { Text = dialog.Value };
         RefillArguments([index]);
     }
@@ -324,6 +370,7 @@ public sealed class PromptSettingsDialog : Form
     private void DeleteArgument()
     {
         if (SelectedArguments() is not [var index]) return;
+        PushUndo();
         _arguments.RemoveAt(index);
         RefillArguments([Math.Min(index, _arguments.Count - 1)]);
     }
@@ -333,6 +380,7 @@ public sealed class PromptSettingsDialog : Form
         if (SelectedArguments() is not [var index]) return;
         var to = index + delta;
         if (to < 0 || to >= _arguments.Count) return;
+        PushUndo();
         (_arguments[index], _arguments[to]) = (_arguments[to], _arguments[index]);
         RefillArguments([to]);
     }
@@ -378,6 +426,7 @@ public sealed class PromptSettingsDialog : Form
     private void Convert(int index, ConversionTarget target)
     {
         var converted = PromptImport.Convert(Current(), index, target);
+        PushUndo();
         Replace(converted);
         RefillItems(-1);
         RefillArguments([index]);
@@ -388,6 +437,7 @@ public sealed class PromptSettingsDialog : Form
         var definition = Current();
         using var dialog = new PromptItemDialog(PromptImport.MergeDraft(definition, indices));
         if (dialog.ShowDialog(this) != DialogResult.OK) return;   // キャンセルなら何も変えない
+        PushUndo();
         Replace(PromptImport.ApplyMerge(definition, indices, dialog.Result));
         RefillItems(-1);
         RefillArguments([indices.Min()]);
@@ -414,6 +464,7 @@ public sealed class PromptSettingsDialog : Form
             && MessageBox.Show(this, "今の項目と引数を置き換えます。よろしいですか。", "ReTAC", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
             return;
 
+        PushUndo();
         Replace(new PromptDefinition { Arguments = [.. command.Arguments] });
         ImportedPath = command.Path;
         RefillItems(-1);

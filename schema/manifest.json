@@ -6907,7 +6907,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 140
+        "line": 178
       },
       {
         "file": "src/ReTAC.Domain/Navigation/InputText.cs",
@@ -7153,7 +7153,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 112
+        "line": 116
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
@@ -7915,7 +7915,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 353
+        "line": 401
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -11289,7 +11289,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 448
+        "line": 499
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -11358,6 +11358,14 @@
         "line": 10
       },
       {
+        "file": "src/ReTAC.App/PromptEditHistory.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.App/PromptEditHistory.cs",
+        "line": 8
+      },
+      {
         "file": "src/ReTAC.App/PromptItemDialog.cs",
         "line": 9
       },
@@ -11367,15 +11375,27 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 235
+        "line": 23
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 259
+        "line": 128
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 431
+        "line": 139
+      },
+      {
+        "file": "src/ReTAC.App/PromptSettingsDialog.cs",
+        "line": 274
+      },
+      {
+        "file": "src/ReTAC.App/PromptSettingsDialog.cs",
+        "line": 301
+      },
+      {
+        "file": "src/ReTAC.App/PromptSettingsDialog.cs",
+        "line": 482
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinitionRules.cs",
@@ -11397,11 +11417,11 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 119
+        "line": 123
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 210
+        "line": 248
       },
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentSplitter.cs",
