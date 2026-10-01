@@ -321,6 +321,7 @@
         "unique:ReTAC.Domain.Tools.ArgumentTemplate#Arguments",
         "unique:ReTAC.Domain.Tools.ArgumentTemplate#Errors",
         "unique:ReTAC.Domain.Tools.PromptDefinition#Arguments",
+        "unique:ReTAC.Domain.Tools.ImportedCommand#Arguments",
         "unique:ReTAC.Domain.FileOps.CopyPlan#Items",
         "unique:ReTAC.Domain.FileOps.CopyPlan#Folders",
         "unique:ReTAC.Domain.Tools.TemplateArgument#Parts",

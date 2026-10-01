@@ -3386,6 +3386,17 @@
       "file": "src/ReTAC.Domain/Tools/ArgumentExpander.cs",
       "doc": "引数の展開（F-02 / R-71 / R-72）。"
     },
+    "ReTAC.Domain.Tools.ArgumentMark": {
+      "id": "type:ReTAC.Domain.Tools.ArgumentMark",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
+      "doc": "R-134: 固定の引数の値の見た目。目安で、何も自動では変えない。",
+      "members": [
+        "None",
+        "Switch",
+        "Path"
+      ]
+    },
     "ReTAC.Domain.Tools.ArgumentSplitter": {
       "id": "type:ReTAC.Domain.Tools.ArgumentSplitter",
       "kind": "static class",
@@ -3427,6 +3438,42 @@
           "mutability": "get-only",
           "doc": "R-130: ${prompt} がある。入力ダイアログを出し、その位置に定義の引数の並びを展開する"
         }
+      ]
+    },
+    "ReTAC.Domain.Tools.ConversionCandidate": {
+      "id": "type:ReTAC.Domain.Tools.ConversionCandidate",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
+      "fields": [
+        {
+          "name": "Target",
+          "type": "ReTAC.Domain.Tools.ConversionTarget",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Label",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.ConversionTarget": {
+      "id": "type:ReTAC.Domain.Tools.ConversionTarget",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
+      "members": [
+        "CheckBox",
+        "Text",
+        "FolderItem",
+        "FileItem",
+        "MacroFile",
+        "MacroCursorFile",
+        "MacroPath",
+        "MacroCwd"
       ]
     },
     "ReTAC.Domain.Tools.DefaultExternalTools": {
@@ -3526,6 +3573,28 @@
           "required": false,
           "mutability": "get-only",
           "doc": "待っている件数（動いている 1 件を含まない）。ReTAC の終了時の確認に使う（K-5）。"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.ImportedCommand": {
+      "id": "type:ReTAC.Domain.Tools.ImportedCommand",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
+      "fields": [
+        {
+          "name": "Path",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "ツールのパス（端の引用符を外したもの）"
+        },
+        {
+          "name": "Arguments",
+          "type": "IReadOnlyList<ReTAC.Domain.Tools.PromptArgument>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
         }
       ]
     },
@@ -3724,6 +3793,17 @@
           "mutability": "init",
           "doc": "直後の !。空になったらツールを起動しない"
         }
+      ]
+    },
+    "ReTAC.Domain.Tools.PathKind": {
+      "id": "type:ReTAC.Domain.Tools.PathKind",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
+      "doc": "パスの印の行が実際に指しているもの（App が調べて渡す）。",
+      "members": [
+        "File",
+        "Folder",
+        "Missing"
       ]
     },
     "ReTAC.Domain.Tools.PromptAnswerRules": {
@@ -3934,6 +4014,12 @@
       "kind": "static class",
       "file": "src/ReTAC.Domain/Tools/PromptExpander.cs",
       "doc": "R-130: 入力ダイアログの定義の引数の並びを、${prompt} の位置に展開する。"
+    },
+    "ReTAC.Domain.Tools.PromptImport": {
+      "id": "type:ReTAC.Domain.Tools.PromptImport",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
+      "doc": "R-134: ふだんのコマンドラインから定義を組み立てる。読み込んだ直後は貼り付けたものと同じ引数の並びが送られることを保証し （すべて固定の引数）、項目やマクロへの変換は利用者が行ごとに選ぶ。"
     },
     "ReTAC.Domain.Tools.PromptInput": {
       "id": "type:ReTAC.Domain.Tools.PromptInput",
@@ -4866,6 +4952,17 @@
       "visibility": "public"
     },
     {
+      "from": "type:ReTAC.Domain.Tools.ConversionCandidate",
+      "to": "type:ReTAC.Domain.Tools.ConversionTarget",
+      "type": "1:1",
+      "fk": {
+        "field": "Target",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
       "from": "type:ReTAC.Domain.Tools.ExternalTool",
       "to": "type:ReTAC.Domain.Tools.PromptDefinition",
       "type": "1:1",
@@ -4886,6 +4983,17 @@
         "unique": false
       },
       "visibility": "private"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.ImportedCommand",
+      "to": "type:ReTAC.Domain.Tools.PromptArgument",
+      "type": "1:N",
+      "fk": {
+        "field": "Arguments",
+        "container": "IReadOnlyList<ReTAC.Domain.Tools.PromptArgument>",
+        "unique": false
+      },
+      "visibility": "public"
     },
     {
       "from": "type:ReTAC.Domain.Tools.LaunchRequest",
@@ -11218,6 +11326,14 @@
       {
         "file": "src/ReTAC.Domain/Tools/PromptExpander.cs",
         "line": 17
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
+        "line": 39
       }
     ],
     "R-14": [
