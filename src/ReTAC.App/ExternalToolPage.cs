@@ -16,8 +16,11 @@ namespace ReTAC.App;
 /// </summary>
 public sealed class ExternalToolPage : UserControl
 {
-    /// <summary>R-127: 実行ファイルの欄の文字列を、保存・確認に使う形にする。囲みの二重引用符（「パスのコピー」の形）と端の空白を落とす。</summary>
-    internal static string NormalizePath(string text) => InputText.Unquote(text).Trim();
+    /// <summary>
+    /// R-127: 実行ファイルの欄の文字列を、保存・確認に使う形にする。囲みの二重引用符（「パスのコピー」の形）と端の空白を落とす。
+    /// 落とす空白は ASCII だけ（B-01）。<c>Trim()</c> は全角空白も落とし、名前の一部の全角空白を消して別のファイルを指してしまう。
+    /// </summary>
+    internal static string NormalizePath(string text) => InputText.Unquote(text);
 
     private readonly SettingsDraft _draft;
     /// <summary>右の欄に出している項目。-1 なら無し</summary>

@@ -49,6 +49,8 @@ public class ExternalToolTests
     [InlineData(@"C:\tools\a.exe", @"C:\tools\a.exe")]
     [InlineData("  notepad.exe ", "notepad.exe")]
     [InlineData("", "")]
+    [InlineData("\"\u3000tool.exe\"", "\u3000tool.exe")]   // B-01: 全角空白は名前の一部
+    [InlineData("C:\\t\\tool\u3000", "C:\\t\\tool\u3000")]
     public void 外部ツールの実行ファイルの欄は_囲みの引用符を外して保存する(string input, string expected) =>
         Assert.Equal(expected, ExternalToolPage.NormalizePath(input));
 }
