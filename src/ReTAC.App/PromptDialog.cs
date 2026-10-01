@@ -16,8 +16,8 @@ public sealed class PromptDialog : Form
     /// <summary>本文の幅（96 DPI の論理値）。コピー・移動のダイアログ（536）と同じ外幅になる</summary>
     private const int BodyWidth = 512;
     /// <summary>
-    /// 縦のスクロールバーの幅（論理値）。項目が多いと縦のスクロールバーが出る。その分を常に空けておかないと、
-    /// 本文の幅いっぱいの入力欄が収まらず、横のスクロールバーまで出る
+    /// 縦のスクロールバーの幅（論理値）。項目が多いと縦のスクロールバーが出る。その分をフォームの幅にだけ足す。
+    /// 本文の余白に足すと余白も中身の幅に数えられ、縦のスクロールバーが出て表示幅が狭まったときに横のスクロールバーまで出る（R-131）
     /// </summary>
     private const int ScrollReserve = 18;
 
@@ -31,7 +31,7 @@ public sealed class PromptDialog : Form
         FlowDirection = FlowDirection.TopDown,
         WrapContents = false,
         AutoScroll = true,
-        Padding = new Padding(12, 8, 12 + ScrollReserve, 4),
+        Padding = new Padding(12, 8, 12, 4),
     };
     private readonly Panel _buttons = new() { Dock = DockStyle.Bottom, Height = 48 };
     /// <summary>項目の番号 → 値を持つコントロール（TextBox・CheckBox・ComboBox）</summary>

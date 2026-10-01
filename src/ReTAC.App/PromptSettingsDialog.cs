@@ -60,12 +60,13 @@ public sealed class PromptSettingsDialog : Form
 
         _title.Text = source.Title;
         _remember.Checked = source.RememberLast;
-        _itemList.Columns.Add("種類", 110);
-        _itemList.Columns.Add("ラベル", 200);
-        _itemList.Columns.Add("初期値", 150);
-        _argumentList.Columns.Add("種類", 60);
-        _argumentList.Columns.Add("内容", 340);
-        _argumentList.Columns.Add("印", 60);
+        // R-133: 列幅の合計は 440。表の幅 480 から枠（4）と縦のスクロールバー（約 17）を引いた表示幅に収め、横のスクロールバーを出さない
+        _itemList.Columns.Add("種類", Scaled(100));
+        _itemList.Columns.Add("ラベル", Scaled(190));
+        _itemList.Columns.Add("初期値", Scaled(150));
+        _argumentList.Columns.Add("種類", Scaled(60));
+        _argumentList.Columns.Add("内容", Scaled(320));
+        _argumentList.Columns.Add("印", Scaled(60));
 
         var items = new GroupBox { Text = "表示する項目（表示順）", Bounds = new Rectangle(14, 46, 612, 182) };
         items.Controls.AddRange([_itemList, _itemAdd, _itemEdit, _itemDelete, _itemUp, _itemDown]);
@@ -116,6 +117,9 @@ public sealed class PromptSettingsDialog : Form
         AutoScaleDimensions = new SizeF(96F, 96F);   // B-16
         AutoScaleMode = AutoScaleMode.Dpi;
     }
+
+    /// <summary>列幅の DPI 拡大。ListView の列は自動拡大の対象にならない（MacroReferenceDialog と同じ）</summary>
+    private int Scaled(int logical) => logical * DeviceDpi / 96;
 
     /// <summary>OK で閉じたときの定義。</summary>
     public PromptDefinition Definition { get; private set; }
