@@ -20,6 +20,8 @@ public sealed record ExternalTool
     public bool KeepWindowOpen { get; init; }
     /// <summary>展開後のコマンドラインを見せてから起動する（F-03）</summary>
     public bool ConfirmBeforeRun { get; init; }
+    /// <summary>R-130: 入力ダイアログの定義。引数欄の <c>${prompt}</c> の位置に展開する。無ければ null</summary>
+    public PromptDefinition? Prompt { get; init; }
 }
 
 /// <summary>

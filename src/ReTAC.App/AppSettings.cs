@@ -374,7 +374,7 @@ public sealed class AppSettings
         SystemDarkColors = WithoutNulls(SystemDarkColors);
         KeyBindings = WithoutNulls(KeyBindings);
         ExternalTools = [.. (ExternalTools ?? DefaultExternalTools.Create()).OfType<ExternalTool>()
-            .Select(t => t with { Name = t.Name ?? "", Path = t.Path ?? "", Arguments = t.Arguments ?? "" })];
+            .Select(t => t with { Name = t.Name ?? "", Path = t.Path ?? "", Arguments = t.Arguments ?? "", Prompt = t.Prompt?.Normalized() })];
         QuickAccess = [.. (QuickAccess ?? []).OfType<QuickAccessEntry>()
             .Select(e => e with { Title = e.Title ?? "", Path = e.Path ?? "" })];
         Bookmarks ??= new();

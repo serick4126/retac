@@ -3501,6 +3501,14 @@
           "required": false,
           "mutability": "init",
           "doc": "展開後のコマンドラインを見せてから起動する（F-03）"
+        },
+        {
+          "name": "Prompt",
+          "type": "ReTAC.Domain.Tools.PromptDefinition",
+          "nullable": true,
+          "required": false,
+          "mutability": "init",
+          "doc": "R-130: 入力ダイアログの定義。引数欄の ${prompt} の位置に展開する。無ければ null"
         }
       ]
     },
@@ -3722,6 +3730,323 @@
           "required": false,
           "mutability": "init",
           "doc": "${prompt} のとき、何番目の入力か。それ以外は -1"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.PromptArgument": {
+      "id": "type:ReTAC.Domain.Tools.PromptArgument",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+      "doc": "入力ダイアログの引数の 1 行（R-130）。",
+      "fields": [
+        {
+          "name": "Kind",
+          "type": "ReTAC.Domain.Tools.PromptArgumentKind",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Text",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "固定の引数なら送る値そのもの、マクロを含む引数なら引数欄と同じ書き方の文字列"
+        },
+        {
+          "name": "ItemId",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "項目の行が指す 。型では守られない（ が守る）"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.PromptArgumentKind": {
+      "id": "type:ReTAC.Domain.Tools.PromptArgumentKind",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+      "doc": "R-130: 引数の行の種類。",
+      "members": [
+        "Fixed",
+        "Template",
+        "Item"
+      ]
+    },
+    "ReTAC.Domain.Tools.PromptChoice": {
+      "id": "type:ReTAC.Domain.Tools.PromptChoice",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+      "doc": "ドロップダウンリストの選択肢。初期の選択と前回の値は で指す（表示名を直しても選択を保つ。R-132）。",
+      "fields": [
+        {
+          "name": "Id",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Label",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "表示名。項目の中で重ねない"
+        },
+        {
+          "name": "Value",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "送る値。引数欄と同じ規則で区切る。空なら何も送らない"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.PromptChoiceRow": {
+      "id": "type:ReTAC.Domain.Tools.PromptChoiceRow",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+      "doc": "項目の編集の、選択肢の表の 1 行。 は足したばかりの行なら null。",
+      "fields": [
+        {
+          "name": "Id",
+          "type": "int?",
+          "nullable": true,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Label",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Value",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Initial",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.PromptChoiceRows": {
+      "id": "type:ReTAC.Domain.Tools.PromptChoiceRows",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+      "doc": "R-132: 選択肢の表から、選択肢・初期の選択・前回の選択を決める。"
+    },
+    "ReTAC.Domain.Tools.PromptDefinition": {
+      "id": "type:ReTAC.Domain.Tools.PromptDefinition",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+      "doc": "外部ツールの入力ダイアログの定義（R-130）。引数欄の ${prompt} の位置に を送る順に展開する。 項目は表示順、引数は送る順で別々に持つ。項目の間に ${file} を挟む形（WinRAR の x -o+ ${file} 展開先\\）を作るため。 設定 JSON にそのまま載るので required を付けない（S-14）。",
+      "fields": [
+        {
+          "name": "Title",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "空ならツールの名前"
+        },
+        {
+          "name": "RememberLast",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "R-132: 前回 OK した入力を次の初期値にする"
+        },
+        {
+          "name": "Items",
+          "type": "List<ReTAC.Domain.Tools.PromptItem>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "表示順。10 個まで"
+        },
+        {
+          "name": "Arguments",
+          "type": "List<ReTAC.Domain.Tools.PromptArgument>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "送る順"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.PromptDefinitionRules": {
+      "id": "type:ReTAC.Domain.Tools.PromptDefinitionRules",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Tools/PromptDefinitionRules.cs",
+      "doc": "入力ダイアログの定義の検査（R-130 / R-133）。ヘルパーの OK・設定ページの OK・起動の直前（手で直した設定ファイル）で同じものを使う。 例外ではなく誤りの一覧を返す。"
+    },
+    "ReTAC.Domain.Tools.PromptItem": {
+      "id": "type:ReTAC.Domain.Tools.PromptItem",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+      "doc": "入力ダイアログの 1 項目（R-130）。種類ごとに使う欄が違い、使わない欄は既定値のまま。 設定 JSON にそのまま載るので required を付けない（S-14）。",
+      "fields": [
+        {
+          "name": "Id",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Kind",
+          "type": "ReTAC.Domain.Tools.PromptItemKind",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Label",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Initial",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "テキスト・フォルダ・ファイルの初期値。フォルダの空はカレントフォルダの意味"
+        },
+        {
+          "name": "Prefix",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "テキスト・フォルダ・ファイルの「前に付ける」。空白で終わっていなければ値とつながる"
+        },
+        {
+          "name": "Suffix",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "テキスト・フォルダ・ファイルの「後ろに付ける」。空白で始まっていなければ値とつながる"
+        },
+        {
+          "name": "Required",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "テキスト・ファイルの「入力を必須にする」"
+        },
+        {
+          "name": "Value",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "チェックボックスの送る値"
+        },
+        {
+          "name": "InitialChecked",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Choices",
+          "type": "List<ReTAC.Domain.Tools.PromptChoice>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "InitialChoiceId",
+          "type": "int",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "初期の選択。指す先は"
+        },
+        {
+          "name": "LastText",
+          "type": "string",
+          "nullable": true,
+          "required": false,
+          "mutability": "init",
+          "doc": "R-132: 前回 OK したときの入力欄の文字。前回の入力を初期値にするツールだけが持つ"
+        },
+        {
+          "name": "LastChecked",
+          "type": "bool?",
+          "nullable": true,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "LastChoiceId",
+          "type": "int?",
+          "nullable": true,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.PromptItemKind": {
+      "id": "type:ReTAC.Domain.Tools.PromptItemKind",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+      "doc": "R-130: 入力ダイアログの項目の種類。作った後には変えない（前回の値の意味が変わるため）。",
+      "members": [
+        "Text",
+        "Folder",
+        "File",
+        "CheckBox",
+        "DropDown"
+      ]
+    },
+    "ReTAC.Domain.Tools.PromptProblem": {
+      "id": "type:ReTAC.Domain.Tools.PromptProblem",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/PromptDefinitionRules.cs",
+      "fields": [
+        {
+          "name": "Message",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "ItemId",
+          "type": "int?",
+          "nullable": true,
+          "required": false,
+          "mutability": "init",
+          "doc": "誤りのある項目。ヘルパーがその行を選ぶ"
+        },
+        {
+          "name": "ArgumentIndex",
+          "type": "int?",
+          "nullable": true,
+          "required": false,
+          "mutability": "init",
+          "doc": "誤りのある引数の行（0 から）"
         }
       ]
     },
@@ -4480,6 +4805,17 @@
       "visibility": "public"
     },
     {
+      "from": "type:ReTAC.Domain.Tools.ExternalTool",
+      "to": "type:ReTAC.Domain.Tools.PromptDefinition",
+      "type": "1:1",
+      "fk": {
+        "field": "Prompt",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
       "from": "type:ReTAC.Domain.Tools.ExternalToolQueue",
       "to": "type:ReTAC.Domain.Tools.QueueEntry",
       "type": "1:N",
@@ -4533,6 +4869,83 @@
         "unique": null
       },
       "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.PromptArgument",
+      "to": "type:ReTAC.Domain.Tools.PromptArgumentKind",
+      "type": "1:1",
+      "fk": {
+        "field": "Kind",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.PromptArgument",
+      "to": "type:ReTAC.Domain.Tools.PromptItem",
+      "type": "N:1",
+      "fk": {
+        "field": "ItemId",
+        "byValue": true
+      },
+      "onDelete": "UNENFORCED",
+      "candidateId": "fk:ReTAC.Domain.Tools.PromptArgument#ItemId"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.PromptDefinition",
+      "to": "type:ReTAC.Domain.Tools.PromptItem",
+      "type": "1:N",
+      "fk": {
+        "field": "Items",
+        "container": "List<ReTAC.Domain.Tools.PromptItem>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.PromptDefinition",
+      "to": "type:ReTAC.Domain.Tools.PromptArgument",
+      "type": "1:N",
+      "fk": {
+        "field": "Arguments",
+        "container": "List<ReTAC.Domain.Tools.PromptArgument>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.PromptItem",
+      "to": "type:ReTAC.Domain.Tools.PromptItemKind",
+      "type": "1:1",
+      "fk": {
+        "field": "Kind",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.PromptItem",
+      "to": "type:ReTAC.Domain.Tools.PromptChoice",
+      "type": "1:N",
+      "fk": {
+        "field": "Choices",
+        "container": "List<ReTAC.Domain.Tools.PromptChoice>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.PromptItem",
+      "to": "type:ReTAC.Domain.Tools.PromptChoice",
+      "type": "N:1",
+      "fk": {
+        "field": "InitialChoiceId",
+        "byValue": true
+      },
+      "onDelete": "UNENFORCED",
+      "candidateId": "fk:ReTAC.Domain.Tools.PromptItem#InitialChoiceId"
     },
     {
       "from": "type:ReTAC.Domain.Tools.QueueEntry",
@@ -6334,7 +6747,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
-        "line": 28
+        "line": 30
       }
     ],
     "B-06": [
@@ -6746,7 +7159,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
-        "line": 26
+        "line": 28
       }
     ],
     "F-02": [
@@ -6776,7 +7189,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
-        "line": 35
+        "line": 37
       }
     ],
     "F-03": [
@@ -10481,12 +10894,76 @@
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentSplitter.cs",
         "line": 55
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
+        "line": 23
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 3
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 13
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 35
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 63
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 78
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 94
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinitionRules.cs",
+        "line": 10
+      }
+    ],
+    "R-132": [
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 24
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 57
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 86
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 131
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 155
+      }
+    ],
+    "R-133": [
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinitionRules.cs",
+        "line": 10
       }
     ],
     "R-134": [
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentSplitter.cs",
         "line": 9
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 16
       }
     ],
     "R-14": [
@@ -11433,6 +11910,10 @@
       {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 878
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 110
       }
     ],
     "R-55-3": [
@@ -13649,6 +14130,14 @@
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
         "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 36
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 80
       }
     ],
     "S-19": [

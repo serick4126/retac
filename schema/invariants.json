@@ -626,6 +626,24 @@
       "rule": "サムネイルと OS の印の取得は、クラウドのファイルのダウンロード（取り込み）を誘発しない。クラウドの項目のサムネイルは OS のキャッシュにあるものだけで、作る要求を出さない。設定で変えられない。",
       "enforcedBy": "shell:ShellImageWorker.QueryCached（Cloud なら 2 段目へ回さない）/ domain:CloudFiles.IsPlaceholder（RECALL_ON_DATA_ACCESS・RECALL_ON_OPEN・OFFLINE）",
       "testedBy": "tests/ReTAC.Domain.Tests/ShellThumbnailsTests.cs, tests/ReTAC.Domain.Tests/CloudFilesTests.cs, tests/ReTAC.Domain.Tests/CloudHydrationTests.cs（RETAC_CLOUD_DIR があるときだけ）"
+    },
+    {
+      "id": "INV-PROMPT-REFERENCES",
+      "status": "enforced",
+      "specIds": ["R-130", "R-132", "R-133"],
+      "applies": [
+        "type:ReTAC.Domain.Tools.PromptDefinition",
+        "type:ReTAC.Domain.Tools.PromptItem",
+        "fk:ReTAC.Domain.Tools.PromptArgument#ItemId",
+        "fk:ReTAC.Domain.Tools.PromptItem#InitialChoiceId",
+        "unique:ReTAC.Domain.Tools.PromptDefinition#Items",
+        "unique:ReTAC.Domain.Tools.PromptDefinition#Arguments",
+        "unique:ReTAC.Domain.Tools.PromptItem#Choices"
+      ],
+      "rule": "入力ダイアログの引数の行（Kind が Item）の ItemId は、同じ定義の Items にある Id を指す。項目の Id・ドロップダウンリストの選択肢の Id は定義・項目の中で一意。InitialChoiceId は同じ項目の選択肢を指す。LastChoiceId は無い選択肢を指してよい（初期の選択に戻す）。引数の行は同じ項目を何度指してもよい。",
+      "enforcedBy": "domain:PromptDefinitionRules.Validate（ヘルパーの OK・ExternalToolPage.Validate・MainForm.RunToolAsync の起動の直前）/ PromptAnswerRules.Initial（無い LastChoiceId は初期の選択）",
+      "testedBy": "tests/ReTAC.Domain.Tests/PromptDefinitionRulesTests.cs",
+      "note": "読み込み時には直さない（手で直した誤りは、起動の直前に知らせて起動しない）。testedBy に PromptAnswerRulesTests.cs を足すのは、そのファイルを作る時。"
     }
   ]
 }
