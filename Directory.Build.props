@@ -6,7 +6,7 @@
          エクスプローラーのプロパティ→詳細に出る。
          R-109: ReTAC とアップデータは同じ版番号を名乗る。アップデータは両方の exe の版で
          「最新か」を判定するので、ここ 1 か所で揃える -->
-    <Version>2.8.0</Version>
+    <Version>3.0.0</Version>
   </PropertyGroup>
 
 </Project>
