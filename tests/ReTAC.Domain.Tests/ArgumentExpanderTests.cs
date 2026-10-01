@@ -9,14 +9,14 @@ public class ArgumentExpanderTests
     private const string Cwd = @"C:\work";
 
     private static IReadOnlyList<string>? Expand(string template, Entry[] targets, Entry? cursor = null,
-                                                string[]? answers = null, Func<string, string>? form = null) =>
+                                                PromptInput? prompt = null, Func<string, string>? form = null) =>
         ArgumentExpander.Expand(ArgumentTemplate.Parse(template),
-            new MacroContext(targets, cursor ?? targets.FirstOrDefault(), Cwd, answers ?? [], form));
+            new MacroContext(targets, cursor ?? targets.FirstOrDefault(), Cwd, prompt, form));
 
     private static string[] Args(string template, Entry[] targets, Entry? cursor = null,
-                                 string[]? answers = null, Func<string, string>? form = null)
+                                 PromptInput? prompt = null, Func<string, string>? form = null)
     {
-        var result = Expand(template, targets, cursor, answers, form);
+        var result = Expand(template, targets, cursor, prompt, form);
         Assert.NotNull(result);
         return [.. result];
     }
@@ -98,20 +98,6 @@ public class ArgumentExpanderTests
     public void cwdはカレントフォルダ()
     {
         Assert.Equal(["-path", Cwd], Args("-path ${cwd}", [A]));
-    }
-
-    [Fact]
-    public void 入力した文字列は空白を含んでも1つの引数()
-    {
-        Assert.Equal(["commit", "-m", "直した 箇所"], Args("commit -m ${prompt:メッセージ}", [A], answers: ["直した 箇所"]));
-    }
-
-    [Fact]
-    public void 入力が空のときも書き方で3通りに分かれる()
-    {
-        Assert.Equal(["-search", ""], Args("-search \"${prompt}\"", [A], answers: [""]));
-        Assert.Equal(["-search"], Args("-search ${prompt}", [A], answers: [""]));
-        Assert.Null(Expand("switch ${prompt}!", [A], answers: [""]));
     }
 
     [Fact]

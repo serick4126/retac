@@ -13,7 +13,7 @@ public class LaunchPlannerTests
         new() { Id = 7, Name = "テスト", Path = "tool.exe", Arguments = arguments, LaunchPerItem = perItem };
 
     private static IReadOnlyList<LaunchRequest> Plan(ExternalTool tool, Entry[] targets) =>
-        LaunchPlanner.Plan(tool, ArgumentTemplate.Parse(tool.Arguments), targets, targets.FirstOrDefault(), Cwd, []);
+        LaunchPlanner.Plan(tool, ArgumentTemplate.Parse(tool.Arguments), targets, targets.FirstOrDefault(), Cwd, null);
 
     [Fact]
     public void 初期登録はOS標準の3件()
@@ -93,7 +93,7 @@ public class LaunchPlannerTests
     {
         var targets = new[] { TestEntries.File("a.txt"), TestEntries.File("b.txt") };
         var template = ArgumentTemplate.Parse("${cursorFile}");
-        var requests = LaunchPlanner.Plan(Tool("${cursorFile}"), template, targets, cursor: TestEntries.File("c.txt"), Cwd, []);
+        var requests = LaunchPlanner.Plan(Tool("${cursorFile}"), template, targets, cursor: TestEntries.File("c.txt"), Cwd, null);
 
         var request = Assert.Single(requests);
         Assert.Equal([@"C:\work\c.txt"], request.Arguments);

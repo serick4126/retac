@@ -98,7 +98,6 @@ public class ArgumentTemplateTests
     [InlineData("${file:x}")]        // prompt 以外に「:」は付かない
     [InlineData("${file")]           // 閉じていない
     [InlineData("\"abc")]            // 引用符が閉じていない
-    [InlineData("${prompt:a}{b")]    // 既定値が閉じていない
     [InlineData("${path}${file}")]   // 1 つの引数に ${path} と ${file} 系を混ぜない
     public void 誤りを見つける(string text)
     {
@@ -114,33 +113,31 @@ public class ArgumentTemplateTests
     }
 
     [Fact]
-    public void 入力ダイアログのタイトルと既定値()
+    public void プロンプトはそれだけで一つの引数として書ける()
     {
-        var template = ArgumentTemplate.Parse("${prompt:検索}{*.txt}!");
-        var macro = OnlyMacro(template);
-        Assert.Equal(MacroName.Prompt, macro.Name);
-        Assert.True(macro.Required);
-        Assert.Equal(0, macro.PromptIndex);
-        Assert.Equal(new PromptRequest("検索", "*.txt"), Assert.Single(template.Prompts));
+        var template = ArgumentTemplate.Parse("x ${prompt} ${file}");
+        Assert.True(template.IsValid);
+        Assert.True(template.HasPrompt);
+        Assert.False(ArgumentTemplate.Parse("${file}").HasPrompt);
     }
 
     [Theory]
-    [InlineData("${prompt}", "", "")]
-    [InlineData("${prompt:}", "", "")]
-    [InlineData("${prompt:}{b}", "", "b")]
-    [InlineData("${prompt:a}{\"x y\"}", "a", "\"x y\"")]   // 括弧の中の引用符は文字どおり
-    public void 入力ダイアログは省略できる(string text, string title, string defaultValue)
+    [InlineData("${prompt:検索}", "「${prompt:…}」の書き方は使えません。入力ダイアログ編集で設定してください。")]
+    [InlineData("${prompt}{*.txt}", "${prompt} の後ろに既定値は書けません。入力ダイアログ編集で設定してください。")]
+    [InlineData("${prompt}!", "${prompt} に「!」は付けられません。必須は入力ダイアログ編集で設定してください。")]
+    [InlineData("${prompt} ${prompt}", "${prompt} は 1 つだけ書けます。")]
+    [InlineData("-m${prompt}", "${prompt} は、前後に文字をつなげず、引用符で囲まずに、それだけで 1 つの引数として書いてください。")]
+    [InlineData("${prompt}x", "${prompt} は、前後に文字をつなげず、引用符で囲まずに、それだけで 1 つの引数として書いてください。")]
+    [InlineData("\"${prompt}\"", "${prompt} は、前後に文字をつなげず、引用符で囲まずに、それだけで 1 つの引数として書いてください。")]
+    public void プロンプトの書き方の誤り(string text, string message)
     {
         var template = ArgumentTemplate.Parse(text);
-        Assert.True(template.IsValid);
-        Assert.Equal(new PromptRequest(title, defaultValue), Assert.Single(template.Prompts));
+        Assert.Contains(message, template.Errors.Select(e => e.Message));
     }
 
     [Fact]
-    public void 入力ダイアログは左から順に番号が付く()
+    public void ほかのマクロのコロンは今までどおり誤り()
     {
-        var template = ArgumentTemplate.Parse("${prompt:a} ${prompt:b}");
-        Assert.Equal(["a", "b"], template.Prompts.Select(p => p.Title));
-        Assert.Equal(1, Assert.IsType<MacroPart>(Assert.Single(template.Arguments[1].Parts)).PromptIndex);
+        Assert.Contains("「${file}」には「:」を付けられません。", ArgumentTemplate.Parse("${file:x}").Errors.Select(e => e.Message));
     }
 }

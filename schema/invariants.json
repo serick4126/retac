@@ -319,7 +319,6 @@
         "unique:ReTAC.Domain.Selection.ListState#_entries",
         "unique:ReTAC.Domain.Tools.MacroContext#Targets",
         "unique:ReTAC.Domain.Tools.ArgumentTemplate#Arguments",
-        "unique:ReTAC.Domain.Tools.ArgumentTemplate#Prompts",
         "unique:ReTAC.Domain.Tools.ArgumentTemplate#Errors",
         "unique:ReTAC.Domain.Tools.PromptDefinition#Arguments",
         "unique:ReTAC.Domain.FileOps.CopyPlan#Items",
@@ -650,8 +649,8 @@
       "status": "accepted",
       "specIds": ["R-131"],
       "applies": ["fk:ReTAC.Domain.Tools.PromptValue#ChoiceId"],
-      "rule": "PromptValue.ChoiceId（入力ダイアログで選んだ選択肢の番号）が、その項目の選択肢にあるかは PromptAnswerRules.Check で確かめない。",
-      "reason": "設定に保存しない、ダイアログから展開へ渡すだけの一時の値で、ダイアログは項目の選択肢の一覧からしか選ばせない。保存される側の参照（InitialChoiceId・LastChoiceId）は INV-PROMPT-REFERENCES が守る。"
+      "rule": "PromptValue.ChoiceId（入力ダイアログで選んだ選択肢の番号）が、その項目の選択肢にあるかは PromptAnswerRules.Check で確かめない。展開（PromptExpander.ItemArguments）は、選択肢に無い番号を「何も送らない」として扱い、例外にしない。",
+      "reason": "ダイアログは項目の選択肢の一覧からしか選ばせない。PromptAnswerRules.Remember は ChoiceId を LastChoiceId に書き込む（設定に保存される）が、その選択肢が後で消えても、Initial は初期の選択肢に戻すので問題にならない。保存される側の参照（InitialChoiceId・LastChoiceId）は INV-PROMPT-REFERENCES が守る。"
     }
   ]
 }

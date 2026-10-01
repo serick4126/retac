@@ -36,7 +36,7 @@ public class ArgumentSplitterTests
     [InlineData("a　b c")]
     public void ドルを含まない文字列は引数欄と同じ結果になる(string text)
     {
-        var context = new MacroContext([], null, @"C:\work", []);   // 4 つ目は Task 5 で消す
+        var context = new MacroContext([], null, @"C:\work");
         var expected = ArgumentExpander.Expand(ArgumentTemplate.Parse(text), context);
         Assert.Equal(expected, ArgumentSplitter.Split(text));
     }

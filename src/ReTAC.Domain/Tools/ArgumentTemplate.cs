@@ -20,14 +20,10 @@ public abstract record TemplatePart;
 public sealed record LiteralPart(string Text) : TemplatePart;
 
 /// <param name="Required">直後の <c>!</c>。空になったらツールを起動しない</param>
-/// <param name="PromptIndex"><c>${prompt}</c> のとき、何番目の入力か。それ以外は -1</param>
-public sealed record MacroPart(MacroName Name, bool Required, int PromptIndex = -1) : TemplatePart;
+public sealed record MacroPart(MacroName Name, bool Required) : TemplatePart;
 
 /// <param name="Quoted">引用符を含んでいた。マクロが空になっても <c>""</c> として残す</param>
 public sealed record TemplateArgument(IReadOnlyList<TemplatePart> Parts, bool Quoted);
-
-/// <param name="Title">空ならツールの名前をタイトルにする</param>
-public sealed record PromptRequest(string Title, string Default);
 
 public sealed record TemplateError(int Position, string Message);
 
@@ -50,17 +46,18 @@ public sealed class ArgumentTemplate
         ["prompt"] = MacroName.Prompt,
     };
 
-    private ArgumentTemplate(List<TemplateArgument> arguments, List<PromptRequest> prompts, List<TemplateError> errors)
+    private ArgumentTemplate(List<TemplateArgument> arguments, List<TemplateError> errors)
     {
         Arguments = arguments;
-        Prompts = prompts;
         Errors = errors;
     }
 
     public IReadOnlyList<TemplateArgument> Arguments { get; }
-    public IReadOnlyList<PromptRequest> Prompts { get; }
     public IReadOnlyList<TemplateError> Errors { get; }
     public bool IsValid => Errors.Count == 0;
+
+    /// <summary>R-130: <c>${prompt}</c> がある。入力ダイアログを出し、その位置に定義の引数の並びを展開する</summary>
+    public bool HasPrompt => Arguments.Any(a => a.Parts.Any(p => p is MacroPart { Name: MacroName.Prompt }));
 
     /// <summary><c>${file}</c> と同じ対象（実効対象のファイル）から値を取るマクロ。</summary>
     public static bool IsFileFamily(MacroName name) =>
@@ -71,7 +68,7 @@ public sealed class ArgumentTemplate
     private sealed class Parser(string text)
     {
         private readonly List<TemplateArgument> _arguments = [];
-        private readonly List<PromptRequest> _prompts = [];
+        private int _promptCount;
         private readonly List<TemplateError> _errors = [];
         private readonly List<TemplatePart> _parts = [];
         private readonly StringBuilder _literal = new();
@@ -111,7 +108,7 @@ public sealed class ArgumentTemplate
 
             if (inQuote) _errors.Add(new TemplateError(text.Length, "引用符（\"）が閉じていません。"));
             Flush();
-            return new ArgumentTemplate(_arguments, _prompts, _errors);
+            return new ArgumentTemplate(_arguments, _errors);
         }
 
         private char Next(int i) => i + 1 < text.Length ? text[i + 1] : '\0';
@@ -143,37 +140,44 @@ public sealed class ArgumentTemplate
                 _errors.Add(new TemplateError(start, $"「${{{body}}}」というマクロはありません。"));
                 return next;
             }
-            if (macro != MacroName.Prompt && colon >= 0)
+            if (macro == MacroName.Prompt) return ReadPrompt(start, colon, next);
+            if (colon >= 0)
             {
                 _errors.Add(new TemplateError(start, $"「${{{name}}}」には「:」を付けられません。"));
                 return next;
-            }
-
-            var promptIndex = -1;
-            if (macro == MacroName.Prompt)
-            {
-                // 既定値は区切り記号ではなく括弧で分ける。Everything の検索文字列で「|」を使うため
-                var defaultValue = "";
-                if (next < text.Length && text[next] == '{')
-                {
-                    var end = text.IndexOf('}', next + 1);
-                    if (end < 0)
-                    {
-                        _errors.Add(new TemplateError(next, "既定値の「{」が「}」で閉じていません。"));
-                        return text.Length;
-                    }
-                    defaultValue = text[(next + 1)..end];
-                    next = end + 1;
-                }
-                promptIndex = _prompts.Count;
-                _prompts.Add(new PromptRequest(colon < 0 ? "" : body[(colon + 1)..], defaultValue));
             }
 
             var required = next < text.Length && text[next] == '!';
             if (required) next++;
 
             FlushLiteral();
-            _parts.Add(new MacroPart(macro, required, promptIndex));
+            _parts.Add(new MacroPart(macro, required));
+            return next;
+        }
+
+        /// <summary>
+        /// R-130: <c>${prompt}</c> は引数欄に 1 つだけ、それだけで 1 つの引数として書く。項目・必須・既定値は入力ダイアログの定義で持つ。
+        /// 今の <c>${prompt:タイトル}{既定値}</c> は読み替えずに誤りにする（設定は移行しない）。
+        /// </summary>
+        private int ReadPrompt(int start, int colon, int next)
+        {
+            FlushLiteral();
+            _parts.Add(new MacroPart(MacroName.Prompt, Required: false));
+            if (colon >= 0)
+                _errors.Add(new TemplateError(start, "「${prompt:…}」の書き方は使えません。入力ダイアログ編集で設定してください。"));
+            if (++_promptCount == 2)
+                _errors.Add(new TemplateError(start, "${prompt} は 1 つだけ書けます。"));
+            if (next < text.Length && text[next] == '{')
+            {
+                _errors.Add(new TemplateError(next, "${prompt} の後ろに既定値は書けません。入力ダイアログ編集で設定してください。"));
+                var end = text.IndexOf('}', next + 1);
+                return end < 0 ? text.Length : end + 1;
+            }
+            if (next < text.Length && text[next] == '!')
+            {
+                _errors.Add(new TemplateError(next, "${prompt} に「!」は付けられません。必須は入力ダイアログ編集で設定してください。"));
+                return next + 1;
+            }
             return next;
         }
 
@@ -194,6 +198,11 @@ public sealed class ArgumentTemplate
             if (names.Contains(MacroName.Path) && names.Any(IsFileFamily))
                 _errors.Add(new TemplateError(_argumentStart,
                     "1 つの引数に ${path} と ${file} 系（${file} ${fileBasenameNoExtension} ${fileExtname}）を混ぜられません。"));
+
+            // R-130: ${prompt} は定義の引数の並びに置き換わるので、ほかの文字とつなげられない
+            if (_parts.Any(p => p is MacroPart { Name: MacroName.Prompt }) && (_parts.Count != 1 || _quoted))
+                _errors.Add(new TemplateError(_argumentStart,
+                    "${prompt} は、前後に文字をつなげず、引用符で囲まずに、それだけで 1 つの引数として書いてください。"));
 
             _arguments.Add(new TemplateArgument([.. _parts], _quoted));
             _parts.Clear();

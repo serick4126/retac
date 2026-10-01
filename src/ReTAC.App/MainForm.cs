@@ -887,18 +887,33 @@ public sealed class MainForm : Form, IBookmarkHost
         var cursor = _list.State.Cursor;
         var folder = _currentFolder;
 
-        var answers = new List<string>();
-        foreach (var prompt in template.Prompts)
+        PromptInput? prompt = null;
+        if (template.HasPrompt)
         {
-            // このウィンドウだけを止める。他の ReTAC ウィンドウは入力の間も操作できる（Step 15b）
-            using var dialog = new TextInputDialog(tool.Name, prompt.Title.Length > 0 ? prompt.Title : tool.Name, prompt.Default);
-            if (await OwnerModal.ShowAsync(this, dialog) != DialogResult.OK) return;   // 1 つでもキャンセルしたら起動しない
-            answers.Add(dialog.Value);
+            // R-130: 定義の無い ${prompt} は、ツールの名前のテキスト 1 つ
+            var definition = tool.Prompt ?? PromptDefinition.Simple(tool.Name);
+            if (PromptDefinitionRules.Validate(definition) is { Count: > 0 } problems)
+            {
+                // 設定画面は誤りを保存させないが、設定ファイルは手で直せる（R-55）
+                MessageBox.Show(this,
+                    $"「{tool.Name}」の入力ダイアログの設定に誤りがあります。{Environment.NewLine}{string.Join(Environment.NewLine, problems.Select(p => p.Message))}",
+                    "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // R-131: 全項目を 1 つのダイアログで 1 回だけ聞く。このウィンドウだけを止める（他の ReTAC ウィンドウは入力の間も操作できる）
+            using var dialog = new PromptDialog(definition, tool.Name, _history, _quickAccess, folder, PromptAnswerRules.Initial(definition));
+            if (await OwnerModal.ShowAsync(this, dialog) != DialogResult.OK) return;   // キャンセルしたら起動しない
+            prompt = new PromptInput(definition, dialog.Resolved);
+            foreach (var path in dialog.HistoryFolders) _history.Remember(path);    // R-131 / N-02
+            // R-132: 開いている間に定義が変わっていなければ、前回の値を残す（ファイルへは終了するときに書く）
+            if (PromptAnswerRules.RememberIn(_settings.ExternalTools, tool.Id, definition, dialog.Values) is { } remembered)
+                _settings.ExternalTools = remembered;
         }
 
         // 値を求めるのは「待つことがある処理」として扱う（将来 git の値を取る）。UI を止めない
         var requests = await Task.Run(() =>
-            LaunchPlanner.Plan(tool, template, targets, cursor, folder, answers, ToolLauncher.TargetPath));
+            LaunchPlanner.Plan(tool, template, targets, cursor, folder, prompt, ToolLauncher.TargetPath));
         if (requests.Count == 0 || IsDisposed) return;
         if (!await ConfirmLaunchAsync(tool, requests)) return;
 

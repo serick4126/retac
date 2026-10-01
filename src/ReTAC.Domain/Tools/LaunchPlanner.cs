@@ -12,7 +12,7 @@ public sealed record LaunchRequest(ExternalTool Tool, IReadOnlyList<string> Argu
     public string DisplayCommandLine() =>
         string.Join(" ", new[] { Tool.Path }.Concat(Arguments).Select(Quote));
 
-    private static string Quote(string text) =>
+    internal static string Quote(string text) =>
         text.Length == 0 || text.Contains(' ') || text.Contains('\t') ? $"\"{text}\"" : text;
 }
 
@@ -38,7 +38,7 @@ public static class LaunchPlanner
     /// <returns>起動の並び。<c>!</c> で起動しないと決まったものは含めない</returns>
     public static IReadOnlyList<LaunchRequest> Plan(
         ExternalTool tool, ArgumentTemplate template, IReadOnlyList<Entry> targets, Entry? cursor,
-        string currentFolder, IReadOnlyList<string> answers, Func<string, string>? pathForm = null)
+        string currentFolder, PromptInput? prompt, Func<string, string>? pathForm = null)
     {
         var requests = new List<LaunchRequest>();
 
@@ -54,7 +54,7 @@ public static class LaunchPlanner
 
         void Add(IReadOnlyList<Entry> part, string label)
         {
-            var arguments = ArgumentExpander.Expand(template, new MacroContext(part, cursor, currentFolder, answers, pathForm));
+            var arguments = ArgumentExpander.Expand(template, new MacroContext(part, cursor, currentFolder, prompt, pathForm));
             if (arguments is not null) requests.Add(new LaunchRequest(tool, arguments, currentFolder, label));
         }
     }

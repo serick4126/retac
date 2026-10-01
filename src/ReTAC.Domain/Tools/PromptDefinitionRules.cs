@@ -45,7 +45,7 @@ public static class PromptDefinitionRules
                     break;
                 case PromptArgumentKind.Template:
                     var template = ArgumentTemplate.Parse(argument.Text);
-                    if (ContainsPrompt(template))
+                    if (template.HasPrompt)
                         problems.Add(new($"引数の {i + 1} 行目に ${{prompt}} は書けません。", ArgumentIndex: i));
                     foreach (var error in template.Errors)
                         problems.Add(new($"引数の {i + 1} 行目: {error.Message}", ArgumentIndex: i));
@@ -91,8 +91,4 @@ public static class PromptDefinitionRules
                 break;
         }
     }
-
-    // Task 5 で ArgumentTemplate.HasPrompt に置き換える
-    private static bool ContainsPrompt(ArgumentTemplate template) =>
-        template.Arguments.Any(a => a.Parts.OfType<MacroPart>().Any(p => p.Name == MacroName.Prompt));
 }

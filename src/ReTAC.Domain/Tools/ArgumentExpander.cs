@@ -4,13 +4,13 @@ using ReTAC.Domain.Entries;
 namespace ReTAC.Domain.Tools;
 
 /// <param name="Targets">渡す対象（表示順）。カーソルが <c>..</c> のときは親フォルダ項目を含む</param>
-/// <param name="PromptAnswers">入力ダイアログで入力された値。<see cref="ArgumentTemplate.Prompts"/> と同じ順</param>
+/// <param name="Prompt">入力ダイアログの定義と値（R-130）。<c>${prompt}</c> が無ければ null</param>
 /// <param name="PathForm">パスの値に掛ける変換。長いパスを 8.3 形式にするために App が渡す</param>
 public sealed record MacroContext(
     IReadOnlyList<Entry> Targets,
     Entry? Cursor,
     string CurrentFolder,
-    IReadOnlyList<string> PromptAnswers,
+    PromptInput? Prompt = null,
     Func<string, string>? PathForm = null);
 
 /// <summary>引数の展開（F-02 / R-71 / R-72）。</summary>
@@ -24,6 +24,15 @@ public static class ArgumentExpander
 
         foreach (var argument in template.Arguments)
         {
+            if (argument.Parts is [MacroPart { Name: MacroName.Prompt }])
+            {
+                // R-130: 定義の引数の並びを、この位置に送る順に展開する
+                if (context.Prompt is null) continue;
+                if (PromptExpander.Expand(context.Prompt, context) is not { } expanded) return null;
+                result.AddRange(expanded);
+                continue;
+            }
+
             var macros = argument.Parts.OfType<MacroPart>().ToList();
             // 対象の数だけ引数を作るマクロ。解析で ${path} と ${file} 系の混在は弾いてある
             IReadOnlyList<Entry>? list =
@@ -87,9 +96,6 @@ public static class ArgumentExpander
                 { } cursor => Form(cursor.FullPath),
             },
             MacroName.Cwd => Form(context.CurrentFolder),
-            MacroName.Prompt => macro.PromptIndex >= 0 && macro.PromptIndex < context.PromptAnswers.Count
-                ? context.PromptAnswers[macro.PromptIndex]
-                : "",
             _ => "",
         };
     }
