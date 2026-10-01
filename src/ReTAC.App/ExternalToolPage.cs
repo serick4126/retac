@@ -374,7 +374,7 @@ public sealed class ExternalToolPage : UserControl
     }
 
     /// <summary>R-130・R-133: ヘルパーの結果が空（項目 0・引数 0）なら定義なしとして保存する（タイトルなども捨てる）。</summary>
-    internal static PromptDefinition? DefinitionToSave(PromptDefinition result) => result.IsEmpty ? null : result;
+    internal static PromptDefinition? DefinitionToSave(PromptDefinition result) => result.IsEmpty() ? null : result;
 
     /// <summary>
     /// R-133: ヘルパーに渡す定義。引数欄に ${prompt} が無ければ渡さない（空で開く）。

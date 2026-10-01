@@ -34,6 +34,7 @@ public class PromptSettingsJsonTests
         loaded.Normalize();
 
         Assert.Equal(json, JsonSerializer.Serialize(loaded, AppSettings.Json));
+        Assert.DoesNotContain("IsEmpty", json);   // 計算だけのメンバーを設定ファイルに書かない（R-55）
         Assert.Contains("\"Kind\": \"CheckBox\"", json);   // 列挙は名前で書く（人が読んで直せる。R-55）
     }
 

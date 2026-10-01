@@ -61,10 +61,10 @@ public class ExternalToolPagePromptTests
     public void 空の定義は定義なしと同じに扱う()
     {
         var item = new PromptItem { Id = 1, Kind = PromptItemKind.Text, Label = "a" };
-        Assert.True(new PromptDefinition().IsEmpty);
-        Assert.False(new PromptDefinition { Items = [item] }.IsEmpty);
-        Assert.False(new PromptDefinition { Arguments = [PromptArgument.Fixed("x")] }.IsEmpty);
-        Assert.False(PromptDefinition.Simple("t").IsEmpty);
+        Assert.True(new PromptDefinition().IsEmpty());
+        Assert.False(new PromptDefinition { Items = [item] }.IsEmpty());
+        Assert.False(new PromptDefinition { Arguments = [PromptArgument.Fixed("x")] }.IsEmpty());
+        Assert.False(PromptDefinition.Simple("t").IsEmpty());
     }
 
     [Fact]

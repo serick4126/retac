@@ -101,8 +101,8 @@ public sealed record PromptDefinition
         Arguments = [PromptArgument.Item(1)],
     };
 
-    /// <summary>R-130・R-133: 項目も引数の行も無い定義は、定義なし（<see cref="Simple"/>）と同じに扱う。入口（ヘルパーか引数欄の手書きか）で動きを変えないため</summary>
-    public bool IsEmpty => Items.Count == 0 && Arguments.Count == 0;
+    /// <summary>R-130・R-133: 項目も引数の行も無い定義は、定義なし（<see cref="Simple"/>）と同じに扱う。設定 JSON に計算だけの欄を書かないよう、プロパティにしない。入口（ヘルパーか引数欄の手書きか）で動きを変えないため</summary>
+    public bool IsEmpty() => Items.Count == 0 && Arguments.Count == 0;
 
     public int NextItemId() => Items.Count == 0 ? 1 : Items.Max(i => i.Id) + 1;
 
