@@ -321,6 +321,7 @@
         "unique:ReTAC.Domain.Tools.ArgumentTemplate#Arguments",
         "unique:ReTAC.Domain.Tools.ArgumentTemplate#Prompts",
         "unique:ReTAC.Domain.Tools.ArgumentTemplate#Errors",
+        "unique:ReTAC.Domain.Tools.PromptDefinition#Arguments",
         "unique:ReTAC.Domain.FileOps.CopyPlan#Items",
         "unique:ReTAC.Domain.FileOps.CopyPlan#Folders",
         "unique:ReTAC.Domain.Tools.TemplateArgument#Parts",
@@ -335,7 +336,7 @@
         "unique:ReTAC.Domain.Listing.DetailsLayoutInput#Columns"
       ],
       "rule": "並び順そのものに意味がある列であり、重複禁止を掛けない。",
-      "reason": "ファイル一覧は列挙結果の順序が表示順であり、同名は OS 側で作れない。引数・プロンプト・エラーは書かれた順に対応し、同じ内容が二度現れるのは正常。コピー計画とツールキューは同じ対象を複数回積めることが仕様。一意性を掛けると意味が壊れる。元に戻す履歴と記録の項目は起きた順に並べる。項目のパスは OS が返した結果なので重なることは無く、型で一意にしても守るものが無い。見出しのセルはレイアウトが列の並びから導く表示の順で、列の種類はもともと設定の並び（重複を許さない）から来る。レイアウトへの列の入力も同じ並びを表示の順に渡すだけである。"
+      "reason": "ファイル一覧は列挙結果の順序が表示順であり、同名は OS 側で作れない。引数・プロンプト・エラーは書かれた順に対応し、同じ内容が二度現れるのは正常（入力ダイアログの引数の行も、同じ項目・同じ固定の引数を複数の位置に送ってよい。R-130）。コピー計画とツールキューは同じ対象を複数回積めることが仕様。一意性を掛けると意味が壊れる。元に戻す履歴と記録の項目は起きた順に並べる。項目のパスは OS が返した結果なので重なることは無く、型で一意にしても守るものが無い。見出しのセルはレイアウトが列の並びから導く表示の順で、列の種類はもともと設定の並び（重複を許さない）から来る。レイアウトへの列の入力も同じ並びを表示の順に渡すだけである。"
     },
     {
       "id": "INV-SINGLE-CLICK-MODE",
@@ -637,7 +638,6 @@
         "fk:ReTAC.Domain.Tools.PromptArgument#ItemId",
         "fk:ReTAC.Domain.Tools.PromptItem#InitialChoiceId",
         "unique:ReTAC.Domain.Tools.PromptDefinition#Items",
-        "unique:ReTAC.Domain.Tools.PromptDefinition#Arguments",
         "unique:ReTAC.Domain.Tools.PromptItem#Choices"
       ],
       "rule": "入力ダイアログの引数の行（Kind が Item）の ItemId は、同じ定義の Items にある Id を指す。項目の Id・ドロップダウンリストの選択肢の Id は定義・項目の中で一意。InitialChoiceId は同じ項目の選択肢を指す。LastChoiceId は無い選択肢を指してよい（初期の選択に戻す）。引数の行は同じ項目を何度指してもよい。",
