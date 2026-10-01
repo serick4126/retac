@@ -111,13 +111,20 @@ public sealed class PromptItemDialog : Form
                 Controls.Add(new Label { Text = "選択肢(&C):", AutoSize = true, Location = new Point(14, y) });
                 _choices.Location = new Point(14, y + 20);
                 Controls.Add(_choices);
-                var delete = new Button { Text = "削除(&D)", Bounds = new Rectangle(442, y + 20, 80, 26) };
-                var up = new Button { Text = "上へ(&U)", Bounds = new Rectangle(442, y + 52, 80, 26) };
-                var down = new Button { Text = "下へ(&N)", Bounds = new Rectangle(442, y + 84, 80, 26) };
+                var add = new Button { Text = "追加(&A)", Bounds = new Rectangle(442, y + 20, 80, 26) };
+                var delete = new Button { Text = "削除(&D)", Bounds = new Rectangle(442, y + 52, 80, 26) };
+                var up = new Button { Text = "上へ(&U)", Bounds = new Rectangle(442, y + 84, 80, 26) };
+                var down = new Button { Text = "下へ(&N)", Bounds = new Rectangle(442, y + 116, 80, 26) };
+                add.Click += (_, _) =>
+                {
+                    _choices.Focus();
+                    _choices.CurrentCell = _choices.Rows[_choices.Rows.Count - 1].Cells[1];   // 新しい行の表示名
+                    _choices.BeginEdit(true);
+                };
                 delete.Click += (_, _) => { if (_choices.CurrentRow is { IsNewRow: false } row) _choices.Rows.Remove(row); };
                 up.Click += (_, _) => MoveChoice(-1);
                 down.Click += (_, _) => MoveChoice(1);
-                Controls.AddRange([delete, up, down]);
+                Controls.AddRange([add, delete, up, down]);
                 y += 190;
                 break;
         }
@@ -176,7 +183,7 @@ public sealed class PromptItemDialog : Form
         var path = _source.Kind is PromptItemKind.Folder or PromptItemKind.File;
         var value = _initial.Text.Length > 0 ? _initial.Text : "値";
         _sample.Text = ArgumentSplitter.Join(_prefix.Text, value, _suffix.Text, path) is { } parts
-            ? "送るもの: " + string.Join(" ", parts.Select(p => p.Length == 0 || p.Any(ArgumentSplitter.IsSeparator) ? $"\"{p}\"" : p))
+            ? "送るもの: " + string.Join(" ", parts.Select(p => ArgumentSplitter.QuoteOne(p) ?? p))
             : "送るもの: （引用符が閉じていません）";
     }
 

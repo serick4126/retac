@@ -906,6 +906,7 @@ public sealed class MainForm : Form, IBookmarkHost
             if (await OwnerModal.ShowAsync(this, dialog) != DialogResult.OK) return;   // キャンセルしたら起動しない
             prompt = new PromptInput(definition, dialog.Resolved);
             foreach (var path in dialog.HistoryFolders) _history.Remember(path);    // R-131 / N-02
+            // 履歴と前回の値は、このダイアログを OK した時点で確定する。あとの起動の確認で中止しても残す
             // R-132: 開いている間に定義が変わっていなければ、前回の値を残す（ファイルへは終了するときに書く）
             if (PromptAnswerRules.RememberIn(_settings.ExternalTools, tool.Id, definition, dialog.Values) is { } remembered)
                 _settings.ExternalTools = remembered;
