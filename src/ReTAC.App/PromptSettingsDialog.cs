@@ -125,10 +125,10 @@ public sealed class PromptSettingsDialog : Form
 
     internal bool CanUndo => _undo.CanUndo;
 
-    /// <summary>テキストボックスにフォーカスがあるときの Ctrl+Z は、テキストボックス自身の取り消しに任せる（R-133）。</summary>
+    /// <summary>編集できるテキストボックスにフォーカスがあるときの Ctrl+Z は、テキストボックス自身の取り消しに任せる（R-133）。</summary>
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
-        if (keyData == (Keys.Control | Keys.Z) && ActiveControl is not TextBoxBase)
+        if (keyData == (Keys.Control | Keys.Z) && ActiveControl is not TextBoxBase { ReadOnly: false })
         {
             Undo();
             return true;
@@ -283,7 +283,7 @@ public sealed class PromptSettingsDialog : Form
         if (index < 0) return;
         using var dialog = new PromptItemDialog(_items[index]);
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
-        if (dialog.Result == _items[index]) return;   // 何も変わらなければ積まない
+        if (PromptEditHistory.SameItem(dialog.Result, _items[index])) return;   // 何も変わらなければ積まない
         PushUndo();
         _items[index] = dialog.Result;
         _previewValues = null;

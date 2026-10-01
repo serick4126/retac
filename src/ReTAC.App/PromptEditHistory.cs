@@ -15,7 +15,7 @@ internal sealed class PromptEditHistory
 
     public bool CanUndo => _states.Count > 0;
 
-    public void Push(PromptEditState state)
+    private void Push(PromptEditState state)
     {
         _states.Add(state);
         if (_states.Count > Limit) _states.RemoveAt(0);
@@ -24,6 +24,13 @@ internal sealed class PromptEditHistory
     /// <summary>リストは複製して積む。後の操作で元のリストが書き換わっても、積んだ中身を変えないため。</summary>
     public void Push(IEnumerable<PromptItem> items, IEnumerable<PromptArgument> arguments, string? importedPath) =>
         Push(new PromptEditState([.. items], [.. arguments], importedPath));
+
+    /// <summary>項目が同じ内容か。Choices は List で参照比較になるので、要素ごとに比べる。何も変わらない編集を積まないため。</summary>
+    internal static bool SameItem(PromptItem a, PromptItem b)
+    {
+        var none = new List<PromptChoice>();   // 空のリストも別のインスタンスだと参照比較で食い違うので、共有する
+        return a with { Choices = none } == b with { Choices = none } && a.Choices.SequenceEqual(b.Choices);
+    }
 
     public bool TryUndo(out PromptEditState state)
     {

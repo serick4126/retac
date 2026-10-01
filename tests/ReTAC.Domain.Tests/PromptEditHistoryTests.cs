@@ -7,8 +7,24 @@ namespace ReTAC.Domain.Tests;
 /// <summary>ヘルパーの「元に戻す」の積み置き場（R-133）。</summary>
 public class PromptEditHistoryTests
 {
-    private static PromptEditState State(int id, string? path = null) =>
-        new([new PromptItem { Id = id }], [PromptArgument.Item(id)], path);
+    private static void Push(PromptEditHistory history, int id, string? path = null) =>
+        history.Push([new PromptItem { Id = id }], [PromptArgument.Item(id)], path);
+
+    private static PromptItem Drop(string label = "a") => new()
+    {
+        Id = 1, Kind = PromptItemKind.DropDown, InitialChoiceId = 1,
+        Choices = [new PromptChoice { Id = 1, Label = label, Value = "x" }],
+    };
+
+    [Fact]
+    public void SameItem_compares_choices_by_value()
+    {
+        Assert.True(PromptEditHistory.SameItem(Drop(), Drop()));
+        Assert.False(PromptEditHistory.SameItem(Drop("a"), Drop("b")));
+        Assert.False(PromptEditHistory.SameItem(Drop(), Drop() with { Label = "L" }));
+        var two = Drop() with { Choices = [.. Drop().Choices, new PromptChoice { Id = 2, Label = "c" }] };
+        Assert.False(PromptEditHistory.SameItem(Drop(), two));
+    }
 
     [Fact]
     public void Empty_cannot_undo()
@@ -22,8 +38,8 @@ public class PromptEditHistoryTests
     public void Undo_returns_pushed_states_newest_first()
     {
         var history = new PromptEditHistory();
-        history.Push(State(1));
-        history.Push(State(2, "a.exe"));
+        Push(history, 1);
+        Push(history, 2, "a.exe");
         Assert.True(history.TryUndo(out var second));
         Assert.Equal(2, second.Items[0].Id);
         Assert.Equal("a.exe", second.ImportedPath);
@@ -50,7 +66,7 @@ public class PromptEditHistoryTests
     public void Oldest_states_are_dropped_over_the_limit()
     {
         var history = new PromptEditHistory();
-        for (var i = 0; i < PromptEditHistory.Limit + 5; i++) history.Push(State(i));
+        for (var i = 0; i < PromptEditHistory.Limit + 5; i++) Push(history, i);
         var count = 0;
         var last = -1;
         while (history.TryUndo(out var s)) { count++; last = s.Items[0].Id; }
