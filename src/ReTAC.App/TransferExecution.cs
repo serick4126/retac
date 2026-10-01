@@ -11,6 +11,13 @@ namespace ReTAC.App;
 internal static class TransferExecution
 {
     /// <summary>
+    /// 計画を作る前に、転送元と宛先を長いパスに直す。計画の中で一覧した名前は長いので、直すのは入口だけでよい
+    /// （項目ごとに直すと、ネットワークドライブで 1 件ずつ問い合わせることになる）。
+    /// </summary>
+    public static (IReadOnlyList<string> Sources, string Destination) LongPaths(IReadOnlyList<string> sources, string destination) =>
+        ([.. sources.Select(LongPath.Of)], LongPath.Of(destination));
+
+    /// <summary>
     /// 計画を OS の操作に登録する。先に、転送のために作る・中をたどったフォルダの種類（無い／ファイル／フォルダ）が
     /// 計画の時点と同じかを確かめ、違えば<b>何も登録せず</b>にそのパスを返す
     /// （消えたフォルダを作り直して転送すると、複写条件の判断が当てはまらない）。

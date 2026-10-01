@@ -1092,6 +1092,9 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <returns>すべて転送できたら true。中断・失敗なら false。</returns>
     private bool ExecuteTransfer(IReadOnlyList<string> sources, string destination, bool moving, bool differentialOnly)
     {
+        // R-125: 短い名前（8.3）のままだと、OS が通知する長いパスと計画のパスが一致せず、宛先の検査と上書きの印が効かない
+        (sources, destination) = TransferExecution.LongPaths(sources, destination);
+
         // 宛先が転送元そのもの、あるいはその配下なら送らない。
         // 規則は DropRules が持っていたがドロップ経路にしか効いておらず、
         // C / M の宛先欄と Ctrl+V は素通りしていた。入口はここ 1 つなので全経路に効く（V-05）

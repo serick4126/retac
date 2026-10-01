@@ -17,10 +17,20 @@ internal sealed class UndoRecorder
 
     public void MarkOverwrite(string destinationPath) => _overwritten.Add(destinationPath);
 
-    public void AddResults(IEnumerable<OperationResult> results)
+    /// <summary>OS の操作 1 回の結果。日時は Commit で取る。</summary>
+    private readonly List<OperationResult> _results = [];
+
+    public void AddResults(IEnumerable<OperationResult> results) =>
+        // 中身を除くのは操作 1 回の中だけ。操作をまたいで除くと、コピーしたフォルダの中へ移した項目が記録から落ち、戻せなくなる
+        _results.AddRange(UndoRecord.TopLevel(results, r => r.Created));
+
+    /// <summary>
+    /// 日時は、コマンドのすべての操作が終わってから取る。操作ごとに取ると、ドロップの後半の移動（R-93）で前半にコピーした
+    /// フォルダの中身が増え、外から何も変えていないのに「記録した後に変更されています」になる。
+    /// </summary>
+    private void StampResults()
     {
-        // 中身を除いてから日時を取る（ネットワークドライブでは 1 件ごとの問い合わせが重い）
-        foreach (var result in UndoRecord.TopLevel(results, r => r.Created))
+        foreach (var result in _results)
         {
             if (Stamp(result.Created) is not { } stamp) continue;
             var item = new UndoItem(result.Source, result.Created, stamp, _overwritten.Contains(result.Created));
@@ -31,6 +41,7 @@ internal sealed class UndoRecorder
                 _ => _copies,
             }).Add(item);
         }
+        _results.Clear();
     }
 
     /// <summary>`K`・`O`・連結で作った項目。作る前に無かったものだけを渡すこと。</summary>
@@ -47,6 +58,7 @@ internal sealed class UndoRecorder
     /// <summary>履歴へ積む。空の種類は積まない（UndoHistory.Push が捨てる）。</summary>
     public void Commit(UndoHistory history)
     {
+        StampResults();
         history.Push(new UndoRecord(UndoKind.Rename, _renames, [], []));
         history.Push(new UndoRecord(UndoKind.Create, _creates, [], []));
 

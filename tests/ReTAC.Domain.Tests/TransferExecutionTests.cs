@@ -1,4 +1,6 @@
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
 using ReTAC.App;
 using ReTAC.Domain.FileOps;
 using ReTAC.Shell;
@@ -389,6 +391,111 @@ public sealed class TransferExecutionTests : IDisposable
         Assert.True(Directory.Exists(Path.Combine(pack, "sub")));
         Assert.True(File.Exists(Path.Combine(pack, "x.txt")));
         Assert.Null(outcome.Record);
+    }
+
+    // ---- 短い名前（8.3）の宛先 ----
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    private static extern uint GetShortPathName(string longPath, StringBuilder shortPath, int bufferLength);
+
+    private static string ShortOf(string path)
+    {
+        var buffer = new StringBuilder(path.Length + 1);
+        return GetShortPathName(path, buffer, buffer.Capacity) is > 0 and var n && n < buffer.Capacity ? buffer.ToString() : path;
+    }
+
+    /// <summary>一時フォルダのドライブで短い名前が作られないとき（fsutil 8dot3name）は、確かめられないのでスキップとして数える。</summary>
+    private sealed class ShortNameFactAttribute : FactAttribute
+    {
+        public ShortNameFactAttribute()
+        {
+            var probe = Path.Combine(Path.GetTempPath(), "retac long name probe " + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(probe);
+            try { if (ShortOf(probe) == probe) Skip = "一時フォルダのドライブで 8.3 形式の名前が作られない"; }
+            finally { Directory.Delete(probe); }
+        }
+    }
+
+    [ShortNameFact]
+    public void 短い名前の宛先でも_計画の後に現れたファイルを上書きしない()
+    {
+        var (source, destination) = (Dir("src"), Dir("long destination folder"));
+        Write(source, "a.txt", "source", New);
+        var shortDestination = ShortOf(destination);
+        Assert.NotEqual(destination, shortDestination);
+        // 本番の ExecuteTransfer と同じく、計画の前に長いパスへ直す
+        var (sources, target) = TransferExecution.LongPaths([Path.Combine(source, "a.txt")], shortDestination);
+        var plan = CopyPlanner.Build(sources, target, CopyCondition.NewerOnly);
+
+        var outcome = Run(plan, moving: false, () => Write(destination, "a.txt", "appeared", Newer));
+
+        Assert.False(outcome.Completed);
+        Assert.Equal("appeared", File.ReadAllText(Path.Combine(destination, "a.txt")));
+        Assert.Null(outcome.Record);
+    }
+
+    [ShortNameFact]
+    public void 短い名前の宛先でも_上書きした項目に印が付く()
+    {
+        var (source, destination) = (Dir("src"), Dir("long destination folder"));
+        Write(source, "a.txt", "source", New);
+        Write(destination, "a.txt", "old", Old);
+        var (sources, target) = TransferExecution.LongPaths([Path.Combine(source, "a.txt")], ShortOf(destination));
+        var plan = CopyPlanner.Build(sources, target, CopyCondition.NewerOnly);
+
+        var outcome = Run(plan, moving: false);
+
+        Assert.True(outcome.Completed);
+        Assert.Equal("source", File.ReadAllText(Path.Combine(destination, "a.txt")));
+        // 印が無いと、元に戻すで上書きした側をごみ箱へ送り、上書きされた側も失う（INV-UNDO-NO-DATA-LOSS）
+        Assert.True(ItemFor(outcome.Record, Path.Combine(destination, "a.txt"))!.Overwrote);
+    }
+
+    // ---- ドロップのコピーと移動（R-93）を 1 件の記録にする ----
+
+    [Fact]
+    public void コピーしたフォルダの中へ移しても_直後の記録はどれも変わっていないと判定する()
+    {
+        var (source, other, destination) = (Dir("src"), Dir("other"), Dir("dst"));
+        var folder = Path.Combine(source, "p");
+        Directory.CreateDirectory(folder);
+        Write(folder, "a.txt", "a", New);
+        Write(other, "m.txt", "m", New);
+        var recorder = new UndoRecorder();
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                // 前半: フォルダをコピー。後半: その中へ移動（コピーしたフォルダの更新日時が変わる）
+                foreach (var build in new Action<ShellFileOperation>[]
+                         {
+                             op => op.Copy(folder, destination),
+                             op => op.Move(Path.Combine(other, "m.txt"), Path.Combine(destination, "p")),
+                         })
+                {
+                    using var operation = new ShellFileOperation(IntPtr.Zero, silentOverwrite: true, noUi: true);
+                    build(operation);
+                    Assert.True(operation.Execute());
+                    recorder.AddResults(operation.Results);
+                    Thread.Sleep(50);   // 更新日時の違いが出るように
+                }
+            }
+            catch (Exception ex) { failure = ex; }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(60)));
+        Assert.Null(failure);
+        var history = new UndoHistory();
+        recorder.Commit(history);
+        var record = history.Peek()!;
+
+        Assert.Equal(2, record.Items.Count);
+        Assert.All(record.Items, item =>
+            Assert.Equal(UndoProblem.None, UndoCheck.Check(record.KindOf(item), item, UndoRecorder.Stamp, UndoRecorder.IsEmptyFolder)));
+        // 戻すのは移動が先（コピーしたフォルダから出してから、フォルダをごみ箱へ）
+        Assert.Equal(UndoKind.Move, record.Steps(record.Items).First().Kind);
     }
 
     // ---- ネットワークドライブでの確認（環境変数があるときだけ） ----
