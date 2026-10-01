@@ -30,6 +30,35 @@ public sealed class PromptItemDialog : Form
     };
     private readonly Label _sample = new() { AutoSize = true, UseMnemonic = false };
 
+    /// <summary>
+    /// R-133: DataGridView は Application.SetColorMode のダーク対応に乗らず、見出しが白地に黒文字・選んだ行が青地に黒文字になる。
+    /// ほかの画面と同じく起動時の OS の色（<see cref="Program.StartupOs"/>）を当てる。ライトは今までの見た目のまま。
+    /// ハイコントラストは OS の組に従い、ダークの選択行は文字を白にする（OS の HighlightText は黒で青地では読みにくい。Theme.Resolve と同じ）
+    /// </summary>
+    private static void ApplyOsColors(DataGridView grid)
+    {
+        var os = Program.StartupOs;
+        if (!os.Dark && !os.HighContrast) return;
+        var selectionText = os.HighContrast ? os.HighlightText : Color.White;
+        // 見出しは本文の地から少し離す（ハイコントラストは OS の色だけを使い、混ぜない）
+        var header = os.HighContrast ? os.Window : Blend(os.Window, os.WindowText, 0.15);
+        var line = os.HighContrast ? os.WindowText : Blend(os.Window, os.WindowText, 0.35);
+        grid.EnableHeadersVisualStyles = false;
+        grid.BackgroundColor = os.Window;
+        grid.GridColor = line;
+        grid.ColumnHeadersDefaultCellStyle.BackColor = header;
+        grid.ColumnHeadersDefaultCellStyle.ForeColor = os.WindowText;
+        grid.ColumnHeadersDefaultCellStyle.SelectionBackColor = header;
+        grid.ColumnHeadersDefaultCellStyle.SelectionForeColor = os.WindowText;
+        grid.DefaultCellStyle.BackColor = os.Window;
+        grid.DefaultCellStyle.ForeColor = os.WindowText;
+        grid.DefaultCellStyle.SelectionBackColor = os.Highlight;
+        grid.DefaultCellStyle.SelectionForeColor = selectionText;
+    }
+
+    private static Color Blend(Color from, Color to, double amount) => Color.FromArgb(
+        (int)(from.R + (to.R - from.R) * amount), (int)(from.G + (to.G - from.G) * amount), (int)(from.B + (to.B - from.B) * amount));
+
     public PromptItemDialog(PromptItem item)
     {
         _source = item;
@@ -92,6 +121,7 @@ public sealed class PromptItemDialog : Form
                 break;
 
             default:
+                ApplyOsColors(_choices);
                 _choices.Columns.Add(new DataGridViewCheckBoxColumn { HeaderText = "初期", Width = 48 });
                 _choices.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "表示名", Width = 170 });
                 _choices.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "送る値", Width = 180 });
