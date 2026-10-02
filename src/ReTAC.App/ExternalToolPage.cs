@@ -315,7 +315,7 @@ public sealed class ExternalToolPage : UserControl
     private void InsertMacro(bool showScripts)
     {
         if (_editing < 0) return;
-        using var dialog = new MacroReferenceDialog(showScripts);
+        using var dialog = new MacroReferenceDialog(MacroUsage.Arguments, showScripts);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is not { Insert: { } insert } entry) return;
 
         // R-133: ${prompt} を選んだら、入力ダイアログ編集と同じに動く（既にあれば 2 つ目は入れずに編集する）

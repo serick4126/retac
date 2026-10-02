@@ -70,7 +70,7 @@ public sealed class PromptArgumentDialog : Form
 
     private void InsertMacro()
     {
-        using var dialog = new MacroReferenceDialog(excludePrompt: true);
+        using var dialog = new MacroReferenceDialog(MacroUsage.PromptArgument);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is not { Insert: { } insert } entry) return;
         var at = _input.SelectionStart;
         _input.SelectedText = insert;

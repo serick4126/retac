@@ -18,53 +18,56 @@ public sealed class MacroReferenceDialog : Form
         MultiSelect = false,
         HideSelection = false,
         ShowGroups = true,
-        Bounds = new Rectangle(14, 14, 560, 300),
+        Bounds = new Rectangle(14, 60, 912, 296),
+        Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
     };
     private readonly TextBox _description = new()
     {
         Multiline = true,
         ReadOnly = true,
         ScrollBars = ScrollBars.Vertical,
-        Bounds = new Rectangle(14, 322, 560, 96),
+        Bounds = new Rectangle(14, 368, 912, 134),
+        Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
     };
-    private readonly Button _insert = new() { Text = "挿入(&I)", DialogResult = DialogResult.OK, Bounds = new Rectangle(384, 430, 90, 28) };
+    private readonly Button _insert = new() { Text = "挿入(&I)", DialogResult = DialogResult.OK, Bounds = new Rectangle(736, 518, 90, 28), Anchor = AnchorStyles.Bottom | AnchorStyles.Right, Enabled = false };
 
     /// <param name="showScripts">「実行できる書き方を見る」から開いたとき、スクリプトの例を選んだ状態で開く</param>
-    /// <param name="excludePrompt">入力ダイアログの「マクロを含む引数」の行から開いたとき。${prompt} は書けない（R-130）</param>
-    public MacroReferenceDialog(bool showScripts = false, bool excludePrompt = false)
+    public MacroReferenceDialog(MacroUsage usage = MacroUsage.Arguments, bool showScripts = false)
     {
         Text = "マクロの一覧";
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.Sizable;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = MaximizeBox = false;
-        ClientSize = new Size(588, 472);
+        ClientSize = new Size(940, 560);
 
-        _entries.Columns.Add("項目", Scaled(220));
-        _entries.Columns.Add("挿入する文字", Scaled(310));
+        _entries.Columns.Add("説明", Scaled(360));
+        _entries.Columns.Add("項目", Scaled(280));
+        _entries.Columns.Add("挿入する文字", Scaled(230));
 
         var groups = new Dictionary<string, ListViewGroup>();
-        foreach (var entry in MacroCatalog.Entries)
+        foreach (var entry in MacroCatalog.For(usage))
         {
-            if (excludePrompt && entry.Insert == "${prompt}") continue;
             if (!groups.TryGetValue(entry.Group, out var group))
             {
                 group = new ListViewGroup(entry.Group);
                 groups[entry.Group] = group;
                 _entries.Groups.Add(group);
             }
-            _entries.Items.Add(new ListViewItem([entry.Label, entry.Insert ?? ""]) { Group = group, Tag = entry });
+            _entries.Items.Add(new ListViewItem([entry.Summary, entry.Label, entry.Insert ?? ""]) { Group = group, Tag = entry });
         }
 
-        var close = new Button { Text = "閉じる", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(484, 430, 90, 28) };
-        Controls.AddRange([_entries, _description, _insert, close]);
+        var close = new Button { Text = "閉じる", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(836, 518, 90, 28), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
+        var help = new Label { Text = MacroCatalog.ContextHelp(usage), Bounds = new Rectangle(14, 14, 912, 38),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+        Controls.AddRange([help, _entries, _description, _insert, close]);
         AcceptButton = _insert;
         CancelButton = close;
 
         _entries.SelectedIndexChanged += (_, _) => Sync();
         _entries.DoubleClick += (_, _) =>
         {
-            if (Selected?.Insert is null) return;
+            if (!CanInsert(Selected)) return;
             DialogResult = DialogResult.OK;
             Close();
         };
@@ -88,19 +91,40 @@ public sealed class MacroReferenceDialog : Form
         AutoScaleMode = AutoScaleMode.Dpi;
     }
 
+    protected override void OnLoad(EventArgs e)
+    {
+        base.OnLoad(e);
+        var area = Screen.FromControl(Owner ?? (Control)this).WorkingArea;
+        MinimumSize = ClampSize(SizeFromClientSize(new Size(Scaled(700), Scaled(460))), area.Size);
+        Size = ClampSize(Size, area.Size);
+        StartPosition = FormStartPosition.Manual;
+        Location = DialogPlacement.Place(Owner?.Bounds ?? Bounds, Size, area);
+    }
+
+    internal static Size ClampSize(Size desired, Size workArea) =>
+        new(Math.Min(desired.Width, workArea.Width), Math.Min(desired.Height, workArea.Height));
+
+    internal bool CanInsert(MacroCatalogEntry? entry) => entry?.Insert is not null;
+
+    internal IReadOnlyList<string> ColumnTitles => _entries.Columns.Cast<ColumnHeader>().Select(c => c.Text).ToList();
+
+    internal IReadOnlyList<(string Summary, string Label, string? Insert, string Group)> Rows =>
+        _entries.Items.Cast<ListViewItem>().Select(i => (i.SubItems[0].Text, i.SubItems[1].Text,
+            ((MacroCatalogEntry)i.Tag!).Insert is null ? null : i.SubItems[2].Text, i.Group!.Header)).ToList();
+
     private int Scaled(int logical) => logical * DeviceDpi / 96;
 
     private MacroCatalogEntry? Selected =>
         _entries.SelectedItems.Count == 0 ? null : (MacroCatalogEntry)_entries.SelectedItems[0].Tag!;
 
     /// <summary>挿入する項目。挿入しない項目を選んで閉じたときは null。</summary>
-    public MacroCatalogEntry? Result => DialogResult == DialogResult.OK && Selected?.Insert is not null ? Selected : null;
+    public MacroCatalogEntry? Result => DialogResult == DialogResult.OK && CanInsert(Selected) ? Selected : null;
 
     private void Sync()
     {
         _description.Text = Selected?.Description ?? "";
         // 挿入しない項目では押せない。Enter（AcceptButton）も効かない
-        _insert.Enabled = Selected?.Insert is not null;
+        _insert.Enabled = CanInsert(Selected);
     }
 
     /// <summary>一覧に出している挿入する文字。</summary>

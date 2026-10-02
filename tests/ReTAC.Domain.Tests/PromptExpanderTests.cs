@@ -179,7 +179,7 @@ public class PromptExpanderTests
         var raw = new Dictionary<int, PromptValue> { [1] = new("") };
         var check = PromptAnswerRules.Check(definition, raw, Cwd);
         Assert.Equal(new[] { expected }, PromptExpander.Expand(new(definition, check.Values!), new([], null, Cwd, PathForm: _ => throw new Exception())));
-        Assert.Equal(new[] { "-o", "" }, PromptExpander.ItemArguments(item with { Prefix = "-o ", Suffix = "" }, new(""), new MacroContext([], null, Cwd)));
+        Assert.Equal(new[] { "-o", "" }, PromptExpander.ItemArguments(item with { Prefix = "-o ", Suffix = "" }, new(""), new MacroContext([], null, Cwd))!);
         Assert.Equal(new[] { @"C:\work\" }, PromptExpander.ItemArguments(item with { Prefix = "", Suffix = @"\" }, new(@"C:\work\"), new MacroContext([], null, Cwd)));
     }
 
@@ -187,5 +187,5 @@ public class PromptExpanderTests
     [InlineData(PromptItemKind.Text)]
     [InlineData(PromptItemKind.File)]
     public void OptionalTextAndFile_OmitAffixes(PromptItemKind kind) =>
-        Assert.Empty(PromptExpander.ItemArguments(new() { Kind = kind, Prefix = "-o", Suffix = "-end" }, new(""), new MacroContext([], null, Cwd)));
+        Assert.Empty(PromptExpander.ItemArguments(new() { Kind = kind, Prefix = "-o", Suffix = "-end" }, new(""), new MacroContext([], null, Cwd))!);
 }

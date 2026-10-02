@@ -31,4 +31,25 @@ public class MacroCatalogTests
         Assert.Contains(scripts, e => e.Label.Contains("仮想環境"));
         Assert.Contains(scripts, e => e.Description.Contains("%~dp0"));
     }
+
+    [Fact]
+    public void Catalog_AllRowsHaveSummary()
+    {
+        Assert.All(MacroCatalog.Entries, e => { Assert.False(string.IsNullOrWhiteSpace(e.Summary)); Assert.NotEqual(e.Summary, e.Description); });
+    }
+
+    [Fact]
+    public void Catalog_UsageFilters()
+    {
+        foreach (var usage in Enum.GetValues<MacroUsage>())
+        {
+            var entries = MacroCatalog.For(usage);
+            Assert.Equal(usage == MacroUsage.Arguments, entries.Any(e => e.Insert == "${prompt}"));
+            Assert.Equal(usage is MacroUsage.Arguments or MacroUsage.PromptArgument, entries.Any(e => e.Group == MacroCatalog.ScriptGroup));
+            Assert.Equal(ArgumentTemplate.Names.Keys.Where(n => usage == MacroUsage.Arguments || n != "prompt").Order(),
+                entries.Where(e => e.Group == MacroCatalog.MacroGroup).Select(e => e.Insert![2..^1]).Order());
+            Assert.All(entries, e => Assert.InRange(e.CaretOffset, 0, e.Insert?.Length ?? 0));
+            Assert.Equal(entries.OrderBy(e => e.Group == MacroCatalog.MacroGroup ? 0 : e.Group == MacroCatalog.SyntaxGroup ? 1 : 2), entries);
+        }
+    }
 }

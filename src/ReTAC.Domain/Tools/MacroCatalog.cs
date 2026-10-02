@@ -2,7 +2,10 @@ namespace ReTAC.Domain.Tools;
 
 /// <param name="Insert">引数欄に挿入する文字。挿入しない項目（書き方の説明・例）は null</param>
 /// <param name="CaretOffset">挿入後にカーソルを置く位置（挿入した文字の先頭から）</param>
-public sealed record MacroCatalogEntry(string Group, string Label, string? Insert, int CaretOffset, string Description);
+public sealed record MacroCatalogEntry(string Group, string Label, string? Insert, int CaretOffset, string Summary, string Description);
+
+/// <summary>R-138: マクロを挿入する欄の文法。</summary>
+public enum MacroUsage { Arguments, PromptArgument, InitialValue, ItemValue }
 
 /// <summary>
 /// 外部ツールの設定ダイアログから開くマクロの一覧（F-04）。
@@ -15,49 +18,72 @@ public static class MacroCatalog
     public const string SyntaxGroup = "書き方";
     public const string ScriptGroup = "スクリプトを実行する";
 
-    private static MacroCatalogEntry Macro(string insert, string description) =>
-        new(MacroGroup, insert, insert, insert.Length, description);
+    private static MacroCatalogEntry Macro(string insert, string summary, string description) =>
+        new(MacroGroup, insert, insert, insert.Length, summary, description);
 
     public static IReadOnlyList<MacroCatalogEntry> Entries { get; } =
     [
-        Macro("${file}", "実効対象のファイルのパス。マークがあればマークしたファイルすべて（一覧の表示順に 1 件ずつ別の引数）、無ければカーソル位置のファイル。フォルダと「..」は含めない。"),
-        Macro("${path}", "実効対象の項目のパス。${file} と違いフォルダも含める。「..」はカレントフォルダになる。"),
-        Macro("${fileBasenameNoExtension}", "${file} の、拡張子を除いた名前（パスなし）。例: 動画.avi → 動画"),
-        Macro("${fileExtname}", "${file} の拡張子（. を含む）。例: 動画.avi → .avi"),
-        Macro("${cursorFile}", "マークに関係なく、カーソル位置のファイルだけ。フォルダと「..」なら空。"),
-        Macro("${cursorPath}", "マークに関係なく、カーソル位置の項目だけ。「..」ならカレントフォルダ。"),
-        Macro("${cwd}", "カレントフォルダ。"),
+        Macro("${file}", "対象ファイルのフルパス（フォルダ除外）", "実効対象のファイルのパス。マークがあればマークしたファイルすべて（一覧の表示順に 1 件ずつ別の引数）、無ければカーソル位置のファイル。フォルダと「..」は含めない。"),
+        Macro("${path}", "対象のフルパス（フォルダも含む）", "実効対象の項目のパス。${file} と違いフォルダも含める。「..」はカレントフォルダになる。"),
+        Macro("${fileBasenameNoExtension}", "対象ファイルの拡張子なしの名前", "${file} の、拡張子を除いた名前（パスなし）。例: 動画.avi → 動画"),
+        Macro("${fileExtname}", "対象ファイルの拡張子（`.` を含む）", "${file} の拡張子（. を含む）。例: 動画.avi → .avi"),
+        Macro("${cursorFile}", "カーソルのファイルのフルパス", "マークに関係なく、カーソル位置のファイルだけ。フォルダと「..」なら空。"),
+        Macro("${cursorPath}", "カーソルの項目のフルパス", "マークに関係なく、カーソル位置の項目だけ。「..」ならカレントフォルダ。"),
+        Macro("${cwd}", "実行時のフォルダのフルパス", "カレントフォルダ。"),
         // R-137
-        Macro("${cwdBasename}", "カレントフォルダの名前だけ。末尾の区切りを除き、ドットは名前に残す。ドライブルートは C:、共有ルートは共有名。"),
-        Macro("${cursorFileBasenameNoExtension}", "カーソル位置のファイルの拡張子を除いた名前。フォルダと「..」なら空。"),
-        Macro("${pathBase}", "実効対象の拡張子を除いたフルパス。フォルダはそのまま、「..」はカレントフォルダ。"),
-        Macro("${cursorPathBase}", "カーソル位置の拡張子を除いたフルパス。フォルダはそのまま、「..」はカレントフォルダ。"),
+        Macro("${cwdBasename}", "実行時のフォルダ名", "カレントフォルダの名前だけ。末尾の区切りを除き、ドットは名前に残す。ドライブルートは C:、共有ルートは共有名。"),
+        Macro("${cursorFileBasenameNoExtension}", "カーソルのファイルの拡張子なしの名前", "カーソル位置のファイルの拡張子を除いた名前。フォルダと「..」なら空。"),
+        Macro("${pathBase}", "対象の拡張子なしのパス（フォルダはそのまま）", "実効対象の拡張子を除いたフルパス。フォルダはそのまま、「..」はカレントフォルダ。"),
+        Macro("${cursorPathBase}", "カーソルの拡張子なしのパス（フォルダはそのまま）", "カーソル位置の拡張子を除いたフルパス。フォルダはそのまま、「..」はカレントフォルダ。"),
         // R-130
-        Macro("${prompt}",
+        Macro("${prompt}", "起動前に入力ダイアログを表示",
             "起動の前に入力ダイアログを出す。項目（テキスト・フォルダ・ファイル・チェックボックス・ドロップダウンリスト）と送る順は「入力ダイアログ編集」で設定する。引数欄に 1 つだけ、それだけで 1 つの引数として書く。設定していなければ、ツールの名前のテキストを 1 つ出す。"),
 
         new(SyntaxGroup, "!（マクロの直後）", "!", 1,
+            "マクロが空なら起動を中止",
             "マクロが空になったら、ツールを起動しない。例: ${file}!（フォルダの上では何もしない）"),
         new(SyntaxGroup, "\"…\"（引用符で囲む）", null, 0,
+            "空のマクロを含む引数を残す",
             "マクロが空になっても、空の値 \"\" として渡す。囲まなければ、その引数ごと取り除く。パスに空白があっても、引用符の有無にかかわらず 1 つの引数として渡る。! と両方付けたら ! が優先。"),
         new(SyntaxGroup, "$$", "$$", 2,
+            "ドル記号を文字どおり書く",
             "$ そのものを書く。${ で始まらない $（$env:PATH など）はそのまま渡るので、$${env:PATH} のように ${ を書きたいときだけ使う。"),
         new(SyntaxGroup, "作業ディレクトリ", null, 0,
+            "ツールが動くフォルダ",
             "ツールは常にカレントフォルダを作業ディレクトリとして起動する。"),
 
         new(ScriptGroup, "書き方の注意", null, 0,
+            "スクリプトの場所と実行結果の表示",
             "スクリプトはパスではなく引数に書く。スクリプトの場所はフルパスで書く（作業ディレクトリはカレントフォルダなので、相対パスでは見つからない）。結果を見たいなら「終了後もウィンドウを閉じない」を ON にする。"),
         new(ScriptGroup, "Python", null, 0,
+            "Python スクリプトの実行",
             "パス: py.exe\r\n引数: \"C:\\tools\\script.py\" ${file}\r\n\r\npy.exe は Windows 版の Python に付いてくる起動役で、スクリプトの 1 行目を見て使う Python を選ぶ。使う Python が決まっているなら、パスに python.exe を書いてもよい。どちらの場合も、パスに .py は書けない。"),
         new(ScriptGroup, "Python（仮想環境）", null, 0,
+            "仮想環境の Python で実行",
             "パス: C:\\work\\.venv\\Scripts\\python.exe\r\n引数: \"C:\\work\\script.py\" ${file}"),
         new(ScriptGroup, "PowerShell 7", null, 0,
+            "PowerShell 7 のスクリプトを実行",
             "パス: pwsh.exe\r\n引数: -File \"C:\\tools\\build.ps1\" ${file}"),
         new(ScriptGroup, "Windows PowerShell", null, 0,
+            "Windows PowerShell のスクリプトを実行",
             "パス: powershell.exe\r\n引数: -ExecutionPolicy Bypass -File \"C:\\tools\\build.ps1\" ${file}"),
         new(ScriptGroup, "Node.js", null, 0,
+            "JavaScript のスクリプトを実行",
             "パス: node.exe\r\n引数: \"C:\\tools\\script.js\" ${file}"),
         new(ScriptGroup, "バッチファイル（.bat / .cmd）", null, 0,
+            "バッチファイルの実行とパスの注意",
             "パスにそのまま書けば実行される。%CD% はカレントフォルダで、バッチファイル自身の場所は %~dp0。受け取った引数は %~1 で引用符を外して使う。カレントフォルダがネットワーク上（\\\\サーバー\\共有）だと cmd.exe は C:\\Windows で動くので、バッチの中で pushd する。ファイル名に % を含むと cmd.exe が展開してしまうことがある。"),
     ];
+    /// <summary>R-138: 除外と欄ごとの文法の案内を全入口で共有する。</summary>
+    public static IReadOnlyList<MacroCatalogEntry> For(MacroUsage usage) =>
+        [.. Entries.Where(e => (usage == MacroUsage.Arguments || e.Insert != "${prompt}")
+            && (usage is MacroUsage.Arguments or MacroUsage.PromptArgument || e.Group != ScriptGroup))
+            .Select(e => usage == MacroUsage.InitialValue && e.Label.Contains("引用符", StringComparison.Ordinal)
+                ? e with { Summary = "空白と引用符はそのままの文字",
+                    Description = "初期値では、空白・タブ・引用符はそのまま文字として残ります。引数への分割や引用符の除去は行いません。" }
+                : e)];
+
+    public static string ContextHelp(MacroUsage usage) =>
+        "対象はマークした項目。マークがなければカーソルの項目。"
+        + (usage == MacroUsage.InitialValue ? "\r\n複数の対象があるマクロは先頭の 1 件を使います。" : "");
 }

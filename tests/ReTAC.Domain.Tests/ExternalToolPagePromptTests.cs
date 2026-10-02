@@ -79,7 +79,7 @@ public class ExternalToolPagePromptTests
     public void マクロを含む引数の行に入れるマクロの一覧にはプロンプトを出さない()
     {
         using var all = new MacroReferenceDialog();
-        using var without = new MacroReferenceDialog(excludePrompt: true);
+        using var without = new MacroReferenceDialog(MacroUsage.PromptArgument);
         Assert.Contains("${prompt}", all.Inserts);
         Assert.DoesNotContain("${prompt}", without.Inserts);
         Assert.Contains("${file}", without.Inserts);

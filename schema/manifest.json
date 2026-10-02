@@ -3719,6 +3719,13 @@
           "doc": "挿入後にカーソルを置く位置（挿入した文字の先頭から）"
         },
         {
+          "name": "Summary",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
           "name": "Description",
           "type": "string",
           "nullable": false,
@@ -3812,6 +3819,18 @@
           "mutability": "init",
           "doc": "直後の !。空になったらツールを起動しない"
         }
+      ]
+    },
+    "ReTAC.Domain.Tools.MacroUsage": {
+      "id": "type:ReTAC.Domain.Tools.MacroUsage",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
+      "doc": "R-138: マクロを挿入する欄の文法。",
+      "members": [
+        "Arguments",
+        "PromptArgument",
+        "InitialValue",
+        "ItemValue"
       ]
     },
     "ReTAC.Domain.Tools.PathKind": {
@@ -7296,7 +7315,7 @@
       },
       {
         "file": "src/ReTAC.App/MacroReferenceDialog.cs",
-        "line": 87
+        "line": 90
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
@@ -7464,7 +7483,7 @@
       },
       {
         "file": "src/ReTAC.App/MacroReferenceDialog.cs",
-        "line": 86
+        "line": 89
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
@@ -7684,11 +7703,11 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 8
+        "line": 11
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 9
+        "line": 12
       }
     ],
     "F-05": [
@@ -11327,10 +11346,6 @@
         "line": 386
       },
       {
-        "file": "src/ReTAC.App/MacroReferenceDialog.cs",
-        "line": 33
-      },
-      {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 894
       },
@@ -11364,7 +11379,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 35
+        "line": 38
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -11726,7 +11741,7 @@
     "R-137": [
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 30
+        "line": 33
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
@@ -11735,6 +11750,16 @@
       {
         "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
         "line": 25
+      }
+    ],
+    "R-138": [
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
+        "line": 77
       }
     ],
     "R-139": [
