@@ -18,19 +18,43 @@ public sealed record PromptCheck(IReadOnlyDictionary<int, PromptValue>? Values, 
 /// <summary>入力ダイアログの値の検査・初期値・前回の値（R-131 / R-132）。</summary>
 public static class PromptAnswerRules
 {
-    /// <summary>定義の初期値。「初期値に戻す」もこれを使う（前回の値は使わない）。</summary>
-    public static IReadOnlyDictionary<int, PromptValue> Defaults(PromptDefinition definition) =>
+    /// <summary>R-133: 例に使う未展開の定義の値。</summary>
+    public static IReadOnlyDictionary<int, PromptValue> DefinedValues(PromptDefinition definition) =>
         ById(definition, i => new PromptValue(i.Initial, i.InitialChecked, i.InitialChoiceId));
 
-    /// <summary>R-132: 開くときの値。前回の入力を初期値にする定義なら前回の値、無ければ定義の初期値。</summary>
-    public static IReadOnlyDictionary<int, PromptValue> Initial(PromptDefinition definition)
+    /// <summary>R-136: 定義の初期値を展開する。失敗したら部分的な値を返さない。</summary>
+    public static PromptCheck Defaults(PromptDefinition definition, MacroContext context) =>
+        Initial(definition with { RememberLast = false }, context);
+
+    /// <summary>R-132 / R-136: 前回の文字は再解析せず、前回値がない欄だけ初期値を展開する。</summary>
+    public static PromptCheck Initial(PromptDefinition definition, MacroContext context)
     {
-        if (!definition.RememberLast) return Defaults(definition);
-        return ById(definition, i => new PromptValue(
-            i.LastText ?? i.Initial,
-            i.LastChecked ?? i.InitialChecked,
-            // 前回の選択肢を消していたら初期の選択（INV-PROMPT-REFERENCES）
-            i.LastChoiceId is { } id && i.Choices.Any(c => c.Id == id) ? id : i.InitialChoiceId));
+        var values = new Dictionary<int, PromptValue>();
+        foreach (var item in definition.Items)
+        {
+            var text = "";
+            if (item.Kind is PromptItemKind.Text or PromptItemKind.Folder or PromptItemKind.File)
+            {
+                if (definition.RememberLast && item.LastText is { } last) text = last;
+                else
+                {
+                    var template = ScalarTemplate.Parse(item.Initial);
+                    var expanded = template.Expand(context, out var emptyRequired);
+                    if (expanded is null)
+                    {
+                        var reason = template.Errors.FirstOrDefault()?.Message
+                            ?? $"${{{ArgumentTemplate.Names.First(n => n.Value == emptyRequired).Key}}}! の値が空です。";
+                        return new(null, item.Id, $"「{item.Label}」の初期値: {reason}");
+                    }
+                    text = expanded;
+                }
+            }
+            var check = definition.RememberLast ? item.LastChecked ?? item.InitialChecked : item.InitialChecked;
+            var choice = definition.RememberLast && item.LastChoiceId is { } id && item.Choices.Any(c => c.Id == id)
+                ? id : item.InitialChoiceId;
+            values[item.Id] = new(text, check, choice);
+        }
+        return new(values, null, null);
     }
 
     /// <summary>

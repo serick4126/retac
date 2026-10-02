@@ -233,7 +233,7 @@ public sealed class PromptSettingsDialog : Form
     }
 
     private void RenderExample() =>
-        _example.Text = PromptExample.Render(Current(), _previewValues ?? PromptAnswerRules.Defaults(Current()));
+        _example.Text = PromptExample.Render(Current(), _previewValues);
 
     private int SelectedItemIndex() => _itemList.SelectedIndices.Count == 1 ? _itemList.SelectedIndices[0] : -1;
 
@@ -495,6 +495,8 @@ public sealed class PromptSettingsDialog : Form
         return null;
     }
 
+    internal PromptCheck PreviewInitial() => PromptAnswerRules.Initial(Current(), new MacroContext([], null, _currentFolder));
+
     private void Preview()
     {
         var definition = Current();
@@ -504,7 +506,18 @@ public sealed class PromptSettingsDialog : Form
             return;
         }
         // 起動はしない。履歴と前回の値は書かない（R-133）
-        using var dialog = new PromptDialog(definition, _toolName, _history, _quickAccess, _currentFolder, PromptAnswerRules.Initial(definition));
+        var initial = PreviewInitial();
+        if (initial.Values is null)
+        {
+            ShowProblem(new PromptProblem(initial.Error!, initial.ItemId, Field: PromptField.Initial));
+            return;
+        }
+        using var dialog = new PromptDialog(definition, _toolName, _history, _quickAccess, new MacroContext([], null, _currentFolder), initial.Values);
+        dialog.Controls.Add(new Label
+        {
+            Text = "ファイル・カーソルのマクロは、実行時の対象がないため空になります。",
+            Dock = DockStyle.Top, Height = 38, AutoEllipsis = false,
+        });
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         _previewValues = dialog.Values;
         RenderExample();

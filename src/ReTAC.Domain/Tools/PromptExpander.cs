@@ -22,7 +22,8 @@ public static class PromptExpander
                     result.AddRange(expanded);
                     break;
                 case PromptArgumentKind.Item when input.Definition.ItemOf(argument.ItemId) is { } item:
-                    result.AddRange(ItemArguments(item, input.Values.GetValueOrDefault(item.Id) ?? new PromptValue(), context.PathForm));
+                    if (ItemArguments(item, input.Values.GetValueOrDefault(item.Id) ?? new PromptValue(), context) is not { } itemArguments) return null;
+                    result.AddRange(itemArguments);
                     break;
             }
         }
@@ -30,32 +31,40 @@ public static class PromptExpander
     }
 
     /// <summary>1 つの項目が送る引数。</summary>
-    public static IReadOnlyList<string> ItemArguments(PromptItem item, PromptValue value, Func<string, string>? pathForm)
+    public static IReadOnlyList<string>? ItemArguments(PromptItem item, PromptValue value, MacroContext context)
     {
         switch (item.Kind)
         {
             case PromptItemKind.CheckBox:
-                return value.Checked ? ArgumentSplitter.Split(item.Value) ?? [] : [];
+                return value.Checked ? ExpandValue(item.Value, context) : [];
             case PromptItemKind.DropDown:
                 // 存在しない選択肢の番号は何も送らない（例外にしない）
-                return item.Choices.FirstOrDefault(c => c.Id == value.ChoiceId) is { } choice ? ArgumentSplitter.Split(choice.Value) ?? [] : [];
+                return item.Choices.FirstOrDefault(c => c.Id == value.ChoiceId) is { } choice ? ExpandValue(choice.Value, context) : [];
             default:
                 // 必須でない空欄は付ける文字ごと送らない（-ss だけが残らない）。フォルダの空欄は検査でカレントフォルダになっている
                 if (item.Kind != PromptItemKind.Folder && InputText.TrimEdge(value.Text).Length == 0) return [];
                 var path = item.Kind is PromptItemKind.Folder or PromptItemKind.File;
                 // 長いパスは外部のアプリが開けないので、${file} と同じく短い形にする（ToolLauncher.TargetPath）
-                var text = path && value.Text.Length > 0 && pathForm is not null ? pathForm(value.Text) : value.Text;
+                var text = path && value.Text.Length > 0 && context.PathForm is not null ? context.PathForm(value.Text) : value.Text;
                 return ArgumentSplitter.Join(item.Prefix, text, item.Suffix, mergeBackslash: path) ?? [];
         }
     }
+    private static IReadOnlyList<string>? ExpandValue(string text, MacroContext context)
+    {
+        var template = ArgumentTemplate.Parse(text);
+        if (!template.IsValid || template.HasPrompt) return null;
+        return ArgumentExpander.Expand(template, context with { Prompt = null });
+    }
+
 }
 
 /// <summary>R-133: ヘルパーの「結果の例」。送る引数を 1 行にする（ツールのパスは含めない）。</summary>
 public static class PromptExample
 {
     /// <summary>マクロを含む引数の行は書いたまま、項目は与えた値で作る。フォルダの空欄は <c>${cwd}</c>（設定画面ではカレントフォルダが確かでない）。</summary>
-    public static string Render(PromptDefinition definition, IReadOnlyDictionary<int, PromptValue> values)
+    public static string Render(PromptDefinition definition, IReadOnlyDictionary<int, PromptValue>? previewValues = null)
     {
+        var values = previewValues ?? PromptAnswerRules.DefinedValues(definition);
         var parts = new List<string>();
         foreach (var argument in definition.Arguments)
         {
@@ -72,9 +81,17 @@ public static class PromptExample
                     if (item.Kind is PromptItemKind.Folder or PromptItemKind.File)
                     {
                         var text = InputText.Unquote(value.Text);
-                        value = value with { Text = text.Length == 0 && item.Kind == PromptItemKind.Folder ? "${cwd}" : text };
+                        value = value with { Text = text.Length == 0 && item.Kind == PromptItemKind.Folder && item.FolderEmptyBehavior == PromptFolderEmptyBehavior.CurrentFolder ? "${cwd}" : text };
                     }
-                    parts.AddRange(PromptExpander.ItemArguments(item, value, null).Select(LaunchRequest.Quote));
+                    // R-133 / R-136: 例では定義の構文を保持する。対象なしの展開でマクロを消さない。
+                    IReadOnlyList<string> args = item.Kind switch
+                    {
+                        PromptItemKind.CheckBox => value.Checked ? ArgumentSplitter.Split(item.Value) ?? [] : [],
+                        PromptItemKind.DropDown => item.Choices.FirstOrDefault(c => c.Id == value.ChoiceId) is { } choice ? ArgumentSplitter.Split(choice.Value) ?? [] : [],
+                        _ => item.Kind != PromptItemKind.Folder && InputText.TrimEdge(value.Text).Length == 0 ? []
+                            : ArgumentSplitter.Join(item.Prefix, value.Text, item.Suffix, mergeBackslash: item.Kind is PromptItemKind.Folder or PromptItemKind.File) ?? [],
+                    };
+                    parts.AddRange(args.Select(LaunchRequest.Quote));
                     break;
             }
         }

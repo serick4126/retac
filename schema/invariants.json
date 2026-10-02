@@ -68,6 +68,15 @@
 
   "invariants": [
     {
+      "id": "INV-PROMPT-MACRO-CONTEXT",
+      "status": "enforced",
+      "specIds": ["R-136", "R-137"],
+      "applies": ["type:ReTAC.Domain.Tools.PromptDefinition", "app:MainForm", "app:PromptDialog"],
+      "rule": "初期値は ScalarTemplate、チェックと全選択肢の送る値は ArgumentTemplate で定義を常に検査する。入力と前回値はマクロとして再解析しない。起動操作時の対象・カーソル・cwd を固定し、初期値は各系統の先頭、送る値は各起動の実効対象で展開する。初期値とリセットの失敗は部分的な値を返さず、リセット時の全入力を保持する。プレビューは対象とカーソルなしで cwd だけを渡し、定義・履歴・前回値を書かない。",
+      "enforcedBy": "TemplateParser / MacroValues / PromptDefinitionRules.CheckItem / PromptAnswerRules.Initial・Defaults / PromptExpander.ItemArguments / MainForm.RunToolAsync / PromptDialog.TryResetValues / PromptSettingsDialog.PreviewInitial・Preview",
+      "testedBy": "ScalarTemplateTests / MacroExpansionTests / PromptMacroTests / PromptDialogTests / PromptAnswerRulesTests"
+    },
+    {
       "id": "INV-PROMPT-FOLDER-EMPTY",
       "status": "enforced",
       "specIds": ["R-135"],

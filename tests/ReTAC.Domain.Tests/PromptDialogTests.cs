@@ -28,7 +28,7 @@ public class PromptDialogTests
     };
 
     private static PromptDialog Open(PromptDefinition definition) =>
-        new(definition, "ツール", new FolderHistory(), null, @"C:\work", PromptAnswerRules.Initial(definition));
+        new(definition, "ツール", new FolderHistory(), null, new MacroContext([], null, @"C:\work"), PromptAnswerRules.Initial(definition, new MacroContext([], null, @"C:\work")).Values!);
 
     private static IEnumerable<Control> All(Control root) =>
         root.Controls.Cast<Control>().SelectMany(c => new[] { c }.Concat(All(c)));
@@ -37,10 +37,10 @@ public class PromptDialogTests
     public void 開いたときは前回の値で初期値に戻すと定義の初期値になる()
     {
         using var dialog = Open(Definition);
-        Assert.Equal(PromptAnswerRules.Initial(Definition), dialog.ReadValues());
+        Assert.Equal(PromptAnswerRules.Initial(Definition, new MacroContext([], null, @"C:\work")).Values!, dialog.ReadValues());
 
-        dialog.ResetValues();
-        Assert.Equal(PromptAnswerRules.Defaults(Definition), dialog.ReadValues());
+        Assert.Null(dialog.TryResetValues().Error);
+        Assert.Equal(PromptAnswerRules.Defaults(Definition, new MacroContext([], null, @"C:\work")).Values!, dialog.ReadValues());
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class PromptDialogTests
         var simple = PromptDefinition.Simple("検索");
         using var dialog = Open(simple);
         Assert.Equal("検索", dialog.Text);
-        dialog.ResetValues();
+        Assert.Null(dialog.TryResetValues().Error);
         Assert.Equal(new PromptValue(""), dialog.ReadValues()[1]);
     }
 

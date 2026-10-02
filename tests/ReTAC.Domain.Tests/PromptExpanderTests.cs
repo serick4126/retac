@@ -125,7 +125,7 @@ public class PromptExpanderTests
     public void チェックボックスと選択肢の送る値は区切りの規則で分ける()
     {
         var check = new PromptItem { Kind = PromptItemKind.CheckBox, Label = "c", Value = "-c:v copy \"-vf scale=1280:-1\" $${file}" };
-        Assert.Equal(["-c:v", "copy", "-vf scale=1280:-1", "$${file}"], Args("${prompt}", One(check), new() { [1] = new(Checked: true) }));
+        Assert.Equal(["-c:v", "copy", "-vf scale=1280:-1", "${file}"], Args("${prompt}", One(check), new() { [1] = new(Checked: true) }));
 
         var drop = new PromptItem
         {
@@ -179,13 +179,13 @@ public class PromptExpanderTests
         var raw = new Dictionary<int, PromptValue> { [1] = new("") };
         var check = PromptAnswerRules.Check(definition, raw, Cwd);
         Assert.Equal(new[] { expected }, PromptExpander.Expand(new(definition, check.Values!), new([], null, Cwd, PathForm: _ => throw new Exception())));
-        Assert.Equal(new[] { "-o", "" }, PromptExpander.ItemArguments(item with { Prefix = "-o ", Suffix = "" }, new(""), null));
-        Assert.Equal(new[] { @"C:\work\" }, PromptExpander.ItemArguments(item with { Prefix = "", Suffix = @"\" }, new(@"C:\work\"), null));
+        Assert.Equal(new[] { "-o", "" }, PromptExpander.ItemArguments(item with { Prefix = "-o ", Suffix = "" }, new(""), new MacroContext([], null, Cwd)));
+        Assert.Equal(new[] { @"C:\work\" }, PromptExpander.ItemArguments(item with { Prefix = "", Suffix = @"\" }, new(@"C:\work\"), new MacroContext([], null, Cwd)));
     }
 
     [Theory]
     [InlineData(PromptItemKind.Text)]
     [InlineData(PromptItemKind.File)]
     public void OptionalTextAndFile_OmitAffixes(PromptItemKind kind) =>
-        Assert.Empty(PromptExpander.ItemArguments(new() { Kind = kind, Prefix = "-o", Suffix = "-end" }, new(""), null));
+        Assert.Empty(PromptExpander.ItemArguments(new() { Kind = kind, Prefix = "-o", Suffix = "-end" }, new(""), new MacroContext([], null, Cwd)));
 }

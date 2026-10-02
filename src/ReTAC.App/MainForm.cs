@@ -883,10 +883,11 @@ public sealed class MainForm : Form, IBookmarkHost
         }
 
         // 押した時点の対象で起動する。入力の間にカーソルやマークが動いても変わらない
-        var targets = TreeOverrideTargets() ?? LaunchPlanner.TargetsFor(_list.State);
+        var targets = (TreeOverrideTargets() ?? LaunchPlanner.TargetsFor(_list.State)).ToArray();
         var cursor = _list.State.Cursor;
         var folder = _currentFolder;
 
+        var context = new MacroContext(targets, cursor, folder);
         PromptInput? prompt = null;
         if (template.HasPrompt)
         {
@@ -903,7 +904,13 @@ public sealed class MainForm : Form, IBookmarkHost
             }
 
             // R-131: 全項目を 1 つのダイアログで 1 回だけ聞く。このウィンドウだけを止める（他の ReTAC ウィンドウは入力の間も操作できる）
-            using var dialog = new PromptDialog(definition, tool.Name, _history, _quickAccess, folder, PromptAnswerRules.Initial(definition));
+            var initial = PromptAnswerRules.Initial(definition, context);
+            if (initial.Values is null)
+            {
+                MessageBox.Show(this, initial.Error, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            using var dialog = new PromptDialog(definition, tool.Name, _history, _quickAccess, context, initial.Values);
             if (await OwnerModal.ShowAsync(this, dialog) != DialogResult.OK) return;   // キャンセルしたら起動しない
             prompt = new PromptInput(definition, dialog.Resolved);
             foreach (var path in dialog.HistoryFolders) _history.Remember(path);    // R-131 / N-02

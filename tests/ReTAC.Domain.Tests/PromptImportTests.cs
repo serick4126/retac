@@ -79,7 +79,7 @@ public class PromptImportTests
     /// <summary>定義を展開した引数（インポートした直後・変換の前後で、送るものが変わらないことを確かめる）</summary>
     private static string[] Sent(PromptDefinition definition, Dictionary<int, PromptValue>? values = null)
     {
-        values ??= new Dictionary<int, PromptValue>(PromptAnswerRules.Defaults(definition));
+        values ??= new Dictionary<int, PromptValue>(PromptAnswerRules.Defaults(definition, new MacroContext([], null, @"C:\work")).Values!);
         var check = PromptAnswerRules.Check(definition, values, @"C:\work");
         Assert.Null(check.Error);
         var result = ArgumentExpander.Expand(ArgumentTemplate.Parse("${prompt}"),
@@ -212,7 +212,7 @@ public class PromptImportTests
         Assert.True(PromptImport.CanMerge(before, picked));
         var draft = PromptImport.MergeDraft(before, picked);
         Assert.Equal((PromptItemKind.CheckBox, "-c:v copy a b $${file}", true), (draft.Kind, draft.Label, draft.InitialChecked));   // R-134: ラベルは送る値全体（引用符なしの表示用）
-        Assert.Equal("-c:v copy \"a b\" $${file}", draft.Value);
+        Assert.Equal("-c:v copy \"a b\" $$$${file}", draft.Value);
 
         var after = PromptImport.ApplyMerge(before, picked, draft);
         Assert.Equal(Sent(before), Sent(after));

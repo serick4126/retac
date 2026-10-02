@@ -25,6 +25,7 @@ public sealed class PromptDialog : Form
     private readonly FolderHistory _history;
     private readonly QuickAccessList? _quickAccess;
     private readonly string _currentFolder;
+    private readonly MacroContext _context;
     private readonly FlowLayoutPanel _body = new()
     {
         Dock = DockStyle.Fill,
@@ -42,12 +43,13 @@ public sealed class PromptDialog : Form
     private bool _browseKeyGiven;
 
     public PromptDialog(PromptDefinition definition, string toolName, FolderHistory history, QuickAccessList? quickAccess,
-                        string currentFolder, IReadOnlyDictionary<int, PromptValue> initial)
+                        MacroContext context, IReadOnlyDictionary<int, PromptValue> initial)
     {
         _definition = definition;
         _history = history;
         _quickAccess = quickAccess;
-        _currentFolder = currentFolder;
+        _context = context with { Targets = context.Targets.ToArray(), Prompt = null, PathForm = null };
+        _currentFolder = _context.CurrentFolder;
 
         Text = definition.Title.Length > 0 ? definition.Title : toolName;
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -70,7 +72,13 @@ public sealed class PromptDialog : Form
         reset.Click += (_, _) =>
         {
             // 確認を挟まない。開いているダイアログの入力だけを変え、定義・前回の値・履歴は変えない（R-131 / R-132）
-            ResetValues();
+            var check = TryResetValues();
+            if (check.Error is not null)
+            {
+                MessageBox.Show(this, check.Error, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                if (check.ItemId is { } id) FocusItem(id);
+                return;
+            }
             FocusFirst();
         };
         FormClosing += OnClosing;
@@ -98,7 +106,8 @@ public sealed class PromptDialog : Form
         base.OnLoad(e);
         // 拡大の後の実ピクセルで測る。モニターの作業領域を超えるなら、項目の部分をスクロールにする（R-131）
         var area = Screen.FromControl(Owner ?? (Control)this).WorkingArea;
-        var wanted = _body.GetPreferredSize(new Size(_body.ClientSize.Width, 0)).Height + _buttons.Height;
+        var wanted = _body.GetPreferredSize(new Size(_body.ClientSize.Width, 0)).Height + _buttons.Height
+            + Controls.Cast<Control>().Where(c => c.Dock == DockStyle.Top).Sum(c => c.Height);
         var frame = Height - ClientSize.Height;
         ClientSize = new Size(ClientSize.Width, Math.Min(wanted, area.Height - frame));
 
@@ -211,7 +220,12 @@ public sealed class PromptDialog : Form
         return values;
     }
 
-    internal void ResetValues() => SetValues(PromptAnswerRules.Defaults(_definition));
+    internal PromptCheck TryResetValues()
+    {
+        var check = PromptAnswerRules.Defaults(_definition, _context);
+        if (check.Values is { } values) SetValues(values);
+        return check;
+    }
 
     private void SetValues(IReadOnlyDictionary<int, PromptValue> values)
     {

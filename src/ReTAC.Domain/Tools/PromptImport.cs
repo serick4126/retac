@@ -130,6 +130,8 @@ public static class PromptImport
         return [.. targets.Select(t => new ConversionCandidate(t, LabelOf(t)))];
     }
 
+    internal static string EscapeLiteral(string value) => value.Replace("$", "$$", StringComparison.Ordinal);
+
     private static bool IsItem(ConversionTarget target) =>
         target is ConversionTarget.CheckBox or ConversionTarget.Text or ConversionTarget.FolderItem or ConversionTarget.FileItem;
 
@@ -172,15 +174,15 @@ public static class PromptImport
         {
             ConversionTarget.CheckBox => new PromptItem
             {
-                Id = id, Kind = PromptItemKind.CheckBox, Label = value, Value = ArgumentSplitter.QuoteOne(value)!, InitialChecked = true,
+                Id = id, Kind = PromptItemKind.CheckBox, Label = value, Value = ArgumentSplitter.QuoteOne(EscapeLiteral(value))!, InitialChecked = true,
             },
             ConversionTarget.FolderItem => new PromptItem
             {
                 // 初期値から \ を外さない（C:\ が C: になると、そのドライブのカレントフォルダを指す）。重なった \ は展開で 1 つになる
-                Id = id, Kind = PromptItemKind.Folder, Label = value, Initial = value, Suffix = value.EndsWith('\\') ? @"\" : "",
+                Id = id, Kind = PromptItemKind.Folder, Label = value, Initial = EscapeLiteral(value), Suffix = value.EndsWith('\\') ? @"\" : "",
             },
-            ConversionTarget.FileItem => new PromptItem { Id = id, Kind = PromptItemKind.File, Label = value, Initial = value },
-            _ => new PromptItem { Id = id, Kind = PromptItemKind.Text, Label = value, Initial = value },
+            ConversionTarget.FileItem => new PromptItem { Id = id, Kind = PromptItemKind.File, Label = value, Initial = EscapeLiteral(value) },
+            _ => new PromptItem { Id = id, Kind = PromptItemKind.Text, Label = value, Initial = EscapeLiteral(value) },
         };
         arguments[index] = PromptArgument.Item(id);
         return definition with { Items = [.. definition.Items, item], Arguments = arguments };
@@ -209,7 +211,7 @@ public static class PromptImport
             Kind = PromptItemKind.CheckBox,
             Label = string.Join(" ", values),
             InitialChecked = true,
-            Value = string.Join(" ", values.Select(v => ArgumentSplitter.QuoteOne(v)!)),
+            Value = string.Join(" ", values.Select(v => ArgumentSplitter.QuoteOne(EscapeLiteral(v))!)),
         };
     }
 

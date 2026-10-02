@@ -36,7 +36,7 @@ public class PromptAnswerRulesTests
     [Fact]
     public void 初期値は定義の初期値()
     {
-        var values = PromptAnswerRules.Defaults(All());
+        var values = PromptAnswerRules.Defaults(All(), new MacroContext([], null, @"C:\work")).Values!;
         Assert.Equal(new PromptValue("既定"), values[1]);
         Assert.Equal(new PromptValue(""), values[2]);
         Assert.Equal(new PromptValue("b.txt"), values[3]);
@@ -48,13 +48,13 @@ public class PromptAnswerRulesTests
     public void 前回の値を覚えるなら前回の値で開き覚えないなら初期値()
     {
         var remembered = PromptAnswerRules.Remember(All(remember: true), Input(text: "前回", folder: "out", check: false, choice: 1));
-        var initial = PromptAnswerRules.Initial(remembered);
+        var initial = PromptAnswerRules.Initial(remembered, new MacroContext([], null, @"C:\work")).Values!;
         Assert.Equal(new PromptValue("前回"), initial[1]);
         Assert.Equal(new PromptValue("out"), initial[2]);
         Assert.Equal(new PromptValue(Checked: false), initial[4]);
         Assert.Equal(new PromptValue(ChoiceId: 1), initial[5]);
 
-        Assert.Equal(PromptAnswerRules.Defaults(remembered), PromptAnswerRules.Initial(remembered with { RememberLast = false }));
+        Assert.Equal(PromptAnswerRules.Defaults(remembered, new MacroContext([], null, @"C:\work")).Values!, PromptAnswerRules.Initial(remembered with { RememberLast = false }, new MacroContext([], null, @"C:\work")).Values!);
     }
 
     [Fact]
@@ -68,14 +68,14 @@ public class PromptAnswerRulesTests
     public void 前回の選択肢が無ければ初期の選択()
     {
         var definition = All(remember: true) with { Items = [.. All().Items.Select(i => i.Id == 5 ? i with { LastChoiceId = 99 } : i)] };
-        Assert.Equal(2, PromptAnswerRules.Initial(definition)[5].ChoiceId);
+        Assert.Equal(2, PromptAnswerRules.Initial(definition, new MacroContext([], null, @"C:\work")).Values![5].ChoiceId);
     }
 
     [Fact]
     public void 空欄だったことも前回の値として残す()
     {
         var remembered = PromptAnswerRules.Remember(All(remember: true), Input(text: ""));
-        Assert.Equal("", PromptAnswerRules.Initial(remembered)[1].Text);   // 初期値「既定」には戻さない
+        Assert.Equal("", PromptAnswerRules.Initial(remembered, new MacroContext([], null, @"C:\work")).Values![1].Text);   // 初期値「既定」には戻さない
     }
 
     [Fact]
@@ -223,8 +223,8 @@ public class PromptAnswerRulesTests
     {
         // 手で直した設定ファイル。ヘルパーを開いて直せるように、ここでは止めない（重なりは定義の検査が知らせる）
         var broken = new PromptDefinition { Items = [TextItem, TextItem with { Initial = "後" }] };
-        Assert.Equal("後", PromptAnswerRules.Defaults(broken)[1].Text);
-        Assert.Equal("後", PromptAnswerRules.Initial(broken with { RememberLast = true })[1].Text);
+        Assert.Equal("後", PromptAnswerRules.Defaults(broken, new MacroContext([], null, @"C:\work")).Values![1].Text);
+        Assert.Equal("後", PromptAnswerRules.Initial(broken with { RememberLast = true }, new MacroContext([], null, @"C:\work")).Values![1].Text);
     }
 
     [Fact]
