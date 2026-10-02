@@ -85,13 +85,16 @@ public sealed class StatusBar : Control
         LoadCapacityInBackground(currentFolder);
     }
 
-    /// <summary>R-34 ④: 名前・サイズ・更新日時・種別。名前を先頭に常に出す。フォルダはサイズなし、親フォルダは何も出さない。</summary>
+    /// <summary>
+    /// R-34 ④: 更新日時・種別・サイズ・名前（Detail が前の 3 つ、Name が最後）。フォルダはサイズなし、親フォルダは何も出さない。
+    /// 日時は固定の幅なので先頭に置き、カーソルを動かしても日時の位置が動かないようにする。幅の変わる名前は末尾に置く。
+    /// </summary>
     internal static (string Name, string Detail) DescribeCursor(Entry? entry)
     {
         if (entry is null || entry.IsParent) return ("", "");
         var type = ShellFileType.TypeName(entry.FullPath, entry.Kind == EntryKind.Folder);
-        var size = entry.Kind == EntryKind.Folder ? "" : Display.Size(entry.Size) + "  ";
-        return (entry.Name, $"{size}{Display.Timestamp(entry.LastWriteTime)}  {type}");
+        var size = entry.Kind == EntryKind.Folder ? "" : "  " + Display.Size(entry.Size);
+        return (entry.Name, $"{Display.Timestamp(entry.LastWriteTime)}  {type}{size}");
     }
 
     private string _capacityRoot = "";
@@ -168,20 +171,21 @@ public sealed class StatusBar : Control
 
     private enum Icon { Folder, File }
 
-    /// <summary>R-34 ④: 入らないときは名前だけを「…」で省略し、サイズ・日時・種別は残す。</summary>
+    /// <summary>R-34 ④: 日時・種別・サイズを先に描き、残りの幅に名前を置く。入らないときは名前だけを「…」で省略し、日時・種別・サイズは残す。</summary>
     private void DrawCursorSection(Graphics g, int x, int right)
     {
         if (_cursorName.Length == 0) return;
         var pad = Scaled(6);
         g.DrawLine(SystemPens.ControlDark, x - pad / 2, Scaled(3), x - pad / 2, Height - Scaled(3));
-        var rest = "  " + _cursorRest;
+        var head = _cursorRest + "  ";
         var measure = TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
-        var restWidth = TextRenderer.MeasureText(g, rest, Font, Size.Empty, measure).Width;
+        var headWidth = TextRenderer.MeasureText(g, head, Font, Size.Empty, measure).Width;
+        var nameX = x + headWidth;
         var nameWidth = Math.Max(0, Math.Min(TextRenderer.MeasureText(g, _cursorName, Font, Size.Empty, measure).Width,
-            right - x - restWidth - pad));
+            right - nameX - pad));
         var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding | TextFormatFlags.PreserveGraphicsClipping;
-        TextRenderer.DrawText(g, _cursorName, Font, new Rectangle(x, 0, nameWidth, Height), ForeColor, flags | TextFormatFlags.EndEllipsis);
-        TextRenderer.DrawText(g, rest, Font, new Rectangle(x + nameWidth, 0, restWidth, Height), ForeColor, flags);
+        TextRenderer.DrawText(g, head, Font, new Rectangle(x, 0, headWidth, Height), ForeColor, flags);
+        TextRenderer.DrawText(g, _cursorName, Font, new Rectangle(nameX, 0, nameWidth, Height), ForeColor, flags | TextFormatFlags.EndEllipsis);
     }
 
     private int DrawSection(Graphics g, int x, string text, Icon? icon, bool marked)

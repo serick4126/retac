@@ -7919,7 +7919,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 103
+        "line": 106
       },
       {
         "file": "src/ReTAC.App/ToolLauncher.cs",
@@ -8015,7 +8015,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 210
+        "line": 214
       },
       {
         "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
@@ -9091,7 +9091,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 229
+        "line": 233
       },
       {
         "file": "src/ReTAC.Shell/PreviewSession.cs",
@@ -9511,7 +9511,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 227
+        "line": 231
       }
     ],
     "R-11-6": [
@@ -11075,7 +11075,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 134
+        "line": 137
       },
       {
         "file": "src/ReTAC.Shell/ShellThumbnails.cs",
@@ -11507,7 +11507,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 109
+        "line": 112
       },
       {
         "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
@@ -11745,11 +11745,11 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 88
+        "line": 89
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 171
+        "line": 174
       },
       {
         "file": "src/ReTAC.Domain/Formatting/Display.cs",
@@ -11785,11 +11785,11 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 159
+        "line": 162
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 227
+        "line": 231
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListSummary.cs",
@@ -12795,7 +12795,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 239
+        "line": 243
       }
     ],
     "R-66-2": [
@@ -14821,7 +14821,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 228
+        "line": 232
       }
     ],
     "V-13": [

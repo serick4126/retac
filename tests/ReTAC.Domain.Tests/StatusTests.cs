@@ -127,11 +127,30 @@ public class ListSummaryTests
 public class StatusBarCursorTests
 {
     [Fact]
-    public void ステータスバーの項目の情報は名前を先頭に出す()
+    public void ステータスバーの項目の情報は更新日時_種別_サイズの順で名前は別に返す()
     {
-        var (name, rest) = ReTAC.App.StatusBar.DescribeCursor(TestEntries.File("資料.xlsx"));
+        var mtime = new DateTime(2026, 10, 2, 9, 8, 7);
+        var (name, detail) = ReTAC.App.StatusBar.DescribeCursor(TestEntries.File("資料.xlsx", size: 512, mtime: mtime));
         Assert.Equal("資料.xlsx", name);
-        Assert.DoesNotContain("資料", rest);
+        Assert.DoesNotContain("資料", detail);
+        Assert.StartsWith(Display.Timestamp(mtime), detail);
+        Assert.EndsWith("  " + Display.Size(512), detail);   // サイズは種別の後
+    }
+
+    [Fact]
+    public void ステータスバーのフォルダの情報はサイズを含まない()
+    {
+        var mtime = new DateTime(2026, 10, 2, 9, 8, 7);
+        var (name, detail) = ReTAC.App.StatusBar.DescribeCursor(TestEntries.Folder("資料", mtime: mtime));
+        Assert.Equal("資料", name);
+        Assert.StartsWith(Display.Timestamp(mtime), detail);
+        Assert.DoesNotContain(Display.Size(0), detail);
+    }
+
+    [Fact]
+    public void ステータスバーはnullと親フォルダの項目で何も出さない()
+    {
         Assert.Equal(("", ""), ReTAC.App.StatusBar.DescribeCursor(null));
+        Assert.Equal(("", ""), ReTAC.App.StatusBar.DescribeCursor(TestEntries.Parent()));
     }
 }
