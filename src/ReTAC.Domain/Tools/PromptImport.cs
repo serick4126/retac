@@ -35,17 +35,67 @@ public sealed record ConversionCandidate(ConversionTarget Target, string Label);
 /// <param name="Path">ツールのパス（端の引用符を外したもの）</param>
 public sealed record ImportedCommand(string Path, IReadOnlyList<PromptArgument> Arguments);
 
+/// <summary>R-134: 読取りに失敗した理由を入力画面へ返す。成功時は Command のみを持つ。</summary>
+public sealed record PromptImportRead(ImportedCommand? Command, string? Error);
+
 /// <summary>
 /// R-134: ふだんのコマンドラインから定義を組み立てる。読み込んだ直後は貼り付けたものと同じ引数の並びが送られることを保証し
 /// （すべて固定の引数）、項目やマクロへの変換は利用者が行ごとに選ぶ。
 /// </summary>
 public static class PromptImport
 {
-    /// <returns>読み取れない（空・先頭が空・引用符が閉じていない）ときは null</returns>
-    public static ImportedCommand? Parse(string commandLine)
+    public static ImportedCommand? Parse(string commandLine) => Read(commandLine).Command;
+
+    /// <summary>R-134: 実行ファイルを先に切り出す。存在・PATH によって境界を変えない。</summary>
+    public static PromptImportRead Read(string commandLine)
     {
-        if (ArgumentSplitter.Split(commandLine) is not { Count: > 0 } tokens || InputText.TrimEdge(tokens[0]).Length == 0) return null;
-        return new ImportedCommand(tokens[0], [.. tokens.Skip(1).Select(PromptArgument.Fixed)]);
+        static PromptImportRead Fail(string reason) => new(null, reason);
+        if (commandLine.IndexOfAny(['\r', '\n']) >= 0) return Fail("コマンドラインに改行は書けません。");
+        var start = 0;
+        while (start < commandLine.Length && ArgumentSplitter.IsSeparator(commandLine[start])) start++;
+        if (start == commandLine.Length) return Fail("実行ファイルのパスを入れてください。");
+
+        string path;
+        int end;
+        if (commandLine[start] == '"')
+        {
+            var close = commandLine.IndexOf('"', start + 1);
+            if (close < 0) return Fail("実行ファイルのパスの引用符（\"）が閉じていません。");
+            path = commandLine[(start + 1)..close];
+            end = close + 1;
+            if (end < commandLine.Length && !ArgumentSplitter.IsSeparator(commandLine[end]))
+                return Fail("パスを閉じる引用符（\"）の後には空白を入れてください。");
+        }
+        else
+        {
+            end = start;
+            while (end < commandLine.Length && !ArgumentSplitter.IsSeparator(commandLine[end])) end++;
+            var first = commandLine[start..end];
+            var pathLike = first.Contains('\\') || first.Contains('/')
+                || (first.Length >= 2 && char.IsAsciiLetter(first[0]) && first[1] == ':');
+            if (pathLike)
+            {
+                for (var i = start; i + 4 <= commandLine.Length; i++)
+                {
+                    if (commandLine[i] != '.') continue;
+                    var ext = commandLine.AsSpan(i, 4);
+                    if (!ext.Equals(".exe", StringComparison.OrdinalIgnoreCase)
+                        && !ext.Equals(".com", StringComparison.OrdinalIgnoreCase)
+                        && !ext.Equals(".bat", StringComparison.OrdinalIgnoreCase)
+                        && !ext.Equals(".cmd", StringComparison.OrdinalIgnoreCase)) continue;
+                    var after = i + 4;
+                    if (after != commandLine.Length && !ArgumentSplitter.IsSeparator(commandLine[after])) continue;
+                    end = after;
+                    break;
+                }
+            }
+            path = commandLine[start..end];
+            if (path.Contains('"')) return Fail("実行ファイルのパスは全体を引用符（\"）で囲んでください。");
+        }
+        if (InputText.TrimEdge(path).Length == 0) return Fail("実行ファイルのパスが空です。");
+        if (ArgumentSplitter.Split(commandLine[end..]) is not { } args)
+            return Fail("引数の引用符（\"）が閉じていません。");
+        return new(new ImportedCommand(path, [.. args.Select(PromptArgument.Fixed)]), null);
     }
 
     public static ArgumentMark Mark(string value)

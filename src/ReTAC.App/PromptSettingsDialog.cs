@@ -147,7 +147,7 @@ public sealed class PromptSettingsDialog : Form
         _undoButton.Enabled = true;
     }
 
-    private void Undo()
+    internal void Undo()
     {
         if (!_undo.TryUndo(out var state)) return;
         _items.Clear();
@@ -177,7 +177,7 @@ public sealed class PromptSettingsDialog : Form
 
     private static Button Side(string text, int y) => new() { Text = text, Bounds = new Rectangle(498, y, 104, 28) };
 
-    private PromptDefinition Current() => new()
+    internal PromptDefinition Current() => new()
     {
         Title = InputText.TrimEdge(_title.Text),   // B-01: 全角空白は名前の一部なので落とさない
         RememberLast = _remember.Checked,
@@ -474,17 +474,25 @@ public sealed class PromptSettingsDialog : Form
     {
         using var input = new TextInputDialog("インポート",
             $"コマンドラインを貼り付けてください。{Environment.NewLine}パスと引数は、貼り付けたコマンドで置き換わります。", "",
-            text => PromptImport.Parse(text) is null ? "コマンドラインを読み取れません。引用符（\"）が閉じているか確かめてください。" : null);
-        if (input.ShowDialog(this) != DialogResult.OK || PromptImport.Parse(input.Value) is not { } command) return;
+            text => PromptImport.Read(text).Error);
+        if (input.ShowDialog(this) != DialogResult.OK) return;
         if ((_items.Count > 0 || _arguments.Count > 0)
             && MessageBox.Show(this, "今の項目と引数を置き換えます。よろしいですか。", "ReTAC", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
             return;
 
+        TryImport(input.Value);
+    }
+
+    internal string? TryImport(string commandLine)
+    {
+        var read = PromptImport.Read(commandLine);
+        if (read.Command is not { } command) return read.Error;
         PushUndo();
         Replace(new PromptDefinition { Arguments = [.. command.Arguments] });
         ImportedPath = command.Path;
         RefillItems(-1);
         RefillArguments([]);
+        return null;
     }
 
     private void Preview()

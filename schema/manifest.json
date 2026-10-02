@@ -4021,6 +4021,28 @@
       "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
       "doc": "R-134: ふだんのコマンドラインから定義を組み立てる。読み込んだ直後は貼り付けたものと同じ引数の並びが送られることを保証し （すべて固定の引数）、項目やマクロへの変換は利用者が行ごとに選ぶ。"
     },
+    "ReTAC.Domain.Tools.PromptImportRead": {
+      "id": "type:ReTAC.Domain.Tools.PromptImportRead",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
+      "doc": "R-134: 読取りに失敗した理由を入力画面へ返す。成功時は Command のみを持つ。",
+      "fields": [
+        {
+          "name": "Command",
+          "type": "ReTAC.Domain.Tools.ImportedCommand",
+          "nullable": true,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Error",
+          "type": "string",
+          "nullable": true,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
     "ReTAC.Domain.Tools.PromptInput": {
       "id": "type:ReTAC.Domain.Tools.PromptInput",
       "kind": "sealed record",
@@ -5102,6 +5124,17 @@
         "field": "Arguments",
         "container": "List<ReTAC.Domain.Tools.PromptArgument>",
         "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.PromptImportRead",
+      "to": "type:ReTAC.Domain.Tools.ImportedCommand",
+      "type": "1:1",
+      "fk": {
+        "field": "Command",
+        "container": null,
+        "unique": null
       },
       "visibility": "public"
     },
@@ -11317,7 +11350,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 515
+        "line": 523
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -11435,7 +11468,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 498
+        "line": 506
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
@@ -11493,11 +11526,19 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
-        "line": 39
+        "line": 38
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
-        "line": 152
+        "line": 42
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
+        "line": 49
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
+        "line": 202
       }
     ],
     "R-14": [

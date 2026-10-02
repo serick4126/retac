@@ -6,6 +6,74 @@ namespace ReTAC.Domain.Tests;
 /// <summary>R-134: インポート・印・変換・まとめる</summary>
 public class PromptImportTests
 {
+    [Fact]
+    public void Import_UnquotedExecutableWithSpaces()
+    {
+        var read = PromptImport.Read(@"C:\Program Files\WinRAR\WinRAR.exe  a -afzip -m5 backup.zip ""C:\Data\*""");
+        Assert.Null(read.Error);
+        Assert.Equal(@"C:\Program Files\WinRAR\WinRAR.exe", read.Command!.Path);
+        Assert.Equal(new[] { "a", "-afzip", "-m5", "backup.zip", @"C:\Data\*" }, read.Command.Arguments.Select(a => a.Text));
+        Assert.All(read.Command.Arguments, a => Assert.Equal(PromptArgumentKind.Fixed, a.Kind));
+    }
+
+    [Theory]
+    [InlineData(@"C:\Program Files\tool.EXE x", @"C:\Program Files\tool.EXE", "x")]
+    [InlineData(@"C:\Program Files\tool.com x", @"C:\Program Files\tool.com", "x")]
+    [InlineData(@"C:\Program Files\tool.bat x", @"C:\Program Files\tool.bat", "x")]
+    [InlineData(@"C:\Program Files\tool.cmd x", @"C:\Program Files\tool.cmd", "x")]
+    [InlineData(@"\\server\share name\tool.exe x", @"\\server\share name\tool.exe", "x")]
+    [InlineData(@"sub\with space\tool.exe x", @"sub\with space\tool.exe", "x")]
+    [InlineData(@"sub folder\tool.exe x", "sub", @"folder\tool.exe|x")]
+    [InlineData(@"""sub folder\tool.exe"" x", @"sub folder\tool.exe", "x")]
+    [InlineData(@"./sub folder/tool.exe x", @"./sub folder/tool.exe", "x")]
+    [InlineData(@"C:\Tools.exe\App\tool.exe x", @"C:\Tools.exe\App\tool.exe", "x")]
+    [InlineData(@"C:\Tools.exe folder\app.exe x", @"C:\Tools.exe", @"folder\app.exe|x")]
+    [InlineData(@"""C:\Tools.exe folder\app.exe"" x", @"C:\Tools.exe folder\app.exe", "x")]
+    [InlineData(@"""C:\Program Files\script.ps1"" x", @"C:\Program Files\script.ps1", "x")]
+    [InlineData(@"C:\bin\tool x", @"C:\bin\tool", "x")]
+    [InlineData("tool.exe x", "tool.exe", "x")]
+    [InlineData("tool x", "tool", "x")]
+    [InlineData("  \tC:\\Program Files\\tool.exe\t x \t y", @"C:\Program Files\tool.exe", "x|y")]
+    public void Import_Boundaries(string command, string path, string args)
+    {
+        var read = PromptImport.Read(command);
+        Assert.Null(read.Error);
+        Assert.Equal(path, read.Command!.Path);
+        Assert.Equal(args.Split('|'), read.Command.Arguments.Select(a => a.Text));
+    }
+
+    [Theory]
+    [InlineData(@"C:\Program Files\tool.exe")]
+    [InlineData(@"""C:\Program Files\tool.exe""")]
+    public void Import_NoArguments(string command)
+    {
+        Assert.Empty(PromptImport.Read(command).Command!.Arguments);
+    }
+
+    [Fact]
+    public void Import_FixedValuesAreLiteral()
+    {
+        var read = PromptImport.Read("tool.exe \"\" a　b * ${file} ${unknown} $${file} $$ $env:PATH");
+        Assert.Equal(new[] { "", "a　b", "*", "${file}", "${unknown}", "$${file}", "$$", "$env:PATH" },
+            read.Command!.Arguments.Select(a => a.Text));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" \t ")]
+    [InlineData("\"\" x")]
+    [InlineData("\"bad.exe")]
+    [InlineData("\"tool.exe\"x")]
+    [InlineData("tool.exe \"x")]
+    [InlineData("tool.exe\nx")]
+    [InlineData("tool.exe\rx")]
+    public void Import_ErrorsGiveReasons(string command)
+    {
+        var read = PromptImport.Read(command);
+        Assert.Null(read.Command);
+        Assert.False(string.IsNullOrWhiteSpace(read.Error));
+    }
+
     private static readonly Entry A = TestEntries.File("a.txt");
 
     /// <summary>定義を展開した引数（インポートした直後・変換の前後で、送るものが変わらないことを確かめる）</summary>
