@@ -148,7 +148,7 @@ public class PromptImportTests
     }
 
     [Fact]
-    public void 変換できない値と項目が十個のとき()
+    public void 全項目の候補は内容によらず表示し十個なら無効()
     {
         foreach (var value in new[] { "", "a\"b", "  " }) Assert.Equal(ItemTargets, Targets(value, null));
         var candidates = PromptImport.Candidates(@"D:\書庫.rar", PathKind.File, 10);
