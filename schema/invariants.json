@@ -68,6 +68,15 @@
 
   "invariants": [
     {
+      "id": "INV-PROMPT-FOLDER-EMPTY",
+      "status": "enforced",
+      "specIds": ["R-135"],
+      "applies": ["type:ReTAC.Domain.Tools.PromptItem"],
+      "rule": "必須のフォルダの空欄はエラー。任意なら CurrentFolder は起動時の cwd、SendEmpty は空の 1 引数と前後の文字を送る。空は短縮・履歴登録をせず、前回値には入力のまま残す。空欄 enum は必須状態によらず検査する。",
+      "enforcedBy": "PromptDefinitionRules.Validate / PromptAnswerRules.Check・HistoryFolders・Remember / PromptExpander.ItemArguments",
+      "testedBy": "PromptAnswerRulesTests.Folder_EmptyMatrix・Folder_RememberRawEmpty / PromptExpanderTests.Folder_EmptyAffixes / PromptDefinitionRulesTests.FolderSetting_InvalidEnumRejected / PromptSettingsJsonTests.FolderSetting_MissingKeyDefaults・FolderSetting_RoundTrip"
+    },
+    {
       "id": "INV-QUICKACCESS-UNIQUE-PATH",
       "status": "enforced",
       "specIds": [],

@@ -226,4 +226,43 @@ public class PromptAnswerRulesTests
         Assert.Equal("後", PromptAnswerRules.Defaults(broken)[1].Text);
         Assert.Equal("後", PromptAnswerRules.Initial(broken with { RememberLast = true })[1].Text);
     }
+
+    [Fact]
+    public void Folder_EmptyMatrix()
+    {
+        foreach (var required in new[] { false, true })
+        foreach (var behavior in Enum.GetValues<PromptFolderEmptyBehavior>())
+        foreach (var text in new[] { "", " ", "\t", "\"\"" })
+        {
+            var item = FolderItem with { Required = required, FolderEmptyBehavior = behavior };
+            var definition = new PromptDefinition { Items = [item], Arguments = [PromptArgument.Item(item.Id)] };
+            var input = new Dictionary<int, PromptValue> { [item.Id] = new(text) };
+            var check = PromptAnswerRules.Check(definition, input, Cwd);
+            if (required)
+            {
+                Assert.Null(check.Values);
+                Assert.Equal(item.Id, check.ItemId);
+                Assert.Equal("出力先を入力してください。", check.Error);
+            }
+            else
+            {
+                Assert.Null(check.Error);
+                Assert.Equal(behavior == PromptFolderEmptyBehavior.CurrentFolder ? Cwd : "", check.Values![item.Id].Text);
+                Assert.Empty(PromptAnswerRules.HistoryFolders(definition, input, check.Values));
+            }
+        }
+        var nonEmpty = PromptAnswerRules.Check(new() { Items = [FolderItem] }, new Dictionary<int, PromptValue> { [2] = new("　") }, Cwd);
+        Assert.Equal(@"C:\work\　", nonEmpty.Values![2].Text);
+    }
+
+    [Fact]
+    public void Folder_RememberRawEmpty()
+    {
+        foreach (var behavior in Enum.GetValues<PromptFolderEmptyBehavior>())
+        {
+            var definition = new PromptDefinition { RememberLast = true, Items = [FolderItem with { FolderEmptyBehavior = behavior }] };
+            var remembered = PromptAnswerRules.Remember(definition, new Dictionary<int, PromptValue> { [2] = new("") });
+            Assert.Equal("", remembered.Items[0].LastText);
+        }
+    }
 }

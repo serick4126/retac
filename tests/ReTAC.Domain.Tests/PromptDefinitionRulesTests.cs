@@ -190,4 +190,15 @@ public class PromptDefinitionRulesTests
         Assert.Equal([1, 2], item.Choices.Select(c => c.Id));
         Assert.Null(item.LastChoiceId);
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FolderSetting_InvalidEnumRejected(bool required)
+    {
+        var item = new PromptItem { Id = 1, Kind = PromptItemKind.Folder, Label = "出力", Required = required,
+            FolderEmptyBehavior = (PromptFolderEmptyBehavior)999 };
+        var definition = new PromptDefinition { Items = [item], Arguments = [PromptArgument.Item(1)] };
+        Assert.Contains(PromptDefinitionRules.Validate(definition), p => p.ItemId == 1 && p.Message.Contains("空欄"));
+    }
 }

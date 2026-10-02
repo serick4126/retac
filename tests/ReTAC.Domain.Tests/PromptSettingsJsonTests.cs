@@ -80,4 +80,24 @@ public class PromptSettingsJsonTests
         Assert.Empty(prompt.Items);
         Assert.Empty(prompt.Arguments);
     }
+
+    [Fact]
+    public void FolderSetting_MissingKeyDefaults()
+    {
+        var item = System.Text.Json.JsonSerializer.Deserialize<PromptItem>("{\"Id\":1,\"Kind\":1,\"Label\":\"出力\"}")!;
+        var normalized = new PromptDefinition { Items = [item] }.Normalized().Items[0];
+        Assert.Equal(PromptFolderEmptyBehavior.CurrentFolder, normalized.FolderEmptyBehavior);
+        Assert.False(normalized.Required);
+    }
+
+    [Theory]
+    [InlineData(PromptFolderEmptyBehavior.CurrentFolder)]
+    [InlineData(PromptFolderEmptyBehavior.SendEmpty)]
+    public void FolderSetting_RoundTrip(PromptFolderEmptyBehavior behavior)
+    {
+        var original = new PromptItem { Id = 1, Kind = PromptItemKind.Folder, Label = "出力", Required = true,
+            FolderEmptyBehavior = behavior, Initial = "${pathBase}", LastText = "" };
+        var json = System.Text.Json.JsonSerializer.Serialize(original);
+        Assert.Equal(original, System.Text.Json.JsonSerializer.Deserialize<PromptItem>(json)! with { Choices = original.Choices });
+    }
 }

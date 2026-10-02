@@ -41,10 +41,10 @@ public static class PromptExpander
                 return item.Choices.FirstOrDefault(c => c.Id == value.ChoiceId) is { } choice ? ArgumentSplitter.Split(choice.Value) ?? [] : [];
             default:
                 // 必須でない空欄は付ける文字ごと送らない（-ss だけが残らない）。フォルダの空欄は検査でカレントフォルダになっている
-                if (InputText.TrimEdge(value.Text).Length == 0) return [];
+                if (item.Kind != PromptItemKind.Folder && InputText.TrimEdge(value.Text).Length == 0) return [];
                 var path = item.Kind is PromptItemKind.Folder or PromptItemKind.File;
                 // 長いパスは外部のアプリが開けないので、${file} と同じく短い形にする（ToolLauncher.TargetPath）
-                var text = path && pathForm is not null ? pathForm(value.Text) : value.Text;
+                var text = path && value.Text.Length > 0 && pathForm is not null ? pathForm(value.Text) : value.Text;
                 return ArgumentSplitter.Join(item.Prefix, text, item.Suffix, mergeBackslash: path) ?? [];
         }
     }

@@ -10,6 +10,9 @@ public enum PromptItemKind
     DropDown,
 }
 
+/// <summary>R-135: 任意のフォルダ項目の空欄時の送信方法。</summary>
+public enum PromptFolderEmptyBehavior { CurrentFolder = 0, SendEmpty = 1 }
+
 /// <summary>R-130: 引数の行の種類。</summary>
 public enum PromptArgumentKind
 {
@@ -46,8 +49,10 @@ public sealed record PromptItem
     public string Prefix { get; init; } = "";
     /// <summary>テキスト・フォルダ・ファイルの「後ろに付ける」。空白で始まっていなければ値とつながる</summary>
     public string Suffix { get; init; } = "";
-    /// <summary>テキスト・ファイルの「入力を必須にする」</summary>
+    /// <summary>テキスト・フォルダ・ファイルの「入力を必須にする」</summary>
     public bool Required { get; init; }
+    /// <summary>R-135: 任意のフォルダの空欄。キーがなければ従来どおりカレントフォルダ。</summary>
+    public PromptFolderEmptyBehavior FolderEmptyBehavior { get; init; } = PromptFolderEmptyBehavior.CurrentFolder;
     /// <summary>チェックボックスの送る値</summary>
     public string Value { get; init; } = "";
     public bool InitialChecked { get; init; }

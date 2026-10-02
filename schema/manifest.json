@@ -4019,6 +4019,16 @@
       "file": "src/ReTAC.Domain/Tools/PromptExpander.cs",
       "doc": "R-130: 入力ダイアログの定義の引数の並びを、${prompt} の位置に展開する。"
     },
+    "ReTAC.Domain.Tools.PromptFolderEmptyBehavior": {
+      "id": "type:ReTAC.Domain.Tools.PromptFolderEmptyBehavior",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+      "doc": "R-135: 任意のフォルダ項目の空欄時の送信方法。",
+      "members": [
+        "CurrentFolder",
+        "SendEmpty"
+      ]
+    },
     "ReTAC.Domain.Tools.PromptImport": {
       "id": "type:ReTAC.Domain.Tools.PromptImport",
       "kind": "static class",
@@ -4126,7 +4136,15 @@
           "nullable": false,
           "required": false,
           "mutability": "init",
-          "doc": "テキスト・ファイルの「入力を必須にする」"
+          "doc": "テキスト・フォルダ・ファイルの「入力を必須にする」"
+        },
+        {
+          "name": "FolderEmptyBehavior",
+          "type": "ReTAC.Domain.Tools.PromptFolderEmptyBehavior",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "R-135: 任意のフォルダの空欄。キーがなければ従来どおりカレントフォルダ。"
         },
         {
           "name": "Value",
@@ -5199,6 +5217,17 @@
       "type": "1:1",
       "fk": {
         "field": "Kind",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.PromptItem",
+      "to": "type:ReTAC.Domain.Tools.PromptFolderEmptyBehavior",
+      "type": "1:1",
+      "fk": {
+        "field": "FolderEmptyBehavior",
         "container": null,
         "unique": null
       },
@@ -11301,27 +11330,27 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 13
+        "line": 16
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 35
+        "line": 38
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 63
+        "line": 68
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 78
+        "line": 83
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 94
+        "line": 99
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 104
+        "line": 109
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinitionRules.cs",
@@ -11433,23 +11462,23 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 24
+        "line": 27
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 57
+        "line": 62
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 86
+        "line": 91
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 134
+        "line": 139
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 158
+        "line": 163
       }
     ],
     "R-133": [
@@ -11531,7 +11560,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 104
+        "line": 109
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinitionRules.cs",
@@ -11573,7 +11602,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 16
+        "line": 19
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptExpander.cs",
@@ -11598,6 +11627,16 @@
       {
         "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
         "line": 202
+      }
+    ],
+    "R-135": [
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 13
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
+        "line": 54
       }
     ],
     "R-136": [
@@ -12603,7 +12642,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 113
+        "line": 118
       }
     ],
     "R-55-3": [
@@ -14835,11 +14874,11 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 36
+        "line": 39
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
-        "line": 80
+        "line": 85
       }
     ],
     "S-19": [

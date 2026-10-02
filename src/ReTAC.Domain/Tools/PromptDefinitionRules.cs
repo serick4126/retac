@@ -65,6 +65,8 @@ public static class PromptDefinitionRules
     {
         void Add(string message) => problems.Add(new(message, item.Id));
 
+        if (item.Kind == PromptItemKind.Folder && !Enum.IsDefined(item.FolderEmptyBehavior))
+            Add($"「{name}」の空欄の扱いが正しくありません。");
         switch (item.Kind)
         {
             case PromptItemKind.Text or PromptItemKind.Folder or PromptItemKind.File:

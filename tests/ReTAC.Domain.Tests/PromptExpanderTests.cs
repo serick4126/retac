@@ -166,4 +166,26 @@ public class PromptExpanderTests
         var spaced = new PromptDefinition { Arguments = [PromptArgument.Fixed("a b"), PromptArgument.Fixed("")] };
         Assert.Equal("\"a b\" \"\"", PromptExample.Render(spaced, new Dictionary<int, PromptValue>()));
     }
+
+    [Theory]
+    [InlineData("", "", "")]
+    [InlineData("-o", "", "-o")]
+    [InlineData("", "-end", "-end")]
+    public void Folder_EmptyAffixes(string prefix, string suffix, string expected)
+    {
+        var item = new PromptItem { Id = 1, Kind = PromptItemKind.Folder, Label = "出力", Prefix = prefix, Suffix = suffix,
+            FolderEmptyBehavior = PromptFolderEmptyBehavior.SendEmpty };
+        var definition = new PromptDefinition { Items = [item], Arguments = [PromptArgument.Item(1)] };
+        var raw = new Dictionary<int, PromptValue> { [1] = new("") };
+        var check = PromptAnswerRules.Check(definition, raw, Cwd);
+        Assert.Equal(new[] { expected }, PromptExpander.Expand(new(definition, check.Values!), new([], null, Cwd, PathForm: _ => throw new Exception())));
+        Assert.Equal(new[] { "-o", "" }, PromptExpander.ItemArguments(item with { Prefix = "-o ", Suffix = "" }, new(""), null));
+        Assert.Equal(new[] { @"C:\work\" }, PromptExpander.ItemArguments(item with { Prefix = "", Suffix = @"\" }, new(@"C:\work\"), null));
+    }
+
+    [Theory]
+    [InlineData(PromptItemKind.Text)]
+    [InlineData(PromptItemKind.File)]
+    public void OptionalTextAndFile_OmitAffixes(PromptItemKind kind) =>
+        Assert.Empty(PromptExpander.ItemArguments(new() { Kind = kind, Prefix = "-o", Suffix = "-end" }, new(""), null));
 }

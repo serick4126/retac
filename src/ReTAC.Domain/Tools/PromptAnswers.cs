@@ -64,8 +64,8 @@ public static class PromptAnswerRules
                     // 空かどうかは引用符を外した後で判断する。解決には入力のままを渡す（Resolve が 1 回だけ外す。2 回外すと ""C:\x"" が通ってしまう）
                     if (InputText.Unquote(value.Text).Length == 0)
                     {
-                        if (item.Kind == PromptItemKind.File && item.Required) return Fail(item, $"{item.Label}を入力してください。");
-                        values[item.Id] = value with { Text = item.Kind == PromptItemKind.Folder ? currentFolder : "" };
+                        if (item.Required) return Fail(item, $"{item.Label}を入力してください。");
+                        values[item.Id] = value with { Text = item.Kind == PromptItemKind.Folder && item.FolderEmptyBehavior == PromptFolderEmptyBehavior.CurrentFolder ? currentFolder : "" };
                         break;
                     }
                     if (PathResolver.Resolve(currentFolder, value.Text) is not { } resolved) return Fail(item, $"{item.Label}のパスが正しくありません。");
