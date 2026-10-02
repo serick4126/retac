@@ -68,6 +68,15 @@
 
   "invariants": [
     {
+      "id": "INV-PROMPT-CONVERSION-DRAFT",
+      "status": "enforced",
+      "specIds": ["R-134", "R-139"],
+      "applies": ["type:ReTAC.Domain.Tools.PromptDefinition", "app:PromptSettingsDialog"],
+      "rule": "固定の単一行から全 5 種類へ内容を問わず下書きを作れる。元の表示文字と引数位置を保ち、マクロ欄のドルを escape する。項目上限は候補を隠さず無効にし、適用時にも拒否する。保存の Validate は不正な下書きを変更せず差し戻す。1 変換で undo は 1 つ。",
+      "enforcedBy": "PromptImport.Candidates・Convert・EscapeMacroLiteral・ConversionWarning / PromptSettingsDialog.ApplyConversion・OnClosing",
+      "testedBy": "PromptImportTests.Convert_AllKindsKeepDraft・ConvertAndMerge_DollarsAreLiteral・Convert_EmbeddedQuotesRetainedWithWarning・Convert_LimitKeepsAllCandidatesVisible・Convert_OnlySingleFixedRow / PromptSettingsDialogTests.Convert_UndoRestoresPositionAndValue・Convert_SelectsNewItemAndCancelDiscards"
+    },
+    {
       "id": "INV-PROMPT-MACRO-CONTEXT",
       "status": "enforced",
       "specIds": ["R-136", "R-137"],

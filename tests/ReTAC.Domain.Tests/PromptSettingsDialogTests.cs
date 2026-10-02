@@ -44,4 +44,38 @@ public class PromptSettingsDialogTests
         Assert.Equal("original", Assert.Single(dialog.Current().Arguments).Text);
         Assert.False(dialog.CanUndo);
     }
+
+    [Fact]
+    public void Convert_UndoRestoresPositionAndValue()
+    {
+        var source = Source with { Arguments = [PromptArgument.Fixed("before"), PromptArgument.Fixed("${file}"), PromptArgument.Fixed("after")] };
+        using var dialog = new PromptSettingsDialog(source, "ツール", new FolderHistory(), null, @"C:\work");
+        Assert.Null(dialog.ApplyConversion(1, ConversionTarget.DropDown));
+        Assert.Equal(PromptItemKind.DropDown, Assert.Single(dialog.Current().Items).Kind);
+        Assert.True(dialog.CanUndo);
+        dialog.Undo();
+        Assert.Equal(JsonSerializer.Serialize(source), JsonSerializer.Serialize(dialog.Current()));
+        Assert.False(dialog.CanUndo);
+        Assert.Null(dialog.ApplyConversion(0, ConversionTarget.Text));
+        Assert.Null(dialog.ApplyConversion(0, ConversionTarget.Text)); // Item row: no further history.
+        dialog.Undo();
+        Assert.False(dialog.CanUndo);
+    }
+
+    [Fact]
+    public void Convert_SelectsNewItemAndCancelDiscards()
+    {
+        var source = Source with { Arguments = [PromptArgument.Fixed("a\"b")] };
+        using var dialog = new PromptSettingsDialog(source, "ツール", new FolderHistory(), null, @"C:\work");
+        Assert.NotNull(dialog.ApplyConversion(0, ConversionTarget.CheckBox));
+        static IEnumerable<System.Windows.Forms.Control> All(System.Windows.Forms.Control root) =>
+            root.Controls.Cast<System.Windows.Forms.Control>().SelectMany(c => new[] { c }.Concat(All(c)));
+        var list = All(dialog).OfType<System.Windows.Forms.ListView>().OrderBy(l => l.Top).First();
+        Assert.True(Assert.Single(list.Items.Cast<System.Windows.Forms.ListViewItem>()).Selected);
+        Assert.NotEmpty(PromptDefinitionRules.Validate(dialog.Current()));
+        Assert.Single(dialog.Current().Items); // Invalid draft survives save validation.
+        Assert.Empty(source.Items);
+        Assert.Same(source, dialog.Definition); // Until OK, caller has original definition.
+        Assert.Null(dialog.ImportedPath);
+    }
 }

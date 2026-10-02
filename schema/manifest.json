@@ -3458,6 +3458,20 @@
           "nullable": false,
           "required": false,
           "mutability": "init"
+        },
+        {
+          "name": "Enabled",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Reason",
+          "type": "string",
+          "nullable": true,
+          "required": false,
+          "mutability": "init"
         }
       ]
     },
@@ -3473,7 +3487,8 @@
         "MacroFile",
         "MacroCursorFile",
         "MacroPath",
-        "MacroCwd"
+        "MacroCwd",
+        "DropDown"
       ]
     },
     "ReTAC.Domain.Tools.DefaultExternalTools": {
@@ -11469,7 +11484,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 536
+        "line": 543
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -11587,7 +11602,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 508
+        "line": 515
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -11653,19 +11668,19 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
-        "line": 38
+        "line": 39
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
-        "line": 42
+        "line": 43
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
-        "line": 49
+        "line": 50
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
-        "line": 204
+        "line": 210
       }
     ],
     "R-135": [
@@ -11720,6 +11735,16 @@
       {
         "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
         "line": 25
+      }
+    ],
+    "R-139": [
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
+        "line": 110
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
+        "line": 150
       }
     ],
     "R-14": [

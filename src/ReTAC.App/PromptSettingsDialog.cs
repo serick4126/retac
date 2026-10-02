@@ -423,12 +423,15 @@ public sealed class PromptSettingsDialog : Form
             foreach (var candidate in PromptImport.Candidates(value, kind, _items.Count))
             {
                 var target = candidate.Target;
-                menu.Items.Add(candidate.Label, null, (_, _) =>
+                var menuItem = new ToolStripMenuItem(candidate.Label) { Enabled = candidate.Enabled, ToolTipText = candidate.Reason ?? "" };
+                menuItem.Click += (_, _) =>
                 {
                     // クリックまでに行が動いた・消えたかもしれない。今の位置で変換し、無ければ何もしない
                     var current = ConvertRequestGate.IndexOfSame(_arguments, row);
-                    if (current >= 0) Convert(current, target);
-                });
+                    if (current >= 0 && ApplyConversion(current, target) is { } warning)
+                        MessageBox.Show(this, warning, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                };
+                menu.Items.Add(menuItem);
             }
             if (menu.Items.Count == 0) menu.Items.Add(new ToolStripMenuItem("変換できません") { Enabled = false });
         }
@@ -439,13 +442,17 @@ public sealed class PromptSettingsDialog : Form
         menu.Show(_convert, new Point(0, _convert.Height));
     }
 
-    private void Convert(int index, ConversionTarget target)
+    internal string? ApplyConversion(int index, ConversionTarget target)
     {
-        var converted = PromptImport.Convert(Current(), index, target);
+        var before = Current();
+        var converted = PromptImport.Convert(before, index, target);
+        if (ReferenceEquals(before, converted)) return null;
+        var warning = PromptImport.ConversionWarning(before.Arguments[index].Text, target);
         PushUndo();
         Replace(converted);
-        RefillItems(-1);
+        RefillItems(converted.Items.Count > before.Items.Count ? converted.Items.Count - 1 : -1);
         RefillArguments([index]);
+        return warning;
     }
 
     private void Merge(IReadOnlyList<int> indices)

@@ -139,26 +139,21 @@ public class PromptImportTests
     [Fact]
     public void 候補の並び()
     {
-        Assert.Equal([ConversionTarget.CheckBox, ConversionTarget.Text], Targets("-o+", null));
-        Assert.Equal([ConversionTarget.MacroFile, ConversionTarget.MacroCursorFile, ConversionTarget.MacroPath, ConversionTarget.FileItem, ConversionTarget.Text],
-            Targets(@"D:\書庫.rar", PathKind.File));
-        Assert.Equal([ConversionTarget.FolderItem, ConversionTarget.MacroPath, ConversionTarget.MacroCwd, ConversionTarget.Text],
-            Targets(@"E:\展開先", PathKind.Folder));
-        Assert.Equal([ConversionTarget.FolderItem, ConversionTarget.MacroPath, ConversionTarget.MacroCwd, ConversionTarget.Text],
-            Targets(@"E:\無い\", PathKind.Missing));               // \ で終わればフォルダ
-        Assert.Equal([ConversionTarget.FileItem, ConversionTarget.FolderItem, ConversionTarget.MacroFile, ConversionTarget.Text],
-            Targets(@"E:\無い.txt", PathKind.Missing));
-        Assert.Equal([ConversionTarget.Text, ConversionTarget.CheckBox], Targets("x", null));
+        Assert.Equal(ItemTargets, Targets("-o+", null));
+        Assert.Equal(ItemTargets.Concat(new[] { ConversionTarget.MacroFile, ConversionTarget.MacroCursorFile, ConversionTarget.MacroPath }), Targets(@"D:\書庫.rar", PathKind.File));
+        Assert.Equal(ItemTargets.Concat(new[] { ConversionTarget.MacroPath, ConversionTarget.MacroCwd }), Targets(@"E:\展開先", PathKind.Folder));
+        Assert.Equal(ItemTargets.Concat(new[] { ConversionTarget.MacroPath, ConversionTarget.MacroCwd }), Targets(@"E:\無い\", PathKind.Missing));
+        Assert.Equal(ItemTargets.Concat(new[] { ConversionTarget.MacroFile }), Targets(@"E:\無い.txt", PathKind.Missing));
+        Assert.Equal(ItemTargets, Targets("x", null));
     }
 
     [Fact]
     public void 変換できない値と項目が十個のとき()
     {
-        Assert.Empty(Targets("", null));                                               // 空の引数は項目にすると消える
-        Assert.Equal([ConversionTarget.Text], Targets("a\"b", null));                  // " はチェックボックスで表せない
-        Assert.Equal([ConversionTarget.CheckBox], Targets("  ", null));                // 空白だけはテキストにすると空とみなされる
-        Assert.Equal([ConversionTarget.MacroFile, ConversionTarget.MacroCursorFile, ConversionTarget.MacroPath],
-            Targets(@"D:\書庫.rar", PathKind.File, itemCount: 10));
+        foreach (var value in new[] { "", "a\"b", "  " }) Assert.Equal(ItemTargets, Targets(value, null));
+        var candidates = PromptImport.Candidates(@"D:\書庫.rar", PathKind.File, 10);
+        Assert.All(candidates.Take(5), c => Assert.False(c.Enabled));
+        Assert.All(candidates.Skip(5), c => Assert.True(c.Enabled));
     }
 
     [Fact]
@@ -244,5 +239,113 @@ public class PromptImportTests
             Items = [.. Enumerable.Range(1, 10).Select(i => new PromptItem { Id = i, Kind = PromptItemKind.Text, Label = $"t{i}" })],
         };
         Assert.False(PromptImport.CanMerge(full, [0, 1]));                         // 項目が 10 個
+    }
+
+    private static readonly ConversionTarget[] ItemTargets = [ConversionTarget.Text, ConversionTarget.FolderItem, ConversionTarget.FileItem, ConversionTarget.CheckBox, ConversionTarget.DropDown];
+
+    [Fact]
+    public void Convert_AllKindsKeepDraft()
+    {
+        foreach (var value in new[] { "x", "-o", @"C:\out\", "bad|path", "", " ", "\t", "a\"b" })
+        foreach (var kind in new PathKind?[] { null, PathKind.File, PathKind.Folder, PathKind.Missing })
+        foreach (var target in ItemTargets)
+        {
+            var candidates = PromptImport.Candidates(value, kind, 1);
+            Assert.Equal(ItemTargets, candidates.Take(5).Select(c => c.Target));
+            Assert.All(candidates.Take(5), c => Assert.True(c.Enabled));
+            var before = new PromptDefinition { Items = [new() { Id = 4, Label = "既存" }], Arguments = [PromptArgument.Item(4), PromptArgument.Fixed(value), PromptArgument.Fixed("after")] };
+            var after = PromptImport.Convert(before, 1, target);
+            Assert.Equal(2, after.Items.Count);
+            var item = after.Items[1];
+            Assert.Equal(5, item.Id);
+            Assert.Equal(value, item.Label);
+            Assert.Equal(PromptArgument.Item(5), after.Arguments[1]);
+            Assert.Equal(before.Arguments[0], after.Arguments[0]);
+            Assert.Equal(before.Arguments[2], after.Arguments[2]);
+            Assert.False(item.Required);
+            if (target == ConversionTarget.DropDown)
+            {
+                var choice = Assert.Single(item.Choices);
+                Assert.Equal(value, choice.Label);
+                Assert.Equal(choice.Id, item.InitialChoiceId);
+                Assert.Equal(ArgumentSplitter.QuoteOne(value.Replace("$", "$$")) ?? value.Replace("$", "$$"), choice.Value);
+            }
+            else if (target == ConversionTarget.CheckBox) Assert.True(item.InitialChecked);
+            else Assert.Equal(value.Replace("$", "$$"), item.Initial);
+        }
+    }
+
+    [Fact]
+    public void ConvertAndMerge_DollarsAreLiteral()
+    {
+        foreach (var value in new[] { "${file}", "${unknown}", "$${file}", "$$", "$env:PATH" })
+        foreach (var target in ItemTargets)
+        {
+            var converted = PromptImport.Convert(new() { Arguments = [PromptArgument.Fixed(value)] }, 0, target);
+            var initial = PromptAnswerRules.Initial(converted, new([], null, @"C:\work"));
+            Assert.Null(initial.Error);
+            var item = Assert.Single(converted.Items);
+            var check = PromptAnswerRules.Check(converted, initial.Values!, @"C:\work");
+            var expected = item.Kind is PromptItemKind.File or PromptItemKind.Folder
+                ? ReTAC.Domain.Navigation.PathResolver.Resolve(@"C:\work", value) : value;
+            if (expected is null) Assert.NotNull(check.Error);
+            else Assert.Equal(new[] { expected }, PromptExpander.Expand(new(converted, check.Values!), new([], null, @"C:\work")));
+        }
+        var before = new PromptDefinition { Arguments = [PromptArgument.Fixed("${unknown}"), PromptArgument.Fixed("a b"), PromptArgument.Fixed("$$")] };
+        var draft = PromptImport.MergeDraft(before, [0, 1, 2]);
+        var after = PromptImport.ApplyMerge(before, [0, 1, 2], draft);
+        Assert.Equal(new[] { "${unknown}", "a b", "$$" }, Sent(after));
+    }
+
+    [Theory]
+    [InlineData(ConversionTarget.CheckBox)]
+    [InlineData(ConversionTarget.DropDown)]
+    public void Convert_EmbeddedQuotesRetainedWithWarning(ConversionTarget target)
+    {
+        const string value = "a\"b${file}";
+        var after = PromptImport.Convert(new() { Arguments = [PromptArgument.Fixed(value)] }, 0, target);
+        var item = Assert.Single(after.Items);
+        Assert.Equal("a\"b$${file}", target == ConversionTarget.CheckBox ? item.Value : item.Choices[0].Value);
+        Assert.NotNull(PromptImport.ConversionWarning(value, target));
+        Assert.NotEmpty(PromptDefinitionRules.Validate(after));
+        Assert.Null(PromptImport.ConversionWarning(value, ConversionTarget.Text));
+    }
+
+    [Fact]
+    public void Convert_EmptyLabelNeedsEditAtSave()
+    {
+        foreach (var target in ItemTargets)
+        {
+            var after = PromptImport.Convert(new() { Arguments = [PromptArgument.Fixed("")] }, 0, target);
+            var item = Assert.Single(after.Items);
+            Assert.Contains(PromptDefinitionRules.Validate(after), p => p.ItemId == item.Id && p.Field == PromptField.Label);
+        }
+    }
+
+    [Fact]
+    public void Convert_LimitKeepsAllCandidatesVisible()
+    {
+        foreach (var count in new[] { 9, 10, 11 })
+        {
+            var candidates = PromptImport.Candidates(@"C:\a.txt", PathKind.File, count);
+            Assert.Equal(ItemTargets, candidates.Take(5).Select(c => c.Target));
+            Assert.All(candidates.Take(5), c => { Assert.Equal(count < 10, c.Enabled); if (count >= 10) Assert.NotNull(c.Reason); });
+            Assert.All(candidates.Skip(5), c => Assert.True(c.Enabled));
+        }
+    }
+
+    [Fact]
+    public void Convert_OnlySingleFixedRow()
+    {
+        foreach (var row in new[] { PromptArgument.Template("x"), PromptArgument.Item(1) })
+        {
+            var definition = new PromptDefinition { Arguments = [row] };
+            Assert.Same(definition, PromptImport.Convert(definition, 0, ConversionTarget.Text));
+        }
+        var before = new PromptDefinition { Arguments = [PromptArgument.Fixed("x")] };
+        Assert.Same(before, PromptImport.Convert(before, -1, ConversionTarget.Text));
+        Assert.Same(before, PromptImport.Convert(before, 1, ConversionTarget.Text));
+        var full = before with { Items = [.. Enumerable.Range(1, 10).Select(id => new PromptItem { Id = id })] };
+        Assert.Same(full, PromptImport.Convert(full, 0, ConversionTarget.DropDown));
     }
 }
