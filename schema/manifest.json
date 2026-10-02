@@ -8015,7 +8015,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 214
+        "line": 224
       },
       {
         "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
@@ -9091,7 +9091,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 233
+        "line": 243
       },
       {
         "file": "src/ReTAC.Shell/PreviewSession.cs",
@@ -9511,7 +9511,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 231
+        "line": 241
       }
     ],
     "R-11-6": [
@@ -11749,7 +11749,11 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 174
+        "line": 175
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 195
       },
       {
         "file": "src/ReTAC.Domain/Formatting/Display.cs",
@@ -11789,7 +11793,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 231
+        "line": 241
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListSummary.cs",
@@ -12795,7 +12799,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 243
+        "line": 253
       }
     ],
     "R-66-2": [
@@ -14821,7 +14825,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 232
+        "line": 242
       }
     ],
     "V-13": [

@@ -153,4 +153,16 @@ public class StatusBarCursorTests
         Assert.Equal(("", ""), ReTAC.App.StatusBar.DescribeCursor(null));
         Assert.Equal(("", ""), ReTAC.App.StatusBar.DescribeCursor(TestEntries.Parent()));
     }
+
+    // 名前は x=300 から幅 100。pad は 6。キューの区画が無いときの queueLeft は int.MaxValue（OnPaint と同じ）
+    [Theory]
+    [InlineData(1000, int.MaxValue, 100)]   // 名前まで収まる
+    [InlineData(356, int.MaxValue, 50)]     // 日時・種別・サイズは収まり、名前だけ縮める
+    [InlineData(280, int.MaxValue, 0)]      // 日時・種別・サイズも収まらない。名前は出さない
+    [InlineData(1000, 356, 50)]             // キューを出している間は、その手前が右端
+    [InlineData(1000, 280, 0)]
+    public void ステータスバーの名前の幅は区画の右端までに縮める(int controlWidth, int queueLeft, int expected)
+    {
+        Assert.Equal(expected, ReTAC.App.StatusBar.CursorNameWidth(300, 100, controlWidth, queueLeft, 6));
+    }
 }

@@ -165,14 +165,17 @@ public sealed class StatusBar : Control
         x = DrawSection(e.Graphics, x, $"{_summary.FileCount}個 {Display.Size(_summary.TotalSize)}",
             Icon.File, _summary.FileFromMarks);
         if (_message.Length > 0) DrawSection(e.Graphics, x, _message, icon: null, marked: false);
-        else DrawCursorSection(e.Graphics, x, right);
+        else DrawCursorSection(e.Graphics, x);
         e.Graphics.ResetClip();
     }
 
     private enum Icon { Folder, File }
 
-    /// <summary>R-34 ④: 日時・種別・サイズを先に描き、残りの幅に名前を置く。入らないときは名前だけを「…」で省略し、日時・種別・サイズは残す。</summary>
-    private void DrawCursorSection(Graphics g, int x, int right)
+    /// <summary>
+    /// R-34 ④: 日時・種別・サイズを先に描き、残りの幅に名前を置く。
+    /// 日時・種別・サイズも入らない幅では名前を出さず、それらは区画の右端（OnPaint のクリップ）で切れる。
+    /// </summary>
+    private void DrawCursorSection(Graphics g, int x)
     {
         if (_cursorName.Length == 0) return;
         var pad = Scaled(6);
@@ -181,12 +184,19 @@ public sealed class StatusBar : Control
         var measure = TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
         var headWidth = TextRenderer.MeasureText(g, head, Font, Size.Empty, measure).Width;
         var nameX = x + headWidth;
-        var nameWidth = Math.Max(0, Math.Min(TextRenderer.MeasureText(g, _cursorName, Font, Size.Empty, measure).Width,
-            right - nameX - pad));
+        var nameWidth = CursorNameWidth(nameX, TextRenderer.MeasureText(g, _cursorName, Font, Size.Empty, measure).Width,
+            Width, _queueLeft, pad);
         var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding | TextFormatFlags.PreserveGraphicsClipping;
         TextRenderer.DrawText(g, head, Font, new Rectangle(x, 0, headWidth, Height), ForeColor, flags);
         TextRenderer.DrawText(g, _cursorName, Font, new Rectangle(nameX, 0, nameWidth, Height), ForeColor, flags | TextFormatFlags.EndEllipsis);
     }
+
+    /// <summary>
+    /// R-34 ④: 名前に使える幅。区画の右端はキューの区画を出している間はその手前（OnPaint と同じ）。
+    /// 描画から切り離すのは、コントロールのハンドルを作らずに幅ごとの扱いをテストするため。
+    /// </summary>
+    internal static int CursorNameWidth(int nameX, int nameWidth, int controlWidth, int queueLeft, int pad) =>
+        Math.Max(0, Math.Min(nameWidth, Math.Min(controlWidth, queueLeft) - nameX - pad));
 
     private int DrawSection(Graphics g, int x, string text, Icon? icon, bool marked)
     {
