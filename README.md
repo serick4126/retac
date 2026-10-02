@@ -4,7 +4,7 @@
 
 ReTAC は、Windows 用ファイラー「卓駆★」（Copyright (C) 1995-2009 COM Corp.。以下、卓駆）の操作感を再現することを目指して作ったファイラーです。キー操作の体系を引き継ぎつつ、卓駆にはなかった Unicode と高 DPI に対応しています。
 
-- 最新版: 3.1.0（2026-10-01）
+- 最新版: 3.1.1（2026-10-02）
 - 対応環境: Windows 11（日本語環境）
 - 実装: .NET 10 / WinForms
 - 変更履歴: [CHANGELOG.md](https://github.com/serick4126/retac/blob/main/CHANGELOG.md)
