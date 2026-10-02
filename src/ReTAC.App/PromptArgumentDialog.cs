@@ -70,12 +70,14 @@ public sealed class PromptArgumentDialog : Form
 
     private void InsertMacro()
     {
+        var start = _input.SelectionStart;
+        var length = _input.SelectionLength;
         using var dialog = new MacroReferenceDialog(MacroUsage.PromptArgument);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is not { Insert: { } insert } entry) return;
-        var at = _input.SelectionStart;
-        _input.SelectedText = insert;
+        var insertion = MacroTextInsertion.Apply(_input.Text, start, length, entry);
+        _input.Text = insertion.Text;
         _input.Focus();
-        _input.SelectionStart = at + entry.CaretOffset;
+        _input.SelectionStart = insertion.Caret;
         _input.SelectionLength = 0;
     }
 }

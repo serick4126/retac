@@ -28,6 +28,12 @@ public sealed class PromptItemDialog : Form
         SelectionMode = DataGridViewSelectionMode.FullRowSelect,
         MultiSelect = false,
     };
+    private readonly GroupBox _folderEmpty = new() { Text = "空欄のとき", Size = new Size(382, 82) };
+    private readonly RadioButton _emptyCurrent = new() { Text = "現在のフォルダパスを送信(&K)", AutoSize = true, Location = new Point(12, 20) };
+    private readonly RadioButton _emptyLiteral = new() { Text = "そのまま送信(&S)", AutoSize = true, Location = new Point(12, 48) };
+    private readonly Button _choiceMacro = new() { Text = "マクロ(&M)...", Tag = MacroUsage.ItemValue, Enabled = false };
+    private (DataGridViewRow Row, string Text, int Start, int Length)? _choiceSelection;
+
     private readonly Label _sample = new() { AutoSize = true, UseMnemonic = false };
 
     /// <summary>
@@ -90,19 +96,25 @@ public sealed class PromptItemDialog : Form
                 _prefix.Text = item.Prefix;
                 _suffix.Text = item.Suffix;
                 Row("初期値(&I):", _initial);
+                AddMacroButton(_initial, MacroUsage.InitialValue);
                 Row("前に付ける(&B):", _prefix);
                 Row("後ろに付ける(&F):", _suffix);
-                if (item.Kind != PromptItemKind.Folder)
+                _required.Checked = item.Required;
+                _required.Location = new Point(140, y);
+                Controls.Add(_required);
+                y += 28;
+                if (item.Kind == PromptItemKind.Folder)
                 {
-                    _required.Checked = item.Required;
-                    _required.Location = new Point(140, y);
-                    Controls.Add(_required);
-                    y += 28;
-                }
-                else
-                {
-                    Controls.Add(new Label { Text = "空欄で OK するとカレントフォルダを送ります。", AutoSize = true, Location = new Point(140, y) });
-                    y += 24;
+                    _emptyCurrent.Checked = item.FolderEmptyBehavior == PromptFolderEmptyBehavior.CurrentFolder;
+                    _emptyLiteral.Checked = item.FolderEmptyBehavior == PromptFolderEmptyBehavior.SendEmpty;
+                    _folderEmpty.Controls.AddRange([_emptyCurrent, _emptyLiteral]);
+                    _folderEmpty.Location = new Point(140, y);
+                    _folderEmpty.Enabled = !item.Required;
+                    _required.CheckedChanged += (_, _) => _folderEmpty.Enabled = !_required.Checked;
+                    _emptyCurrent.CheckedChanged += (_, _) => RenderSample();
+                    _emptyLiteral.CheckedChanged += (_, _) => RenderSample();
+                    Controls.Add(_folderEmpty);
+                    y += 90;
                 }
                 _sample.Location = new Point(140, y);
                 Controls.Add(_sample);
@@ -114,6 +126,7 @@ public sealed class PromptItemDialog : Form
             case PromptItemKind.CheckBox:
                 _value.Text = item.Value;
                 Row("送る値(&V):", _value);
+                AddMacroButton(_value, MacroUsage.ItemValue);
                 _initialChecked.Checked = item.InitialChecked;
                 _initialChecked.Location = new Point(140, y);
                 Controls.Add(_initialChecked);
@@ -155,7 +168,25 @@ public sealed class PromptItemDialog : Form
                 up.Click += (_, _) => MoveChoice(-1);
                 down.Click += (_, _) => MoveChoice(1);
                 Controls.AddRange([add, delete, up, down]);
-                y += 190;
+                _choiceMacro.Bounds = new Rectangle(14, y + 186, 120, 28);
+                _choiceMacro.MouseDown += (_, _) => CaptureChoice();
+                _choiceMacro.Click += (_, _) => InsertSelectedChoiceMacro();
+                _choices.CurrentCellChanged += (_, _) => { _choiceSelection = null; SyncChoiceMacro(); };
+                _choices.RowsAdded += (_, _) => SyncChoiceMacro();
+                _choices.RowsRemoved += (_, _) => SyncChoiceMacro();
+                _choices.EditingControlShowing += (_, e) =>
+                {
+                    if (e.Control is not TextBox box) return;
+                    box.Leave -= CaptureChoiceEvent;
+                    box.Leave += CaptureChoiceEvent;
+                    box.KeyUp -= CaptureChoiceKey;
+                    box.KeyUp += CaptureChoiceKey;
+                    box.MouseUp -= CaptureChoiceMouse;
+                    box.MouseUp += CaptureChoiceMouse;
+                };
+                Controls.Add(_choiceMacro);
+                SyncChoiceMacro();
+                y += 224;
                 break;
         }
 
@@ -176,15 +207,17 @@ public sealed class PromptItemDialog : Form
     /// <summary>OK で閉じたときの項目。前回の値（Last…）と番号は元の項目のまま。</summary>
     public PromptItem Result { get; private set; }
 
-    private PromptItem Build() => _source.Kind switch
+    internal PromptItem Build() => _source.Kind switch
     {
         PromptItemKind.Text or PromptItemKind.Folder or PromptItemKind.File => _source with
         {
             Label = _label.Text, Initial = _initial.Text, Prefix = _prefix.Text, Suffix = _suffix.Text,
-            Required = _source.Kind != PromptItemKind.Folder && _required.Checked,
+            Required = _required.Checked,
+            FolderEmptyBehavior = _source.Kind == PromptItemKind.Folder && _emptyLiteral.Checked
+                ? PromptFolderEmptyBehavior.SendEmpty : PromptFolderEmptyBehavior.CurrentFolder,
         },
-        PromptItemKind.CheckBox => _source with { Label = _label.Text, Value = _value.Text, InitialChecked = _initialChecked.Checked },
-        _ => WithChoices(_source with { Label = _label.Text }),
+        PromptItemKind.CheckBox => _source with { Label = _label.Text, Value = _value.Text, InitialChecked = _initialChecked.Checked, FolderEmptyBehavior = PromptFolderEmptyBehavior.CurrentFolder },
+        _ => WithChoices(_source with { Label = _label.Text, FolderEmptyBehavior = PromptFolderEmptyBehavior.CurrentFolder }),
     };
 
     /// <summary>番号の付け方と前回の選択の扱いは Domain（PromptChoiceRows.Apply）に任せる。消した選択肢の番号を使い回さないため。</summary>
@@ -210,11 +243,103 @@ public sealed class PromptItemDialog : Form
 
     private void RenderSample()
     {
-        var path = _source.Kind is PromptItemKind.Folder or PromptItemKind.File;
-        var value = _initial.Text.Length > 0 ? _initial.Text : "値";
-        _sample.Text = ArgumentSplitter.Join(_prefix.Text, value, _suffix.Text, path) is { } parts
-            ? "送るもの: " + string.Join(" ", parts.Select(p => ArgumentSplitter.QuoteOne(p) ?? p))
-            : "送るもの: （引用符が閉じていません）";
+        var item = Build();
+        _sample.Text = "送るもの: " + PromptExample.Render(new PromptDefinition { Items = [item], Arguments = [PromptArgument.Item(item.Id)] });
+    }
+
+    private void AddMacroButton(TextBox box, MacroUsage usage)
+    {
+        var button = new Button { Text = "マクロ(&M)...", Tag = usage, Bounds = new Rectangle(442, box.Top, 80, 26) };
+        button.Click += (_, _) =>
+        {
+            var start = box.SelectionStart;
+            var length = box.SelectionLength;
+            using var dialog = new MacroReferenceDialog(usage);
+            if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is not { } entry) return;
+            var insertion = MacroTextInsertion.Apply(box.Text, start, length, entry);
+            box.Text = insertion.Text;
+            box.Focus();
+            box.Select(insertion.Caret, 0);
+        };
+        Controls.Add(button);
+    }
+
+    private void SyncChoiceMacro() => _choiceMacro.Enabled = _choices.CurrentRow is { IsNewRow: false };
+    private void CaptureChoiceEvent(object? sender, EventArgs e) => CaptureChoice();
+    private void CaptureChoiceKey(object? sender, KeyEventArgs e) => CaptureChoice();
+    private void CaptureChoiceMouse(object? sender, MouseEventArgs e) => CaptureChoice();
+
+    private void CaptureChoice()
+    {
+        if (_choices.CurrentRow is not { IsNewRow: false } row) { _choiceSelection = null; return; }
+        if (_choices.CurrentCell?.ColumnIndex == 2 && _choices.IsCurrentCellInEditMode && _choices.EditingControl is TextBox box)
+            _choiceSelection = (row, box.Text, box.SelectionStart, box.SelectionLength);
+        else if (_choiceSelection is not { } saved || !ReferenceEquals(saved.Row, row))
+        {
+            var text = row.Cells[2].Value as string ?? "";
+            _choiceSelection = (row, text, text.Length, 0);
+        }
+    }
+
+    private void InsertSelectedChoiceMacro()
+    {
+        CaptureChoice();
+        if (_choiceSelection is not { } selection) return;
+        // R-136: ボタンへ移った後でも編集中の文字と範囲を保持する。行は参照で照合する。
+        _choices.EndEdit();
+        using var dialog = new MacroReferenceDialog(MacroUsage.ItemValue);
+        try
+        {
+            if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is not { } entry) return;
+            var index = _choices.Rows.IndexOf(selection.Row);
+            if (index < 0 || selection.Row.IsNewRow) return;
+            var insertion = MacroTextInsertion.Apply(selection.Text, selection.Start, selection.Length, entry);
+            if (!InsertChoiceMacro(index, selection.Start, selection.Length, entry)) return;
+            _choices.CurrentCell = selection.Row.Cells[2];
+            _choices.BeginEdit(false);
+            if (_choices.EditingControl is TextBox box)
+            {
+                box.Focus();
+                box.Select(insertion.Caret, 0);
+            }
+        }
+        finally { _choiceSelection = null; }
+    }
+
+    internal bool InsertChoiceMacro(int rowIndex, int start, int length, MacroCatalogEntry entry)
+    {
+        if (rowIndex < 0 || rowIndex >= _choices.Rows.Count || _choices.Rows[rowIndex].IsNewRow || entry.Insert is null) return false;
+        var cell = _choices.Rows[rowIndex].Cells[2];
+        cell.Value = MacroTextInsertion.Apply(cell.Value as string ?? "", start, length, entry).Text;
+        return true;
+    }
+
+    internal (Control Control, int? Row, int? Column) ProblemTarget(PromptProblem problem)
+    {
+        if (_source.Kind == PromptItemKind.DropDown && problem.Field is PromptField.Value or PromptField.Choices or PromptField.InitialChoice)
+        {
+            var item = Build();
+            var row = problem.ChoiceId is { } id ? item.Choices.FindIndex(c => c.Id == id) : 0;
+            return (_choices, row >= 0 ? row : 0, problem.Field == PromptField.Value ? 2 : problem.Field == PromptField.InitialChoice ? 0 : 1);
+        }
+        return (problem.Field switch
+        {
+            PromptField.Initial => _initial,
+            PromptField.Prefix => _prefix,
+            PromptField.Suffix => _suffix,
+            PromptField.Value => _value,
+            PromptField.FolderEmptyBehavior => _emptyCurrent,
+            _ => _label,
+        }, null, null);
+    }
+
+    private void FocusProblem(PromptProblem problem)
+    {
+        var target = ProblemTarget(problem);
+        if (target.Control == _choices && target.Row is { } row && row < _choices.Rows.Count && target.Column is { } column)
+            _choices.CurrentCell = _choices.Rows[row].Cells[column];
+        target.Control.Focus();
+        if (target.Control is TextBox box) box.SelectAll();
     }
 
     private void OnClosing(object? sender, FormClosingEventArgs e)
@@ -227,6 +352,7 @@ public sealed class PromptItemDialog : Form
         {
             MessageBox.Show(this, problems[0].Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);   // R-48
             e.Cancel = true;
+            FocusProblem(problems[0]);
             return;
         }
         Result = item;

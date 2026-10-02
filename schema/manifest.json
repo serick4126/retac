@@ -7331,7 +7331,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptItemDialog.cs",
-        "line": 172
+        "line": 203
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
@@ -11339,11 +11339,11 @@
     "R-130": [
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 376
+        "line": 378
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 386
+        "line": 388
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -11549,19 +11549,19 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 321
+        "line": 323
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 336
+        "line": 338
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 376
+        "line": 378
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 380
+        "line": 382
       },
       {
         "file": "src/ReTAC.App/PromptArgumentDialog.cs",
@@ -11585,7 +11585,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptItemDialog.cs",
-        "line": 34
+        "line": 40
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
@@ -11647,7 +11647,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 337
+        "line": 339
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
@@ -11709,6 +11709,14 @@
       }
     ],
     "R-136": [
+      {
+        "file": "src/ReTAC.App/MacroTextInsertion.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.App/PromptItemDialog.cs",
+        "line": 288
+      },
       {
         "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
         "line": 5
@@ -12541,7 +12549,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptItemDialog.cs",
-        "line": 228
+        "line": 353
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",

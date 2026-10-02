@@ -315,6 +315,8 @@ public sealed class ExternalToolPage : UserControl
     private void InsertMacro(bool showScripts)
     {
         if (_editing < 0) return;
+        var start = _arguments.SelectionStart;
+        var length = _arguments.SelectionLength;
         using var dialog = new MacroReferenceDialog(MacroUsage.Arguments, showScripts);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Result is not { Insert: { } insert } entry) return;
 
@@ -325,10 +327,10 @@ public sealed class ExternalToolPage : UserControl
             return;
         }
 
-        var at = _arguments.SelectionStart;
-        _arguments.SelectedText = insert;   // 選んでいる範囲があれば置き換える
+        var insertion = MacroTextInsertion.Apply(_arguments.Text, start, length, entry);
+        _arguments.Text = insertion.Text;
         _arguments.Focus();
-        _arguments.SelectionStart = at + entry.CaretOffset;
+        _arguments.SelectionStart = insertion.Caret;
         _arguments.SelectionLength = 0;
     }
 
