@@ -19,7 +19,6 @@ public static class ArgumentExpander
     /// <returns>展開した引数。<c>!</c> の付いたマクロが空になったら null（ツールを起動しない）</returns>
     public static IReadOnlyList<string>? Expand(ArgumentTemplate template, MacroContext context)
     {
-        var files = context.Targets.Where(t => t.Kind == EntryKind.File).ToList();
         var result = new List<string>();
 
         foreach (var argument in template.Arguments)
@@ -35,10 +34,8 @@ public static class ArgumentExpander
 
             var macros = argument.Parts.OfType<MacroPart>().ToList();
             // 対象の数だけ引数を作るマクロ。解析で ${path} と ${file} 系の混在は弾いてある
-            IReadOnlyList<Entry>? list =
-                macros.Any(m => ArgumentTemplate.IsFileFamily(m.Name)) ? files
-                : macros.Any(m => m.Name == MacroName.Path) ? context.Targets
-                : null;
+            var family = macros.FirstOrDefault(m => MacroValues.IsFileFamily(m.Name) || MacroValues.IsPathFamily(m.Name));
+            IReadOnlyList<Entry>? list = family is null ? null : MacroValues.Targets(family.Name, context);
 
             var count = list is { Count: > 0 } ? list.Count : 1;
             for (var k = 0; k < count; k++)
@@ -56,7 +53,7 @@ public static class ArgumentExpander
                     }
 
                     var macro = (MacroPart)part;
-                    var value = Value(macro, item, context);
+                    var value = MacroValues.Value(macro.Name, item, context);
                     if (value.Length == 0)
                     {
                         if (macro.Required) return null;
@@ -71,32 +68,5 @@ public static class ArgumentExpander
             }
         }
         return result;
-    }
-
-    private static string Value(MacroPart macro, Entry? item, MacroContext context)
-    {
-        string Form(string path) => context.PathForm is null ? path : context.PathForm(path);
-
-        return macro.Name switch
-        {
-            MacroName.File => item is null ? "" : Form(item.FullPath),
-            MacroName.FileBasenameNoExtension => item?.BaseName ?? "",
-            MacroName.FileExtname => item?.Extension ?? "",
-            MacroName.Path => item switch
-            {
-                null => "",
-                { IsParent: true } => Form(context.CurrentFolder),
-                { } entry => Form(entry.FullPath),
-            },
-            MacroName.CursorFile => context.Cursor is { Kind: EntryKind.File } file ? Form(file.FullPath) : "",
-            MacroName.CursorPath => context.Cursor switch
-            {
-                null => "",
-                { IsParent: true } => Form(context.CurrentFolder),
-                { } cursor => Form(cursor.FullPath),
-            },
-            MacroName.Cwd => Form(context.CurrentFolder),
-            _ => "",
-        };
     }
 }

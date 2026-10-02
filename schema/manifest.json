@@ -3770,7 +3770,11 @@
         "CursorFile",
         "CursorPath",
         "Cwd",
-        "Prompt"
+        "Prompt",
+        "CwdBasename",
+        "CursorFileBasenameNoExtension",
+        "PathBase",
+        "CursorPathBase"
       ]
     },
     "ReTAC.Domain.Tools.MacroPart": {
@@ -4326,6 +4330,35 @@
           "required": false,
           "mutability": "init",
           "doc": "利用者が「この 1 件を強制終了する」で終わらせた"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.ScalarTemplate": {
+      "id": "type:ReTAC.Domain.Tools.ScalarTemplate",
+      "kind": "sealed class",
+      "file": "src/ReTAC.Domain/Tools/ScalarTemplate.cs",
+      "doc": "R-136: 初期値は引数へ分割せず、各マクロの先頭の値を埋める。",
+      "fields": [
+        {
+          "name": "Parts",
+          "type": "IReadOnlyList<ReTAC.Domain.Tools.TemplatePart>",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "Errors",
+          "type": "IReadOnlyList<ReTAC.Domain.Tools.TemplateError>",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
+        },
+        {
+          "name": "IsValid",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only"
         }
       ]
     },
@@ -5223,6 +5256,28 @@
         "field": "State",
         "container": null,
         "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.ScalarTemplate",
+      "to": "type:ReTAC.Domain.Tools.TemplatePart",
+      "type": "1:N",
+      "fk": {
+        "field": "Parts",
+        "container": "IReadOnlyList<ReTAC.Domain.Tools.TemplatePart>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.ScalarTemplate",
+      "to": "type:ReTAC.Domain.Tools.TemplateError",
+      "type": "1:N",
+      "fk": {
+        "field": "Errors",
+        "container": "IReadOnlyList<ReTAC.Domain.Tools.TemplateError>",
+        "unique": false
       },
       "visibility": "public"
     },
@@ -7454,15 +7509,15 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
-        "line": 5
-      },
-      {
-        "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
-        "line": 31
+        "line": 3
       },
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
         "line": 33
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
+        "line": 35
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
@@ -8333,6 +8388,10 @@
       {
         "file": "src/ReTAC.Domain/Entries/Entry.cs",
         "line": 80
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
+        "line": 25
       }
     ],
     "R-10": [
@@ -11210,7 +11269,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentExpander.cs",
-        "line": 29
+        "line": 28
       },
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentSplitter.cs",
@@ -11222,15 +11281,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
-        "line": 59
-      },
-      {
-        "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
-        "line": 159
-      },
-      {
-        "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
-        "line": 202
+        "line": 65
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
@@ -11238,7 +11289,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 30
+        "line": 35
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -11279,6 +11330,14 @@
       {
         "file": "src/ReTAC.Domain/Tools/PromptExpander.cs",
         "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/TemplateParser.cs",
+        "line": 105
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/TemplateParser.cs",
+        "line": 150
       }
     ],
     "R-131": [
@@ -11539,6 +11598,34 @@
       {
         "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
         "line": 202
+      }
+    ],
+    "R-136": [
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ScalarTemplate.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/TemplateParser.cs",
+        "line": 7
+      }
+    ],
+    "R-137": [
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
+        "line": 30
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
+        "line": 25
       }
     ],
     "R-14": [
@@ -12962,13 +13049,21 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
-        "line": 31
+        "line": 33
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
+        "line": 5
       }
     ],
     "R-72": [
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentExpander.cs",
         "line": 16
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
+        "line": 5
       }
     ],
     "R-75": [

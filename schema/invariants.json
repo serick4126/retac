@@ -320,6 +320,8 @@
         "unique:ReTAC.Domain.Tools.MacroContext#Targets",
         "unique:ReTAC.Domain.Tools.ArgumentTemplate#Arguments",
         "unique:ReTAC.Domain.Tools.ArgumentTemplate#Errors",
+        "unique:ReTAC.Domain.Tools.ScalarTemplate#Parts",
+        "unique:ReTAC.Domain.Tools.ScalarTemplate#Errors",
         "unique:ReTAC.Domain.Tools.PromptDefinition#Arguments",
         "unique:ReTAC.Domain.Tools.ImportedCommand#Arguments",
         "unique:ReTAC.Domain.FileOps.CopyPlan#Items",
