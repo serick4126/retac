@@ -13,10 +13,31 @@ public class MacroReferenceDialogTests
         foreach (var usage in Enum.GetValues<MacroUsage>())
         {
             using var dialog = new MacroReferenceDialog(usage);
-            Assert.Equal(new[] { "説明", "項目", "挿入する文字" }, dialog.ColumnTitles);
+            Assert.Equal(new[] { "説明", "挿入する文字" }, dialog.ColumnTitles);
             Assert.All(dialog.Rows, r => Assert.False(string.IsNullOrWhiteSpace(r.Summary)));
             Assert.Contains(dialog.Rows, r => r.Insert == "${cwdBasename}" && r.Summary == "実行時のフォルダ名");
             Assert.Equal(MacroCatalog.For(usage).Select(e => (e.Summary, e.Label, e.Insert, e.Group)), dialog.Rows);
+        }
+    }
+
+    [Fact]
+    public void MacroList_ShowsInsertionTextOrHelpMarkerWithoutDuplicateColumn()
+    {
+        foreach (var usage in Enum.GetValues<MacroUsage>())
+        {
+            using var dialog = new MacroReferenceDialog(usage);
+            var rows = dialog.Controls.OfType<ListView>().Single().Items.Cast<ListViewItem>().ToList();
+            Assert.All(rows, row => Assert.Equal(2, row.SubItems.Count));
+            var file = rows.Single(row => ((MacroCatalogEntry)row.Tag!).Insert == "${file}");
+            Assert.Equal("対象ファイルのフルパス（フォルダ除外）", file.SubItems[0].Text);
+            Assert.Equal("${file}", file.SubItems[1].Text);
+            var help = rows.Where(row => ((MacroCatalogEntry)row.Tag!).Insert is null).ToList();
+            Assert.NotEmpty(help);
+            Assert.All(help, row =>
+            {
+                Assert.Equal("—", row.SubItems[1].Text);
+                Assert.False(dialog.CanInsert((MacroCatalogEntry)row.Tag!));
+            });
         }
     }
 

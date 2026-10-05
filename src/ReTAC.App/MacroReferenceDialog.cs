@@ -41,9 +41,8 @@ public sealed class MacroReferenceDialog : Form
         MinimizeBox = MaximizeBox = false;
         ClientSize = new Size(940, 560);
 
-        _entries.Columns.Add("説明", Scaled(360));
-        _entries.Columns.Add("項目", Scaled(280));
-        _entries.Columns.Add("挿入する文字", Scaled(230));
+        _entries.Columns.Add("説明", Scaled(580));
+        _entries.Columns.Add("挿入する文字", Scaled(310));
 
         var groups = new Dictionary<string, ListViewGroup>();
         foreach (var entry in MacroCatalog.For(usage))
@@ -54,7 +53,7 @@ public sealed class MacroReferenceDialog : Form
                 groups[entry.Group] = group;
                 _entries.Groups.Add(group);
             }
-            _entries.Items.Add(new ListViewItem([entry.Summary, entry.Label, entry.Insert ?? ""]) { Group = group, Tag = entry });
+            _entries.Items.Add(new ListViewItem([entry.Summary, entry.Insert ?? "—"]) { Group = group, Tag = entry });
         }
 
         var close = new Button { Text = "閉じる", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(836, 518, 90, 28), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
@@ -109,8 +108,8 @@ public sealed class MacroReferenceDialog : Form
     internal IReadOnlyList<string> ColumnTitles => _entries.Columns.Cast<ColumnHeader>().Select(c => c.Text).ToList();
 
     internal IReadOnlyList<(string Summary, string Label, string? Insert, string Group)> Rows =>
-        _entries.Items.Cast<ListViewItem>().Select(i => (i.SubItems[0].Text, i.SubItems[1].Text,
-            ((MacroCatalogEntry)i.Tag!).Insert is null ? null : i.SubItems[2].Text, i.Group!.Header)).ToList();
+        _entries.Items.Cast<ListViewItem>().Select(i => (i.SubItems[0].Text, ((MacroCatalogEntry)i.Tag!).Label,
+            ((MacroCatalogEntry)i.Tag!).Insert is null ? null : i.SubItems[1].Text, i.Group!.Header)).ToList();
 
     private int Scaled(int logical) => logical * DeviceDpi / 96;
 
