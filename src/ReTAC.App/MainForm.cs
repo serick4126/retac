@@ -2116,8 +2116,8 @@ public sealed class MainForm : Form, IBookmarkHost
     void IBookmarkHost.ShowStatus(string text) => _statusBar.ShowMessage(text);
 
     // ブックマークのフォルダとその中のメニューの両方がここを通る
-    void IBookmarkHost.TransferDropped(string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift) =>
-        AcceptDrop(DropReceptacle.BookmarkFolder, files, destination, allowed, ctrl, shift);
+    void IBookmarkHost.TransferDropped(string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift, BookmarkDropMode mode) =>
+        AcceptDrop(DropReceptacle.BookmarkFolder, files, destination, allowed, ctrl, shift, mode);
 
     /// <summary>
     /// R-111-2 / INV-RIGHT-DROP-SAME-ROUTE: ReTAC の受け口に落とされたファイルを、受け口ごとの経路へ渡す。
@@ -2125,7 +2125,8 @@ public sealed class MainForm : Form, IBookmarkHost
     /// 右ボタンのドロップでは、受け口がドラッグ元へ None を返す（ReTAC が自分で転送するので、元のファイルを消させない。T6）。
     /// 修飾キーは受け口がドロップの時点で読んで渡す（後に回すと利用者はキーを離している）。
     /// </summary>
-    private void AcceptDrop(DropReceptacle receptacle, string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift)
+    private void AcceptDrop(DropReceptacle receptacle, string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift,
+        BookmarkDropMode mode = BookmarkDropMode.Standard)
     {
         if (files.Length == 0) return;
         var plan = DropRouting.Plan(receptacle, ShellDrag.InProgress, DragButtonState.Right);
@@ -2136,10 +2137,17 @@ public sealed class MainForm : Form, IBookmarkHost
             var choice = DropMenu.Show(Handle, model, Cursor.Position);
             if (choice == DropChoice.Cancel) return;
             if (choice == DropChoice.Link) { CreateShortcutsAt(files, destination); return; }
-            (ctrl, shift) = DropRouting.ModifiersFor(choice);
+            (ctrl, shift, mode) = AfterMenu(choice);
         }
-        if (plan.Route == DropRoute.Dialog) TransferDropped(files, destination, allowed, ctrl, shift);
+        if (plan.Route == DropRoute.Dialog) TransferDropped(files, destination, allowed, ctrl, shift, mode);
         else DropInto(destination, files, allowed, ctrl, shift);
+    }
+
+    /// <summary>R-111-2 / R-140: 右ボタンのメニューで選んだ操作は修飾キーに読み替え、フォルダの指定は戻す（選んだ操作に従う）。</summary>
+    internal static (bool Ctrl, bool Shift, BookmarkDropMode Mode) AfterMenu(DropChoice choice)
+    {
+        var (ctrl, shift) = DropRouting.ModifiersFor(choice);
+        return (ctrl, shift, BookmarkDropMode.Standard);
     }
 
     /// <summary>
@@ -2147,9 +2155,9 @@ public sealed class MainForm : Form, IBookmarkHost
     /// 振り分けは DragDrop のイベントの中（ここ）で済ませる。修飾キーは呼び出し側がドロップの時点で読んで渡す。
     /// ダイアログは BeginInvoke で後に回す（ドロップ元のエクスプローラーを待たせない。メニューやバーの作り直しとも衝突しない）。
     /// </summary>
-    private void TransferDropped(string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift)
+    private void TransferDropped(string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift, BookmarkDropMode mode)
     {
-        var (copies, moves) = DropRules.Split(files, destination, ctrl, shift,
+        var (copies, moves) = DropRules.SplitFixed(mode, files, destination, ctrl, shift,
             copyAllowed: allowed.HasFlag(DragDropEffects.Copy), moveAllowed: allowed.HasFlag(DragDropEffects.Move));
         if (copies.Count == 0 && moves.Count == 0) return;
 

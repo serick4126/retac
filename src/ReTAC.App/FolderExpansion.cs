@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows.Forms;
 using ReTAC.Domain.Entries;
+using ReTAC.Domain.Navigation;
 
 namespace ReTAC.App;
 
@@ -55,14 +56,14 @@ public static class FolderExpansion
     /// R-107: item の中に並べる項目（「このフォルダへジャンプ」・中身）に付ける段数。バーのボタンから
     /// 開いたドロップダウンの中でなければ null（「ブックマーク」メニュー・ブックマークビューなど、標準の挙動のまま）。
     /// </param>
-    public static void Attach(ToolStripDropDownItem item, string folder, BookmarkItems items, Action onMissing, int? level = null)
+    public static void Attach(ToolStripDropDownItem item, string folder, BookmarkItems items, Action onMissing, int? level = null, BookmarkDropMode mode = BookmarkDropMode.Standard)
     {
         var host = items.Host;
         // 開くたびに進める。裏の列挙の結果が、閉じた後や開き直した後に届いたら捨てる
         var generation = 0;
         item.DropDownItems.Add(BookmarkItems.Placeholder("読み込み中…"));   // 項目が無いと ▶ が出ず、開けない
         ToolStripExtras.EnableWheel(item.DropDown);   // 数百件を ▲▼ だけで送らせない（実機指摘）
-        ExpansionDropZone.Attach(item.DropDown, folder, host);   // R-93: 中へファイルを落として転送する
+        ExpansionDropZone.Attach(item.DropDown, folder, host, mode);   // R-93: 中へファイルを落として転送する
 
         // R-107: ↑ で開いたときは中身が届くまで本当の末尾が分からない（フォルダは非同期に読む）。
         // BarDropDownButton（バー直下だけ）に「読み込み後に末尾を選び直す」引き金を渡しておく
@@ -129,7 +130,7 @@ public static class FolderExpansion
                             items.Invoker.BeginInvoke(onMissing);
                             break;
                         default:
-                            items.LoadIcons(Fill(item, index, entries, folder, items, level));
+                            items.LoadIcons(Fill(item, index, entries, folder, items, level, mode));
                             // R-107: ↑ で開いた直後に選んだ「このフォルダへジャンプ」が、読み込みが
                             // 終わった今も選ばれたままなら（＝利用者がその間に選択を動かしていなければ）、
                             // 本当の末尾へ選び直す。動かしていれば、その選択を横取りしない
@@ -161,7 +162,7 @@ public static class FolderExpansion
     }
 
     private static List<ToolStripItem> Fill(ToolStripDropDownItem parent, int index, IReadOnlyList<Entry> entries,
-                                            string folder, BookmarkItems items, int? level)
+                                            string folder, BookmarkItems items, int? level, BookmarkDropMode mode)
     {
         var host = items.Host;
         var shown = entries.Where(e => !e.IsParent).ToList();
@@ -174,7 +175,7 @@ public static class FolderExpansion
             if (entry.Kind == EntryKind.Folder)
             {
                 // R-107: フォルダの中はさらに 1 段深い
-                Attach(menu, entry.FullPath, items, onMissing: () => host.PathMissing(entry.FullPath), level is { } l ? l + 1 : null);
+                Attach(menu, entry.FullPath, items, onMissing: () => host.PathMissing(entry.FullPath), level is { } l ? l + 1 : null, mode);   // R-140: 何段でも引き継ぐ
             }
             else
             {

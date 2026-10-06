@@ -32,7 +32,7 @@ public sealed class BookmarkTreeView : TreeView
     private Drop? _drop;
 
     /// <summary>落とす先。Transfer があればそのフォルダへの転送、無ければ List の Index の前へ入れる。</summary>
-    private sealed record Drop(List<Bookmark>? List, int Index, string? Transfer);
+    private sealed record Drop(List<Bookmark>? List, int Index, string? Transfer, BookmarkDropMode Mode = BookmarkDropMode.Standard);
 
     public event EventHandler? FocusFileViewRequested;
     /// <summary>ReTAC のキー割り当て。MainForm は左パネルの 5 コマンドだけを実行して Handled にする（R-98 / Q63）。</summary>
@@ -392,7 +392,7 @@ public sealed class BookmarkTreeView : TreeView
                 drop = BookmarkDrop.Onto(b.Kind, reorder) switch
                 {
                     OntoAction.IntoGroup when b.Children is { } children => new Drop(children, children.Count, null),
-                    OntoAction.Transfer => new Drop(null, 0, b.Target),
+                    OntoAction.Transfer => new Drop(null, 0, b.Target, b.DropMode),   // R-140
                     _ => null,
                 };
             }
@@ -412,7 +412,7 @@ public sealed class BookmarkTreeView : TreeView
         if (drop?.Transfer is { } folder)
         {
             // R-93 / §9: フォルダの中央はそのフォルダへの転送。判定はファイルリストへのドロップと同じ
-            DropFeedback.Apply(e, folder, DropFeedback.FolderLabel(folder));
+            DropFeedback.Apply(e, folder, DropFeedback.FolderLabel(folder), drop.Mode);
             message = e.Effect switch
             {
                 _ when string.IsNullOrEmpty(e.Message) => "",   // R-111-2: 右ボタンだけで落とせる所は、メニューで選ぶので説明を出さない
@@ -450,7 +450,7 @@ public sealed class BookmarkTreeView : TreeView
             if (BookmarkDropZone.Dragging is null && e.Data?.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } files)
             {
                 var (ctrl, shift) = DropFeedback.Modifiers(e);   // 後に回すとキーは離されている
-                _items.Host.TransferDropped(files, folder, e.AllowedEffect, ctrl, shift);
+                _items.Host.TransferDropped(files, folder, e.AllowedEffect, ctrl, shift, drop.Mode);
             }
             return;
         }

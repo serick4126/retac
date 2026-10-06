@@ -170,7 +170,7 @@ internal sealed class BookmarkDropZone
             // R-93: フォルダの中央はそのフォルダへの転送（枠）。判定はファイルリストへのドロップと同じ（先頭の項目・修飾キー・元が許す効果）。
             // 並べ替えは落とせない（ブックマークはファイルではない）。フォルダの有無はここで確かめない（R-91）
             if (reorder) e.Effect = DragDropEffects.None;
-            else DropFeedback.Apply(e, folder.Target, DropFeedback.FolderLabel(folder.Target));
+            else DropFeedback.Apply(e, folder.Target, DropFeedback.FolderLabel(folder.Target), folder.DropMode);   // R-140
             message = e.Effect switch
             {
                 _ when string.IsNullOrEmpty(e.Message) => "",   // R-111-2: 右ボタンだけで落とせる所は、メニューで選ぶので説明を出さない
@@ -238,7 +238,7 @@ internal sealed class BookmarkDropZone
                 var (ctrl, shift) = DropFeedback.Modifiers(e);   // 後に回すとキーは離されている
                 (slots[s.Index] as ToolStripDropDownItem)?.HideDropDown();   // ホールドで開いていたら閉じる
                 CloseMenus(_strip);
-                _host.TransferDropped(files, onto.Target, e.AllowedEffect, ctrl, shift);
+                _host.TransferDropped(files, onto.Target, e.AllowedEffect, ctrl, shift, onto.DropMode);   // R-140
             }
             return;
         }
@@ -319,21 +319,23 @@ internal sealed class ExpansionDropZone
     private readonly ToolStripDropDown _menu;
     private readonly string _folder;
     private readonly IBookmarkHost _host;
+    private readonly BookmarkDropMode _mode;   // R-140: このメニューの元のフォルダの指定。サブフォルダも同じ
     private readonly Timer _hold = new() { Interval = 1000 };   // BookmarkDropZone と同じ「ホールドで展開」
     private ToolStripDropDownItem? _holding;
     /// <summary>枠で囲むもの。サブフォルダの項目か、メニュー全体（null の項目）。落とせないときは None。</summary>
     private (bool Shown, ToolStripItem? Item) _frame;
 
-    private ExpansionDropZone(ToolStripDropDown menu, string folder, IBookmarkHost host)
+    private ExpansionDropZone(ToolStripDropDown menu, string folder, IBookmarkHost host, BookmarkDropMode mode)
     {
+        _mode = mode;
         _menu = menu;
         _folder = folder;
         _host = host;
     }
 
-    public static void Attach(ToolStripDropDown menu, string folder, IBookmarkHost host)
+    public static void Attach(ToolStripDropDown menu, string folder, IBookmarkHost host, BookmarkDropMode mode)
     {
-        var zone = new ExpansionDropZone(menu, folder, host);
+        var zone = new ExpansionDropZone(menu, folder, host, mode);
         menu.AllowDrop = true;
         // R-111-2: 右ボタンの印は効果を決める前に覚える
         menu.DragEnter += (_, e) => zone.Guard(e, () => { DropButton.Enter(e); zone.OnDragOver(e); DropTargetHelper.Enter(menu, e); });
@@ -363,7 +365,7 @@ internal sealed class ExpansionDropZone
     {
         var (folder, item) = Target(e);
         // 外からは FileDrop だけ（R3）。ブックマークの並べ替えは FileDrop を持たないので、ここで自然に None になる
-        DropFeedback.Apply(e, folder, DropFeedback.FolderLabel(folder));
+        DropFeedback.Apply(e, folder, DropFeedback.FolderLabel(folder), _mode);
         var label = DropFeedback.FolderLabel(folder);
         _host.ShowStatus(e.Effect switch
         {
@@ -395,7 +397,7 @@ internal sealed class ExpansionDropZone
         if (!shown || e.Data?.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files) return;
         var (ctrl, shift) = DropFeedback.Modifiers(e);   // 後に回すとキーは離されている
         BookmarkDropZone.CloseMenus(_menu);
-        _host.TransferDropped(files, folder, e.AllowedEffect, ctrl, shift);
+        _host.TransferDropped(files, folder, e.AllowedEffect, ctrl, shift, _mode);
     }
 
     private void Reset()

@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows.Forms;
 using ReTAC.Domain.FileOps;
 using ReTAC.Domain.Listing;
+using ReTAC.Domain.Navigation;
 using ReTAC.Shell;
 
 namespace ReTAC.App;
@@ -16,17 +17,15 @@ internal static class DropFeedback
 
     /// <param name="destination">落とす先のフォルダ。落とせない場所なら null</param>
     /// <param name="label">説明の %1 に入れる名前</param>
-    public static void Apply(DragEventArgs e, string? destination, string label)
+    /// <param name="mode">R-140: ブックマークのフォルダの指定。ブックマーク以外の受け口は Standard。右ボタンの分岐は使わない</param>
+    public static void Apply(DragEventArgs e, string? destination, string label, BookmarkDropMode mode = BookmarkDropMode.Standard)
     {
         var action = DropAction.None;
         var files = destination is { Length: > 0 } ? e.Data?.GetData(DataFormats.FileDrop) as string[] : null;
         // 判定は先頭の項目で行う（エクスプローラーと同じ）。実際の転送は項目ごとに判定する
         if (files is { Length: > 0 })
         {
-            action = DropRules.Allow(
-                DropRules.Decide(files[0], destination!, (e.KeyState & CtrlKey) != 0, (e.KeyState & ShiftKey) != 0),
-                copyAllowed: e.AllowedEffect.HasFlag(DragDropEffects.Copy),
-                moveAllowed: e.AllowedEffect.HasFlag(DragDropEffects.Move));
+            action = LeftDecision(files, destination!, e.KeyState, e.AllowedEffect, mode);
         }
 
         (e.Effect, e.DropImageType, e.Message) = action switch
@@ -52,6 +51,11 @@ internal static class DropFeedback
             };
         }
     }
+
+    /// <summary>左ボタンの判定（ハンドル無しで確かめられるよう切り出してある）。R-140: mode が Standard なら従来どおり。</summary>
+    internal static DropAction LeftDecision(string[] files, string destination, int keyState, DragDropEffects allowed, BookmarkDropMode mode) =>
+        DropRules.DecideFixed(mode, files[0], destination, (keyState & CtrlKey) != 0, (keyState & ShiftKey) != 0,
+            copyAllowed: allowed.HasFlag(DragDropEffects.Copy), moveAllowed: allowed.HasFlag(DragDropEffects.Move));
 
     /// <summary>
     /// ドロップの時点の修飾キー。ToolStrip の受け口でも使えるよう KeyState から読む。

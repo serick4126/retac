@@ -52,7 +52,7 @@ public static class DropRules
 
     /// <summary>
     /// 落とされた項目を、コピーするものと移動するものに振り分ける（R-65 / R-78。ファイルリスト・ドライブバー・ブックマーク・パンくずで共通）。
-    /// 項目ごとに <see cref="Decide"/> → <see cref="Allow"/> を通し、どちらでもないものは落とす。並びはドロップ元の順。
+    /// 指定なし（Standard）の <see cref="SplitFixed"/> に委ねる（項目ごとに Decide → Allow を通し、どちらでもないものは落とす）。並びはドロップ元の順。
     /// 修飾キーはドロップの時点のものを渡すこと（後に回した処理の中で読むと、利用者はもうキーを離している）。
     /// </summary>
     public static (IReadOnlyList<string> Copies, IReadOnlyList<string> Moves) Split(

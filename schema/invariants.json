@@ -448,12 +448,12 @@
     {
       "id": "INV-TREE-DROP-VIA-DIALOG",
       "status": "enforced",
-      "specIds": ["R-97-3", "R-93", "R-111-2"],
+      "specIds": ["R-97-3", "R-93", "R-111-2", "R-65-3"],
       "applies": ["type:ReTAC.Domain.FileOps.DropRules", "type:ReTAC.Domain.FileOps.DropAction"],
       "rule": "ドライブツリー・デスクトップツリーへのドロップは、NSTC(INameSpaceTreeControl)自身の即時転送を使わず、必ず宛先入りの転送確認ダイアログ(既存の TransferDropped → TransferCore)を経由する。ファイルリストの外部ドロップ(DropInto、確認無しの即時転送)とは別の経路である。ドライブバーは宛先入りの確認ダイアログを経る(R-65-3)。ブックマークのフォルダへのドロップも同じ確認を行う(既存)。右ボタンのドロップでも、NSTC 自身の転送・シェルのメニューを使わない。OnDrop の中で ReTAC のメニューを出し、効果は必ず None で返す。",
       "enforcedBy": "shell:NameSpaceTreeHost.OnDrop/DropFrom(effect を常に DragDropEffects.None に戻し、Shell 自身に即時転送させない。FilesDropped イベントだけを外へ出す)/ shell:ShellTreeDropTap（右ボタンを知るためにツリーの受け口を包む）/ app:MainForm(_driveTree.FilesDropped / _desktopTree.FilesDropped を DropInto ではなく AcceptDrop(DropReceptacle.DriveTree / DesktopTree) → TransferDropped へ購読する)",
       "testedBy": "tests/ReTAC.Domain.Tests/DropRulesTests.cs",
-      "note": "DropInto を使うと確認ダイアログが出ない(ファイルリスト・ドライブバーの通常のドロップと同じ挙動になってしまう)。ツリーは §9 の例外で、宛先を見せて確認する側を使う。"
+      "note": "DropInto を使うと確認ダイアログが出ない(ファイルリストの通常のドロップと同じ挙動になってしまう)。ツリーは §9 の例外で、宛先を見せて確認する側を使う。"
     },
     {
       "id": "INV-INPANEL-DROP-VIA-DIALOG",

@@ -43,7 +43,7 @@ public interface IBookmarkHost
     /// R-93: フォルダへファイルが落とされた。宛先を入れたコピー／移動のダイアログを出す。
     /// ctrl / shift はドロップの時点の値（DragDrop のイベントの中で読む）。
     /// </summary>
-    void TransferDropped(string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift);
+    void TransferDropped(string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift, BookmarkDropMode mode);
 }
 
 /// <summary>R-89 / R-90 / R-91: ブックマークを ToolStripItem にする。バーのボタンとメニューの項目で同じ規則を使う。</summary>
@@ -112,7 +112,7 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
         switch (b.Kind)
         {
             case BookmarkKind.Folder:
-                FolderExpansion.Attach((ToolStripDropDownItem)item, b.Target, this, onMissing: () => host.BookmarkMissing(b), childLevel);
+                FolderExpansion.Attach((ToolStripDropDownItem)item, b.Target, this, onMissing: () => host.BookmarkMissing(b), childLevel, b.DropMode);   // R-140
                 // R-91-2: バー直下のフォルダのダブルクリック。Group には繋がない（Group はこの分岐に来ない）
                 if (item is BarDropDownButton bar) bar.DoubleClicked += (_, _) => host.JumpTo(b.Target);
                 break;
