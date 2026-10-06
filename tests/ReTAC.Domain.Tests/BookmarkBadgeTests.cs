@@ -15,10 +15,10 @@ public class BookmarkBadgeTests
         new("保存先", BookmarkKind.Folder, @"C:\work\保存先") { DropMode = mode };
 
     [Theory]
-    [InlineData(16, 10, 2, 2)]
-    [InlineData(20, 13, 3, 3)]
-    [InlineData(24, 15, 3, 3)]
-    [InlineData(32, 20, 4, 4)]
+    [InlineData(16, 10, 4, 0)]
+    [InlineData(20, 13, 5, 0)]
+    [InlineData(24, 15, 5, 0)]
+    [InlineData(32, 20, 8, 0)]
     public void Badge_Metrics(int size, int box, int stroke, int inset) =>
         Assert.Equal((box, stroke, inset), BookmarkBadge.Metrics(size));
 
@@ -66,11 +66,15 @@ public class BookmarkBadgeTests
         AssertBadge(16, mode);
         using var bmp = Blank(16);
         BookmarkBadge.Draw(bmp, mode, false);
-        // 枠は 6..15。横線は y 10..11・x 9..12。縦線（コピーだけ）は x 10..11・y 9..12
+        // 枠は 6..15。横線は y 9..12・x 7..14（内側いっぱい）。縦線（コピーだけ）は x 9..12・y 7..14
         AssertArgb(Gray, bmp.GetPixel(6, 6), "左上");
         AssertArgb(Gray, bmp.GetPixel(15, 15), "右下");
-        AssertArgb(mode == BookmarkDropMode.Copy ? Green : Red, bmp.GetPixel(9, 10), "横線");
-        AssertArgb(mode == BookmarkDropMode.Copy ? Green : Color.White, bmp.GetPixel(10, 9), "縦線");
+        var line = mode == BookmarkDropMode.Copy ? Green : Red;
+        AssertArgb(line, bmp.GetPixel(7, 9), "横線の左端");
+        AssertArgb(line, bmp.GetPixel(14, 12), "横線の右端");
+        AssertArgb(Color.White, bmp.GetPixel(7, 8), "横線の上");
+        AssertArgb(mode == BookmarkDropMode.Copy ? Green : Color.White, bmp.GetPixel(9, 7), "縦線の上端");
+        AssertArgb(mode == BookmarkDropMode.Copy ? Green : Color.White, bmp.GetPixel(12, 14), "縦線の下端");
     }
 
     [Theory]
@@ -107,7 +111,7 @@ public class BookmarkBadgeTests
         using var bmp = Blank(16);
         BookmarkBadge.Draw(bmp, BookmarkDropMode.Copy, highContrast: true);
         AssertArgb(SystemColors.WindowText, bmp.GetPixel(6, 6), "枠");
-        AssertArgb(SystemColors.WindowText, bmp.GetPixel(9, 10), "線");
+        AssertArgb(SystemColors.WindowText, bmp.GetPixel(7, 9), "線");
         AssertArgb(SystemColors.Window, bmp.GetPixel(7, 7), "中");
     }
 

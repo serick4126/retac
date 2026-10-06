@@ -13,15 +13,16 @@ internal static class BookmarkBadge
     private static readonly Color Frame = Color.FromArgb(0x60, 0x60, 0x60), Plus = Color.FromArgb(0x00, 0x80, 0x00), Minus = Color.FromArgb(0xC8, 0x00, 0x00);
 
     /// <summary>
-    /// 枠の一辺・線の太さ・線の左右の空き。16px で (10, 2, 2) を基準に比率で伸ばす（四捨五入は整数演算で 0.5 を切り上げ）。
-    /// 線が内側（Box - 2）の中央に来るよう、Box - 2 と Stroke の偶奇をそろえる。そろわなければ Box を 1 増やす。
+    /// 枠の一辺・線の太さ・線の左右の空き。16px で (10, 4, 0) を基準に比率で伸ばす（四捨五入は整数演算で 0.5 を切り上げ）。
+    /// 16px では細い線（太さ 2・空き 2）だと＋が読めなかったので、線は内側いっぱい（空き 0）に太く引く。
+    /// 線が内側（Box - 2）の中央に来るよう、Box - 2 と Stroke の偶奇をそろえる。そろわなければ Stroke を 1 減らす。
     /// </summary>
     internal static (int Box, int Stroke, int Inset) Metrics(int iconSize)
     {
         var box = (iconSize * 10 + 8) / 16;
-        var stroke = Math.Max(1, (iconSize + 4) / 8);
-        if ((box - 2) % 2 != stroke % 2) box++;
-        return (box, stroke, stroke);
+        var stroke = (box * 4 + 5) / 10;
+        if ((box - 2) % 2 != stroke % 2) stroke--;
+        return (box, stroke, 0);
     }
 
     /// <summary>読み込んだ Bitmap へ直接描く（新しい Bitmap は作らない）。Standard は何もしない。</summary>

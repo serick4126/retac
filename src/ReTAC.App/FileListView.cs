@@ -91,17 +91,10 @@ public sealed class FileListView : Control
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        // B-04: ImeMode だけでは効かない。WinForms が ImeMode を実際に適用するのは
-        // CanEnableIme を override した TextBoxBase / ComboBox などに限られ、
-        // Control 直系の自前描画コントロールでは値を持つだけで IME コンテキストに触れない。
-        // ウィンドウから IME を切り離すのは自分でやる。ハンドル再生成のたびに掛け直す
-        ImmAssociateContext(Handle, IntPtr.Zero);
+        // B-04: ImeMode だけでは効かない（理由は ImeBlock）。ハンドル再生成のたびに掛け直す
+        ImeBlock.Detach(this);
         UpdateImageQueue();   // R-117: ハンドルができたので、ここから背景の取得を始められる
     }
-
-    [System.Runtime.InteropServices.DefaultDllImportSearchPaths(System.Runtime.InteropServices.DllImportSearchPath.System32)]
-    [System.Runtime.InteropServices.DllImport("imm32.dll")]
-    private static extern IntPtr ImmAssociateContext(IntPtr window, IntPtr context);
 
     /// <summary>カーソル位置が変わった（ステータスバーの更新契機）。</summary>
     public event EventHandler? CursorMoved;
