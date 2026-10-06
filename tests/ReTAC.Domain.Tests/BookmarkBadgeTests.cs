@@ -1,5 +1,6 @@
 using System.Drawing;
 using ReTAC.App;
+using ReTAC.Domain.FileOps;
 using ReTAC.Domain.Navigation;
 using System.Windows.Forms;
 
@@ -87,6 +88,20 @@ public class BookmarkBadgeTests
     }
 
     [Fact]
+    public void Undefined_TreatedAsStandard()
+    {
+        var undefined = (BookmarkDropMode)7;
+        using var bmp = Blank(16);
+        BookmarkBadge.Draw(bmp, undefined, false);
+        for (var y = 0; y < 16; y++)
+            for (var x = 0; x < 16; x++) Assert.Equal(0, bmp.GetPixel(x, y).A);
+        Assert.Equal("保存先", BookmarkItems.Shown(Folder(undefined), "保存先", iconShown: false));
+        Assert.Null(BookmarkItems.DropModeLine(Folder(undefined)));
+        Assert.Equal(DropRules.DecideFixed(BookmarkDropMode.Standard, @"C:\a\x.txt", @"C:\b", false, false, true, true),
+            DropRules.DecideFixed(undefined, @"C:\a\x.txt", @"C:\b", false, false, true, true));
+    }
+
+    [Fact]
     public void Badge_HighContrast()
     {
         using var bmp = Blank(16);
@@ -148,6 +163,19 @@ public class BookmarkBadgeTests
         Assert.Equal(["Windows 標準", "常にコピー", "常に移動"], combo.Items.Cast<string>());
         combo.SelectedIndex = 2;
         Assert.Equal(BookmarkDropMode.Move, dialog.Bookmark.DropMode);
+        Assert.False(dialog.IsHandleCreated);
+    }
+
+    [Fact]
+    public void EntryDialog_DropLabelDoesNotOverlapCombo()
+    {
+        var preset = new Bookmark("n", BookmarkKind.Folder, @"C:\x");
+        using var dialog = new BookmarkEntryDialog(preset, @"C:\", [], _ => "");
+        var label = dialog.Controls.OfType<Label>().Single(l => l.Text.StartsWith("ドロップ"));
+        var combo = dialog.Controls.OfType<ComboBox>().Single();
+        var labelBounds = new Rectangle(label.Location, label.PreferredSize);
+        Assert.False(labelBounds.IntersectsWith(combo.Bounds), $"label {labelBounds} combo {combo.Bounds}");
+        Assert.Equal(420, combo.Bounds.Right);   // 右端は他の欄とそろえる
         Assert.False(dialog.IsHandleCreated);
     }
 

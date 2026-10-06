@@ -17,15 +17,20 @@ internal static class DropFeedback
 
     /// <param name="destination">落とす先のフォルダ。落とせない場所なら null</param>
     /// <param name="label">説明の %1 に入れる名前</param>
-    /// <param name="mode">R-140: ブックマークのフォルダの指定。ブックマーク以外の受け口は Standard。右ボタンの分岐は使わない</param>
-    public static void Apply(DragEventArgs e, string? destination, string label, BookmarkDropMode mode = BookmarkDropMode.Standard)
+    /// <param name="mode">R-140: ブックマークのフォルダの指定。ブックマーク以外の受け口は Standard。右ボタンのドラッグでは使わない</param>
+    public static void Apply(DragEventArgs e, string? destination, string label, BookmarkDropMode mode = BookmarkDropMode.Standard) =>
+        Apply(e, destination, label, mode, DragButtonState.Right);
+
+    /// <summary>右ボタンの状態を引数で受ける版（ハンドル無しのテスト用）。</summary>
+    internal static void Apply(DragEventArgs e, string? destination, string label, BookmarkDropMode mode, bool right)
     {
         var action = DropAction.None;
         var files = destination is { Length: > 0 } ? e.Data?.GetData(DataFormats.FileDrop) as string[] : null;
         // 判定は先頭の項目で行う（エクスプローラーと同じ）。実際の転送は項目ごとに判定する
         if (files is { Length: > 0 })
         {
-            action = LeftDecision(files, destination!, e.KeyState, e.AllowedEffect, mode);
+            // R-111-2 / R-140: 右ボタンは指定を使わない（ドロップ後のメニューの既定と同じ標準の判定にそろえる）
+            action = LeftDecision(files, destination!, e.KeyState, e.AllowedEffect, right ? BookmarkDropMode.Standard : mode);
         }
 
         (e.Effect, e.DropImageType, e.Message) = action switch
@@ -39,7 +44,7 @@ internal static class DropFeedback
         // R-111-2: 右ボタンのドラッグでは、左ボタンなら何も起きない所（別のドライブで移動だけ・リンクだけ）でも、
         // メニューが出る所なら落とせる効果を返す。None のままだと OLE は Drop を呼ばず、メニューが出ない。
         // 説明は出さない（何をするかはメニューで選ぶ）
-        if (action == DropAction.None && DragButtonState.Right && files is { Length: > 0 }
+        if (action == DropAction.None && right && files is { Length: > 0 }
             && DropRouting.Menu(files[0], destination!, e.AllowedEffect.HasFlag(DragDropEffects.Copy),
                 e.AllowedEffect.HasFlag(DragDropEffects.Move), e.AllowedEffect.HasFlag(DragDropEffects.Link)) is { } model)
         {

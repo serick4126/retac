@@ -7387,7 +7387,7 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 117
+        "line": 119
       },
       {
         "file": "src/ReTAC.App/ChoiceDialog.cs",
@@ -8273,11 +8273,11 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 96
+        "line": 98
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 166
+        "line": 168
       },
       {
         "file": "src/ReTAC.App/FolderBrowser.cs",
@@ -10013,7 +10013,11 @@
       },
       {
         "file": "src/ReTAC.App/DropFeedback.cs",
-        "line": 39
+        "line": 32
+      },
+      {
+        "file": "src/ReTAC.App/DropFeedback.cs",
+        "line": 44
       },
       {
         "file": "src/ReTAC.App/DropTargetHelper.cs",
@@ -11391,7 +11395,7 @@
     "R-127": [
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 149
+        "line": 151
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
@@ -11953,7 +11957,11 @@
       },
       {
         "file": "src/ReTAC.App/DropFeedback.cs",
-        "line": 55
+        "line": 32
+      },
+      {
+        "file": "src/ReTAC.App/DropFeedback.cs",
+        "line": 60
       },
       {
         "file": "src/ReTAC.App/FolderExpansion.cs",
@@ -12925,7 +12933,7 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 103
+        "line": 105
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -13005,7 +13013,7 @@
     "R-47": [
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 96
+        "line": 98
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
@@ -13023,7 +13031,7 @@
     "R-48": [
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 108
+        "line": 110
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -13165,7 +13173,7 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 151
+        "line": 153
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
@@ -13551,7 +13559,7 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 118
+        "line": 120
       },
       {
         "file": "src/ReTAC.App/CommandPickerDialog.cs",

@@ -27,7 +27,7 @@ internal static class BookmarkBadge
     /// <summary>読み込んだ Bitmap へ直接描く（新しい Bitmap は作らない）。Standard は何もしない。</summary>
     internal static void Draw(Bitmap icon, BookmarkDropMode mode, bool highContrast)
     {
-        if (mode == BookmarkDropMode.Standard) return;
+        if (mode is not (BookmarkDropMode.Copy or BookmarkDropMode.Move)) return;   // 定義外の値は Standard と同じ（何も描かない）
         var (box, stroke, inset) = Metrics(icon.Width);
         var frame = highContrast ? SystemColors.WindowText : Frame;
         var fill = highContrast ? SystemColors.Window : Color.White;

@@ -67,7 +67,9 @@ public sealed class BookmarkEntryDialog : Form
         {
             // R-140: ブックマークのフォルダへ落としたときの動作。フォルダだけ（ファイル・コマンド・グループには落とせない）
             var dropLabel = new Label { Text = "ドロップ時の動作(&D):", AutoSize = true, Location = new Point(12, 130) };
-            _dropMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Bounds = new Rectangle(110, 126, 310, 23) };
+            // ラベルの幅は文字の大きさで変わるので、コンボは実際の幅の後ろに置く（右端は他の欄の 420 にそろえる）
+            var comboX = Math.Max(110, dropLabel.Left + dropLabel.PreferredSize.Width + 6);
+            _dropMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Bounds = new Rectangle(comboX, 126, 420 - comboX, 23) };
             _dropMode.Items.AddRange(["Windows 標準", "常にコピー", "常に移動"]);
             _dropMode.SelectedIndex = Enum.IsDefined(preset.DropMode) ? (int)preset.DropMode : 0;   // 定義外の値は Windows 標準
             Controls.AddRange([dropLabel, _dropMode]);

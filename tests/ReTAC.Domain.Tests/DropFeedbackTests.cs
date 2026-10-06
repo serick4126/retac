@@ -33,6 +33,27 @@ public class DropFeedbackTests
     }
 
     [Theory]
+    [InlineData(BookmarkDropMode.Standard)]
+    [InlineData(BookmarkDropMode.Copy)]
+    [InlineData(BookmarkDropMode.Move)]
+    public void Apply_RightDragIgnoresMode(BookmarkDropMode mode)
+    {
+        // R-111-2 / R-140: 右ボタンは常に標準の判定。カーソルとメニューの既定がずれない
+        foreach (var dest in new[] { @"C:\b", @"D:\b" })
+            Assert.Equal(Run(dest, BookmarkDropMode.Standard, right: true), Run(dest, mode, right: true));
+        // 左ボタンは指定に従う（同じドライブでも常にコピー）
+        Assert.Equal((DragDropEffects.Copy, DropImageType.Copy), Run(@"C:\b", BookmarkDropMode.Copy, right: false));
+    }
+
+    private static (DragDropEffects, DropImageType) Run(string dest, BookmarkDropMode mode, bool right)
+    {
+        var data = new DataObject(DataFormats.FileDrop, Files);
+        var e = new DragEventArgs(data, 0, 0, 0, Both, DragDropEffects.None);
+        DropFeedback.Apply(e, dest, "x", mode, right);
+        return (e.Effect, e.DropImageType);
+    }
+
+    [Theory]
     [InlineData(DropChoice.Copy)]
     [InlineData(DropChoice.Move)]
     public void AfterMenu_ResetsMode(DropChoice choice)
