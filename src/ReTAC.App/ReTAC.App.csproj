@@ -4,6 +4,8 @@
     <EmbeddedResource Include="retac.ico" />
     <ProjectReference Include="..\ReTAC.Domain\ReTAC.Domain.csproj" />
     <ProjectReference Include="..\ReTAC.Shell\ReTAC.Shell.csproj" />
+    <!-- R-142: 排他の名前は、アップデータ（R-109-1）と同じ最終パス・同じハッシュで作る。写しを作らずリンクで共有する（変更を入れない） -->
+    <Compile Include="..\ReTAC.Updater\Core\InstallFolder.cs" Link="Updater\InstallFolder.cs" />
   </ItemGroup>
 
   <PropertyGroup>

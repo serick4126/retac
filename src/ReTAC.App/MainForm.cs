@@ -290,7 +290,9 @@ public sealed class MainForm : Form, IBookmarkHost
             // B-03: ループはどのウィンドウにも紐づいていない（Program.cs）。
             // 最後の 1 枚が閉じたらここでプロセスを終わらせる。
             // 自分自身が OpenForms から外れる順序に依存しないよう「他に居るか」で見る
-            if (!Application.OpenForms.OfType<MainForm>().Any(f => f != this)) Application.ExitThread();
+            if (s_lastActive == this) s_lastActive = null;
+            // R-142: 終わる途中の印。これ以降に届いた起動の要求は受け付けない（受けても、開いた窓が残らない）
+            if (!Application.OpenForms.OfType<MainForm>().Any(f => f != this)) { IsExiting = true; Application.ExitThread(); }
         };
 
         FormClosing += (_, e) =>
@@ -1666,6 +1668,7 @@ public sealed class MainForm : Form, IBookmarkHost
         // 確認は出さない。卓駆も出さず、常駐の状態は次の起動で復元されるので失うものがない
         // R-40-7 の「最後の 1 つだけ残す」は完全終了には適用しない。全部閉じる
         foreach (var form in Application.OpenForms.OfType<MainForm>().ToList()) form._fullExit = true;
+        IsExiting = true;   // R-142: 完全終了の途中も、起動の要求を受け付けない
         Application.Exit();
         return true;
     }
@@ -1686,7 +1689,47 @@ public sealed class MainForm : Form, IBookmarkHost
     /// R-109-3: 終了依頼の受け口。どのウィンドウが受けてもプロセス全体への依頼なので、プロセスで 1 つ。
     /// 受け付けの印と、実行中のファイル操作の数（全ウィンドウ共通）を持つ。
     /// </summary>
-    private static readonly QuitForUpdateGate s_quitGate = new();
+    internal static readonly QuitForUpdateGate s_quitGate = new();
+
+    /// <summary>R-142: プロセスが終わる途中（最後の窓が閉じて ExitThread する・完全終了）。立ったら戻らない。</summary>
+    internal static bool IsExiting { get; private set; }
+
+    /// <summary>R-142: 最後に使ったウィンドウ。引数なしで渡された起動・開けないパスの通知の宛先。</summary>
+    private static MainForm? s_lastActive;
+
+    /// <summary>R-142: 保存できなかった知らせを出したか（続けて出さない）。</summary>
+    private static bool s_blockedNotified;
+
+    protected override void OnActivated(EventArgs e)
+    {
+        base.OnActivated(e);
+        s_lastActive = this;
+    }
+
+    /// <summary>
+    /// R-142: 動いている側が、渡された起動の要求を実行する（UI スレッドで、窓を作って開き始めるところまで同期で済ませる）。
+    /// ファイルシステムには触らない（存在は送る側が確かめ済み）。窓が 1 枚も無ければ例外にして、受け付けた扱いにしない。
+    /// </summary>
+    internal static void Receive(StartupRequest request)
+    {
+        var plan = SingleInstanceHost.Plan(request);
+        var last = s_lastActive is { IsDisposed: false } active ? active
+            : Application.OpenForms.OfType<MainForm>().LastOrDefault()
+              ?? throw new InvalidOperationException("ReTAC のウィンドウがありません");
+        if (plan.Kind == ReceiveKind.OpenNew) last.OpenInNewWindow(plan.Folder!, plan.SelectName).Raise();
+        else
+        {
+            last.Raise();
+            if (plan.Message is { } message) last.ShowStatusMessage(message);
+        }
+    }
+
+    /// <summary>R-142: 最小化（常駐を含む）していたら元に戻して、前に出す。</summary>
+    private void Raise()
+    {
+        if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
+        Activate();
+    }
 
     protected override void OnHandleCreated(EventArgs e)
     {
@@ -1800,10 +1843,18 @@ public sealed class MainForm : Form, IBookmarkHost
         try
         {
             // R-55-3: 実行ディレクトリに書けない場合は逃がし、初回に一度だけ知らせる
-            if (_settings.Save())
+            var result = _settings.Save();
+            if (result == SaveResult.MovedToFallback)
                 MessageBox.Show(this,
                     $"実行ディレクトリに書き込めないため、設定を次の場所に保存しました。{Environment.NewLine}{AppSettings.FallbackPath}",
                     "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            else if (result == SaveResult.Blocked && !s_blockedNotified)
+            {
+                // R-142: 別の ReTAC が同じ設定ファイルを使っている。続けて出さない（1 回だけ）
+                s_blockedNotified = true;
+                MessageBox.Show(this, "設定を保存できませんでした（別の ReTAC が同じ設定ファイルを使っています）",
+                    "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

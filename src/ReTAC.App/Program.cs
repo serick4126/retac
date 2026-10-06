@@ -59,7 +59,37 @@ internal static class Program
         // 設定の読み込みより前に済ませる。8.3 で動いている側へ渡すときも、この結果をそのまま送る
         var startup = ClassifyStartupArgument(args);
 
-        var settings = AppSettings.Load();
+        // R-142: 同じ設定ファイルを書く ReTAC は 1 つのプロセスに保つ。書く先を決め、その排他を取れた側だけが起動を続ける。
+        // 取れなければ動いている側へ渡し、渡せなければ時間切れまで繰り返す（返事が無いことだけでは起動しない）
+        SingleInstanceHost? host = null;
+        Control? ui = null;
+        var locks = new InstanceLocks(SettingsLocation.SettingsIdentity, key => new MutexLock(key), key => host!.Listen(key));
+        host = new SingleInstanceHost(MainForm.s_quitGate, () => MainForm.IsExiting, MainForm.Receive,
+            (key, accept) => PipeListener.Start(key, accept, ui!), ex => ErrorLog.Write(ex, "startup-request"));
+        AppSettings.Locks = locks;
+
+        var chosen = SettingsLocation.Choose(AppSettings.PrimaryPath, AppSettings.FallbackPath,
+            SettingsLocation.CanWriteDirectory, SettingsLocation.SettingsIdentity);
+        if (chosen is null || SettingsLocation.InstanceKey(chosen) is not { } instanceKey)
+        {
+            MessageBox.Show($"設定ファイルの場所を確かめられないため起動できません: {AppSettings.FallbackPath}", "ReTAC",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return 1;
+        }
+        var request = new StartupRequest(Guid.NewGuid(), startup.Kind, startup.Folder, startup.FileName, startup.Raw);
+        var clock = Stopwatch.StartNew();
+        var decision = SingleInstance.Decide(new HeldLock(locks, chosen), new PipeChannel(instanceKey), request,
+            SingleInstance.Limit, SingleInstance.Interval, () => clock.Elapsed, Thread.Sleep, out var giveUp);
+        if (decision == StartupDecision.Forwarded) return 0;
+        if (decision == StartupDecision.GiveUp)
+        {
+            MessageBox.Show(giveUp == GiveUpReason.NoListener
+                ? "別のセッションで ReTAC が同じ設定ファイルを使っているため起動できません"
+                : "ReTAC が応答しないため開けませんでした", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return 1;
+        }
+
+        var settings = AppSettings.Load(chosen);
         // R-108: 最初のウィンドウより前に決める。後から変えても、作ったコントロールの色は変わらない。
         // 独自の配色でも呼ぶ。独自の配色が当たるのはファイルリストだけで、ほかは OS に従う（T2）。
         // ハイコントラストでは WinForms の既定（OS の色そのもの）のままにする（R-108-3）
@@ -85,6 +115,10 @@ internal static class Program
         // その 1 枚を閉じた時点で他のウィンドウも道連れになる。
         // 終了は MainForm 側（最後の 1 枚が閉じたら ExitThread）に任せる
         form.Show();
+        // R-142: 窓ができてから受け付けを始める。受けた要求は、この見えないコントロールで UI スレッドへ渡す（最初の窓が閉じても残る）
+        ui = new Control();
+        _ = ui.Handle;
+        host.Attach();
         Application.Run(new ApplicationContext());
         return 0;
     }

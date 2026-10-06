@@ -7,6 +7,9 @@ using SortOrder = ReTAC.Domain.Listing.SortOrder;
 
 namespace ReTAC.App;
 
+/// <summary>R-142: 保存の結果。Blocked はどの書く先にも書けなかった（別の ReTAC が同じ設定ファイルを使っている）。</summary>
+public enum SaveResult { Saved, MovedToFallback, Blocked }
+
 /// <summary>
 /// R-55: 設定は実行ファイルと同じディレクトリの JSON に置く。人が読んで直せること。
 /// 卓駆のレジストリは読み書きしない（R-20）。
@@ -169,17 +172,23 @@ public sealed class AppSettings
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ReTAC", FileName);
 
     /// <summary>実際に読み書きしている場所。フォールバックへ移った場合は初回に一度だけ知らせる。</summary>
-    public static string? ActualPath { get; private set; }
+    public static string? ActualPath => s_actualPath;
+    private static string? s_actualPath;
 
-    public static AppSettings Load()
+    /// <summary>R-142: 書く先ごとの排他。起動時に差し替える（既定は何も取らない状態の本物）。</summary>
+    internal static IInstanceLocks Locks { get; set; } =
+        new InstanceLocks(SettingsLocation.SettingsIdentity, key => new MutexLock(key), _ => { });
+
+    /// <param name="preferredPath">R-142: 起動時に決めた書く先。あればそこを先に読む。</param>
+    public static AppSettings Load(string? preferredPath = null)
     {
-        foreach (var path in new[] { PrimaryPath, FallbackPath })
+        foreach (var path in preferredPath == FallbackPath ? new[] { FallbackPath, PrimaryPath } : new[] { PrimaryPath, FallbackPath })
         {
             try
             {
                 if (!File.Exists(path)) continue;
                 if (JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Json) is not { } loaded) continue;
-                ActualPath = path;
+                s_actualPath = path;
                 return loaded;
             }
             catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
@@ -190,24 +199,36 @@ public sealed class AppSettings
         return new AppSettings();
     }
 
-    /// <returns>フォールバックへ逃がしたら true（R-55-3 の通知が要る）。</returns>
-    public bool Save()
+    /// <returns>MovedToFallback ならフォールバックへ逃がした（R-55-3 の通知が要る）。Blocked ならどこにも書いていない（R-142）。</returns>
+    public SaveResult Save() => Save(PrimaryPath, FallbackPath, Locks, ref s_actualPath);
+
+    /// <summary>
+    /// R-142: 横 → 逃がし先の順に試す。どちらの向きでも、書く先の排他を持っていなければ先に取り、取れない（別の ReTAC が使っている）・
+    /// 実体を確かめられない書く先には書かない。直接上書きすると、その排他を持つ別のプロセスの設定を消す。
+    /// 引数はテストでの差し替え用。
+    /// </summary>
+    internal SaveResult Save(string primaryPath, string fallbackPath, IInstanceLocks locks, ref string? actualPath)
     {
         var json = JsonSerializer.Serialize(this, Json);
-        try
+        if (locks.TryHold(primaryPath))
         {
-            WriteAtomic(PrimaryPath, json);
-            ActualPath = PrimaryPath;
-            return false;
+            try
+            {
+                WriteAtomic(primaryPath, json);
+                actualPath = primaryPath;
+                return SaveResult.Saved;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // 横に書けない。逃がし先へ
+            }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(FallbackPath)!);
-            WriteAtomic(FallbackPath, json);
-            var moved = ActualPath != FallbackPath;
-            ActualPath = FallbackPath;
-            return moved;
-        }
+        if (!locks.TryHold(fallbackPath)) return SaveResult.Blocked;
+        Directory.CreateDirectory(Path.GetDirectoryName(fallbackPath)!);
+        WriteAtomic(fallbackPath, json);
+        var moved = actualPath != fallbackPath;
+        actualPath = fallbackPath;
+        return moved ? SaveResult.MovedToFallback : SaveResult.Saved;
     }
 
     /// <summary>
