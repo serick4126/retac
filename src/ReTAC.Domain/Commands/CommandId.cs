@@ -120,6 +120,8 @@ public enum CommandId
     ViewTiles = 0x901C,
     /// <summary>R-112-4 / V9 / R-122: 表示モードをコンテンツにする（全ウィンドウ）。既定のキーは無い。</summary>
     ViewContent = 0x901D,
+    /// <summary>R-141-1: カーソルのフォルダを新しいウィンドウで開く。既定のキーは無い。</summary>
+    OpenCursorFolderInNewWindow = 0x901E,
     ColorAndFontSettings = 0x8151,
     KeyAssignSettings = 0x8155,
     VisibleDriveSettings = 0x814C,

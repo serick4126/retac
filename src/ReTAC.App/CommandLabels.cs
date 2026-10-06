@@ -59,6 +59,7 @@ public static class CommandLabels
         ("表示", CommandId.ShowContextMenu, "右クリックメニューの表示"),
         ("表示", CommandId.ShowFolderBackgroundMenu, "現在のフォルダの右クリックメニューの表示"),
         ("表示", CommandId.NewWindow, "新しいウィンドウ"),
+        ("表示", CommandId.OpenCursorFolderInNewWindow, "カーソルのフォルダを新しいウィンドウで開く"),
         ("表示", CommandId.Quit, "ReTAC の終了"),
         ("表示", CommandId.QuitAll, "ReTAC を完全に終了"),
 

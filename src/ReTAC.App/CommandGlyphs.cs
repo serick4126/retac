@@ -89,6 +89,7 @@ public static class CommandGlyphs
         [CommandId.EnvironmentSettings] = '\uE713',
         [CommandId.OpenSettings] = '\uE713',
         [CommandId.NewWindow] = '\uE78B',
+        [CommandId.OpenCursorFolderInNewWindow] = '\uE8A7',   // R-141-1: \u300C\u65B0\u3057\u3044\u30A6\u30A3\u30F3\u30C9\u30A6\u300D\u306E\u5225\u5F62\uFF08\u5916\u3078\u958B\u304F\uFF09
         [CommandId.About] = '\uE946',
     };
 

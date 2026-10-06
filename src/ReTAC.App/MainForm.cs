@@ -686,6 +686,7 @@ public sealed class MainForm : Form, IBookmarkHost
         CommandId.Quit => QuitCommand(),
         CommandId.QuitAll => QuitAllCommand(),
         CommandId.NewWindow => NewWindowCommand(),
+        CommandId.OpenCursorFolderInNewWindow => OpenCursorFolderInNewWindowCommand(),
         CommandId.ShowContextMenu => ShowShellContextMenu(_list.PointToScreen(_list.PopupAnchor())),
         CommandId.ShowFolderBackgroundMenu => ShowFolderBackgroundMenu(_list.PointToScreen(_list.PopupAnchor())),
         CommandId.Refresh => Reload(),
@@ -1734,6 +1735,14 @@ public sealed class MainForm : Form, IBookmarkHost
         return true;
     }
 
+    /// <summary>R-141-1: カーソルがフォルダのときだけ、そのフォルダを新しいウィンドウで開く（マークは見ない）。</summary>
+    private bool OpenCursorFolderInNewWindowCommand()
+    {
+        if (_list.State.Cursor is not { } cursor || !OpenInNewWindowApplies([cursor])) return false;
+        OpenInNewWindow(cursor.FullPath);
+        return true;
+    }
+
     /// <summary>R-141: 右クリックメニューの項目名。MainForm・AddressBar が同じ文言を使う。</summary>
     internal const string OpenInNewWindowText = "新しいReTACで開く(&U)";
 
@@ -2560,6 +2569,12 @@ public sealed class MainForm : Form, IBookmarkHost
                 if (item.Tag is CommandId command && ViewModeCommands.Target(command) is { } mode)
                     item.Checked = mode == _settings.ViewMode;
         };
+        // R-141-1: 「ファイル」を開くたびに、カーソルがフォルダかで灰色を決める
+        var fileMenu = _menu.Items.Cast<ToolStripMenuItem>()
+            .First(top => top.DropDownItems.OfType<ToolStripMenuItem>().Any(child => child.Tag is CommandId.OpenCursorFolderInNewWindow));
+        fileMenu.DropDownOpening += (_, _) =>
+            fileMenu.DropDownItems.OfType<ToolStripMenuItem>().First(child => child.Tag is CommandId.OpenCursorFolderInNewWindow).Enabled =
+                _list.State.Cursor is { } cursor && OpenInNewWindowApplies([cursor]);
         // R-96-2: RebuildMenu は項目を作り直すので、このウィンドウの状態を毎回このメニューへ映す
         _leftPanelMenuItems.Root.Checked = _leftPanelShown;
         _leftPanelMenuItems.Views[_leftPanel.ViewKind].Checked = true;

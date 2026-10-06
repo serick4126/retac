@@ -167,6 +167,7 @@ public static class MenuBar
                 Item("名前を指定して実行(&E)...", CommandId.RunCommandLine),
                 Separator(),
                 Item("新しいウィンドウ(&W)", CommandId.NewWindow),
+                Item("カーソルのフォルダを新しいウィンドウで開く(&K)", CommandId.OpenCursorFolderInNewWindow),
                 Separator(),
                 Item("ReTAC の終了(&X)", CommandId.Quit),
                 Item("ReTAC を完全に終了(&Q)", CommandId.QuitAll)),
