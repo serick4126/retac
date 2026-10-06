@@ -9743,11 +9743,11 @@
       },
       {
         "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
-        "line": 40
+        "line": 39
       },
       {
         "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
-        "line": 44
+        "line": 43
       },
       {
         "file": "src/ReTAC.Domain/Listing/IFileViewLayout.cs",
@@ -9953,15 +9953,15 @@
       },
       {
         "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
-        "line": 49
+        "line": 48
       },
       {
         "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
-        "line": 62
+        "line": 61
       },
       {
         "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
-        "line": 72
+        "line": 71
       },
       {
         "file": "src/ReTAC.Shell/DragButtonState.cs",
@@ -13038,6 +13038,12 @@
       {
         "file": "src/ReTAC.App/FileListView.cs",
         "line": 1673
+      }
+    ],
+    "R-65-3": [
+      {
+        "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
+        "line": 26
       }
     ],
     "R-66": [

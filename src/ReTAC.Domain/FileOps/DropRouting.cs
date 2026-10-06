@@ -23,7 +23,7 @@ public static class DropRouting
     /// INV-INPANEL-DROP-VIA-DIALOG / INV-RIGHT-DROP-SAME-ROUTE: 経路は受け口とドラッグ元で決まり、ボタンでは変わらない。
     /// ReTAC から始めたドラッグは、ファイルリストでもダイアログを経る（ツリーから始めたもの・同じプロセスの別のウィンドウから始めたものを含む。Q4 / Q6）。
     /// ファイルリストから同じリストへ落としたものは、宛先が同じフォルダなので DropRules が何もしない。
-    /// ドライブバーは ReTAC からでもダイアログを出さない（既存の動作。揃えるなら別の課題）。
+    /// R-65-3: ドライブバーも宛先（押したボタンのパス。ドライブのルート・デスクトップのフォルダ）入りのダイアログを経る。
     /// </summary>
     /// <param name="fromReTAC">同じプロセスで始めたドラッグ（ファイルリスト・ツリー）</param>
     public static DropPlan Plan(DropReceptacle receptacle, bool fromReTAC, bool rightButton)
@@ -31,7 +31,6 @@ public static class DropRouting
         var route = receptacle switch
         {
             DropReceptacle.FileList => fromReTAC ? DropRoute.Dialog : DropRoute.Direct,
-            DropReceptacle.DriveBar => DropRoute.Direct,
             _ => DropRoute.Dialog,
         };
         return new DropPlan(route, rightButton);

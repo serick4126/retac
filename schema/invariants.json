@@ -451,7 +451,7 @@
       "status": "enforced",
       "specIds": ["R-110-1"],
       "applies": ["type:ReTAC.Domain.FileOps.DropRouting"],
-      "rule": "ReTAC から始めたドラッグ（ツリーから始めたドラッグを含む。Q4）をファイル表示パネルの中へ落として起きるコピー・移動は、必ず宛先入りのダイアログを経由する。外からのドロップは今までどおりダイアログを出さない。",
+      "rule": "ReTAC から始めたドラッグ（ツリーから始めたドラッグを含む。Q4）をファイル表示パネルの中へ落として起きるコピー・移動は、必ず宛先入りのダイアログを経由する。外からのドロップは、ファイルリストへはダイアログを出さない（ドライブバーへは R-65-3 でダイアログを経る）。",
       "enforcedBy": "domain:DropRouting.Plan（FileList で fromReTAC なら Dialog）/ app:MainForm.AcceptDrop（ShellDrag.InProgress を渡す）",
       "testedBy": "tests/ReTAC.Domain.Tests/DropRoutingTests.cs",
       "note": "「新しいウィンドウ」で開いたウィンドウ（同じプロセス）からは ReTAC から（Q6）。別に起動した ReTAC（別のプロセス）からは外からの扱い"
@@ -464,7 +464,7 @@
       "rule": "右ボタンのメニューで選んだ転送は、その受け口に左ボタンで落としたときと同じ経路（ダイアログの有無を含む）で処理する。メニューは効果を決めるだけ。",
       "enforcedBy": "domain:DropRouting.Plan（経路はボタンを見ない）/ app:MainForm.AcceptDrop（メニューは修飾キーを決めるだけで、同じ経路へ渡す）",
       "testedBy": "tests/ReTAC.Domain.Tests/DropRoutingTests.cs",
-      "note": "右ボタンのドロップでは受け口がドラッグ元へ None を返す（T6）。受け口を足すときは DragButtonState の Enter / Over / Reset を忘れない（ReTAC の受け口は DropButton を通す）。"
+      "note": "右ボタンのドロップでは受け口がドラッグ元へ None を返す（T6）。受け口を足すときは DragButtonState の Enter / Over / Reset を忘れない（ReTAC の受け口は DropButton を通す）。ドライブバー（R-65-3）も Dialog 側で、右ボタンならメニューのあとにダイアログが出る。"
     },
     {
       "id": "INV-NO-PATH-ITEM-NOT-IN-FILEPANEL",

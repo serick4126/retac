@@ -8,12 +8,12 @@ namespace ReTAC.Domain.Tests;
 public class DropRoutingTests
 {
     // INV-INPANEL-DROP-VIA-DIALOG / Q4: ReTAC から始めたドラッグは、ファイルリストでもダイアログを経る。
-    // 外からはファイルリストとドライブバーだけダイアログなし（ドライブバーは ReTAC からでもなし。P3 の例外）
+    // 外からはファイルリストだけダイアログなし（R-65-3: ドライブバーも宛先入りのダイアログを経る）
     [Theory]
     [InlineData(DropReceptacle.FileList, true, DropRoute.Dialog)]
     [InlineData(DropReceptacle.FileList, false, DropRoute.Direct)]
-    [InlineData(DropReceptacle.DriveBar, true, DropRoute.Direct)]
-    [InlineData(DropReceptacle.DriveBar, false, DropRoute.Direct)]
+    [InlineData(DropReceptacle.DriveBar, true, DropRoute.Dialog)]
+    [InlineData(DropReceptacle.DriveBar, false, DropRoute.Dialog)]
     [InlineData(DropReceptacle.DriveTree, true, DropRoute.Dialog)]
     [InlineData(DropReceptacle.DriveTree, false, DropRoute.Dialog)]
     [InlineData(DropReceptacle.DesktopTree, true, DropRoute.Dialog)]
@@ -29,6 +29,17 @@ public class DropRoutingTests
         // INV-RIGHT-DROP-SAME-ROUTE: 右ボタンでも経路は同じ。メニューを出すかだけが変わる
         Assert.Equal(new DropPlan(expected, ShowMenu: false), DropRouting.Plan(receptacle, fromReTAC, rightButton: false));
         Assert.Equal(new DropPlan(expected, ShowMenu: true), DropRouting.Plan(receptacle, fromReTAC, rightButton: true));
+    }
+
+    // R-65-3: ドライブバーは ReTAC からでも外からでも、左でも右でも、宛先（ドライブのルート）入りのダイアログを経る
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public void Plan_DriveBarUsesDialog(bool fromReTAC, bool rightButton)
+    {
+        Assert.Equal(DropRoute.Dialog, DropRouting.Plan(DropReceptacle.DriveBar, fromReTAC, rightButton).Route);
     }
 
     private static readonly Entry Folder = Entry.ForFolder(@"C:\a\sub", "sub", FileAttributes.Directory, default);
