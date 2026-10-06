@@ -7729,7 +7729,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 29
+        "line": 33
       },
       {
         "file": "src/ReTAC.App/ToolQueueHost.cs",
@@ -8101,7 +8101,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 106
+        "line": 128
       },
       {
         "file": "src/ReTAC.App/ToolLauncher.cs",
@@ -8197,7 +8197,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 224
+        "line": 251
       },
       {
         "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
@@ -9277,7 +9277,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 243
+        "line": 270
       },
       {
         "file": "src/ReTAC.Shell/PreviewSession.cs",
@@ -9697,7 +9697,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 241
+        "line": 268
       }
     ],
     "R-11-6": [
@@ -10321,7 +10321,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Formatting/Display.cs",
-        "line": 30
+        "line": 37
       },
       {
         "file": "src/ReTAC.Domain/Listing/DetailsColumnWidths.cs",
@@ -11261,7 +11261,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 137
+        "line": 159
       },
       {
         "file": "src/ReTAC.Shell/ShellThumbnails.cs",
@@ -11323,7 +11323,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 71
+        "line": 75
       }
     ],
     "R-13": [
@@ -11787,7 +11787,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 112
+        "line": 134
       },
       {
         "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
@@ -12021,23 +12021,35 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 30
+        "line": 26
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 89
+        "line": 34
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 175
+        "line": 93
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 195
+        "line": 105
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 112
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 197
+      },
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 222
       },
       {
         "file": "src/ReTAC.Domain/Formatting/Display.cs",
-        "line": 47
+        "line": 54
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListSummary.cs",
@@ -12069,11 +12081,11 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 162
+        "line": 184
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 241
+        "line": 268
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListSummary.cs",
@@ -13079,7 +13091,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 253
+        "line": 280
       }
     ],
     "R-66-2": [
@@ -13168,6 +13180,16 @@
       {
         "file": "src/ReTAC.Domain/Formatting/Display.cs",
         "line": 11
+      }
+    ],
+    "R-69-2": [
+      {
+        "file": "src/ReTAC.App/StatusBar.cs",
+        "line": 105
+      },
+      {
+        "file": "src/ReTAC.Domain/Formatting/Display.cs",
+        "line": 27
       }
     ],
     "R-7": [
@@ -13727,7 +13749,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 67
+        "line": 71
       },
       {
         "file": "src/ReTAC.Domain/Navigation/JumpInput.cs",
@@ -15113,7 +15135,7 @@
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
-        "line": 242
+        "line": 269
       }
     ],
     "V-13": [

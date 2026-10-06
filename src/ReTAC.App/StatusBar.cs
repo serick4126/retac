@@ -20,7 +20,11 @@ public sealed class StatusBar : Control
     private string _capacity = "";
     private ListSummary _summary;
     private string _cursorName = "";
-    private string _cursorRest = "";
+    private string _cursorDate = "";
+    private string _cursorSize = "";
+    private string _cursorType = "";
+    /// <summary>サイズ欄の幅。フォント・DPI が変わったら -1 に戻して測り直す（R-34）</summary>
+    private int _sizeColumn = -1;
     private string _queueText = "";
     /// <summary>キューの区画の左端。クリックの判定に使う。出していなければ int.MaxValue</summary>
     private int _queueLeft = int.MaxValue;
@@ -80,21 +84,39 @@ public sealed class StatusBar : Control
     {
         if (Environment.TickCount64 >= _messageHeldUntil) _message = "";
         _summary = ListSummary.Of(state);
-        (_cursorName, _cursorRest) = DescribeCursor(state.Cursor);
+        (_cursorDate, _cursorSize, _cursorType, _cursorName) = DescribeCursor(state.Cursor);
         Invalidate();
         LoadCapacityInBackground(currentFolder);
     }
 
     /// <summary>
-    /// R-34 ④: 更新日時・種別・サイズ・名前（Detail が前の 3 つ、Name が最後）。フォルダはサイズなし、親フォルダは何も出さない。
-    /// 日時は固定の幅なので先頭に置き、カーソルを動かしても日時の位置が動かないようにする。幅の変わる名前は末尾に置く。
+    /// R-34 ④: 更新日時・サイズ・種別・名前の順。フォルダはサイズが空、親フォルダは全部空。
+    /// 日時とサイズは固定幅の欄に置き、カーソルを動かしても位置が動かないようにする。幅の変わる名前は末尾に置く。
     /// </summary>
-    internal static (string Name, string Detail) DescribeCursor(Entry? entry)
+    internal static (string Date, string Size, string Type, string Name) DescribeCursor(Entry? entry)
     {
-        if (entry is null || entry.IsParent) return ("", "");
-        var type = ShellFileType.TypeName(entry.FullPath, entry.Kind == EntryKind.Folder);
-        var size = entry.Kind == EntryKind.Folder ? "" : "  " + Display.Size(entry.Size);
-        return (entry.Name, $"{Display.Timestamp(entry.LastWriteTime)}  {type}{size}");
+        if (entry is null || entry.IsParent) return ("", "", "", "");
+        var isFolder = entry.Kind == EntryKind.Folder;
+        return (Display.Timestamp(entry.LastWriteTime), isFolder ? "" : Display.Size(entry.Size),
+            ShellFileType.TypeName(entry.FullPath, isFolder), entry.Name);
+    }
+
+    /// <summary>
+    /// R-34 ④ / R-69-2: サイズ欄の幅。整数部が最大になる見本のうち、いちばん広いものに合わせる。
+    /// 描画から切り離すのは、フォントの代わりに文字数などで測る関数を渡してテストするため。
+    /// </summary>
+    internal static int SizeColumnWidth(Func<string, int> measure) =>
+        new[] { "1023.9KB", "1023.9MB", "1023.9GB", "1023.9TB", "1023.9PB", "8.0EB" }.Max(measure);
+
+    /// <summary>
+    /// R-34 ④: サイズ欄の右端・種別の始まり・名前の始まり。区切りは gap（空白 2 つ分）。
+    /// サイズが空のフォルダでも欄の幅は取るので、種別の始まりはファイルと同じになる。
+    /// </summary>
+    internal static (int SizeRight, int TypeX, int NameX) CursorLayout(int x, int dateWidth, int sizeColumn, int gap, int typeWidth)
+    {
+        var sizeRight = x + dateWidth + gap + sizeColumn;
+        var typeX = sizeRight + gap;
+        return (sizeRight, typeX, typeX + typeWidth + gap);
     }
 
     private string _capacityRoot = "";
@@ -172,22 +194,27 @@ public sealed class StatusBar : Control
     private enum Icon { Folder, File }
 
     /// <summary>
-    /// R-34 ④: 日時・種別・サイズを先に描き、残りの幅に名前を置く。
-    /// 日時・種別・サイズも入らない幅では名前を出さず、それらは区画の右端（OnPaint のクリップ）で切れる。
+    /// R-34 ④: 日時・サイズ・種別を先に描き、残りの幅に名前を置く。サイズは固定幅の欄の中で右寄せ。
+    /// 日時・サイズ・種別も入らない幅では名前を出さず、それらは区画の右端（OnPaint のクリップ）で切れる。
     /// </summary>
     private void DrawCursorSection(Graphics g, int x)
     {
         if (_cursorName.Length == 0) return;
         var pad = Scaled(6);
         g.DrawLine(SystemPens.ControlDark, x - pad / 2, Scaled(3), x - pad / 2, Height - Scaled(3));
-        var head = _cursorRest + "  ";
         var measure = TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
-        var headWidth = TextRenderer.MeasureText(g, head, Font, Size.Empty, measure).Width;
-        var nameX = x + headWidth;
-        var nameWidth = CursorNameWidth(nameX, TextRenderer.MeasureText(g, _cursorName, Font, Size.Empty, measure).Width,
-            Width, _queueLeft, pad);
+        int Measure(string s) => TextRenderer.MeasureText(g, s, Font, Size.Empty, measure).Width;
+        if (_sizeColumn < 0) _sizeColumn = SizeColumnWidth(Measure);
+        var gap = Measure("  ");
+        var dateWidth = Measure(_cursorDate);
+        var typeWidth = Measure(_cursorType);
+        var (sizeRight, typeX, nameX) = CursorLayout(x, dateWidth, _sizeColumn, gap, typeWidth);
+        var nameWidth = CursorNameWidth(nameX, Measure(_cursorName), Width, _queueLeft, pad);
         var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding | TextFormatFlags.PreserveGraphicsClipping;
-        TextRenderer.DrawText(g, head, Font, new Rectangle(x, 0, headWidth, Height), ForeColor, flags);
+        TextRenderer.DrawText(g, _cursorDate, Font, new Rectangle(x, 0, dateWidth, Height), ForeColor, flags);
+        TextRenderer.DrawText(g, _cursorSize, Font, new Rectangle(sizeRight - _sizeColumn, 0, _sizeColumn, Height), ForeColor,
+            (flags & ~TextFormatFlags.Left) | TextFormatFlags.Right);
+        TextRenderer.DrawText(g, _cursorType, Font, new Rectangle(typeX, 0, typeWidth, Height), ForeColor, flags);
         TextRenderer.DrawText(g, _cursorName, Font, new Rectangle(nameX, 0, nameWidth, Height), ForeColor, flags | TextFormatFlags.EndEllipsis);
     }
 
@@ -251,12 +278,14 @@ public sealed class StatusBar : Control
     {
         base.OnDpiChangedAfterParent(e);
         UpdateHeight();   // R-66
+        _sizeColumn = -1;
         Invalidate();
     }
 
     protected override void OnFontChanged(EventArgs e)
     {
         base.OnFontChanged(e);
+        _sizeColumn = -1;
         UpdateHeight();
         Invalidate();
     }

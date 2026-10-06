@@ -5,7 +5,7 @@ namespace ReTAC.Domain.Formatting;
 /// <summary>ステータスバーの表示書式。5-1 節「ファイル日付は西暦 4 桁」・R-69「単位付き表示に固定」。</summary>
 public static class Display
 {
-    private static readonly string[] Units = ["B", "KB", "MB", "GB", "TB", "PB"];
+    private static readonly string[] Units = ["B", "KB", "MB", "GB", "TB", "PB", "EB"];
 
     /// <summary>
     /// R-69: バイト表示は実装せず単位付きに固定する。
@@ -20,6 +20,13 @@ public static class Display
         double value = bytes;
         var unit = 0;
         while (value >= 1024 && unit < Units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+        // R-69-2: 丸めて 1024 になる値（1,048,570 バイトなど）は次の単位で出す。
+        // 丸める前の値で判定すると "1024.0KB" が出る。long の上限は約 8EB なので EB から先は無い
+        if (unit < Units.Length - 1 && Math.Round(value, decimals, MidpointRounding.AwayFromZero) >= 1024)
         {
             value /= 1024;
             unit++;

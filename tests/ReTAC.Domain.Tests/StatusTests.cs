@@ -20,6 +20,49 @@ public class DisplayTests
     }
 
     [Fact]
+    public void Size_RoundsUpToNextUnit()
+    {
+        // R-69-2: 丸めて 1024 になったら次の単位で出す
+        Assert.Equal("1023B", Display.Size(1023));
+        Assert.Equal("1.0KB", Display.Size(1024));
+        Assert.Equal("1.0MB", Display.Size(1_048_570));
+        Assert.Equal("1.0MB", Display.Size(1_048_575));
+        Assert.Equal("1.00GB", Display.Size(1024L * 1024 * 1024 - 1, 2));
+    }
+
+    [Fact]
+    public void Size_PbBoundaryGoesToEb()
+    {
+        var pb = 1024L * 1024 * 1024 * 1024 * 1024;
+        Assert.Equal("1.0EB", Display.Size((long)(pb * 1023.0 + pb * 0.96)));
+        Assert.Equal("1.0EB", Display.Size(pb * 1024));
+    }
+
+    [Fact]
+    public void Size_LongMaxIsEb()
+    {
+        Assert.Equal("8.0EB", Display.Size(long.MaxValue));
+        Assert.Equal("8.00EB", Display.Size(long.MaxValue, 2));
+    }
+
+    [Fact]
+    public void Size_IntegerPartBounded()
+    {
+        // R-69-2: 整数部は B〜PB で 1023 以下、EB で 8 以下
+        long[] samples = [0, 1, 1023, 1024, 1_048_570, 1_048_575, 1L << 30, (1L << 30) - 1, 1L << 40, (1L << 40) - 1,
+            1L << 50, (1L << 50) - 1, (1L << 50) * 1023, (1L << 50) * 1024 - 1, 1L << 60, long.MaxValue];
+        foreach (var bytes in samples)
+        foreach (var decimals in new[] { 1, 2 })
+        {
+            var text = Display.Size(bytes, decimals);
+            var unitAt = text.IndexOfAny(['K', 'M', 'G', 'T', 'P', 'E']);
+            var unit = unitAt < 0 ? "B" : text[unitAt..];
+            var integer = int.Parse(text[..(text.Length - unit.Length)].Split('.')[0]);
+            Assert.True(integer <= (unit == "EB" ? 8 : 1023), $"{bytes} -> {text}");
+        }
+    }
+
+    [Fact]
     public void ドライブ容量は小数2桁で表示する()
     {
         // 卓駆の実測表示: D:全3725.90GB 空75.77GB Use:98%
@@ -127,31 +170,44 @@ public class ListSummaryTests
 public class StatusBarCursorTests
 {
     [Fact]
-    public void ステータスバーの項目の情報は更新日時_種別_サイズの順で名前は別に返す()
+    public void Cursor_OrderIsDateSizeTypeName()
     {
+        // R-34: 更新日時・サイズ・種別・名前を別々に返す
         var mtime = new DateTime(2026, 10, 2, 9, 8, 7);
-        var (name, detail) = ReTAC.App.StatusBar.DescribeCursor(TestEntries.File("資料.xlsx", size: 512, mtime: mtime));
-        Assert.Equal("資料.xlsx", name);
-        Assert.DoesNotContain("資料", detail);
-        Assert.StartsWith(Display.Timestamp(mtime), detail);
-        Assert.EndsWith("  " + Display.Size(512), detail);   // サイズは種別の後
+        var file = ReTAC.App.StatusBar.DescribeCursor(TestEntries.File("資料.xlsx", size: 512, mtime: mtime));
+        Assert.Equal(Display.Timestamp(mtime), file.Date);
+        Assert.Equal("512B", file.Size);
+        Assert.NotEqual("", file.Type);
+        Assert.Equal("資料.xlsx", file.Name);
+
+        var folder = ReTAC.App.StatusBar.DescribeCursor(TestEntries.Folder("資料", mtime: mtime));
+        Assert.Equal(Display.Timestamp(mtime), folder.Date);
+        Assert.Equal("", folder.Size);
+        Assert.NotEqual("", folder.Type);
+        Assert.Equal("資料", folder.Name);
+
+        Assert.Equal(("", "", "", ""), ReTAC.App.StatusBar.DescribeCursor(null));
+        Assert.Equal(("", "", "", ""), ReTAC.App.StatusBar.DescribeCursor(TestEntries.Parent()));
     }
 
     [Fact]
-    public void ステータスバーのフォルダの情報はサイズを含まない()
+    public void SizeColumn_FitsWidest()
     {
-        var mtime = new DateTime(2026, 10, 2, 9, 8, 7);
-        var (name, detail) = ReTAC.App.StatusBar.DescribeCursor(TestEntries.Folder("資料", mtime: mtime));
-        Assert.Equal("資料", name);
-        Assert.StartsWith(Display.Timestamp(mtime), detail);
-        Assert.DoesNotContain(Display.Size(0), detail);
+        var width = ReTAC.App.StatusBar.SizeColumnWidth(s => s.Length);
+        Assert.True(width >= "1023.9PB".Length);
+        Assert.True(width >= Display.Size(long.MaxValue).Length);
     }
 
     [Fact]
-    public void ステータスバーはnullと親フォルダの項目で何も出さない()
+    public void CursorLayout_SizeRightAligned()
     {
-        Assert.Equal(("", ""), ReTAC.App.StatusBar.DescribeCursor(null));
-        Assert.Equal(("", ""), ReTAC.App.StatusBar.DescribeCursor(TestEntries.Parent()));
+        // R-34: サイズ欄の幅が同じなら、サイズの文字列によらず右端も種別の始まりも同じ（フォルダも同じ）
+        var a = ReTAC.App.StatusBar.CursorLayout(10, 120, 60, 12, 80);
+        var b = ReTAC.App.StatusBar.CursorLayout(10, 120, 60, 12, 80);
+        Assert.Equal(a, b);
+        Assert.Equal(10 + 120 + 12 + 60, a.SizeRight);
+        Assert.Equal(a.SizeRight + 12, a.TypeX);
+        Assert.Equal(a.TypeX + 80 + 12, a.NameX);
     }
 
     // 名前は x=300 から幅 100。pad は 6。キューの区画が無いときの queueLeft は int.MaxValue（OnPaint と同じ）
