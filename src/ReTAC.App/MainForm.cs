@@ -231,9 +231,10 @@ public sealed class MainForm : Form, IBookmarkHost
         _addressBar.Cancelled += (_, _) => _list.Focus();
         _addressBar.IconClicked += (_, _) => OpenInExplorer(_currentFolder);
         _addressBar.CopyPathRequested += (_, path) => TryClipboard(() => Clipboard.SetText(path));
+        _addressBar.OpenInNewWindowRequested += (_, folder) => BeginInvoke(() => OpenInNewWindow(folder));   // R-141
         _addressBar.FilesDropped += (_, drop) => AcceptDrop(DropReceptacle.AddressBar, drop.Files, drop.Destination, drop.Allowed, drop.Ctrl, drop.Shift);
         // ドライブのボタンの右クリックはリストの項目と同じ扱い。移動はしない
-        _driveBar.RightClicked += (_, click) => ShowShellContextMenu([click.Path], click.ScreenPoint);
+        _driveBar.RightClicked += (_, click) => ShowShellContextMenu([click.Path], click.ScreenPoint, offerNewWindow: true);   // R-141: 常に出す
         // R-65 ②③: 落とされたファイルの転送はどちらも同じ経路を通す
         _list.FilesDropped += (_, drop) => AcceptDrop(DropReceptacle.FileList, drop.Files, drop.Destination, drop.Allowed, drop.Ctrl, drop.Shift);
         _driveBar.FilesDropped += (_, drop) => AcceptDrop(DropReceptacle.DriveBar, drop.Files, drop.Path, drop.Allowed, drop.Ctrl, drop.Shift);
@@ -1729,11 +1730,28 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>R-36 / R-60: 新しいウィンドウ。各ウィンドウが独立した状態を持つ。</summary>
     private bool NewWindowCommand()
     {
-        var window = new MainForm(settings: _settings);
-        window.Show();
-        _ = window.OpenFolderAsync(_currentFolder);
+        OpenInNewWindow(_currentFolder);
         return true;
     }
+
+    /// <summary>R-141: 右クリックメニューの項目名。MainForm・AddressBar が同じ文言を使う。</summary>
+    internal const string OpenInNewWindowText = "新しいReTACで開く(&U)";
+
+    /// <summary>
+    /// R-141: 同じプロセスに新しいウィンドウを作り、そのフォルダを開く（ウィンドウの作り方はこれ 1 つ）。
+    /// 開けないフォルダの扱いは新しいウィンドウの OpenFolderAsync に任せる。selectName があればそのファイルにカーソルを置く。
+    /// </summary>
+    internal MainForm OpenInNewWindow(string folder, string? selectName = null)
+    {
+        var window = new MainForm(settings: _settings);
+        window.Show();
+        _ = window.OpenFolderAsync(folder, selectName);
+        return window;
+    }
+
+    /// <summary>R-141: 右クリックの対象がフォルダ 1 件のときだけ「新しいReTACで開く」を出す（親フォルダの項目・ファイル・複数は出さない）。</summary>
+    internal static bool OpenInNewWindowApplies(IReadOnlyList<Entry> targets) =>
+        targets is [{ Kind: EntryKind.Folder, IsParent: false }];
 
     /// <summary>
     /// R-60-3: 完全終了時に保存するのはカレントフォルダ・ソート・表示ファイルタイプ・
@@ -2095,17 +2113,27 @@ public sealed class MainForm : Form, IBookmarkHost
             Add("ブックマークを管理(&B)...", () => Execute(new BuiltinTarget(CommandId.BookmarkManage), Keys.None));
         }
 
+        // R-141: シェルのメニューが出るフォルダ（ブックマークのフォルダ・展開の中のフォルダ）だけ
+        var newWindowFolder = tag switch
+        {
+            Bookmark { Kind: BookmarkKind.Folder } f => f.Target,
+            Entry { Kind: EntryKind.Folder } e => e.FullPath,
+            _ => null,
+        };
         var texts = rows.Select(r => r.Text).ToList();
         var checkedFlags = rows.Select(r => r.Checked).ToList();
         var result = SafeShellMenu.Run(this, () => shellPaths.Length > 0
-            ? ShellContextMenu.ShowWithItems(Handle, shellPaths, screen.X, screen.Y, texts, checkedFlags)
+            ? ShellContextMenu.ShowWithItems(Handle, shellPaths, screen.X, screen.Y, texts, checkedFlags,
+                newWindowFolder is null ? null : OpenInNewWindowText)   // R-141: フォルダだけ。添字は texts.Count
             : ShellContextMenu.ShowItems(Handle, screen.X, screen.Y, texts, checkedFlags));
         if (result.Outcome == ContextMenuOutcome.Cancelled) return;   // 取り消しなら元のメニューは開いたまま
 
         closing?.Invoke();
         // 選んだ処理は後に回す。ここは右クリックした項目の MouseUp の中なので、その場で削除してバーを作り直すと、
         // 処理中の項目ごと捨てることになり、閉じたメニューの跡がファイルリストに残った（実機指摘）
-        if (result.Outcome == ContextMenuOutcome.AppItem && rows[result.AppItem].Run is { } run) BeginInvoke(run);
+        if (result.Outcome == ContextMenuOutcome.AppItem && result.AppItem == rows.Count && newWindowFolder is not null)
+            BeginInvoke(() => OpenInNewWindow(newWindowFolder));
+        else if (result.Outcome == ContextMenuOutcome.AppItem && rows[result.AppItem].Run is { } run) BeginInvoke(run);
     }
 
     BookmarkSet IBookmarkHost.Bookmarks => _settings.Bookmarks;
@@ -2351,18 +2379,23 @@ public sealed class MainForm : Form, IBookmarkHost
             ? state.EffectiveTarget().Select(e => e.FullPath).ToList()   // R-10
             : [state.Entries[click.Index].FullPath];
 
-        ShowShellContextMenu(targets, click.ScreenPoint);
+        ShowShellContextMenu(targets, click.ScreenPoint, OpenInNewWindowApplies(state.Marks.Count > 0
+            ? state.EffectiveTarget().ToList() : [state.Entries[click.Index]]));
     }
 
     /// <summary>シェルのコンテキストメニュー（0x8328）。書庫の圧縮・解凍はここから WinRAR へ委譲する。</summary>
     private bool ShowShellContextMenu(Point screenPoint) =>
-        ShowShellContextMenu(_list.State.EffectiveTarget().Select(e => e.FullPath).ToList(), screenPoint);
+        ShowShellContextMenu(_list.State.EffectiveTarget().Select(e => e.FullPath).ToList(), screenPoint,
+            OpenInNewWindowApplies(_list.State.EffectiveTarget().ToList()));
 
-    private bool ShowShellContextMenu(IReadOnlyList<string> targets, Point screenPoint)
+    /// <param name="offerNewWindow">R-141: 「新しいReTACで開く」を出す。選ばれたら targets[0] を新しいウィンドウで開く</param>
+    private bool ShowShellContextMenu(IReadOnlyList<string> targets, Point screenPoint, bool offerNewWindow = false)
     {
         if (targets.Count == 0) return false;
 
-        SafeShellMenu.Run(this, () => ShellContextMenu.Show(Handle, targets, screenPoint.X, screenPoint.Y));   // V-04
+        var result = SafeShellMenu.Run(this, () => ShellContextMenu.Show(Handle, targets, screenPoint.X, screenPoint.Y,
+            offerNewWindow ? OpenInNewWindowText : null));   // V-04
+        if (offerNewWindow && result.Outcome == ContextMenuOutcome.AppItem) OpenInNewWindow(targets[0]);
 
         // メニューから削除・改名が行われることがあるので開き直す（自動更新でも拾えるが確実に）
         Reload();

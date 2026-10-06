@@ -53,6 +53,9 @@ public sealed class AddressBar : Control
     /// <summary>R-94: 右クリックの「このパスをコピー」。クリップボードの競合は呼び出し側が扱う（TryClipboard）。</summary>
     public event EventHandler<string>? CopyPathRequested;
 
+    /// <summary>R-141: 右クリックの「新しいReTACで開く」。引数は開くフォルダ（アイコンなら今のフォルダ、段ならその段）。</summary>
+    public event EventHandler<string>? OpenInNewWindowRequested;
+
     /// <summary>
     /// R-94 / R-93: 段へファイルが落とされた。宛先・ファイル・元が許す効果・ドロップの時点の修飾キー。
     /// 転送のダイアログは呼び出し側（MainForm.TransferDropped）が出す。
@@ -423,11 +426,13 @@ public sealed class AddressBar : Control
         string[] items = ["このパスをコピー(&Y)", "アドレスを編集(&E)"];
         var screen = PointToScreen(client);
         var result = SafeShellMenu.Run(this, () => path is not null
-            ? ShellContextMenu.ShowWithItems(Handle, [path], screen.X, screen.Y, items)   // 区切り線は ShowWithItems が入れる
+            // R-141: 段の上だけに「新しいReTACで開く」を出す（添字 2）。余白では出さない
+            ? ShellContextMenu.ShowWithItems(Handle, [path], screen.X, screen.Y, items, null, MainForm.OpenInNewWindowText)   // 区切り線は ShowWithItems が入れる
             : ShellContextMenu.ShowItems(Handle, screen.X, screen.Y, items));
         if (result.Outcome != ContextMenuOutcome.AppItem) return;
         if (result.AppItem == 0) CopyPathRequested?.Invoke(this, path ?? _folder);
         else if (result.AppItem == 1) BeginEdit();
+        else if (result.AppItem == 2 && path is not null) OpenInNewWindowRequested?.Invoke(this, path);
     }
 
     // ---- R-94: 段へのドロップ ----------------------------------------------------------
@@ -569,7 +574,13 @@ public sealed class AddressBar : Control
         {
             if (e.Button == MouseButtons.Left && pressed) IconClicked?.Invoke(this, EventArgs.Empty);
             else if (e.Button == MouseButtons.Right)
-                SafeShellMenu.Run(this, () => ShellContextMenu.Show(Handle, [_folder], Cursor.Position.X, Cursor.Position.Y));
+            {
+                // R-141: アイコンは常に「新しいReTACで開く」を出す（今のフォルダ。届かなくても ReTAC の項目として残る）
+                var folder = _folder;
+                var result = SafeShellMenu.Run(this, () => ShellContextMenu.Show(Handle, [folder], Cursor.Position.X, Cursor.Position.Y,
+                    MainForm.OpenInNewWindowText));
+                if (result.Outcome == ContextMenuOutcome.AppItem) OpenInNewWindowRequested?.Invoke(this, folder);
+            }
             return;
         }
         if (_input.Visible) return;

@@ -20,8 +20,31 @@ public static class ShellContextMenu
     /// <param name="ownerHandle">メニューの所有者。実際の追跡はメッセージ転送用の隠しウィンドウで行う</param>
     /// <param name="paths">対象。同一フォルダ内の項目であること（シェルの仕様）</param>
     /// <param name="screenX">スクリーン座標</param>
-    public static void Show(IntPtr ownerHandle, IReadOnlyList<string> paths, int screenX, int screenY) =>
-        ShowWithItems(ownerHandle, paths, screenX, screenY, []);
+    /// <param name="afterOpen">R-141: 動詞 open の項目のすぐ下へ差し込む ReTAC の項目の文言。選ばれたら AppItem（添字 0）を返す</param>
+    public static ContextMenuResult Show(IntPtr ownerHandle, IReadOnlyList<string> paths, int screenX, int screenY,
+                                         string? afterOpen = null) =>
+        ShowWithItems(ownerHandle, paths, screenX, screenY, [], null, afterOpen);
+
+    /// <summary>R-141: シェルのメニューを作る各段の成否から、シェルのメニューか代わりの表示かを決める。1 つでも欠けたら代わりの表示。</summary>
+    internal enum MenuPath { Shell, Fallback }
+
+    internal static MenuPath ChooseMenuPath(bool parsed, bool uiObject, bool isContextMenu, bool queried) =>
+        parsed && uiObject && isContextMenu && queried ? MenuPath.Shell : MenuPath.Fallback;
+
+    /// <summary>
+    /// R-141: 「開く」の次の位置。verbs はメニューの上から順の動詞（区切り線・ReTAC の項目・動詞の取れない項目は null）。
+    /// 無ければシェルの項目の先頭（ReTAC の項目と区切り線の後）。
+    /// </summary>
+    internal static int InsertPosition(IReadOnlyList<string?> verbs, int appItemCount)
+    {
+        for (var i = 0; i < verbs.Count; i++)
+            if (string.Equals(verbs[i], "open", StringComparison.OrdinalIgnoreCase)) return i + 1;
+        return appItemCount + (appItemCount > 0 ? 1 : 0);
+    }
+
+    /// <summary>R-141: シェルのメニューを作れないときの代わりの表示の並び。afterOpen は ReTAC の項目の末尾（添字 items.Count）。</summary>
+    internal static IReadOnlyList<string> FallbackItems(IReadOnlyList<string> items, string? afterOpen) =>
+        afterOpen is null ? items : [.. items, afterOpen];
 
     /// <summary>
     /// R-89: シェルのメニューの先頭に ReTAC の項目を差し込んで出す。ReTAC の項目はシェルへ渡さず、選ばれた添字を返す。
@@ -31,7 +54,8 @@ public static class ShellContextMenu
     /// パスをシェルが扱えない（消えた・届かない）ときは、ReTAC の項目だけで出す</param>
     /// <param name="isChecked">R-106-1: items と同じ添字でチェック状態を持たせたいとき（例: 「アイコンだけ表示」）。無ければ全部チェック無し</param>
     public static ContextMenuResult ShowWithItems(IntPtr ownerHandle, IReadOnlyList<string> paths, int screenX, int screenY,
-                                                 IReadOnlyList<string> items, IReadOnlyList<bool>? isChecked = null)
+                                                 IReadOnlyList<string> items, IReadOnlyList<bool>? isChecked = null,
+                                                 string? afterOpen = null)
     {
         if (paths.Count == 0) return ContextMenuResult.Cancelled;
 
@@ -54,18 +78,22 @@ public static class ShellContextMenu
                 else if (!ReferenceEquals(parent, folder)) Marshal.ReleaseComObject(folder);
                 childPidls.Add(child);
             }
-            if (parent is null || childPidls.Count == 0) return ShowItems(ownerHandle, screenX, screenY, items, isChecked);
+            // R-141: どの段で失敗しても、ReTAC の項目（afterOpen を含む）だけの表示へ寄せる
+            if (ChooseMenuPath(parent is not null && childPidls.Count > 0, true, true, true) == MenuPath.Fallback)
+                return ShowItems(ownerHandle, screenX, screenY, items, isChecked, afterOpen);
 
             var contextGuid = IID_IContextMenu;
             var children = childPidls.ToArray();
-            var uiHr = parent.GetUIObjectOf(ownerHandle, (uint)children.Length, children, ref contextGuid, IntPtr.Zero, out var unknown);
-            if (uiHr != 0 || unknown == IntPtr.Zero) return ShowItems(ownerHandle, screenX, screenY, items, isChecked);
+            var uiHr = parent!.GetUIObjectOf(ownerHandle, (uint)children.Length, children, ref contextGuid, IntPtr.Zero, out var unknown);
+            if (ChooseMenuPath(true, uiHr == 0 && unknown != IntPtr.Zero, true, true) == MenuPath.Fallback)
+                return ShowItems(ownerHandle, screenX, screenY, items, isChecked, afterOpen);
 
             contextMenu = Marshal.GetObjectForIUnknown(unknown);
             Marshal.Release(unknown);
-            if (contextMenu is not IContextMenu shellMenu) return ContextMenuResult.Cancelled;
+            if (ChooseMenuPath(true, true, contextMenu is IContextMenu, true) == MenuPath.Fallback)
+                return ShowItems(ownerHandle, screenX, screenY, items, isChecked, afterOpen);
 
-            return TrackAndInvoke(ownerHandle, contextMenu, shellMenu, screenX, screenY, directory: null, items, isChecked);
+            return TrackAndInvoke(ownerHandle, contextMenu, screenX, screenY, directory: null, items, isChecked, afterOpen);
         }
         finally
         {
@@ -79,15 +107,23 @@ public static class ShellContextMenu
     /// <summary>R-89: ReTAC の項目だけのメニュー（コマンド・グループのブックマーク、バーの空いた所）。選ばれた添字を返す。</summary>
     /// <param name="items">項目の文言（"" は区切り線）</param>
     /// <param name="isChecked">R-106-1: items と同じ添字でチェック状態を持たせたいとき。無ければ全部チェック無し</param>
+    /// <param name="afterOpen">R-141: ReTAC の項目の末尾に足す項目（添字 items.Count）。シェルのメニューが作れないときの代わりの表示でも残すため</param>
     public static ContextMenuResult ShowItems(IntPtr ownerHandle, int screenX, int screenY, IReadOnlyList<string> items,
-                                             IReadOnlyList<bool>? isChecked = null)
+                                             IReadOnlyList<bool>? isChecked = null, string? afterOpen = null) =>
+        ShowItems(ownerHandle, screenX, screenY, items, isChecked, afterOpen, track: null);
+
+    /// <param name="track">テスト用。メニューを出す代わりに、選ばれた番号を返す。null なら TrackPopupMenuEx</param>
+    internal static ContextMenuResult ShowItems(IntPtr ownerHandle, int screenX, int screenY, IReadOnlyList<string> items,
+                                               IReadOnlyList<bool>? isChecked, string? afterOpen, Func<IntPtr, uint>? track)
     {
+        items = FallbackItems(items, afterOpen);
         if (items.Count == 0) return ContextMenuResult.Cancelled;
         var menu = CreatePopupMenu();
         try
         {
             InsertItems(menu, items, isChecked);
-            var command = TrackPopupMenuEx(menu, TPM_RETURNCMD | TPM_LEFTALIGN | TPM_RIGHTBUTTON, screenX, screenY, ownerHandle, IntPtr.Zero);
+            var command = track is not null ? track(menu)
+                : TrackPopupMenuEx(menu, TPM_RETURNCMD | TPM_LEFTALIGN | TPM_RIGHTBUTTON, screenX, screenY, ownerHandle, IntPtr.Zero);
             return command >= AppIdFirst ? new ContextMenuResult(ContextMenuOutcome.AppItem, (int)(command - AppIdFirst)) : ContextMenuResult.Cancelled;
         }
         finally
@@ -135,8 +171,8 @@ public static class ShellContextMenu
             contextMenu = Marshal.GetObjectForIUnknown(menuUnknown);
             Marshal.Release(menuUnknown);
 
-            if (contextMenu is IContextMenu shellMenu)
-                TrackAndInvoke(ownerHandle, contextMenu, shellMenu, screenX, screenY, folderPath, [], null);
+            if (contextMenu is IContextMenu)
+                TrackAndInvoke(ownerHandle, contextMenu, screenX, screenY, folderPath, [], null, null);
         }
         finally
         {
@@ -149,27 +185,42 @@ public static class ShellContextMenu
 
     /// <summary>メニューを出し、選ばれた項目を実行する。項目のメニューと背景のメニューで共通。</summary>
     /// <param name="directory">作業フォルダを使う項目（「ターミナルで開く」など）に渡すフォルダ。項目のメニューでは null</param>
-    private static ContextMenuResult TrackAndInvoke(IntPtr ownerHandle, object contextMenu, IContextMenu shellMenu,
+    /// <param name="afterOpen">R-141: 動詞 open の項目のすぐ下に差し込む ReTAC の項目（番号は ReTAC の項目の続き）</param>
+    /// <param name="query">テスト用。QueryContextMenu の代わり。null なら contextMenu で実際に問い合わせる</param>
+    /// <param name="track">テスト用。メニューを出す代わりに、選ばれた番号を返す。null なら TrackPopupMenuEx</param>
+    internal static ContextMenuResult TrackAndInvoke(IntPtr ownerHandle, object? contextMenu,
                                                     int screenX, int screenY, string? directory, IReadOnlyList<string> items,
-                                                    IReadOnlyList<bool>? isChecked)
+                                                    IReadOnlyList<bool>? isChecked, string? afterOpen,
+                                                    Func<IntPtr, bool>? query = null, Func<IntPtr, uint>? track = null)
     {
+        var shellMenu = contextMenu as IContextMenu;
         var menu = CreatePopupMenu();
         try
         {
             // CMF_EXPLORE: エクスプローラーと同じ既定の並び。拡張（WinRAR など）もこの経路で入る
-            if (shellMenu.QueryContextMenu(menu, 0, IdCmdFirst, IdCmdLast, CMF_NORMAL | CMF_EXPLORE) < 0) return ContextMenuResult.Cancelled;
+            var queried = query is not null ? query(menu)
+                : shellMenu is not null && shellMenu.QueryContextMenu(menu, 0, IdCmdFirst, IdCmdLast, CMF_NORMAL | CMF_EXPLORE) >= 0;
+            // R-141: 失敗したら作りかけのメニューを捨て、afterOpen を残した代わりの表示へ進む
+            if (ChooseMenuPath(true, true, true, queried) == MenuPath.Fallback)
+                return ShowItems(ownerHandle, screenX, screenY, items, isChecked, afterOpen, track);
 
             // R-89: ReTAC の項目は Shell の項目の前に並べる
             InsertItems(menu, items, isChecked);
             if (items.Count > 0) InsertMenu(menu, (uint)items.Count, MF_BYPOSITION | MF_SEPARATOR, UIntPtr.Zero, null);
+            if (afterOpen is not null)
+            {
+                var verbs = CollectVerbs(menu, shellMenu);
+                InsertMenu(menu, (uint)InsertPosition(verbs, items.Count), MF_BYPOSITION | MF_STRING, (UIntPtr)(AppIdFirst + (uint)items.Count), afterOpen);
+            }
 
             // 拡張の項目はオーナードローのことがあり、メニュー用のメッセージを
             // IContextMenu2/3 へ転送しないと中身が出ない（「新規作成」のサブメニューも同じ）
-            using var hook = new MenuMessageHook(contextMenu);
-            var command = TrackPopupMenuEx(menu, TPM_RETURNCMD | TPM_LEFTALIGN | TPM_RIGHTBUTTON,
-                screenX, screenY, hook.Handle, IntPtr.Zero);
+            using var hook = track is null && contextMenu is not null ? new MenuMessageHook(contextMenu) : null;
+            var command = track is not null ? track(menu)
+                : TrackPopupMenuEx(menu, TPM_RETURNCMD | TPM_LEFTALIGN | TPM_RIGHTBUTTON,
+                    screenX, screenY, hook!.Handle, IntPtr.Zero);
             if (command >= AppIdFirst) return new ContextMenuResult(ContextMenuOutcome.AppItem, (int)(command - AppIdFirst));
-            if (command < IdCmdFirst) return ContextMenuResult.Cancelled;
+            if (command < IdCmdFirst || shellMenu is null) return ContextMenuResult.Cancelled;
 
             var invoke = new CMINVOKECOMMANDINFOEX
             {
@@ -189,6 +240,38 @@ public static class ShellContextMenu
             DestroyMenu(menu);
         }
     }
+
+    /// <summary>R-141: メニューの上から順に、シェルの項目の動詞（取れないもの・区切り線・ReTAC の項目は null）を集める。</summary>
+    private static List<string?> CollectVerbs(IntPtr menu, IContextMenu? shellMenu)
+    {
+        var count = GetMenuItemCount(menu);
+        var verbs = new List<string?>(Math.Max(count, 0));
+        var buffer = Marshal.AllocCoTaskMem(512 * sizeof(char));
+        try
+        {
+            for (var i = 0; i < count; i++)
+            {
+                string? verb = null;
+                var id = GetMenuItemID(menu, i);
+                if (shellMenu is not null && id >= IdCmdFirst && id <= IdCmdLast)
+                {
+                    Marshal.WriteInt16(buffer, 0, 0);
+                    if (shellMenu.GetCommandString((IntPtr)(id - IdCmdFirst), GCS_VERBW, IntPtr.Zero, buffer, 512) == 0)
+                        verb = Marshal.PtrToStringUni(buffer);
+                }
+                verbs.Add(verb);
+            }
+        }
+        finally
+        {
+            Marshal.FreeCoTaskMem(buffer);
+        }
+        return verbs;
+    }
+
+    [DllImport("user32.dll")] private static extern int GetMenuItemCount(IntPtr menu);
+    [DllImport("user32.dll")] private static extern uint GetMenuItemID(IntPtr menu, int position);
+    private const uint GCS_VERBW = 4;
 
     [DllImport("shell32.dll")]
     private static extern int SHGetDesktopFolder([MarshalAs(UnmanagedType.Interface)] out IShellFolder folder);
