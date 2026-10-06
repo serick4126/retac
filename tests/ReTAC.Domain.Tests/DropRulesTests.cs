@@ -1,4 +1,5 @@
 using ReTAC.Domain.FileOps;
+using ReTAC.Domain.Navigation;
 
 namespace ReTAC.Domain.Tests;
 
@@ -80,5 +81,64 @@ public class DropRulesTests
     public void ドラッグ元が許す効果に合わせる(DropAction action, bool copy, bool move, DropAction expected)
     {
         Assert.Equal(expected, DropRules.Allow(action, copy, move));
+    }
+
+    // R-140: 指定 3 種 × キー（なし・Ctrl・Shift・両方）× 同じ／別のドライブ × 許す効果（コピーだけ・移動だけ・両方）
+    public static IEnumerable<object[]> FixedCases()
+    {
+        foreach (var mode in Enum.GetValues<BookmarkDropMode>())
+        foreach (var (ctrl, shift) in new[] { (false, false), (true, false), (false, true), (true, true) })
+        foreach (var dest in new[] { @"C:\b", @"D:\b" })
+        foreach (var (copy, move) in new[] { (true, false), (false, true), (true, true) })
+        {
+            DropAction expected;
+            if (mode == BookmarkDropMode.Standard || ctrl || shift)
+                expected = DropRules.Allow(DropRules.Decide(@"C:\a\x.txt", dest, ctrl, shift), copy, move);
+            else
+                expected = mode == BookmarkDropMode.Copy
+                    ? (copy ? DropAction.Copy : DropAction.None)
+                    : (move ? DropAction.Move : DropAction.None);
+            yield return [mode, ctrl, shift, dest, copy, move, expected];
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(FixedCases))]
+    public void Fixed_Table(BookmarkDropMode mode, bool ctrl, bool shift, string dest, bool copy, bool move, DropAction expected)
+    {
+        Assert.Equal(expected, DropRules.DecideFixed(mode, @"C:\a\x.txt", dest, ctrl, shift, copy, move));
+    }
+
+    [Fact]
+    public void Fixed_固定の移動は許されなければ落とせない_コピーへ格下げしない()
+    {
+        Assert.Equal(DropAction.None, DropRules.DecideFixed(BookmarkDropMode.Move, @"C:\a\x.txt", @"C:\b", false, false, copyAllowed: true, moveAllowed: false));
+    }
+
+    [Fact]
+    public void Fixed_固定のコピーは許されなければ落とせない()
+    {
+        Assert.Equal(DropAction.None, DropRules.DecideFixed(BookmarkDropMode.Copy, @"C:\a\x.txt", @"D:\b", false, false, copyAllowed: false, moveAllowed: true));
+    }
+
+    [Theory]
+    [InlineData(BookmarkDropMode.Copy)]
+    [InlineData(BookmarkDropMode.Move)]
+    public void Fixed_同じフォルダと自分の中は指定があっても落とせない(BookmarkDropMode mode)
+    {
+        Assert.Equal(DropAction.None, DropRules.DecideFixed(mode, @"C:\a\x.txt", @"C:\a", false, false, true, true));
+        Assert.Equal(DropAction.None, DropRules.DecideFixed(mode, @"C:\a", @"C:\a\sub", false, false, true, true));
+    }
+
+    [Fact]
+    public void SplitFixed_同じドライブと別のドライブが混ざっても全部同じ動作()
+    {
+        string[] files = [@"C:\a\x.txt", @"D:\y.txt"];
+        var (copies, moves) = DropRules.SplitFixed(BookmarkDropMode.Copy, files, @"C:\b", false, false, true, true);
+        Assert.Equal(2, copies.Count);
+        Assert.Empty(moves);
+        (copies, moves) = DropRules.SplitFixed(BookmarkDropMode.Move, files, @"C:\b", false, false, true, true);
+        Assert.Empty(copies);
+        Assert.Equal(2, moves.Count);
     }
 }

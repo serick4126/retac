@@ -1,6 +1,7 @@
 using System.IO;
 using ReTAC.Domain.Entries;
 using ReTAC.Domain.FileOps;
+using ReTAC.Domain.Navigation;
 
 namespace ReTAC.Domain.Tests;
 
@@ -129,5 +130,17 @@ public class DropRoutingTests
         var (copies, moves) = DropRules.Split([@"C:\a\x.txt", @"D:\y.txt"], @"C:\b", ctrl: false, shift: true, copyAllowed: true, moveAllowed: true);
         Assert.Empty(copies);
         Assert.Equal(2, moves.Count);
+    }
+
+    // R-111-2 の例外（R-140）: メニューは指定を受け取らないので、太字は指定 3 種のどれでも修飾キーなしの今の判定のまま
+    [Theory]
+    [InlineData(BookmarkDropMode.Standard)]
+    [InlineData(BookmarkDropMode.Copy)]
+    [InlineData(BookmarkDropMode.Move)]
+    public void RightMenu_DefaultIgnoresFixedMode(BookmarkDropMode mode)
+    {
+        _ = mode; // Menu に渡す欄が無いこと自体が裏付け。Task 4 で右ボタンの経路が指定を渡さないことを守る
+        Assert.Equal(DropAction.Move, DropRouting.Menu(@"C:\a\x.txt", @"C:\b", true, true, false)!.Value.Default);
+        Assert.Equal(DropAction.Copy, DropRouting.Menu(@"C:\a\x.txt", @"D:\b", true, true, false)!.Value.Default);
     }
 }

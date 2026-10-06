@@ -92,6 +92,18 @@ public class BookmarkTests
     }
 
     [Fact]
+    public void Bookmark_DropModeJson()
+    {
+        var noField = JsonSerializer.Deserialize<BookmarkSet>("""{"Bar":[{"Title":"x","Kind":"Folder","Target":"C:\\a"}]}""", Json)!;
+        Assert.Equal(BookmarkDropMode.Standard, noField.Bar[0].DropMode);
+
+        var b = new Bookmark("a", BookmarkKind.Folder, @"C:\a") { DropMode = BookmarkDropMode.Copy };
+        Assert.Equal(BookmarkDropMode.Copy, (b with { Title = "z" }).DropMode);
+        var back = JsonSerializer.Deserialize<BookmarkSet>(JsonSerializer.Serialize(new BookmarkSet { Bar = [b] }, Json), Json)!;
+        Assert.Equal(BookmarkDropMode.Copy, back.Bar[0].DropMode);
+    }
+
+    [Fact]
     public void ブックマークから消えたツールを入れ子の中まで落とす()
     {
         var set = new BookmarkSet

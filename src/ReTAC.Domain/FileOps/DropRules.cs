@@ -1,4 +1,5 @@
 using System.IO;
+using ReTAC.Domain.Navigation;
 
 namespace ReTAC.Domain.FileOps;
 
@@ -55,13 +56,35 @@ public static class DropRules
     /// 修飾キーはドロップの時点のものを渡すこと（後に回した処理の中で読むと、利用者はもうキーを離している）。
     /// </summary>
     public static (IReadOnlyList<string> Copies, IReadOnlyList<string> Moves) Split(
-        IReadOnlyList<string> files, string destination, bool ctrl, bool shift, bool copyAllowed, bool moveAllowed)
+        IReadOnlyList<string> files, string destination, bool ctrl, bool shift, bool copyAllowed, bool moveAllowed) =>
+        SplitFixed(BookmarkDropMode.Standard, files, destination, ctrl, shift, copyAllowed, moveAllowed);
+
+    /// <summary>
+    /// R-140: ブックマークのフォルダへの左ボタンのドロップの判定。キーを押していれば（または指定が標準なら）今の判定そのまま。
+    /// キーなしで指定があるときは、同じフォルダ・自分の中を除いて指定の動作にする。
+    /// 指定の動作を <see cref="Allow"/> に通さないのは、通すと「常に移動」で移動を許さないドラッグ元がコピーへ格下げされ、
+    /// 利用者が選んでいない動作になるため。許されなければ落とせない（None）。
+    /// </summary>
+    public static DropAction DecideFixed(BookmarkDropMode mode, string source, string destination,
+        bool ctrl, bool shift, bool copyAllowed, bool moveAllowed)
+    {
+        if (mode == BookmarkDropMode.Standard || ctrl || shift)
+            return Allow(Decide(source, destination, ctrl, shift), copyAllowed, moveAllowed);
+        if (Decide(source, destination, false, false) == DropAction.None) return DropAction.None;
+        return mode == BookmarkDropMode.Copy
+            ? (copyAllowed ? DropAction.Copy : DropAction.None)
+            : (moveAllowed ? DropAction.Move : DropAction.None);
+    }
+
+    /// <summary><see cref="Split"/> の R-140 版。項目ごとに <see cref="DecideFixed"/> を通す（判定は 1 か所）。</summary>
+    public static (IReadOnlyList<string> Copies, IReadOnlyList<string> Moves) SplitFixed(
+        BookmarkDropMode mode, IReadOnlyList<string> files, string destination, bool ctrl, bool shift, bool copyAllowed, bool moveAllowed)
     {
         var copies = new List<string>();
         var moves = new List<string>();
         foreach (var file in files)
         {
-            switch (Allow(Decide(file, destination, ctrl, shift), copyAllowed, moveAllowed))
+            switch (DecideFixed(mode, file, destination, ctrl, shift, copyAllowed, moveAllowed))
             {
                 case DropAction.Copy: copies.Add(file); break;
                 case DropAction.Move: moves.Add(file); break;

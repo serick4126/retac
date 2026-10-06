@@ -142,6 +142,15 @@
       "reason": "同じフォルダを別のグループに入れる使い方がある（ブラウザと同じ。Q5）。重複を許すので、項目は値ではなく参照で探す（BookmarkRules.Locate / Remove / Move）。record の IndexOf は値で比べ、重複した別の項目を指すので使わない。"
     },
     {
+      "id": "INV-BOOKMARK-DROP-ONE-DECISION",
+      "status": "enforced",
+      "specIds": ["R-140"],
+      "applies": ["type:ReTAC.Domain.FileOps.DropRules", "type:ReTAC.Domain.Navigation.BookmarkDropMode"],
+      "rule": "ブックマークのフォルダへのドロップは、表示（DragOver）と転送（Drop）の両方が DropRules.DecideFixed を通る。固定の指定の動作は Allow を通さない（許されなければ None。格下げしない）。右ボタンのメニューの太字は指定を使わない。",
+      "enforcedBy": "domain:DropRules.DecideFixed / DropRules.SplitFixed（Split は Standard で SplitFixed を呼ぶ）",
+      "testedBy": "tests/ReTAC.Domain.Tests/DropRulesTests.cs"
+    },
+    {
       "id": "INV-PREVIEW-RELEASE",
       "status": "enforced",
       "specIds": ["R-99"],
@@ -441,7 +450,7 @@
       "status": "enforced",
       "specIds": ["R-97-3", "R-93", "R-111-2"],
       "applies": ["type:ReTAC.Domain.FileOps.DropRules", "type:ReTAC.Domain.FileOps.DropAction"],
-      "rule": "ドライブツリー・デスクトップツリーへのドロップは、NSTC(INameSpaceTreeControl)自身の即時転送を使わず、必ず宛先入りの転送確認ダイアログ(既存の TransferDropped → TransferCore)を経由する。ファイルリスト・ドライブバーの通常のドロップ(DropInto、確認無しの即時転送)とは別の経路である。ブックマークのフォルダへのドロップも同じ確認を行う(既存)。右ボタンのドロップでも、NSTC 自身の転送・シェルのメニューを使わない。OnDrop の中で ReTAC のメニューを出し、効果は必ず None で返す。",
+      "rule": "ドライブツリー・デスクトップツリーへのドロップは、NSTC(INameSpaceTreeControl)自身の即時転送を使わず、必ず宛先入りの転送確認ダイアログ(既存の TransferDropped → TransferCore)を経由する。ファイルリストの外部ドロップ(DropInto、確認無しの即時転送)とは別の経路である。ドライブバーは宛先入りの確認ダイアログを経る(R-65-3)。ブックマークのフォルダへのドロップも同じ確認を行う(既存)。右ボタンのドロップでも、NSTC 自身の転送・シェルのメニューを使わない。OnDrop の中で ReTAC のメニューを出し、効果は必ず None で返す。",
       "enforcedBy": "shell:NameSpaceTreeHost.OnDrop/DropFrom(effect を常に DragDropEffects.None に戻し、Shell 自身に即時転送させない。FilesDropped イベントだけを外へ出す)/ shell:ShellTreeDropTap（右ボタンを知るためにツリーの受け口を包む）/ app:MainForm(_driveTree.FilesDropped / _desktopTree.FilesDropped を DropInto ではなく AcceptDrop(DropReceptacle.DriveTree / DesktopTree) → TransferDropped へ購読する)",
       "testedBy": "tests/ReTAC.Domain.Tests/DropRulesTests.cs",
       "note": "DropInto を使うと確認ダイアログが出ない(ファイルリスト・ドライブバーの通常のドロップと同じ挙動になってしまう)。ツリーは §9 の例外で、宛先を見せて確認する側を使う。"

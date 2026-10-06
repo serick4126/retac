@@ -10,6 +10,9 @@ public enum BookmarkKind { Folder, File, Command, Group }
 /// <summary>R-89: バーの表示の形。値の名前は設定ファイルに載るので変えない。</summary>
 public enum BookmarkBarStyle { IconAndText, IconOnly, TextOnly }
 
+/// <summary>R-140: フォルダのブックマークへのドロップ時の動作。値の名前は設定ファイルに載るので変えない。</summary>
+public enum BookmarkDropMode { Standard, Copy, Move }
+
 /// <summary>
 /// R-89: ブックマーク 1 件。Target は Folder / File ならパス、Command なら CommandTarget.Serialize() の文字列。
 /// Group のときだけ Children を使う（段数の制限は無い）。重複は許す（Q5）。
@@ -29,6 +32,12 @@ public sealed record Bookmark(string Title, BookmarkKind Kind, string Target = "
     /// 種類を問わず持てる。既定 false。`required` を付けない（S-14。欠けた設定は false で埋まる）。
     /// </summary>
     public bool IconOnly { get; init; }
+
+    /// <summary>
+    /// R-140: フォルダのブックマークへ落としたときの動作。Folder 以外では使わない（値が入っていても無視する）。
+    /// 既定 Standard。`required` を付けない（S-14。欠けた設定は Standard で埋まる）。
+    /// </summary>
+    public BookmarkDropMode DropMode { get; init; }
 
     internal static string NewId() => Guid.NewGuid().ToString("N");
 }
