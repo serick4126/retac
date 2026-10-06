@@ -80,6 +80,16 @@ public class SingleInstanceTests : IDisposable
     }
 
     [Fact]
+    public void WriteProbe_NameIsProcessUnique()
+    {
+        // 同時起動した別プロセスと一時ファイルがぶつからない名前（ぶつかると保存先と鍵がずれる）
+        Assert.Contains(Environment.ProcessId.ToString(), SettingsLocation.ProbeFileName);
+        var dir = Dir("probe");
+        Assert.True(SettingsLocation.CanWriteDirectory(dir));
+        Assert.Empty(Directory.GetFileSystemEntries(dir));
+    }
+
+    [Fact]
     public void Startup_UnresolvedPrimaryUsesFallback()
     {
         var primaryDir = Dir("primary");

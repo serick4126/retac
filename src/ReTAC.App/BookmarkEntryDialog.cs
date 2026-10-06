@@ -69,7 +69,7 @@ public sealed class BookmarkEntryDialog : Form
             var dropLabel = new Label { Text = "ドロップ時の動作(&D):", AutoSize = true, Location = new Point(12, 130) };
             _dropMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Bounds = new Rectangle(110, 126, 310, 23) };
             _dropMode.Items.AddRange(["Windows 標準", "常にコピー", "常に移動"]);
-            _dropMode.SelectedIndex = (int)preset.DropMode;
+            _dropMode.SelectedIndex = Enum.IsDefined(preset.DropMode) ? (int)preset.DropMode : 0;   // 定義外の値は Windows 標準
             Controls.AddRange([dropLabel, _dropMode]);
         }
 

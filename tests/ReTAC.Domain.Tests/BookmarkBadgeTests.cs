@@ -150,4 +150,13 @@ public class BookmarkBadgeTests
         Assert.Equal(BookmarkDropMode.Move, dialog.Bookmark.DropMode);
         Assert.False(dialog.IsHandleCreated);
     }
+
+    [Fact]
+    public void EntryDialog_UndefinedDropModeSelectsStandard()
+    {
+        var preset = new Bookmark("n", BookmarkKind.Folder, @"C:\x") { DropMode = (BookmarkDropMode)7 };
+        using var dialog = new BookmarkEntryDialog(preset, @"C:\", [], _ => "");
+        Assert.Equal(0, dialog.Controls.OfType<ComboBox>().Single().SelectedIndex);
+        Assert.False(dialog.IsHandleCreated);
+    }
 }

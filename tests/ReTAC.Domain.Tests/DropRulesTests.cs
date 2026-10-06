@@ -103,6 +103,17 @@ public class DropRulesTests
     }
 
     [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void Fixed_UndefinedModeIsStandard(bool ctrl, bool shift)
+    {
+        foreach (var dest in new[] { @"C:\b", @"D:\b" })
+            Assert.Equal(DropRules.DecideFixed(BookmarkDropMode.Standard, @"C:\a\x.txt", dest, ctrl, shift, true, true),
+                DropRules.DecideFixed((BookmarkDropMode)7, @"C:\a\x.txt", dest, ctrl, shift, true, true));
+    }
+
+    [Theory]
     [MemberData(nameof(FixedCases))]
     public void Fixed_Table(BookmarkDropMode mode, bool ctrl, bool shift, string dest, bool copy, bool move, DropAction expected)
     {

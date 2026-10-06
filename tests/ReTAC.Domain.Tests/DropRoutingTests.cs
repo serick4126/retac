@@ -139,7 +139,7 @@ public class DropRoutingTests
     [InlineData(BookmarkDropMode.Move)]
     public void RightMenu_DefaultIgnoresFixedMode(BookmarkDropMode mode)
     {
-        _ = mode; // Menu に渡す欄が無いこと自体が裏付け。Task 4 で右ボタンの経路が指定を渡さないことを守る
+        _ = mode; // Menu に渡す欄が無いこと自体が裏付け。右ボタンの経路が指定を渡さないことは AfterMenu_ResetsMode が守る（R-140）
         Assert.Equal(DropAction.Move, DropRouting.Menu(@"C:\a\x.txt", @"C:\b", true, true, false)!.Value.Default);
         Assert.Equal(DropAction.Copy, DropRouting.Menu(@"C:\a\x.txt", @"D:\b", true, true, false)!.Value.Default);
     }

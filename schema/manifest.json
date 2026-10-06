@@ -8017,7 +8017,7 @@
       },
       {
         "file": "src/ReTAC.App/SingleInstance.cs",
-        "line": 163
+        "line": 166
       },
       {
         "file": "src/ReTAC.App/UpdateProtocol.cs",
@@ -11373,7 +11373,7 @@
       },
       {
         "file": "src/ReTAC.App/SingleInstance.cs",
-        "line": 327
+        "line": 330
       },
       {
         "file": "src/ReTAC.App/StartupPathProbe.cs",
@@ -11969,7 +11969,7 @@
       },
       {
         "file": "src/ReTAC.Domain/FileOps/DropRules.cs",
-        "line": 79
+        "line": 80
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
@@ -12219,19 +12219,15 @@
       },
       {
         "file": "src/ReTAC.App/SingleInstance.cs",
-        "line": 107
+        "line": 110
       },
       {
         "file": "src/ReTAC.App/SingleInstance.cs",
-        "line": 138
+        "line": 141
       },
       {
         "file": "src/ReTAC.App/SingleInstance.cs",
-        "line": 162
-      },
-      {
-        "file": "src/ReTAC.App/SingleInstance.cs",
-        "line": 185
+        "line": 165
       },
       {
         "file": "src/ReTAC.App/SingleInstance.cs",
@@ -12239,11 +12235,15 @@
       },
       {
         "file": "src/ReTAC.App/SingleInstance.cs",
-        "line": 236
+        "line": 191
       },
       {
         "file": "src/ReTAC.App/SingleInstance.cs",
-        "line": 287
+        "line": 239
+      },
+      {
+        "file": "src/ReTAC.App/SingleInstance.cs",
+        "line": 290
       }
     ],
     "R-15": [

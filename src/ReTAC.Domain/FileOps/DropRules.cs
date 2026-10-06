@@ -68,7 +68,8 @@ public static class DropRules
     public static DropAction DecideFixed(BookmarkDropMode mode, string source, string destination,
         bool ctrl, bool shift, bool copyAllowed, bool moveAllowed)
     {
-        if (mode == BookmarkDropMode.Standard || ctrl || shift)
+        // 定義外の値（手で書き換えた設定など）は Standard と同じ扱い
+        if (mode is not (BookmarkDropMode.Copy or BookmarkDropMode.Move) || ctrl || shift)
             return Allow(Decide(source, destination, ctrl, shift), copyAllowed, moveAllowed);
         if (Decide(source, destination, false, false) == DropAction.None) return DropAction.None;
         return mode == BookmarkDropMode.Copy

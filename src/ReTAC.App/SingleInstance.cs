@@ -49,9 +49,12 @@ internal static class SettingsLocation
     }
 
     /// <summary>そのフォルダに一時ファイルを作って消せるか。一時的な失敗のやり直しは書き込みと同じ（R-55-3）。</summary>
+    internal static string ProbeFileName => $"retac.write-test.{Environment.ProcessId}.tmp";
+
     internal static bool CanWriteDirectory(string directory)
     {
-        var probe = Path.Combine(directory, "retac.write-test.tmp");
+        // 同時に起動した別の ReTAC と一時ファイル名がぶつかると、書けるのに false になり別の保存先・別の鍵を選んでしまう
+        var probe = Path.Combine(directory, ProbeFileName);
         try
         {
             AppSettings.WriteAtomic(probe, "");
@@ -243,9 +246,9 @@ internal sealed class PipeChannel(string key) : IInstanceChannel
     {
         try
         {
-            using var client = new NamedPipeClientStream(".", SettingsLocation.PipeName(key, SettingsLocation.CurrentSid(), SettingsLocation.CurrentSessionId()),
-                PipeDirection.InOut, PipeOptions.CurrentUserOnly | PipeOptions.Asynchronous);
             var pipeName = SettingsLocation.PipeName(key, SettingsLocation.CurrentSid(), SettingsLocation.CurrentSessionId());
+            using var client = new NamedPipeClientStream(".", pipeName,
+                PipeDirection.InOut, PipeOptions.CurrentUserOnly | PipeOptions.Asynchronous);
             try { client.Connect(ConnectMilliseconds); }
             catch (TimeoutException)
             {
@@ -326,7 +329,7 @@ internal static class PipeListener
             {
                 // 背景のスレッドから例外が漏れるとプロセスが終わる（R-126）。何があっても記録して次を待つ。
                 // 作り直しが失敗し続けても暴走しないよう、少し待つ
-                ErrorLog.Write(ex, "startup-pipe");
+                ErrorLog.WriteOnce(ex, "startup-pipe");
                 Thread.Sleep(200);
             }
         }
