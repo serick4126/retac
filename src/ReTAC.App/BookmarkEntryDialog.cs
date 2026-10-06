@@ -17,6 +17,8 @@ public sealed class BookmarkEntryDialog : Form
     private readonly TextBox _path = new();
     private readonly Label _command = new() { AutoEllipsis = true, BorderStyle = BorderStyle.Fixed3D, TextAlign = ContentAlignment.MiddleLeft };
     private readonly CheckBox _iconOnly = new() { Text = "バーではアイコンだけ表示(&L)", AutoSize = true };
+    /// <summary>R-140: フォルダのときだけ作る。選択肢の並びは BookmarkDropMode の値の並びと同じ。</summary>
+    private readonly ComboBox? _dropMode;
     private readonly Bookmark _preset;
     private readonly string _currentFolder;
     private readonly IReadOnlyList<ExternalTool> _tools;
@@ -45,7 +47,8 @@ public sealed class BookmarkEntryDialog : Form
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = MaximizeBox = false;
-        ClientSize = new Size(440, 180);
+        var extra = preset.Kind == BookmarkKind.Folder ? 32 : 0;   // R-140: ドロップ時の動作の行ぶん
+        ClientSize = new Size(440, 180 + extra);
 
         _title.Text = preset.Title;
         // 題名が空なら、バーには末尾の名前（フォルダ・ファイル）かコマンドの名前が出る（DisplayName）。
@@ -60,14 +63,24 @@ public sealed class BookmarkEntryDialog : Form
         _iconOnly.Location = new Point(12, 98);
         Controls.Add(_iconOnly);
 
-        var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Bounds = new Rectangle(110, 138, 90, 28) };
-        var cancel = new Button { Text = "キャンセル", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(210, 138, 90, 28) };
+        if (preset.Kind == BookmarkKind.Folder)
+        {
+            // R-140: ブックマークのフォルダへ落としたときの動作。フォルダだけ（ファイル・コマンド・グループには落とせない）
+            var dropLabel = new Label { Text = "ドロップ時の動作(&D):", AutoSize = true, Location = new Point(12, 130) };
+            _dropMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Bounds = new Rectangle(110, 126, 310, 23) };
+            _dropMode.Items.AddRange(["Windows 標準", "常にコピー", "常に移動"]);
+            _dropMode.SelectedIndex = (int)preset.DropMode;
+            Controls.AddRange([dropLabel, _dropMode]);
+        }
+
+        var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Bounds = new Rectangle(110, 138 + extra, 90, 28) };
+        var cancel = new Button { Text = "キャンセル", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(210, 138 + extra, 90, 28) };
         Controls.AddRange([ok, cancel]);
 
         if (preset.Kind != BookmarkKind.Group)
         {
             var targetLabel = new Label { Text = $"{kindText}(&F):", AutoSize = true, Location = new Point(12, 50) };
-            var browse = new Button { Text = preset.Kind == BookmarkKind.Command ? "選び直す(&B)..." : "参照(&B)...", Bounds = new Rectangle(320, 138, 100, 28) };
+            var browse = new Button { Text = preset.Kind == BookmarkKind.Command ? "選び直す(&B)..." : "参照(&B)...", Bounds = new Rectangle(320, 138 + extra, 100, 28) };
             browse.Click += (_, _) => Browse();
             Controls.AddRange([targetLabel, browse]);
             if (preset.Kind == BookmarkKind.Command)
@@ -105,7 +118,8 @@ public sealed class BookmarkEntryDialog : Form
         AutoScaleMode = AutoScaleMode.Dpi;   // R-66
     }
 
-    public Bookmark Bookmark => _preset with { Title = InputText.TrimEdge(_title.Text), Target = _target, IconOnly = _iconOnly.Checked };
+    public Bookmark Bookmark => _preset with { Title = InputText.TrimEdge(_title.Text), Target = _target, IconOnly = _iconOnly.Checked,
+        DropMode = _dropMode is { SelectedIndex: >= 0 } combo ? (BookmarkDropMode)combo.SelectedIndex : _preset.DropMode };
 
     private string CommandText() => CommandTarget.Parse(_target) is { } target ? _label(target) : "";
 

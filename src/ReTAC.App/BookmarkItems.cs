@@ -103,7 +103,9 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
     private ToolStripItem Configure(ToolStripItem item, Bookmark b, int? childLevel)
     {
         var name = BookmarkRules.DisplayName(b, host.LabelOf);
-        item.Text = name.Replace("&", "&&");
+        // R-140-2: アイコンを出さない形（名前だけ・アイコンの指定なし）なら、名前の前に印の代わりの [+] / [−] を付ける
+        var iconShown = item.DisplayStyle != ToolStripItemDisplayStyle.Text && IconPath(b) is not null;
+        item.Text = Shown(b, name, iconShown).Replace("&", "&&");
         item.Tag = b;
         item.ToolTipText = Tooltip(b, name);
         item.Image = Glyph(b);   // シェルのアイコンが無いもの（グループ・組み込みコマンド）は記号フォントで描く（R-89）
@@ -147,8 +149,27 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
         var key = b.Kind == BookmarkKind.Command && CommandTarget.Parse(b.Target) is { } target ? host.KeyOf(target) : "";
         var lines = new List<string> { key.Length > 0 ? $"{name}（{key}）" : name };
         if (b.Kind is BookmarkKind.Folder or BookmarkKind.File) lines.Add(b.Target);
+        if (DropModeLine(b) is { } drop) lines.Add(drop);   // R-140-2
         return string.Join(Environment.NewLine, lines);
     }
+
+    /// <summary>R-140-2: ツールチップの「ドロップ: …」の行。フォルダで指定があるときだけ（標準は null）。</summary>
+    internal static string? DropModeLine(Bookmark b) => b is { Kind: BookmarkKind.Folder } ? b.DropMode switch
+    {
+        BookmarkDropMode.Copy => "ドロップ: 常にコピー",
+        BookmarkDropMode.Move => "ドロップ: 常に移動",
+        _ => null,
+    } : null;
+
+    /// <summary>R-140-2: 表示用の名前。アイコン（印）を出していないときだけ [+] / [−] を前に付ける。保存する題名・検索には含めない。</summary>
+    internal static string Shown(Bookmark b, string name, bool iconShown) => iconShown ? name : Prefix(b) + name;
+
+    private static string Prefix(Bookmark b) => b is { Kind: BookmarkKind.Folder } ? b.DropMode switch
+    {
+        BookmarkDropMode.Copy => "[+] ",
+        BookmarkDropMode.Move => "[−] ",   // U+2212 MINUS SIGN。＋と幅をそろえる
+        _ => "",
+    } : "";
 
     /// <summary>
     /// グループの中身は開くたびに組み直す（入れ子は何段でも）。level は R-107 の段数（バーから開いた
@@ -257,13 +278,23 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
             {
                 if (image is null)
                 {
+                    if (item.IsDisposed) continue;
                     // P11-3: 取れなかった。アイコンだけのボタンのままだと名前も画像も無い空のボタンになるので、名前を出す
-                    if (!item.IsDisposed && item.DisplayStyle == ToolStripItemDisplayStyle.Image)
+                    if (item.DisplayStyle == ToolStripItemDisplayStyle.Image)
                         item.DisplayStyle = ToolStripItemDisplayStyle.Text;
+                    // R-140-2: 印を重ねる絵が無いので、名前に [+] / [−] を付ける（付け直しで二重にしない）
+                    if (item.Tag is Bookmark b && Prefix(b) is { Length: > 0 } prefix && item.Text?.StartsWith(prefix) != true)
+                        item.Text = prefix + item.Text;
                     continue;
                 }
                 if (item.IsDisposed) image.Dispose();   // 読んでいる間にメニューを閉じた・バーを作り直した
-                else item.Image = image;
+                else
+                {
+                    // R-140-1: サブフォルダ（Tag が Entry）には付けない。ブックマークのフォルダだけ
+                    if (item.Tag is Bookmark { Kind: BookmarkKind.Folder } folder)
+                        BookmarkBadge.Draw(image, folder.DropMode, Program.StartupOs.HighContrast);
+                    item.Image = image;
+                }
             }
         }
         finally

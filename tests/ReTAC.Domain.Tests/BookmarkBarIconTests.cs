@@ -62,4 +62,25 @@ public class BookmarkBarIconTests
         Assert.NotNull(results[2].Image);
         foreach (var (_, image) in results) image?.Dispose();
     }
+
+    [Fact]
+    public void ドロップ指定のフォルダはアイコンが取れなければ名前に印を付けアイコンがあれば絵に描く()
+    {
+        var host = DispatchProxy.Create<IBookmarkHost, Host>();
+        var items = new BookmarkItems(host, new Control());
+        var folder = new Bookmark("保存先", BookmarkKind.Folder, @"C:\work") { DropMode = BookmarkDropMode.Copy };
+        var failed = items.BarItems([folder], BookmarkBarStyle.IconAndText).Single();
+        BookmarkItems.ApplyIcons([(failed, (Bitmap?)null)]);
+        BookmarkItems.ApplyIcons([(failed, (Bitmap?)null)]);   // 二重に付かない
+        Assert.Equal("[+] 保存先", failed.Text);
+
+        var ok = items.BarItems([folder], BookmarkBarStyle.IconAndText).Single();
+        Assert.Equal("保存先", ok.Text);
+        BookmarkItems.ApplyIcons([(ok, new Bitmap(16, 16))]);
+        Assert.Equal(0x008000, ok.Image is Bitmap bmp ? bmp.GetPixel(10, 9).ToArgb() & 0xFFFFFF : -1);   // 縦線
+        Assert.Contains("ドロップ: 常にコピー", ok.ToolTipText);
+
+        var textOnly = items.BarItems([folder], BookmarkBarStyle.TextOnly).Single();
+        Assert.Equal("[+] 保存先", textOnly.Text);
+    }
 }

@@ -76,7 +76,7 @@ public sealed class BookmarkTreeView : TreeView
         var selectedId = (SelectedNode?.Tag as Bookmark)?.Id;
         var topId = (TopNode?.Tag as Bookmark)?.Id;
         var set = _items.Host.Bookmarks;
-        var paths = new List<(TreeNode Node, string Path)>();
+        var paths = new List<(TreeNode Node, string Path, BookmarkDropMode Mode)>();
         _building = true;
         BeginUpdate();
         try
@@ -107,7 +107,7 @@ public sealed class BookmarkTreeView : TreeView
     private static IEnumerable<TreeNode> All(TreeNodeCollection nodes) =>
         nodes.Cast<TreeNode>().SelectMany(n => All(n.Nodes).Prepend(n));
 
-    private TreeNode Root(string text, List<Bookmark> list, List<(TreeNode, string)> paths)
+    private TreeNode Root(string text, List<Bookmark> list, List<(TreeNode, string, BookmarkDropMode)> paths)
     {
         var root = new TreeNode(text) { Tag = list };
         AddChildren(root, list, paths);
@@ -115,18 +115,30 @@ public sealed class BookmarkTreeView : TreeView
         return root;
     }
 
-    private void AddChildren(TreeNode parent, List<Bookmark> list, List<(TreeNode, string)> paths)
+    private void AddChildren(TreeNode parent, List<Bookmark> list, List<(TreeNode, string, BookmarkDropMode)> paths)
     {
         foreach (var b in list)
         {
             var name = BookmarkRules.DisplayName(b, _items.Host.LabelOf);
-            var node = new TreeNode(name) { Tag = b, ToolTipText = b.Kind is BookmarkKind.Folder or BookmarkKind.File ? b.Target : "" };
+            // R-140-2: 読み込みが済むまではアイコンがある前提で作り（前置きなし）、取れなかった行だけ LoadIcons が付け直す
+            var node = NodeFor(b, name, iconShown: _items.IconPath(b) is not null);
             SetImage(node, GlyphKey(b));
-            if (_items.IconPath(b) is { } path) paths.Add((node, path));
+            if (_items.IconPath(b) is { } path) paths.Add((node, path, b.Kind == BookmarkKind.Folder ? b.DropMode : BookmarkDropMode.Standard));
             if (b.Children is { } children) AddChildren(node, children, paths);
             parent.Nodes.Add(node);
         }
     }
+
+    /// <summary>R-140-2: ノードの名前（アイコンが無ければ [+] / [−] 付き）とツールチップ（パス＋ドロップの行）。ハンドル無しで作れる。</summary>
+    internal static TreeNode NodeFor(Bookmark b, string name, bool iconShown)
+    {
+        var tip = b.Kind is BookmarkKind.Folder or BookmarkKind.File ? b.Target : "";
+        if (BookmarkItems.DropModeLine(b) is { } line) tip += Environment.NewLine + line;
+        return new TreeNode(BookmarkItems.Shown(b, name, iconShown)) { Tag = b, ToolTipText = tip };
+    }
+
+    /// <summary>R-140-1: 印付きと印なしを分けるため、キーはパスと指定の組。</summary>
+    private static string PathKey(string path, BookmarkDropMode mode) => "path:" + path + (mode == BookmarkDropMode.Standard ? "" : "|" + mode);
 
     // ---- アイコン（バーと同じ絵。シェルのアイコンは応答しないドライブで待たされるので裏で取る。N-05） ----
 
@@ -142,14 +154,20 @@ public sealed class BookmarkTreeView : TreeView
     private static void SetImage(TreeNode node, string key) => (node.ImageKey, node.SelectedImageKey) = (key, key);
 
     // ponytail: 取ったアイコンは作り直しをまたいで取っておき、消さない。ブックマークの件数までしか増えない
-    private void LoadIcons(List<(TreeNode Node, string Path)> paths)
+    private void LoadIcons(List<(TreeNode Node, string Path, BookmarkDropMode Mode)> paths)
     {
-        var missing = paths.Select(p => p.Path).Where(p => !_images.Images.ContainsKey("path:" + p)).Distinct().ToList();
+        var missing = paths.Select(p => (p.Path, p.Mode)).Where(p => !_images.Images.ContainsKey(PathKey(p.Path, p.Mode))).Distinct().ToList();
         var size = _images.ImageSize.Width;
         void Apply()
         {
-            foreach (var (node, path) in paths)
-                if (node.TreeView == this && _images.Images.ContainsKey("path:" + path)) SetImage(node, "path:" + path);
+            foreach (var (node, path, mode) in paths)
+            {
+                if (node.TreeView != this) continue;
+                var key = PathKey(path, mode);
+                if (_images.Images.ContainsKey(key)) SetImage(node, key);
+                else if (node.Tag is Bookmark b)
+                    node.Text = BookmarkItems.Shown(b, BookmarkRules.DisplayName(b, _items.Host.LabelOf), iconShown: false);   // R-140-2: 取れなかった
+            }
         }
         if (missing.Count == 0) { Apply(); return; }
         if (!IsHandleCreated)
@@ -167,23 +185,27 @@ public sealed class BookmarkTreeView : TreeView
             try { icons = new ShellIcons(size); }
             catch (Exception) { }
             using (icons)
-                return BookmarkItems.LoadAll(missing.Select(p => (p, p)),
+                return BookmarkItems.LoadAll(missing.Select(p => (p, p.Path)),
                     path => icons?.ForPath(path) is { } b ? new Bitmap(b) : null);
         }).ContinueWith(task =>
         {
             if (!task.IsCompletedSuccessfully) return;
             // 載せなかった Bitmap は GC を待たずに捨てる（窓が閉じた・並行した読み込みが先に載せた）
-            static void DisposeAll(IEnumerable<(string, Bitmap? Image)> results) { foreach (var r in results) r.Image?.Dispose(); }
+            static void DisposeAll(IEnumerable<((string, BookmarkDropMode), Bitmap? Image)> results) { foreach (var r in results) r.Image?.Dispose(); }
             if (IsDisposed || !IsHandleCreated) { DisposeAll(task.Result); return; }
             try
             {
                 BeginInvoke(() =>
                 {
-                    foreach (var (path, image) in task.Result)
+                    foreach (var ((path, mode), image) in task.Result)
                     {
                         if (image is null) continue;
-                        if (_images.Images.ContainsKey("path:" + path)) image.Dispose();
-                        else _images.Images.Add("path:" + path, image);
+                        if (_images.Images.ContainsKey(PathKey(path, mode))) image.Dispose();
+                        else
+                        {
+                            BookmarkBadge.Draw(image, mode, Program.StartupOs.HighContrast);   // R-140-1
+                            _images.Images.Add(PathKey(path, mode), image);
+                        }
                     }
                     Apply();
                 });
