@@ -15,7 +15,8 @@ public static class StartupPath
     /// </summary>
     public static string? Normalize(string? raw, string workingDirectory)
     {
-        // "C:\" は Windows の引数の規則で C:" として渡される。外部ツールのマクロで出やすい
+        // 前後の " を取る。"C:\" は Windows の引数の規則で C:" と末尾に残って渡される（外部ツールのマクロで出やすい）。
+        // 先頭の " は普通シェルが外すが、"D: b" のように残っていたら外す
         var path = raw?.Trim().Trim('"').Trim();
         if (string.IsNullOrEmpty(path)) return null;
         // C: のままだと、そのドライブの「現在のフォルダ」の意味になる

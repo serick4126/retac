@@ -55,6 +55,10 @@ internal static class Program
         if (args is ["--shot", var folder, var outPath, .. var options]) return Shot(folder, outPath, options);
         if (args is ["--bench", var benchPath, ..]) return Bench(benchPath);
 
+        // R-26-2: 存在の確認は窓を作る前に、上限つきで行う（窓がまだ無いので止まる画面は無い）。
+        // 設定の読み込みより前に済ませる。8.3 で動いている側へ渡すときも、この結果をそのまま送る
+        var startup = ClassifyStartupArgument(args);
+
         var settings = AppSettings.Load();
         // R-108: 最初のウィンドウより前に決める。後から変えても、作ったコントロールの色は変わらない。
         // 独自の配色でも呼ぶ。独自の配色が当たるのはファイルリストだけで、ほかは OS に従う（T2）。
@@ -70,9 +74,6 @@ internal static class Program
         // R-40-6: 起動時はウィンドウを表示しない設定
         if (settings.StartMinimized) form.WindowState = FormWindowState.Minimized;
 
-        // R-26-2: 存在の確認は窓を作る前に、上限つきで行う（窓がまだ無いので止まる画面は無い）。
-        // 8.3 で動いている側へ渡すときも、この結果をそのまま送る
-        var startup = ClassifyStartupArgument(args);
         form.Shown += async (_, _) =>
         {
             var (folder, selectName) = StartTarget(startup, settings);
@@ -145,9 +146,9 @@ internal static class Program
     {
         var raw = args.Length > 0 ? args[0] : "";
         var normalized = StartupPath.Normalize(raw, Environment.CurrentDirectory);
-        // Task.Run 越しに待つ: 同期コンテキストを持ち込まない
-        return Task.Run(() => StartupPathProbe.ClassifyAsync(raw, normalized, StartupPathProbe.DefaultLimit,
-            Directory.Exists, File.Exists)).GetAwaiter().GetResult();
+        // まだ窓が無く同期コンテキストも無いので、ここで待ってもデッドロックしない
+        return StartupPathProbe.ClassifyAsync(raw, normalized, StartupPathProbe.DefaultLimit,
+            Directory.Exists, File.Exists).GetAwaiter().GetResult();
     }
 
     /// <summary>
