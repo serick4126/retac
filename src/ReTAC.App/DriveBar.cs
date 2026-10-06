@@ -44,7 +44,7 @@ public sealed class DriveBar : Control
                  | ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.Selectable, true);
         TabStop = false;   // Tab によるフォーカス移動は持たない。L で入って Esc で戻る
         AllowDrop = true;  // R-65 ③: ドライブアイコンへのドロップでコピー・移動
-        // B-04: L で入った次の 1 打鍵（ドライブ文字）がジャンプになる。IME がオンだと文字が食われる
+        // R-143 / B-04: L で入った次の 1 打鍵（ドライブ文字）がジャンプになる。IME がオンだと文字が食われる
         ImeMode = ImeMode.Disable;
         Dock = DockStyle.Top;
         BackColor = SystemColors.Control;
@@ -54,7 +54,7 @@ public sealed class DriveBar : Control
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        ImeBlock.Detach(this);   // B-04: ImeMode だけでは効かない（理由は ImeBlock）。ハンドル再生成のたびに掛け直す
+        ImeBlock.Detach(this);   // R-143 / B-04: ImeMode だけでは効かない（理由は ImeBlock）。ハンドル再生成のたびに掛け直す
     }
 
     /// <summary>ドライブまたはデスクトップが選ばれた（14.1 節: シングルクリック）。</summary>

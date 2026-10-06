@@ -12266,6 +12266,28 @@
         "line": 290
       }
     ],
+    "R-143": [
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 47
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 57
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 79
+      },
+      {
+        "file": "src/ReTAC.App/FileListView.cs",
+        "line": 94
+      },
+      {
+        "file": "src/ReTAC.App/ImeBlock.cs",
+        "line": 7
+      }
+    ],
     "R-15": [
       {
         "file": "src/ReTAC.App/MainForm.cs",

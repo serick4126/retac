@@ -76,7 +76,7 @@ public sealed class FileListView : Control
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer
                  | ControlStyles.UserPaint | ControlStyles.Selectable | ControlStyles.ResizeRedraw, true);
         TabStop = true;
-        // B-04: ファイルリストは 1 打鍵がコマンドである。IME がオンだと文字が食われて
+        // R-143 / B-04: ファイルリストは 1 打鍵がコマンドである。IME がオンだと文字が食われて
         // 何も動かない。入力欄（TextInputDialog 等）は別ウィンドウなので影響しない
         ImeMode = ImeMode.Disable;
         Controls.Add(_hScrollBar);
@@ -91,7 +91,7 @@ public sealed class FileListView : Control
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        // B-04: ImeMode だけでは効かない（理由は ImeBlock）。ハンドル再生成のたびに掛け直す
+        // R-143 / B-04: ImeMode だけでは効かない（理由は ImeBlock）。ハンドル再生成のたびに掛け直す
         ImeBlock.Detach(this);
         UpdateImageQueue();   // R-117: ハンドルができたので、ここから背景の取得を始められる
     }
