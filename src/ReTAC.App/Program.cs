@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using ReTAC.App.Rendering;
 using ReTAC.Domain.Listing;
+using ReTAC.Domain.Startup;
 using SortOrder = ReTAC.Domain.Listing.SortOrder;
 
 namespace ReTAC.App;
@@ -69,7 +70,15 @@ internal static class Program
         // R-40-6: 起動時はウィンドウを表示しない設定
         if (settings.StartMinimized) form.WindowState = FormWindowState.Minimized;
 
-        form.Shown += async (_, _) => await form.OpenFolderAsync(StartFolder(args, settings));
+        // R-26-2: 存在の確認は窓を作る前に、上限つきで行う（窓がまだ無いので止まる画面は無い）。
+        // 8.3 で動いている側へ渡すときも、この結果をそのまま送る
+        var startup = ClassifyStartupArgument(args);
+        form.Shown += async (_, _) =>
+        {
+            var (folder, selectName) = StartTarget(startup, settings);
+            await form.OpenFolderAsync(folder, selectName);
+            if (startup.Kind == StartupPathKind.Invalid) form.ShowStatusMessage($"開けません: {startup.Raw}");
+        };
 
         // B-03: メッセージループを特定のウィンドウに紐づけない。Run(form) だと
         // その 1 枚を閉じた時点で他のウィンドウも道連れになる。
@@ -131,16 +140,26 @@ internal static class Program
     }
 #endif
 
-    /// <summary>
-    /// R-26: 引数 → 前回終了時のフォルダ（保持する設定のとき） → 固定の起動フォルダ →
-    /// 実行ファイルの所在フォルダ、の順に決める。
-    /// </summary>
-    private static string StartFolder(string[] args, AppSettings settings)
+    /// <summary>R-26-2: 最初の引数だけを見て、整えて分類する。待ちは上限（5 秒）つき。</summary>
+    internal static StartupPathResult ClassifyStartupArgument(string[] args)
     {
-        if (args.Length > 0 && Directory.Exists(args[0])) return args[0];
-        if (settings.KeepLastFolder && Directory.Exists(settings.LastFolder)) return settings.LastFolder!;
-        if (Directory.Exists(settings.StartFolder)) return settings.StartFolder!;
-        return AppContext.BaseDirectory;
+        var raw = args.Length > 0 ? args[0] : "";
+        var normalized = StartupPath.Normalize(raw, Environment.CurrentDirectory);
+        // Task.Run 越しに待つ: 同期コンテキストを持ち込まない
+        return Task.Run(() => StartupPathProbe.ClassifyAsync(raw, normalized, StartupPathProbe.DefaultLimit,
+            Directory.Exists, File.Exists)).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// R-26 / R-26-2: フォルダ → それ、ファイル → 親（と選ぶ名前）。それ以外は 前回終了時のフォルダ（保持する設定のとき） →
+    /// 固定の起動フォルダ → 実行ファイルの所在フォルダ、の順に決める。
+    /// </summary>
+    internal static (string Folder, string? SelectName) StartTarget(StartupPathResult startup, AppSettings settings)
+    {
+        if (startup.Kind is StartupPathKind.Folder or StartupPathKind.File) return (startup.Folder!, startup.FileName);
+        if (settings.KeepLastFolder && Directory.Exists(settings.LastFolder)) return (settings.LastFolder!, null);
+        if (Directory.Exists(settings.StartFolder)) return (settings.StartFolder!, null);
+        return (AppContext.BaseDirectory, null);
     }
 
     /// <summary>

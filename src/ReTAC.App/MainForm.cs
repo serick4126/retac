@@ -2152,6 +2152,9 @@ public sealed class MainForm : Form, IBookmarkHost
 
     void IBookmarkHost.ShowStatus(string text) => _statusBar.ShowMessage(text);
 
+    /// <summary>R-26-2: 起動引数が開けなかったことなど、起動直後に出す知らせ。</summary>
+    internal void ShowStatusMessage(string text) => _statusBar.ShowMessage(text);
+
     // ブックマークのフォルダとその中のメニューの両方がここを通る
     void IBookmarkHost.TransferDropped(string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift, BookmarkDropMode mode) =>
         AcceptDrop(DropReceptacle.BookmarkFolder, files, destination, allowed, ctrl, shift, mode);
