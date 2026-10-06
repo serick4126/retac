@@ -11372,6 +11372,10 @@
         "line": 129
       },
       {
+        "file": "src/ReTAC.App/SingleInstance.cs",
+        "line": 327
+      },
+      {
         "file": "src/ReTAC.App/StartupPathProbe.cs",
         "line": 19
       },
@@ -12239,7 +12243,7 @@
       },
       {
         "file": "src/ReTAC.App/SingleInstance.cs",
-        "line": 276
+        "line": 287
       }
     ],
     "R-15": [

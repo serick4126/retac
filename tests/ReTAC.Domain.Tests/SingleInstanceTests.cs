@@ -288,6 +288,16 @@ public class SingleInstanceTests : IDisposable
     }
 
     [Fact]
+    public void Startup_MixedRepliesLatchNoAnswer()
+    {
+        // 一度でも受け手に届いた（NoAnswer）なら、その後 NoListener が続いても「応答しない」の側
+        var channel = new FakeChannel(ForwardReply.NoListener, ForwardReply.NoAnswer, ForwardReply.NoListener);
+        var (decision, reason) = Run(new FakeLock(false), channel);
+        Assert.Equal(StartupDecision.GiveUp, decision);
+        Assert.Equal(GiveUpReason.NoAnswer, reason);
+    }
+
+    [Fact]
     public void Startup_OtherSessionOwnerGivesUp()
     {
         var (decision, reason) = Run(new FakeLock(false), new FakeChannel(ForwardReply.NoListener));

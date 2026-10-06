@@ -245,8 +245,14 @@ internal sealed class PipeChannel(string key) : IInstanceChannel
         {
             using var client = new NamedPipeClientStream(".", SettingsLocation.PipeName(key, SettingsLocation.CurrentSid(), SettingsLocation.CurrentSessionId()),
                 PipeDirection.InOut, PipeOptions.CurrentUserOnly | PipeOptions.Asynchronous);
+            var pipeName = SettingsLocation.PipeName(key, SettingsLocation.CurrentSid(), SettingsLocation.CurrentSessionId());
             try { client.Connect(ConnectMilliseconds); }
-            catch (TimeoutException) { return ForwardReply.NoListener; }
+            catch (TimeoutException)
+            {
+                // 受け手が 1 件処理中でも接続は時間切れになる。パイプ自体が無いときだけ NoListener
+                WaitNamedPipe(@"\\.\pipe\" + pipeName, 0);
+                return Marshal.GetLastWin32Error() == ErrorFileNotFound ? ForwardReply.NoListener : ForwardReply.NoAnswer;
+            }
 
             // 受けた側が窓を前に出せるように、前面にする許可を渡す
             if (GetNamedPipeServerProcessId(client.SafePipeHandle.DangerousGetHandle(), out var pid)) AllowSetForegroundWindow(pid);
@@ -268,6 +274,11 @@ internal sealed class PipeChannel(string key) : IInstanceChannel
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool GetNamedPipeServerProcessId(IntPtr pipe, out uint processId);
+
+    private const int ErrorFileNotFound = 2;
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool WaitNamedPipe(string name, uint timeout);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool AllowSetForegroundWindow(uint processId);
@@ -311,9 +322,12 @@ internal static class PipeListener
                 writer.WriteLine(reply);
                 server.WaitForPipeDrain();
             }
-            catch (Exception ex) when (ex is IOException or OperationCanceledException or UnauthorizedAccessException)
+            catch (Exception ex)
             {
-                Thread.Sleep(200);   // 切れた接続は捨てて、次を待つ
+                // 背景のスレッドから例外が漏れるとプロセスが終わる（R-126）。何があっても記録して次を待つ。
+                // 作り直しが失敗し続けても暴走しないよう、少し待つ
+                ErrorLog.Write(ex, "startup-pipe");
+                Thread.Sleep(200);
             }
         }
     }
