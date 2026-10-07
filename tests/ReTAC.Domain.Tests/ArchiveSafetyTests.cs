@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using System.Runtime.InteropServices;
 using ReTAC.Shell;
 
@@ -72,75 +71,38 @@ public class ArchiveSafetyTests
         Assert.StartsWith("FAIL", OutsideWriteCheck.Judge(before, OutsideWriteCheck.Snapshot([Path.Combine(root, "work"), other], dest)));
     });
 
-    /// <summary>不正な名前の項目と、それぞれが取り出し先の外へ出たときに当たる所</summary>
-    private static (string[] Entries, string[] Sentinels) EvilArchive(string root, string work, string level1)
-    {
-        var absoluteSlash = Path.Combine(root, "abs-target", "escape-abs1.txt").Replace('\\', '/');
-        var absoluteBackslash = Path.Combine(root, "abs-target", "escape-abs2.txt");
-        string[] entries =
-        [
-            "sub/ok.txt",                  // 正しい項目（陽性対照）
-            "sub/../../escape1.txt",       // dest\sub\..\..\ → level1
-            "sub/..\\..\\escape2.txt",     // 区切りが \ の形 → level1
-            "../escape3.txt",              // 直下の項目の ..\ → level1
-            "sub/../../../escape4.txt",    // → work
-            absoluteSlash,                 // 本当の絶対パス（/ 区切り）
-            absoluteBackslash,             // 本当の絶対パス（\ 区切り）
-        ];
-        string[] sentinels =
-        [
-            Path.Combine(level1, "escape1.txt"), Path.Combine(level1, "escape2.txt"), Path.Combine(level1, "escape3.txt"),
-            Path.Combine(work, "escape4.txt"),
-            Path.Combine(root, "abs-target", "escape-abs1.txt"), Path.Combine(root, "abs-target", "escape-abs2.txt"),
-        ];
-        return (entries, sentinels);
-    }
-
     [Theory]
     [InlineData(true)]    // エクスプローラーで書庫を開いて全部選ぶ（Ctrl+A）のと同じ、書庫の直下の全項目
     [InlineData(false)]   // 入れ子の不正な名前を持つフォルダ sub だけ
     public void Extract_NeverWritesOutsideDestination(bool allItems) => Sta.Run(() => Sta.WithTempFolder(root =>
     {
-        // 絶対パスの名前は、見張りを置けるこのテストのフォルダを指すものだけ（ドライブの直下などへ書き出させない）
-        var work = Directory.CreateDirectory(Path.Combine(root, "work")).FullName;
-        var level1 = Directory.CreateDirectory(Path.Combine(work, "level1")).FullName;
-        var dest = Directory.CreateDirectory(Path.Combine(level1, "out")).FullName;
-        Directory.CreateDirectory(Path.Combine(root, "abs-target"));
-        var (entries, sentinels) = EvilArchive(root, work, level1);
+        // 実機調査（vprobe）と同じ作業場所を使う。書庫と見張りは新しく作ったフォルダの中だけにあり、既にあるものに触らない。
+        // 書庫の中の名前が意図した不正な名前のままか（絶対パスが本当の絶対パスか）は、作業場所を作るときに確かめている（ProbeWorkspaceTests）
+        var workspace = ProbeWorkspace.Create(root);
+        Assert.NotNull(workspace);
+        var run = workspace!.NewRun();
+        Assert.NotNull(run);
 
-        var zip = Path.Combine(root, "evil.zip");
-        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
-            foreach (var name in entries)
-                using (var writer = new StreamWriter(archive.CreateEntry(name).Open())) writer.Write("evil");
-
-        // 入力の検証: 書庫の中の名前が、意図した不正な名前のまま入っている（ライブラリが直していない）
-        using (var check = ZipFile.OpenRead(zip))
-            Assert.Equal(entries, check.Entries.Select(e => e.FullName));
-        Assert.True(Path.IsPathFullyQualified(entries[5]), entries[5]);
-        Assert.True(Path.IsPathFullyQualified(entries[6]), entries[6]);
-        // 見張りが、不正な名前の当たる所を指している（取り出し先の外で、書庫を作った後も無いことを確かめてから置く）
-        Assert.All(sentinels, s => Assert.False(s.StartsWith(dest + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)));
-        foreach (var sentinel in sentinels) File.WriteAllText(sentinel, "original");
-
-        string[] watched = [root];
-        var before = OutsideWriteCheck.Snapshot(watched, dest);
-        var idLists = allItems ? TopLevelIdLists(zip) : [ParseIdList(Path.Combine(zip, "sub"))];
+        string[] watched = [workspace.Root];
+        var before = OutsideWriteCheck.Snapshot(watched, run!.Output);
+        var idLists = allItems ? TopLevelIdLists(workspace.EvilZip) : [ParseIdList(Path.Combine(workspace.EvilZip, "sub"))];
         try
         {
             Assert.NotEmpty(idLists);
             using var operation = new ShellFileOperation(IntPtr.Zero, silentOverwrite: false, noUi: true);
-            foreach (var idList in idLists) operation.CopyIdList(idList, dest);
+            foreach (var idList in idLists) operation.CopyIdList(idList, run.Output);
             try { operation.Execute(); }
             catch (IOException) { }   // 不正な項目で取り出しが失敗するのはよい。外へ書かないことを見る
         }
         finally { foreach (var idList in idLists) Marshal.FreeCoTaskMem(idList); }
 
         // 陽性対照: 正しい項目は取り出せている（何も起きなかったから合格、を防ぐ）。取り出せなければ判定できないので失敗にする
-        Assert.True(File.Exists(Path.Combine(dest, "sub", "ok.txt")), "陽性対照の sub\\ok.txt が取り出されていない（判定できない）");
-        Assert.Equal("evil", File.ReadAllText(Path.Combine(dest, "sub", "ok.txt")));
-        // 本題: 取り出し先の外は、見張りの中身も含めて何も変わっていない（新しいファイルもできていない）
-        Assert.Equal("PASS", OutsideWriteCheck.Judge(before, OutsideWriteCheck.Snapshot(watched, dest)));
-        Assert.All(sentinels, s => Assert.Equal("original", File.ReadAllText(s)));
+        var ok = Path.Combine(run.Output, "sub", "ok.txt");
+        Assert.True(File.Exists(ok), "陽性対照の sub\\ok.txt が取り出されていない（判定できない）");
+        Assert.Equal("evil", File.ReadAllText(ok));
+        // 本題: 取り出し先の外（見張り・書庫そのものを含む）は何も変わっていない（新しいファイルもできていない）
+        Assert.Equal("PASS", OutsideWriteCheck.Judge(before, OutsideWriteCheck.Snapshot(watched, run.Output)));
+        Assert.All(run.Sentinels, s => Assert.Equal("original", File.ReadAllText(s)));
     }));
 
     /// <summary>解析名から識別子を作る（テストのデータ作りにだけ使う。呼び出し側が解放する）</summary>
