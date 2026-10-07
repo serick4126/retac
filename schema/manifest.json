@@ -7532,7 +7532,7 @@
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 377
+        "line": 376
       },
       {
         "file": "src/ReTAC.App/IncrementalSearchBar.cs",
@@ -9132,11 +9132,11 @@
     "R-103-2": [
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
-        "line": 219
+        "line": 216
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
-        "line": 222
+        "line": 219
       },
       {
         "file": "src/ReTAC.App/KeyBindingFile.cs",
@@ -9460,7 +9460,7 @@
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 316
+        "line": 315
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -9552,15 +9552,15 @@
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 287
+        "line": 286
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 300
+        "line": 299
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 317
+        "line": 316
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -12206,7 +12206,7 @@
     "R-14": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 337
+        "line": 336
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -12620,7 +12620,7 @@
       },
       {
         "file": "src/ReTAC.App/MacroBuildPromptActions.cs",
-        "line": 9
+        "line": 8
       },
       {
         "file": "src/ReTAC.App/MacroBuildPromptButton.cs",
@@ -12788,7 +12788,7 @@
     "R-25": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 343
+        "line": 342
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -13702,7 +13702,7 @@
       },
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 263
+        "line": 262
       },
       {
         "file": "src/ReTAC.App/ErrorLog.cs",
@@ -14524,7 +14524,7 @@
     "R-83": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 343
+        "line": 342
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -14711,6 +14711,10 @@
       {
         "file": "src/ReTAC.App/FolderExpansion.cs",
         "line": 199
+      },
+      {
+        "file": "src/ReTAC.App/MacroBuildPromptButton.cs",
+        "line": 46
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -15784,7 +15788,7 @@
     "R-98": [
       {
         "file": "src/ReTAC.App/AppSettings.cs",
-        "line": 411
+        "line": 410
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
@@ -16043,12 +16047,12 @@
         "line": 27
       },
       {
-        "file": "src/ReTAC.App/MacroBuildPromptActions.cs",
-        "line": 60
-      },
-      {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 771
+      },
+      {
+        "file": "src/ReTAC.App/SafeFileWrite.cs",
+        "line": 6
       }
     ],
     "V-08": [

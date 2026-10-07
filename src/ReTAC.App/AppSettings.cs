@@ -244,13 +244,12 @@ public sealed class AppSettings
     /// </remarks>
     internal static void WriteAtomic(string path, string json, Action<string, string>? move = null, Action<int>? wait = null)
     {
-        var temp = path + ".tmp";
         for (var attempt = 1; ; attempt++)
         {
             try
             {
-                File.WriteAllText(temp, json);
-                (move ?? ((from, to) => File.Move(from, to, overwrite: true)))(temp, path);
+                // 一時ファイルは毎回一意な名前で作り、失敗した回のものはその場で片付ける（SafeFileWrite）
+                SafeFileWrite.WriteReplacing(path, json, move);
                 return;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < WriteAttempts)

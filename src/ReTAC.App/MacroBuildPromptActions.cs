@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows.Forms;
 using ReTAC.Domain.Commands;
 using ReTAC.Domain.Tools;
@@ -48,42 +47,11 @@ internal static class MacroBuildPromptActions
 
         try
         {
-            WriteReplacing(dialog.FileName, Generate());
+            SafeFileWrite.WriteReplacing(dialog.FileName, Generate());
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             MessageBox.Show(owner, "書き出せませんでした。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        }
-    }
-
-    /// <summary>
-    /// 一時ファイル経由で置き換える（V-07 と同じ理由。途中で失敗しても前のファイルを壊さない）。
-    /// 一時ファイルは保存先と同じフォルダに一意な名前で新しく作り、自分が作ったものだけを片付ける。
-    /// 「保存先.tmp」のような決まった名前だと、利用者の同名のファイルを黙って上書きし、失敗時には消してしまう。
-    /// </summary>
-    internal static void WriteReplacing(string path, string text)
-    {
-        var full = Path.GetFullPath(path);
-        var temp = Path.Combine(Path.GetDirectoryName(full)!, $"{Path.GetFileName(full)}.{Guid.NewGuid():N}.tmp");
-        var created = false;
-        try
-        {
-            using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-            {
-                created = true;
-                using var writer = new StreamWriter(stream, new UTF8Encoding(false));
-                writer.Write(text);
-            }
-            File.Move(temp, full, overwrite: true);
-            created = false;
-        }
-        finally
-        {
-            if (created)
-            {
-                try { File.Delete(temp); }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
-            }
         }
     }
 

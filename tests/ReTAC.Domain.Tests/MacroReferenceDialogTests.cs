@@ -68,7 +68,16 @@ public class MacroReferenceDialogTests
             var client = new Rectangle(Point.Empty, dialog.ClientSize);
             var button = dialog.Controls.OfType<Button>().Single(b => b.Text.StartsWith("マクロ構築プロンプト", StringComparison.Ordinal));
             var guide = dialog.Controls.OfType<Label>().Single(l => l.Text == MacroBuildPromptActions.Guide);
-            var others = dialog.Controls.Cast<Control>().Where(c => c != button && c != guide && c.Visible).ToList();
+            // 表示していないダイアログでは子の Visible が false なので、それで絞らない。比較する相手を名指しする
+            var others = new Control[]
+            {
+                dialog.Controls.OfType<Button>().Single(b => b.Text == "挿入(&I)"),
+                dialog.Controls.OfType<Button>().Single(b => b.Text == "閉じる"),
+                dialog.Controls.OfType<ListView>().Single(),
+                dialog.Controls.OfType<TextBox>().Single(),
+                dialog.Controls.OfType<Label>().Single(l => l != guide),
+            };
+            Assert.Equal(5, others.Length);
 
             Assert.True(client.Contains(button.Bounds), $"{scale}/{width}: ボタンがはみ出す {button.Bounds}");
             Assert.True(client.Contains(guide.Bounds), $"{scale}/{width}: 案内がはみ出す {guide.Bounds}");
@@ -80,6 +89,26 @@ public class MacroReferenceDialogTests
                 Assert.False(guide.Bounds.IntersectsWith(other.Bounds), $"{scale}/{width}: 案内 {guide.Bounds} が {other.Text} {other.Bounds} に重なる");
             }
         }
+    }
+
+    // R-88: ボタンから開くメニューも、ほかのメニューと同じ上下の余白にする（設定ページとマクロの一覧は同じ部品を使う）
+    [Fact]
+    public void PromptButtonMenu_UsesCommonSpacing()
+    {
+        using var owner = new Panel();
+        var (_, _, menu) = MacroBuildPromptButton.Attach(owner, new Point(0, 0), 600, AnchorStyles.Top | AnchorStyles.Left);
+        typeof(ToolStripDropDown).GetMethod("OnOpening", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(menu, [new System.ComponentModel.CancelEventArgs()]);
+
+        var expected = new ToolStripMenuItem("x");
+        MenuSpacing.Apply([expected], owner.DeviceDpi);
+        Assert.Equal(2, menu.Items.Count);
+        Assert.All(menu.Items.Cast<ToolStripItem>(), item =>
+        {
+            Assert.Equal(expected.Padding.Top, item.Padding.Top);
+            Assert.Equal(expected.Padding.Bottom, item.Padding.Bottom);
+        });
+        Assert.NotEqual(0, expected.Padding.Top);
     }
 
     [Fact]

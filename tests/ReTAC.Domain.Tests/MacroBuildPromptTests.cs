@@ -33,6 +33,9 @@ public class MacroBuildPromptTests
         Assert.Contains("直接実行する", instructions);
         Assert.Contains("入力ダイアログ（GUI）を使う", instructions);
         Assert.True(instructions.IndexOf("何を実行したいか", StringComparison.Ordinal) < instructions.IndexOf("起動の仕方", StringComparison.Ordinal));
+        // 実機確認（2026-10-07）で、AI が返事を待たずに「とりあえず」の設定案を出した
+        Assert.Contains("返事を待ってから", instructions);
+        Assert.Contains("設定案を出さない", instructions);
         Assert.Contains(MenuPath, instructions);
         // VS Code の変数名を流用しているので、AI は表に無い ${relativeFile} などを作りがち
         Assert.Contains("表にあるものだけ", instructions);

@@ -192,7 +192,7 @@ public sealed class KeyAssignPage : UserControl
         RefreshAssignedKeys();
     }
 
-    /// <summary>R-103-1: 下書きの割り当てをファイルに書き出す。書き込みは一時ファイル経由（V-07 と同じ理由）。</summary>
+    /// <summary>R-103-1: 下書きの割り当てをファイルに書き出す。書き込みは一時ファイル経由（V-07 と同じ理由。SafeFileWrite）。</summary>
     private void ExportKeyBindings()
     {
         using var dialog = new SaveFileDialog
@@ -205,10 +205,7 @@ public sealed class KeyAssignPage : UserControl
 
         try
         {
-            var json = KeyBindingFile.Export(_assignments);
-            var temp = dialog.FileName + ".tmp";
-            File.WriteAllText(temp, json);
-            File.Move(temp, dialog.FileName, overwrite: true);
+            SafeFileWrite.WriteReplacing(dialog.FileName, KeyBindingFile.Export(_assignments));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

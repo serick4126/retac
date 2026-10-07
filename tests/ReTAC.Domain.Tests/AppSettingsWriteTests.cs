@@ -36,11 +36,15 @@ public class AppSettingsWriteTests : IDisposable
     public void 失敗が続けば回数の上限で諦めて例外を出す()
     {
         var (calls, waits) = (0, new List<int>());
+        File.WriteAllText(Target + ".tmp", "neighbor");   // 決まった名前の一時ファイルを使っていたころに壊していた、同名の隣のファイル
         Assert.Throws<UnauthorizedAccessException>(() => AppSettings.WriteAtomic(Target, "{}",
             (_, _) => { calls++; throw new UnauthorizedAccessException(); }, waits.Add));
         Assert.Equal(AppSettings.WriteAttempts, calls);
         Assert.Equal(AppSettings.WriteAttempts - 1, waits.Count);   // 最後の失敗の後は待たない
         Assert.False(File.Exists(Target));
+        // 失敗した回ごとの一時ファイルは片付け、隣のファイルは触らない（SafeFileWrite）
+        Assert.Equal("neighbor", File.ReadAllText(Target + ".tmp"));
+        Assert.Equal(new[] { Target + ".tmp" }, Directory.GetFiles(Path.GetDirectoryName(Target)!));
     }
 
     [Fact]

@@ -15,7 +15,7 @@ internal static class MacroBuildPromptButton
 
     /// <param name="guideRight">案内の行の右端。右の操作ボタンの手前にする（重ねない）</param>
     /// <param name="anchor">ボタンの Anchor。案内の行には Right も足して、残りの幅に合わせて伸び縮みさせる</param>
-    public static (Button Button, Label Guide) Attach(Control owner, Point location, int guideRight, AnchorStyles anchor)
+    public static (Button Button, Label Guide, ContextMenuStrip Menu) Attach(Control owner, Point location, int guideRight, AnchorStyles anchor)
     {
         var button = new Button { Text = "マクロ構築プロンプト ▼", Bounds = new Rectangle(location, new Size(ButtonWidth, 28)), Anchor = anchor };
         var guideLeft = location.X + ButtonWidth + Gap;
@@ -43,6 +43,8 @@ internal static class MacroBuildPromptButton
                 timer.Stop();
                 timer.Start();
             }));
+        // R-88: ほかのメニューと同じ行間にする。DPI の違うモニターへ移しても追従させるため、開くたびに掛ける
+        menu.Opening += (_, _) => MenuSpacing.Apply(menu.Items, button.DeviceDpi);
         button.Click += (_, _) => menu.Show(button, new Point(0, button.Height));
         owner.Disposed += (_, _) =>
         {
@@ -53,6 +55,6 @@ internal static class MacroBuildPromptButton
 
         owner.Controls.Add(button);
         owner.Controls.Add(guide);
-        return (button, guide);
+        return (button, guide, menu);
     }
 }
