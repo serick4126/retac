@@ -15,9 +15,10 @@ public enum MacroUsage { Arguments, PromptArgument, InitialValue, ItemValue }
 public static class MacroCatalog
 {
     // R-144-1: マクロが増えて 1 つのグループでは探しにくいので、対象の系統ごとに分ける。見出しが区切りになる。
+    // 見出しは値の形（パス・名前）ではなく対象で名乗る。${pathBasename} のように名前を返すものも同じ対象の系統に入るため。
     // 各グループの中は、ファイルだけを返すものを先に、同じ系統ではフルパス・拡張子なしのパス・名前・拡張子なしの名前・拡張子の順。
-    public const string FileGroup = "ファイル（フォルダを除く）";
-    public const string PathGroup = "パス（フォルダも含む）";
+    public const string FileGroup = "対象のファイル（フォルダを除く）";
+    public const string PathGroup = "対象の項目（フォルダも含む）";
     public const string CursorGroup = "カーソルの項目";
     public const string CwdGroup = "カレントフォルダ";
     public const string PromptGroup = "入力ダイアログ";
