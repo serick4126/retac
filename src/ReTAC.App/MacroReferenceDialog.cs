@@ -60,6 +60,8 @@ public sealed class MacroReferenceDialog : Form
         var help = new Label { Text = MacroCatalog.ContextHelp(usage), Bounds = new Rectangle(14, 14, 912, 38),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
         Controls.AddRange([help, _entries, _description, _insert, close]);
+        // R-145-1: 下端の左。案内の行の右端は「挿入」の手前に合わせ、大きさを変えても重ならないようにする
+        MacroBuildPromptButton.Attach(this, new Point(14, 518), _insert.Left - 10, AnchorStyles.Bottom | AnchorStyles.Left);
         AcceptButton = _insert;
         CancelButton = close;
 

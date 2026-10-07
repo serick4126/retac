@@ -88,6 +88,9 @@ public sealed class ExternalToolPage : UserControl
             _promptEdit,
             _warning, _scriptHelp, _perItem, _popup, _keepOpen, _confirm,
         ]);
+        // R-145-1: チェックボックスの下。ページは大きさが変わらないので、右端はページの右の余白の手前。
+        // ツールを選んでいなくても使えるので、選択に合わせて無効にする欄の一覧には入れない
+        MacroBuildPromptButton.Attach(this, new Point(250, 406), 740, AnchorStyles.Top | AnchorStyles.Left);
         OptionHelp.Attach(this, _tips,
             (_perItem, ExternalToolHelp.LaunchPerItem.ToolTip),
             (_popup, ExternalToolHelp.ShowInPopup.ToolTip),
