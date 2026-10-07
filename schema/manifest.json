@@ -3649,6 +3649,18 @@
         }
       ]
     },
+    "ReTAC.Domain.Tools.ExternalToolExamples": {
+      "id": "type:ReTAC.Domain.Tools.ExternalToolExamples",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Tools/ExternalToolExamples.cs",
+      "doc": "R-145-2: マクロ構築プロンプトに載せる設定例。型の違う例に絞る（R-145）。 例は文字ではなく設定として持ち、テストで解析・入力ダイアログの検査・展開した結果を確かめる。 文字で持つと、構文は正しいまま送る値が変わる誤り（-m の後の空白を落とすなど）に気づけないため。"
+    },
+    "ReTAC.Domain.Tools.ExternalToolHelp": {
+      "id": "type:ReTAC.Domain.Tools.ExternalToolHelp",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Tools/ExternalToolHelp.cs",
+      "doc": "R-145-2: 外部ツールの設定の欄・オプション・入力ダイアログの説明。 設定画面とマクロ構築プロンプトが同じ文を使う。手で書いた別の説明を持つと、欄を足したときに片方だけ書き漏れるため。 欄や列挙の値を足したら、ここにも足す（網羅のテストが止める）。"
+    },
     "ReTAC.Domain.Tools.ExternalToolQueue": {
       "id": "type:ReTAC.Domain.Tools.ExternalToolQueue",
       "kind": "sealed class",
@@ -3662,6 +3674,44 @@
           "required": false,
           "mutability": "get-only",
           "doc": "待っている件数（動いている 1 件を含まない）。ReTAC の終了時の確認に使う（K-5）。"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.HelpEntry": {
+      "id": "type:ReTAC.Domain.Tools.HelpEntry",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/ExternalToolHelp.cs",
+      "fields": [
+        {
+          "name": "Key",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "説明する設定の欄（型名.プロパティ名）か列挙の値（型名.値）。網羅のテストが型から作る名前と突き合わせる"
+        },
+        {
+          "name": "Label",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "画面に出る名前（アクセスキーなし）"
+        },
+        {
+          "name": "Description",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Macros",
+          "type": "ReTAC.Domain.Tools.MacroUse",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "文字の欄でマクロを展開するか（R-136）。文字の欄でなければ"
         }
       ]
     },
@@ -3751,6 +3801,12 @@
         }
       ]
     },
+    "ReTAC.Domain.Tools.MacroBuildPrompt": {
+      "id": "type:ReTAC.Domain.Tools.MacroBuildPrompt",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Tools/MacroBuildPrompt.cs",
+      "doc": "R-145: 外部ツールのマクロ構築プロンプト。使いたいコマンドと一緒に AI に送り、外部ツールの設定を組み立ててもらうための Markdown。 その時点の実装（マクロの一覧・説明のカタログ・設定例）から作るので、マクロや欄を足せば自動で載る（R-145-2）。 利用者の今の設定は受け取らない（パスやフォルダ名を AI に渡さないため）。"
+    },
     "ReTAC.Domain.Tools.MacroCatalog": {
       "id": "type:ReTAC.Domain.Tools.MacroCatalog",
       "kind": "static class",
@@ -3805,6 +3861,14 @@
           "nullable": false,
           "required": false,
           "mutability": "init"
+        },
+        {
+          "name": "ArgumentsOnly",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "引数へ区切って展開する欄だけの規則。初期値（区切らず先頭 1 件を使う。R-136）の一覧には出さない"
         }
       ]
     },
@@ -3909,6 +3973,18 @@
         "PromptArgument",
         "InitialValue",
         "ItemValue"
+      ]
+    },
+    "ReTAC.Domain.Tools.MacroUse": {
+      "id": "type:ReTAC.Domain.Tools.MacroUse",
+      "kind": "enum",
+      "file": "src/ReTAC.Domain/Tools/ExternalToolHelp.cs",
+      "doc": "R-136: 入力ダイアログの文字の欄がマクロを展開するか。欄を足したら必ず分類する（網羅のテストが止める）。",
+      "members": [
+        "NotText",
+        "Expanded",
+        "Literal",
+        "ByKind"
       ]
     },
     "ReTAC.Domain.Tools.PathKind": {
@@ -4570,6 +4646,128 @@
       "id": "type:ReTAC.Domain.Tools.TemplatePart",
       "kind": "abstract record",
       "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs"
+    },
+    "ReTAC.Domain.Tools.ToolExample": {
+      "id": "type:ReTAC.Domain.Tools.ToolExample",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/ExternalToolExamples.cs",
+      "fields": [
+        {
+          "name": "Title",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "例の見出し"
+        },
+        {
+          "name": "Note",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "何をする設定か・なぜその ON/OFF か"
+        },
+        {
+          "name": "Tool",
+          "type": "ReTAC.Domain.Tools.ExternalTool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Targets",
+          "type": "IReadOnlyList<ReTAC.Domain.Entries.Entry>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "例の対象（マークした項目、またはカーソルの 1 件）。対象の項目を使わない例は空"
+        },
+        {
+          "name": "Cursor",
+          "type": "ReTAC.Domain.Entries.Entry",
+          "nullable": true,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Input",
+          "type": "IReadOnlyDictionary<int, ReTAC.Domain.Tools.PromptValue>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "入力ダイアログに入れる例の値（項目の番号ごと）。入力ダイアログを使わない例は空"
+        },
+        {
+          "name": "Expected",
+          "type": "IReadOnlyList<string>",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "起動 1 回ぶんの、展開後の引数。テストがこの値と実際の展開を突き合わせる"
+        }
+      ]
+    },
+    "ReTAC.Domain.Tools.ToolOptionHelp": {
+      "id": "type:ReTAC.Domain.Tools.ToolOptionHelp",
+      "kind": "sealed record",
+      "file": "src/ReTAC.Domain/Tools/ExternalToolHelp.cs",
+      "fields": [
+        {
+          "name": "Key",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "Label",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "On",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "ON にしたときの動き"
+        },
+        {
+          "name": "Off",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "OFF にしたときの動き"
+        },
+        {
+          "name": "Note",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "補足。無ければ空"
+        },
+        {
+          "name": "When",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init",
+          "doc": "どんなときに ON にするか。マクロ構築プロンプトで AI が利用者に案内するために使う"
+        },
+        {
+          "name": "ToolTip",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "get-only",
+          "doc": "設定画面のオプションの「?」に出す文。"
+        }
+      ]
     }
   },
   "edges": [
@@ -5223,6 +5421,17 @@
       "visibility": "private"
     },
     {
+      "from": "type:ReTAC.Domain.Tools.HelpEntry",
+      "to": "type:ReTAC.Domain.Tools.MacroUse",
+      "type": "1:1",
+      "fk": {
+        "field": "Macros",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
       "from": "type:ReTAC.Domain.Tools.ImportedCommand",
       "to": "type:ReTAC.Domain.Tools.PromptArgument",
       "type": "1:N",
@@ -5483,6 +5692,50 @@
         "field": "Parts",
         "container": "IReadOnlyList<ReTAC.Domain.Tools.TemplatePart>",
         "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.ToolExample",
+      "to": "type:ReTAC.Domain.Tools.ExternalTool",
+      "type": "1:1",
+      "fk": {
+        "field": "Tool",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.ToolExample",
+      "to": "type:ReTAC.Domain.Entries.Entry",
+      "type": "1:N",
+      "fk": {
+        "field": "Targets",
+        "container": "IReadOnlyList<ReTAC.Domain.Entries.Entry>",
+        "unique": false
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.ToolExample",
+      "to": "type:ReTAC.Domain.Entries.Entry",
+      "type": "1:1",
+      "fk": {
+        "field": "Cursor",
+        "container": null,
+        "unique": null
+      },
+      "visibility": "public"
+    },
+    {
+      "from": "type:ReTAC.Domain.Tools.ToolExample",
+      "to": "type:ReTAC.Domain.Tools.PromptValue",
+      "type": "1:N",
+      "fk": {
+        "field": "Input",
+        "container": "IReadOnlyDictionary<int, ReTAC.Domain.Tools.PromptValue>",
+        "unique": true
       },
       "visibility": "public"
     },
@@ -7823,11 +8076,11 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 11
+        "line": 12
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 12
+        "line": 13
       }
     ],
     "F-05": [
@@ -11519,7 +11772,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 58
+        "line": 59
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -11858,6 +12111,18 @@
         "line": 288
       },
       {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolHelp.cs",
+        "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolHelp.cs",
+        "line": 8
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
+        "line": 5
+      },
+      {
         "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
         "line": 5
       },
@@ -11889,7 +12154,7 @@
     "R-137": [
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 55
+        "line": 56
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
@@ -11903,11 +12168,11 @@
     "R-138": [
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 7
+        "line": 8
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 97
+        "line": 111
       }
     ],
     "R-139": [
@@ -12299,7 +12564,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 43
+        "line": 44
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
@@ -12309,7 +12574,43 @@
     "R-144-1": [
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 17
+        "line": 18
+      }
+    ],
+    "R-145": [
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolExamples.cs",
+        "line": 20
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroBuildPrompt.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroBuildPrompt.cs",
+        "line": 14
+      }
+    ],
+    "R-145-2": [
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolExamples.cs",
+        "line": 20
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/ExternalToolHelp.cs",
+        "line": 32
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroBuildPrompt.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroBuildPrompt.cs",
+        "line": 146
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
+        "line": 75
       }
     ],
     "R-15": [
@@ -13800,6 +14101,10 @@
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentExpander.cs",
         "line": 16
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
+        "line": 75
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroValues.cs",

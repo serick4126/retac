@@ -2,7 +2,8 @@ namespace ReTAC.Domain.Tools;
 
 /// <param name="Insert">引数欄に挿入する文字。挿入しない項目（書き方の説明・例）は null</param>
 /// <param name="CaretOffset">挿入後にカーソルを置く位置（挿入した文字の先頭から）</param>
-public sealed record MacroCatalogEntry(string Group, string Label, string? Insert, int CaretOffset, string Summary, string Description);
+/// <param name="ArgumentsOnly">引数へ区切って展開する欄だけの規則。初期値（区切らず先頭 1 件を使う。R-136）の一覧には出さない</param>
+public sealed record MacroCatalogEntry(string Group, string Label, string? Insert, int CaretOffset, string Summary, string Description, bool ArgumentsOnly = false);
 
 /// <summary>R-138: マクロを挿入する欄の文法。</summary>
 public enum MacroUsage { Arguments, PromptArgument, InitialValue, ItemValue }
@@ -71,6 +72,19 @@ public static class MacroCatalog
         new(SyntaxGroup, "作業ディレクトリ", null, 0,
             "ツールが動くフォルダ",
             "ツールは常にカレントフォルダを作業ディレクトリとして起動する。"),
+        // R-72 / R-145-2: マクロ構築プロンプトも同じ文を使う。生成処理に別の文を書かない
+        new(SyntaxGroup, "引数の区切り", null, 0,
+            "空白とタブで区切ってから展開",
+            "半角の空白とタブで区切ってから展開する。展開した値に空白があっても 1 つの引数のまま渡る。", ArgumentsOnly: true),
+        new(SyntaxGroup, "複数の値", null, 0,
+            "対象ごとに別の引数",
+            "マークした項目は一覧の表示順に、1 件ずつ別の引数として渡す。引用符で囲んでもつなげない。", ArgumentsOnly: true),
+        new(SyntaxGroup, "混ぜられない組み合わせ", null, 0,
+            "対象の項目と対象のファイルを混ぜない",
+            "1 つの引数の中に、対象の項目（フォルダも含む）のマクロと、対象のファイル（フォルダを除く）のマクロを混ぜられない。マークした中のフォルダの有無で件数が変わり、対応が取れないため。", ArgumentsOnly: true),
+        new(SyntaxGroup, "長いパス", null, 0,
+            "260 文字を超えるパスは短い形式へ",
+            "260 文字を超えるフルパスは、渡す前に短い形式（8.3 形式）への変換を試みる。短縮できなければ元のパスを渡す。名前だけのマクロは短縮しない。", ArgumentsOnly: true),
 
         new(ScriptGroup, "書き方の注意", null, 0,
             "スクリプトの場所と実行結果の表示",
@@ -97,6 +111,7 @@ public static class MacroCatalog
     /// <summary>R-138: 除外と欄ごとの文法の案内を全入口で共有する。</summary>
     public static IReadOnlyList<MacroCatalogEntry> For(MacroUsage usage) =>
         [.. Entries.Where(e => (usage == MacroUsage.Arguments || e.Insert != "${prompt}")
+            && !(usage == MacroUsage.InitialValue && e.ArgumentsOnly)
             && (usage is MacroUsage.Arguments or MacroUsage.PromptArgument || e.Group != ScriptGroup))
             .Select(e => usage == MacroUsage.InitialValue && e.Label.Contains("引用符", StringComparison.Ordinal)
                 ? e with { Summary = "空白と引用符はそのままの文字",
