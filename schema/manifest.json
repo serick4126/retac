@@ -12707,6 +12707,14 @@
       {
         "file": "src/ReTAC.Shell/ShellFileOperation.cs",
         "line": 71
+      },
+      {
+        "file": "src/ReTAC.Shell/VirtualItems.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.Shell/VirtualItems.cs",
+        "line": 11
       }
     ],
     "R-15": [
