@@ -11619,6 +11619,10 @@
     ],
     "R-126": [
       {
+        "file": "src/ReTAC.App/ArchiveExtraction.cs",
+        "line": 38
+      },
+      {
         "file": "src/ReTAC.App/DriveBar.cs",
         "line": 268
       },
@@ -12696,6 +12700,18 @@
       }
     ],
     "R-146-1": [
+      {
+        "file": "src/ReTAC.App/ArchiveExtraction.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.App/ArchiveExtraction.cs",
+        "line": 38
+      },
+      {
+        "file": "src/ReTAC.App/ArchiveExtraction.cs",
+        "line": 126
+      },
       {
         "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
         "line": 79
@@ -13924,6 +13940,10 @@
       }
     ],
     "R-62": [
+      {
+        "file": "src/ReTAC.App/ArchiveExtraction.cs",
+        "line": 160
+      },
       {
         "file": "src/ReTAC.App/ChoiceDialog.cs",
         "line": 7

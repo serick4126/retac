@@ -58,6 +58,7 @@ public class DestructiveApiTests
     /// <summary>2026-10-07 より後に足すもの（ファイル → 件数と理由）。理由は「S8:」で、照合して消すこと・新規作成だけで書くことを書く</summary>
     private static readonly Dictionary<string, (int Count, string Reason)> Strict = new(StringComparer.OrdinalIgnoreCase)
     {
+        ["src/ReTAC.App/ArchiveExtraction.cs"] = (2, "S8: R-146-1。この処理が作った一時フォルダだけを、作ったときの識別子（ボリュームとファイル番号）と照合し、リンクでないことを確かめて消す（Directory.Delete と、その呼び出し）"),   // 安全: 基準の表の文字列（呼び出しではない）
     };
 
     [Fact]
