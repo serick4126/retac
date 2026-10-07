@@ -139,6 +139,80 @@ public class ShellTreeDropTapTests
         Assert.False(DragButtonState.Right);
     }
 
+    // R-146-1 / S1 / P2-5: 仮想項目のときは包んだ受け口で効果をコピーに絞る
+    private const uint Copy = 1, Move = 2, Link = 4;
+
+    /// <summary>Windows のシェルの代わり。いつも決めた効果を返す</summary>
+    private sealed class AnswerTarget(uint answer) : IOleDropTarget
+    {
+        public int DragEnter(IntPtr data, uint keyState, long point, ref uint effect) { effect = answer; return 0; }
+        public int DragOver(uint keyState, long point, ref uint effect) { effect = answer; return 0; }
+        public int DragLeave() => 0;
+        public int Drop(IntPtr data, uint keyState, long point, ref uint effect) { effect = answer; return 0; }
+    }
+
+    [Theory]
+    [InlineData(Move)]
+    [InlineData(Copy)]
+    [InlineData(Link)]
+    public void Tap_VirtualNeverMove(uint shellAnswer)
+    {
+        var tap = new ShellTreeDropTap(new AnswerTarget(shellAnswer), isVirtual: _ => true);
+        var effect = Copy | Move | Link;
+        tap.DragEnter(IntPtr.Zero, 0, 0, ref effect);
+        Assert.Equal(Copy, effect);
+        effect = Copy | Move | Link;
+        tap.DragOver(0, 0, ref effect);
+        Assert.Equal(Copy, effect);
+        effect = Copy | Move | Link;
+        tap.Drop(IntPtr.Zero, 0, 0, ref effect);
+        Assert.Equal(0u, effect & Move);   // S1: ドラッグ元へ移動を返さない
+    }
+
+    [Fact]
+    public void Tap_VirtualRefusedStaysRefused()
+    {
+        var tap = new ShellTreeDropTap(new AnswerTarget(0), isVirtual: _ => true);
+        var effect = Copy | Move;
+        tap.DragEnter(IntPtr.Zero, 0, 0, ref effect);
+        Assert.Equal(0u, effect);   // シェルが断る所（PC など）は断ったまま
+        var moveOnly = Move;
+        tap.DragOver(0, 0, ref moveOnly);
+        Assert.Equal(0u, moveOnly);   // コピーを許さないなら不可
+    }
+
+    [Fact]
+    public void Tap_FileSystemUnchanged()
+    {
+        var tap = new ShellTreeDropTap(new AnswerTarget(Move), isVirtual: _ => false);
+        var effect = Copy | Move;
+        tap.DragEnter(IntPtr.Zero, 0, 0, ref effect);
+        Assert.Equal(Move, effect);   // ディスク上の項目は今までどおり
+        effect = Copy | Move;
+        tap.Drop(IntPtr.Zero, 0, 0, ref effect);
+        Assert.Equal(Move, effect);
+    }
+
+    [Fact]
+    public void Tap_DragLeaveResetsVirtual()
+    {
+        var calls = 0;
+        var tap = new ShellTreeDropTap(new AnswerTarget(Move), isVirtual: _ => calls++ == 0);
+        var effect = Copy | Move;
+        tap.DragEnter(IntPtr.Zero, 0, 0, ref effect);   // 仮想
+        tap.DragLeave();
+        effect = Copy | Move;
+        tap.DragOver(0, 0, ref effect);                 // 次のドラッグの DragEnter が来る前は絞らない
+        Assert.Equal(Move, effect);
+    }
+
+    [Theory]
+    [InlineData(@"C:\b", Copy | Move, Copy)]
+    [InlineData(@"C:\b", Move, 0u)]
+    [InlineData(null, Copy | Move, 0u)]
+    public void TreeVirtualEffect_CopyOnly(string? destination, uint allowed, uint expected) =>
+        Assert.Equal(expected, NameSpaceTreeHost.TreeVirtualEffect(destination, allowed));
+
     [Fact]
     public void 受け口を取り出せなければnullにして例外を外へ出さない()
     {

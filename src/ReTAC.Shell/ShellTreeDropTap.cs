@@ -21,24 +21,55 @@ internal interface IOleDropTarget
 /// そのときは外からの右ボタンのドロップを左ボタンと同じに扱う（ダイアログを経るので黙って転送はしない）。
 /// </summary>
 [ComVisible(true), ClassInterface(ClassInterfaceType.None)]
-internal sealed class ShellTreeDropTap(IOleDropTarget inner) : IOleDropTarget
+internal sealed class ShellTreeDropTap(IOleDropTarget inner, Func<IntPtr, bool> isVirtual) : IOleDropTarget
 {
     private const string DropTargetProp = "OleDropTargetInterface";
+    private const uint DROPEFFECT_COPY = 1, DROPEFFECT_MOVE = 2;
+
+    public ShellTreeDropTap(IOleDropTarget inner) : this(inner, HasVirtualItems) { }
+
+    // R-146-1 / S1: DragEnter で決め、DragOver・Drop で使う（DragOver にはデータが来ない）
+    private bool _virtual;
 
     // 包んだ先が失敗を返した・例外を投げたときは、右ボタンの印を消す。失敗の後に DragLeave / Drop が来るとは限らず、
     // 残すと次の左ボタンのドラッグが右ボタンに見える。印は包んだ先を呼ぶ前に立てる（NSTC の通知の中で読まれるため）
     public int DragEnter(IntPtr data, uint keyState, long point, ref uint effect)
     {
         DragButtonState.Enter(keyState);
+        _virtual = isVirtual(data);
+        var allowed = effect;
         try { return ResetIfFailed(inner.DragEnter(data, keyState, point, ref effect)); }
         catch { DragButtonState.Reset(); throw; }
+        finally { if (_virtual) effect = ClampVirtual(allowed, effect); }
     }
 
     public int DragOver(uint keyState, long point, ref uint effect)
     {
         DragButtonState.Over(keyState);
+        var allowed = effect;
         try { return ResetIfFailed(inner.DragOver(keyState, point, ref effect)); }
         catch { DragButtonState.Reset(); throw; }
+        finally { if (_virtual) effect = ClampVirtual(allowed, effect); }
+    }
+
+    /// <summary>
+    /// R-146-1 / S1: 仮想項目は、Windows が落とせると答えた所（効果が 0 でない）でだけ、コピーにする。
+    /// コピーを許さないドラッグ元なら不可。表示の文（「◯◯へ移動」など）はシェルが決めるので、そろうかは実機で確かめる。
+    /// </summary>
+    internal static uint ClampVirtual(uint allowed, uint chosen) =>
+        chosen != 0 && (allowed & DROPEFFECT_COPY) != 0 ? DROPEFFECT_COPY : 0u;
+
+    /// <summary>FileDrop（CF_HDROP）が無く、Shell IDList があれば仮想項目の候補</summary>
+    private static bool HasVirtualItems(IntPtr data)
+    {
+        if (data == IntPtr.Zero) return false;
+        try
+        {
+            if (Marshal.GetObjectForIUnknown(data) is not System.Runtime.InteropServices.ComTypes.IDataObject com) return false;
+            var forms = new System.Windows.Forms.DataObject(com);
+            return !forms.GetDataPresent(System.Windows.Forms.DataFormats.FileDrop) && forms.GetDataPresent(VirtualItems.ShellIdListFormat);
+        }
+        catch (Exception ex) when (ex is COMException or InvalidCastException) { return false; }
     }
 
     private static int ResetIfFailed(int hr)
@@ -50,6 +81,7 @@ internal sealed class ShellTreeDropTap(IOleDropTarget inner) : IOleDropTarget
     public int DragLeave()
     {
         DragButtonState.Reset();
+        _virtual = false;
         return inner.DragLeave();
     }
 
@@ -57,7 +89,13 @@ internal sealed class ShellTreeDropTap(IOleDropTarget inner) : IOleDropTarget
     public int Drop(IntPtr data, uint keyState, long point, ref uint effect)
     {
         try { return inner.Drop(data, keyState, point, ref effect); }
-        finally { DragButtonState.Reset(); }
+        finally
+        {
+            // S1: 書庫の中の項目で、ドラッグ元へ移動を返さない（返すとエクスプローラーが書庫から消すことがある）
+            if (_virtual) effect &= ~DROPEFFECT_MOVE;
+            _virtual = false;
+            DragButtonState.Reset();
+        }
     }
 
     /// <summary>

@@ -52,6 +52,8 @@ public sealed class ShellTreeDropEventArgs(
     public string Destination { get; } = destination;
     public uint KeyState { get; } = keyState;
     public DragDropEffects AllowedEffect { get; } = allowedEffect;
+    /// <summary>R-146-1: 書庫の中など、パスを持たない項目。Files は空。受け取った側が解放する。</summary>
+    public VirtualItems? Virtual { get; init; }
     /// <summary>§9: ドロップ時点の修飾キー(OLE の KeyState は DragEventArgs と同じ MK_* ビット)。</summary>
     public bool Ctrl => (KeyState & MK_CONTROL) != 0;
     public bool Shift => (KeyState & MK_SHIFT) != 0;
@@ -1199,7 +1201,14 @@ public sealed class NameSpaceTreeHost : IDisposable
         return args.Handled;
     }
 
-    private void ReplaceDropSources(IntPtr data) => _dropSources = ShellItemPath.FileSystemPathsOf(data);
+    // R-146-1: ドラッグ中の項目が仮想項目か（DragEnter で決める。識別子の複製はドロップのときだけ作る）
+    private bool _dropVirtual;
+
+    private void ReplaceDropSources(IntPtr data)
+    {
+        _dropSources = ShellItemPath.FileSystemPathsOf(data);
+        _dropVirtual = _dropSources.Length == 0 && VirtualItems.IsVirtualArray(data);
+    }
 
     /// <summary>
     /// R-97-3 / §9: パスを持たない項目(仮想項目)は転送先にしない(Phase10.2 技術確認: 実機 OK)。
@@ -1216,7 +1225,8 @@ public sealed class NameSpaceTreeHost : IDisposable
     {
         if (!_acceptEvents) return;
         var destination = ShellItemPath.FileSystemPathOf(over);
-        effect = _dropSources.Length == 0 ? 0u : TreeDropEffect(_dropSources[0], destination, keyState, effect, DragButtonState.Right);
+        effect = _dropVirtual ? TreeVirtualEffect(destination, effect)
+            : _dropSources.Length == 0 ? 0u : TreeDropEffect(_dropSources[0], destination, keyState, effect, DragButtonState.Right);
     }
 
     /// <summary>
@@ -1254,6 +1264,11 @@ public sealed class NameSpaceTreeHost : IDisposable
         };
     }
 
+    /// <summary>R-146-1 / S1: 仮想項目は、宛先が実フォルダならコピーだけ（右ボタンでもメニューはコピーだけなので同じ）。</summary>
+    internal static uint TreeVirtualEffect(string? destination, uint allowed) =>
+        destination is not null && ReTAC.Domain.FileOps.DropRules.DecideVirtual((allowed & DROPEFFECT_COPY) != 0) == ReTAC.Domain.FileOps.DropAction.Copy
+            ? DROPEFFECT_COPY : 0u;
+
     private void DropFrom(IntPtr over, IntPtr data, uint keyState, ref uint effect)
     {
         var allowed = effect;
@@ -1263,11 +1278,15 @@ public sealed class NameSpaceTreeHost : IDisposable
             var destination = ShellItemPath.FileSystemPathOf(over);
             if (_acceptEvents && destination is not null && _dropSources.Length > 0)
                 FilesDropped?.Invoke(this, new ShellTreeDropEventArgs(_dropSources, destination, keyState, (DragDropEffects)allowed));
+            else if (_acceptEvents && destination is not null && _dropVirtual && FilesDropped is { } handler
+                     && VirtualItems.FromShellItemArray(data) is { } items)
+                handler(this, new ShellTreeDropEventArgs([], destination, keyState, (DragDropEffects)allowed) { Virtual = items });   // R-146-1
         }
         finally
         {
             effect = (uint)DragDropEffects.None; // Shell自身には即時転送させず、ReTAC側の確認経路へ渡す。
             _dropSources = [];
+            _dropVirtual = false;
         }
     }
 
@@ -1423,7 +1442,9 @@ public sealed class NameSpaceTreeHost : IDisposable
 
         private void ClearDropSources()
         {
-            if (_host is { } host) host._dropSources = [];
+            if (_host is not { } host) return;
+            host._dropSources = [];
+            host._dropVirtual = false;
         }
     }
 

@@ -139,8 +139,16 @@ public sealed class MainForm : Form, IBookmarkHost
         // R-97-3: 右クリックは実フォルダだけシェルメニューの対象(パスが無ければ Path イベントが来ない)。開くだけでは移動しない
         // R-97-3 / §9: ツリーへのドロップも既存の宛先入り転送ダイアログ(TransferDropped)を必ず通す（INV-TREE-DROP-VIA-DIALOG）。
         // R-111-2: 右ボタンでも、メニューの後に同じダイアログを通す
-        _driveTree.FilesDropped += (_, e) => AcceptDrop(DropReceptacle.DriveTree, e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
-        _desktopTree.FilesDropped += (_, e) => AcceptDrop(DropReceptacle.DesktopTree, e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
+        _driveTree.FilesDropped += (_, e) =>
+        {
+            if (e.Virtual is { } items) AcceptVirtualDrop(DropReceptacle.DriveTree, items, e.Destination, e.AllowedEffect);   // R-146-1
+            else AcceptDrop(DropReceptacle.DriveTree, e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
+        };
+        _desktopTree.FilesDropped += (_, e) =>
+        {
+            if (e.Virtual is { } items) AcceptVirtualDrop(DropReceptacle.DesktopTree, items, e.Destination, e.AllowedEffect);   // R-146-1
+            else AcceptDrop(DropReceptacle.DesktopTree, e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
+        };
         // R-96-2: 上端の選択欄もメニューと同じ入口を通す（表示・保存・ラジオ印の反映を 1 か所にする）
         _leftPanel.ViewRequested += (_, kind) => ExecuteLeftPanelCommand(LeftPanel.CommandOf(kind), fromSelector: true);
 
