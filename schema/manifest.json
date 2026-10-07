@@ -7940,11 +7940,11 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 207
+        "line": 208
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 230
+        "line": 231
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
@@ -8484,7 +8484,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 246
+        "line": 247
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -9066,7 +9066,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 77
+        "line": 78
       },
       {
         "file": "src/ReTAC.App/FileViewPage.cs",
@@ -11750,11 +11750,11 @@
     "R-130": [
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 378
+        "line": 379
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 388
+        "line": 389
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -11956,23 +11956,23 @@
     "R-133": [
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 138
+        "line": 139
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 323
+        "line": 324
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 338
+        "line": 339
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 378
+        "line": 379
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 382
+        "line": 383
       },
       {
         "file": "src/ReTAC.App/PromptArgumentDialog.cs",
@@ -12058,7 +12058,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 339
+        "line": 340
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
@@ -12640,6 +12640,10 @@
       }
     ],
     "R-145-2": [
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 60
+      },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalToolExamples.cs",
         "line": 20
@@ -13656,7 +13660,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 73
+        "line": 74
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",

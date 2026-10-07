@@ -130,6 +130,16 @@ public class MacroBuildPromptTests
         Assert.Equal(MacroUse.Expanded, ExternalToolHelp.PromptFields.Single(f => f.Key == "PromptItem.Initial").Macros);
     }
 
+    // R-145-2: 設定画面の「?」は、カタログへ移す前の文言をそのまま保つ
+    [Fact]
+    public void OptionToolTipsKeepCurrentWording()
+    {
+        Assert.Equal("ON: マークした数だけ、1 件ずつ順に起動する。前の 1 件が終わってから次を起動する。\nOFF: 1 回だけ起動し、マークした項目をまとめて引数に渡す。", ExternalToolHelp.LaunchPerItem.ToolTip);
+        Assert.Equal("ON: コマンド「ポップアップメニューの表示」の「外部ツール ▶」に出る（既定のキーは G）。\nOFF: 出ない。メニュー「ツール」とキー割り当てからは、どちらでも起動できる。", ExternalToolHelp.ShowInPopup.ToolTip);
+        Assert.Equal("ON: ツールが終わってもコンソールを閉じず、キーを押すまで結果を残す。\nOFF: 終わると同時に閉じる。\n\nコンソールを使わないツールには効かない。", ExternalToolHelp.KeepWindowOpen.ToolTip);
+        Assert.Equal("ON: 実際に渡すコマンドラインを見せ、OK を押すまで起動しない。\nOFF: そのまま起動する。", ExternalToolHelp.ConfirmBeforeRun.ToolTip);
+    }
+
     [Fact]
     public void ExampleWithoutTargetsSaysSo()
     {

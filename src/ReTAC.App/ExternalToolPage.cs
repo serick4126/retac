@@ -57,10 +57,11 @@ public sealed class ExternalToolPage : UserControl
             : Color.Firebrick,
     };
     private readonly LinkLabel _scriptHelp = new() { Text = "実行できる書き方を見る(&H)", AutoSize = true, Location = new Point(250, 256), Visible = false };
-    private readonly CheckBox _perItem = new() { Text = "マークした項目ごとに起動する(&L)", AutoSize = true, Location = new Point(250, 290) };
-    private readonly CheckBox _popup = new() { Text = "ポップアップに表示する(&O)", AutoSize = true, Location = new Point(250, 318) };
-    private readonly CheckBox _keepOpen = new() { Text = "終了後もウィンドウを閉じない(&W)", AutoSize = true, Location = new Point(250, 346) };
-    private readonly CheckBox _confirm = new() { Text = "実行前に確認する(&C)", AutoSize = true, Location = new Point(250, 374) };
+    // R-145-2: 文言と「?」の説明はマクロ構築プロンプトと共有する（アクセスキーだけここで付ける）
+    private readonly CheckBox _perItem = new() { Text = ExternalToolHelp.LaunchPerItem.Label + "(&L)", AutoSize = true, Location = new Point(250, 290) };
+    private readonly CheckBox _popup = new() { Text = ExternalToolHelp.ShowInPopup.Label + "(&O)", AutoSize = true, Location = new Point(250, 318) };
+    private readonly CheckBox _keepOpen = new() { Text = ExternalToolHelp.KeepWindowOpen.Label + "(&W)", AutoSize = true, Location = new Point(250, 346) };
+    private readonly CheckBox _confirm = new() { Text = ExternalToolHelp.ConfirmBeforeRun.Label + "(&C)", AutoSize = true, Location = new Point(250, 374) };
     private readonly ToolTip _tips = new();
 
     public ExternalToolPage(SettingsDraft draft, string currentFolder = "", FolderHistory? history = null, QuickAccessList? quickAccess = null)
@@ -88,10 +89,10 @@ public sealed class ExternalToolPage : UserControl
             _warning, _scriptHelp, _perItem, _popup, _keepOpen, _confirm,
         ]);
         OptionHelp.Attach(this, _tips,
-            (_perItem, "ON: マークした数だけ、1 件ずつ順に起動する。前の 1 件が終わってから次を起動する。\nOFF: 1 回だけ起動し、マークした項目をまとめて引数に渡す。"),
-            (_popup, "ON: コマンド「ポップアップメニューの表示」の「外部ツール ▶」に出る（既定のキーは G）。\nOFF: 出ない。メニュー「ツール」とキー割り当てからは、どちらでも起動できる。"),
-            (_keepOpen, "ON: ツールが終わってもコンソールを閉じず、キーを押すまで結果を残す。\nOFF: 終わると同時に閉じる。\n\nコンソールを使わないツールには効かない。"),
-            (_confirm, "ON: 実際に渡すコマンドラインを見せ、OK を押すまで起動しない。\nOFF: そのまま起動する。"));
+            (_perItem, ExternalToolHelp.LaunchPerItem.ToolTip),
+            (_popup, ExternalToolHelp.ShowInPopup.ToolTip),
+            (_keepOpen, ExternalToolHelp.KeepWindowOpen.ToolTip),
+            (_confirm, ExternalToolHelp.ConfirmBeforeRun.ToolTip));
 
         _list.SelectedIndexChanged += (_, _) =>
         {
