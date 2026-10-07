@@ -8616,7 +8616,7 @@
     "P-14": [
       {
         "file": "src/ReTAC.Shell/ShellFileOperation.cs",
-        "line": 131
+        "line": 146
       }
     ],
     "P-25": [
@@ -12677,6 +12677,12 @@
         "line": 75
       }
     ],
+    "R-146-1": [
+      {
+        "file": "src/ReTAC.Shell/ShellFileOperation.cs",
+        "line": 71
+      }
+    ],
     "R-15": [
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -12720,7 +12726,7 @@
       },
       {
         "file": "src/ReTAC.Shell/ShellFileOperation.cs",
-        "line": 76
+        "line": 91
       }
     ],
     "R-20": [
@@ -13332,7 +13338,7 @@
       },
       {
         "file": "src/ReTAC.Shell/ShellFileOperation.cs",
-        "line": 76
+        "line": 91
       }
     ],
     "R-45": [

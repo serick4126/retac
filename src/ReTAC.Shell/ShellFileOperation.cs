@@ -67,6 +67,21 @@ public sealed class ShellFileOperation : IDisposable
         _hasWork = true;
     }
 
+    /// <summary>
+    /// R-146-1: 識別子（書庫の中の項目など、パスを持たない項目の絶対の識別子）の項目をコピーする。
+    /// 書庫の中の項目は解析名から作り直さない（ドロップの後に作り直せる保証が無い）。識別子は呼び出し側のもので、ここでは解放しない。
+    /// </summary>
+    public void CopyIdList(IntPtr idList, string destinationFolder)
+    {
+        var guid = IID_IShellItem;
+        var hr = SHCreateItemFromIDList(idList, ref guid, out var unknown);
+        if (hr != 0 || unknown == IntPtr.Zero) throw new IOException($"項目を解決できません。(0x{hr:X})");
+        var item = (IShellItem)Marshal.GetObjectForIUnknown(unknown);
+        Marshal.Release(unknown);
+        Check(_operation.CopyItem(item, Destination(destinationFolder), null, IntPtr.Zero));
+        _hasWork = true;
+    }
+
     public void Move(string source, string destinationFolder, string? newName = null)
     {
         Check(_operation.MoveItem(Item(source), Destination(destinationFolder), newName, IntPtr.Zero));
@@ -155,6 +170,9 @@ public sealed class ShellFileOperation : IDisposable
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern int SHCreateItemFromParsingName(string path, IntPtr bindContext,
         ref Guid riid, out IntPtr item);
+
+    [DllImport("shell32.dll")]
+    private static extern int SHCreateItemFromIDList(IntPtr idList, ref Guid riid, out IntPtr item);
 
     [ComImport, Guid("43826D1E-E718-42EE-BC55-A1E261C37BFE"),
      InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
