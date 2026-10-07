@@ -26,7 +26,7 @@ public class ArchiveExtractionTests
         string? seen = null;
         var result = ArchiveExtraction.Run(root, Names, Displays, ExtractBoth, extracted =>
         {
-            // P1-3: 続きの処理（ダイアログ・転送）が終わるまで、転送元は残っている
+            // R-146-1: 続きの処理（ダイアログ・転送）が終わるまで、転送元は残っている
             Assert.All(extracted.Paths, p => Assert.True(Path.Exists(p)));
             Assert.Equal([Path.Combine(extracted.Folder, "x.txt"), Path.Combine(extracted.Folder, "sub")], extracted.Paths);
             seen = extracted.Folder;
@@ -147,9 +147,75 @@ public class ArchiveExtractionTests
         Directory.Delete(owned.FullPath);   // 安全: テストのフォルダの中で作った所有のフォルダを、置き換わりを模すために消す
         Directory.CreateDirectory(owned.FullPath);
         File.WriteAllText(Path.Combine(owned.FullPath, "precious.txt"), "!");   // 安全: テストが新しく作ったフォルダ（Sta.WithTempFolder）の中
+        // 陽性対照: 置き換えたフォルダの識別子は、作ったときのものと実際に違う（違わなければ、この試験は何も確かめていない）
+        Assert.NotEqual(owned.Identity, OwnedTempFolder.IdOf(owned.FullPath));
         Assert.False(owned.Delete());   // 安全: 識別子が違うので消さないことを確かめる
         Assert.Equal("!", File.ReadAllText(Path.Combine(owned.FullPath, "precious.txt")));
     });
+
+    /// <summary>テストのフォルダの中だけに結合点（ジャンクション）を作る。作れなければ失敗にする（黙って飛ばさない）</summary>
+    private static void MakeJunction(string link, string target)
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/c mklink /J \"{link}\" \"{target}\"")
+        { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        using var p = System.Diagnostics.Process.Start(psi)!;
+        var output = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
+        p.WaitForExit();
+        Assert.True(p.ExitCode == 0, "mklink /J failed: " + output);
+        Assert.True((new DirectoryInfo(link).Attributes & FileAttributes.ReparsePoint) != 0);   // 作ったものが本当にリンク
+    }
+
+    [Fact]
+    public void Owned_DeleteDoesNotFollowJunctionInside() => Sta.WithTempFolder(root =>
+    {
+        // S8: 中のリンクはたどらない。リンク先の読み取り専用ファイルの属性も、中身も、残る
+        var target = Directory.CreateDirectory(Path.Combine(root, "retac-vtest-target")).FullName;
+        var victim = Path.Combine(target, "victim.txt");
+        File.WriteAllText(victim, "keep");   // 安全: テストが新しく作ったフォルダ（Sta.WithTempFolder）の中
+        File.SetAttributes(victim, FileAttributes.ReadOnly);
+        var owned = OwnedTempFolder.TryCreate(root, ArchiveExtraction.FolderPrefix + "junc")!;
+        MakeJunction(Path.Combine(owned.FullPath, "link"), target);
+        Assert.True(owned.Delete());   // 安全: テストのフォルダの中で作った所有のフォルダ（中にリンクがある）
+        Assert.False(Directory.Exists(owned.FullPath));
+        Assert.True(File.Exists(victim));
+        Assert.True((File.GetAttributes(victim) & FileAttributes.ReadOnly) != 0);
+        Assert.Equal("keep", File.ReadAllText(victim));
+    });
+
+    [Fact]
+    public void Owned_RootReplacedByJunctionIsNotDeleted() => Sta.WithTempFolder(root =>
+    {
+        // S8: 作ったフォルダの場所がリンクに置き換わっていたら、リンクもリンク先も触らない
+        var target = Directory.CreateDirectory(Path.Combine(root, "retac-vtest-target")).FullName;
+        var victim = Path.Combine(target, "victim.txt");
+        File.WriteAllText(victim, "keep");   // 安全: テストが新しく作ったフォルダ（Sta.WithTempFolder）の中
+        var owned = OwnedTempFolder.TryCreate(root, ArchiveExtraction.FolderPrefix + "jroot")!;
+        Directory.Delete(owned.FullPath);   // 安全: テストのフォルダの中で作った空の所有のフォルダを、置き換わりを模すために消す
+        MakeJunction(owned.FullPath, target);
+        try
+        {
+            Assert.False(owned.Delete());   // 安全: リンクに置き換わっているので消さないことを確かめる
+            Assert.True(Directory.Exists(owned.FullPath));
+            Assert.Equal("keep", File.ReadAllText(victim));
+        }
+        finally { Directory.Delete(owned.FullPath); }   // 安全: このテストが作ったリンクそのもの（非再帰。リンク先は消えない）。後片付けが止まらないように
+    });
+
+    [Fact]
+    public void Owned_MissingTempRootCreatesNothing() => Sta.WithTempFolder(root =>
+    {
+        var missing = Path.Combine(root, "no-such", "deeper");
+        Assert.Null(OwnedTempFolder.TryCreate(missing));
+        Assert.False(Directory.Exists(Path.Combine(root, "no-such")));   // 親も作らない
+    });
+
+    [Fact]
+    public void Owned_UnusableIdentityIsRejected()
+    {
+        Assert.False(OwnedTempFolder.IsUsable((0, 0)));
+        Assert.True(OwnedTempFolder.IsUsable((1, 0)));
+        Assert.True(OwnedTempFolder.IsUsable((0, 1)));
+    }
 
     [Fact]
     public void Owned_DeletesOwnFolder() => Sta.WithTempFolder(root =>
@@ -164,7 +230,7 @@ public class ArchiveExtractionTests
     public void Run_MatchReadFailureIsAbort() => Sta.WithTempFolder(root =>
     {
         var called = false;
-        // P2-3: 取り出しは終わったと答えたのに、結果を読む所（直下の一覧）で読めない。例外を外へ出さず、何も送らない
+        // R-146-1 / S6: 取り出しは終わったと答えたのに、結果を読む所（直下の一覧）で読めない。例外を外へ出さず、何も送らない
         var result = ArchiveExtraction.Run(root, Names, Displays,
             folder => { Directory.Delete(folder, recursive: true); return true; }, _ => called = true);   // 安全: Run が作った一時フォルダ（テストのフォルダの中）を、読めない状態を模すために消す
         Assert.False(result);

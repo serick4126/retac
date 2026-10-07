@@ -12706,11 +12706,19 @@
       },
       {
         "file": "src/ReTAC.App/ArchiveExtraction.cs",
+        "line": 33
+      },
+      {
+        "file": "src/ReTAC.App/ArchiveExtraction.cs",
         "line": 38
       },
       {
         "file": "src/ReTAC.App/ArchiveExtraction.cs",
-        "line": 126
+        "line": 113
+      },
+      {
+        "file": "src/ReTAC.App/ArchiveExtraction.cs",
+        "line": 149
       },
       {
         "file": "src/ReTAC.Domain/FileOps/DropRouting.cs",
@@ -13942,7 +13950,7 @@
     "R-62": [
       {
         "file": "src/ReTAC.App/ArchiveExtraction.cs",
-        "line": 160
+        "line": 183
       },
       {
         "file": "src/ReTAC.App/ChoiceDialog.cs",

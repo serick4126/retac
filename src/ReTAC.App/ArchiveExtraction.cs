@@ -30,7 +30,7 @@ internal static class ArchiveExtraction
             try
             {
                 if (!extract(owned.FullPath)) return false;   // S3: 1 件でも終わらなければ何も送らない
-                // S6: 送るものの取り違えを防ぐ照合。結果を読む所の失敗も、取り出しの失敗と同じく中断にする（P2-3）
+                // S6: 送るものの取り違えを防ぐ照合。結果を読む所の失敗も、取り出しの失敗と同じく中断にする（R-146-1）
                 extracted = ExtractedFolder.Match(owned.FullPath, names, displayPaths);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or COMException)
@@ -64,19 +64,27 @@ internal sealed class OwnedTempFolder
     public static OwnedTempFolder? TryCreate(string tempRoot) =>
         TryCreate(tempRoot, ArchiveExtraction.FolderPrefix + Guid.NewGuid().ToString("N"));
 
-    /// <summary>名前を決めて作る（テストの入口）。既にあれば作らない。作った直後に空でなければ使わない</summary>
+    /// <summary>
+    /// 名前を決めて作る（テストの入口）。「この呼び出しが作った」ことは作成の結果で保証する（既にあれば失敗する CreateDirectoryW。
+    /// tempRoot が無いときも親は作らず失敗）。作った直後に空でなければ・識別子が使えなければ使わない（作ったフォルダは消さない。S8）
+    /// </summary>
     internal static OwnedTempFolder? TryCreate(string tempRoot, string name)
     {
-        var fullPath = Path.Combine(Path.GetFullPath(tempRoot), name);
-        if (Path.Exists(fullPath)) return null;
         try
         {
-            Directory.CreateDirectory(fullPath);
-            if (Directory.EnumerateFileSystemEntries(fullPath).Any() || IdOf(fullPath) is not { } id) return null;
+            var fullPath = Path.Combine(Path.GetFullPath(tempRoot), name);
+            if (!CreateDirectoryW(fullPath, IntPtr.Zero)) return null;
+            if (Directory.EnumerateFileSystemEntries(fullPath).Any() || IdOf(fullPath) is not { } id || !IsUsable(id)) return null;
             return new OwnedTempFolder(fullPath, id);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; }
     }
+
+    /// <summary>S8: 識別子が取れていない（0, 0）ものは照合に使えない。</summary>
+    internal static bool IsUsable((uint Volume, ulong Index) id) => id != (0u, 0ul);
+
+    /// <summary>テストの確認用: 作ったときの識別子</summary>
+    internal (uint Volume, ulong Index) Identity => _id;
 
     /// <summary>作ったフォルダが今もそのまま（同じ識別子・リンクでない）なら中身ごと消す。違えば何もしない。消せなくても無視する。</summary>
     public bool Delete()
@@ -86,17 +94,28 @@ internal sealed class OwnedTempFolder
             var info = new DirectoryInfo(FullPath);
             if (!info.Exists || (info.Attributes & FileAttributes.ReparsePoint) != 0 || IdOf(FullPath) != _id) return false;
             // 読み取り専用のまま取り出されたファイルがあると Directory.Delete が止まる。
-            // 中のリンク（再解析ポイント）へはたどらず、属性も触らない（Directory.Delete はリンクそのものを消し、リンク先は消さない）
-            var options = new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = true };
-            foreach (var entry in info.EnumerateFileSystemInfos("*", options))
-                if ((entry.Attributes & FileAttributes.ReadOnly) != 0) entry.Attributes &= ~FileAttributes.ReadOnly;
-            Directory.Delete(FullPath, recursive: true);   // 安全: S4。識別子が一致し、リンクでない、作ったフォルダだけ
+            // 中のリンク（再解析ポイント）へはたどらず、属性も触らない。
+            // フォルダのリンク（ジャンクション）が中にあると、再帰の削除がアクセス拒否で止まるので、リンクそのものだけを先に外す（リンク先は消えない）
+            var links = new List<string>();
+            var pending = new Stack<DirectoryInfo>();
+            pending.Push(info);
+            while (pending.Count > 0)
+                foreach (var entry in pending.Pop().EnumerateFileSystemInfos("*", new EnumerationOptions { IgnoreInaccessible = true }))
+                {
+                    if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) { if (entry is DirectoryInfo) links.Add(entry.FullName); }
+                    else if (entry is DirectoryInfo dir) pending.Push(dir);
+                    else if ((entry.Attributes & FileAttributes.ReadOnly) != 0) entry.Attributes &= ~FileAttributes.ReadOnly;
+                }
+            foreach (var link in links) Remove(link, recursive: false);   // 安全: S4。作ったフォルダの中のリンクそのもの（非再帰。リンク先へはたどらない）
+            Remove(FullPath, recursive: true);   // 安全: S4。識別子が一致し、リンクでない、作ったフォルダだけ
             return true;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
+        catch (Exception) { return false; }   // R-146-1: finally から呼ばれる。ここの例外で Run の結果や続きの処理の例外を隠さない
     }
 
-    private static (uint Volume, ulong Index)? IdOf(string path)
+    private static void Remove(string path, bool recursive) => Directory.Delete(path, recursive);   // 安全: S4。呼び出しは Delete だけ（識別子の照合の後）
+
+    internal static (uint Volume, ulong Index)? IdOf(string path)
     {
         using var handle = CreateFile(path, FILE_READ_ATTRIBUTES, FILE_SHARE_ALL, IntPtr.Zero, OPEN_EXISTING,
             FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, IntPtr.Zero);
@@ -117,6 +136,10 @@ internal sealed class OwnedTempFolder
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true, EntryPoint = "CreateFileW")]
     private static extern SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CreateDirectoryW(string path, IntPtr security);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
