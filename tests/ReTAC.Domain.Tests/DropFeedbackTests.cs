@@ -63,4 +63,39 @@ public class DropFeedbackTests
         Assert.Equal(DropRouting.ModifiersFor(choice), (ctrl, shift));
         Assert.Equal(BookmarkDropMode.Standard, mode);
     }
+
+    // R-146-1 / S1: 書庫の中の項目（FileDrop が無く Shell IDList がある）は、修飾キー・指定・ボタンにかかわらずコピーか不可。移動を返さない
+    [Theory]
+    [InlineData(0, BookmarkDropMode.Standard, false)]
+    [InlineData(Shift, BookmarkDropMode.Standard, false)]
+    [InlineData(Ctrl, BookmarkDropMode.Standard, false)]
+    [InlineData(0, BookmarkDropMode.Move, false)]
+    [InlineData(Shift, BookmarkDropMode.Move, true)]
+    [InlineData(0, BookmarkDropMode.Standard, true)]
+    public void Feedback_VirtualIsCopyOnly(int keyState, BookmarkDropMode mode, bool right)
+    {
+        var data = new DataObject();
+        data.SetData(ReTAC.Shell.VirtualItems.ShellIdListFormat, new MemoryStream(new byte[8]));
+        foreach (var dest in new[] { @"C:\b", @"D:\b" })
+        {
+            var e = new DragEventArgs(data, keyState, 0, 0, Both, DragDropEffects.None);
+            DropFeedback.Apply(e, dest, "b", mode, right);
+            Assert.Equal(DragDropEffects.Copy, e.Effect);
+            Assert.Equal(DropImageType.Copy, e.DropImageType);
+        }
+        var moveOnly = new DragEventArgs(data, 0, 0, 0, DragDropEffects.Move, DragDropEffects.None);
+        DropFeedback.Apply(moveOnly, @"C:\b", "b", mode, right);
+        Assert.Equal(DragDropEffects.None, moveOnly.Effect);   // コピーを許さないなら不可。移動へ切り替えない
+    }
+
+    [Fact]
+    public void Feedback_FileDropUnchangedWhenShellIdListAlsoPresent()
+    {
+        // エクスプローラーのディスク上の項目は両方を持つ。今までどおり FileDrop で判定する（同じドライブなら移動）
+        var data = new DataObject(DataFormats.FileDrop, Files);
+        data.SetData(ReTAC.Shell.VirtualItems.ShellIdListFormat, new MemoryStream(new byte[8]));
+        var e = new DragEventArgs(data, 0, 0, 0, Both, DragDropEffects.None);
+        DropFeedback.Apply(e, @"C:\b", "b", BookmarkDropMode.Standard, right: false);
+        Assert.Equal(DragDropEffects.Move, e.Effect);
+    }
 }
