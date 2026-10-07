@@ -92,6 +92,10 @@ public static class CommandLabels
         ("表示", CommandId.ViewTiles, "並べて表示"),
         ("表示", CommandId.ViewContent, "コンテンツで表示"),
         ("設定", CommandId.EnvironmentSettings, "動作環境の設定"),
+
+        // R-145-1
+        ("ヘルプ", CommandId.ExportMacroBuildPrompt, "外部ツールのマクロ構築プロンプトをエクスポート"),
+        ("ヘルプ", CommandId.CopyMacroBuildPrompt, "外部ツールのマクロ構築プロンプトをコピー"),
     ];
 
     private static readonly Dictionary<CommandId, string> Labels =

@@ -655,6 +655,8 @@ public sealed class MainForm : Form, IBookmarkHost
         CommandId.About => ShowAbout(),
         CommandId.OpenGitHub => OpenGitHub(),
         CommandId.CheckForUpdate => CheckForUpdate(),
+        CommandId.ExportMacroBuildPrompt => ExportMacroBuildPrompt(),
+        CommandId.CopyMacroBuildPrompt => CopyMacroBuildPrompt(),
         CommandId.ColorAndFontSettings => ShowSettings(SettingsPage.ColorFont),
         CommandId.KeyAssignSettings => ShowSettings(SettingsPage.KeyAssign),
         CommandId.VisibleDriveSettings => ShowSettings(SettingsPage.DriveVisibility),
@@ -2880,6 +2882,20 @@ public sealed class MainForm : Form, IBookmarkHost
         {
             MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
+        return true;
+    }
+
+    /// <summary>R-145-1: ヘルプ「外部ツールのマクロ構築プロンプト」。既定のキーは無い。</summary>
+    private bool ExportMacroBuildPrompt()
+    {
+        MacroBuildPromptActions.Export(this);
+        return true;
+    }
+
+    /// <summary>R-145-1: メニューからはステータスバーで知らせる。</summary>
+    private bool CopyMacroBuildPrompt()
+    {
+        if (MacroBuildPromptActions.Copy(this)) ShowStatusMessage(MacroBuildPromptActions.CopiedMessage);
         return true;
     }
 

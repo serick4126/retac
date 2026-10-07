@@ -225,6 +225,10 @@ public static class MenuBar
                 Item("更新を確認(&U)...", CommandId.CheckForUpdate),
                 // R-105: 新しいコマンド。既定のキーなし
                 Item("GitHub のページを開く(&G)", CommandId.OpenGitHub),
+                // R-145-1: 名前が長いのでサブメニューにまとめる。既定のキーなし
+                Top("外部ツールのマクロ構築プロンプト(&M)",
+                    Item("マークダウン形式でエクスポート(&E)...", CommandId.ExportMacroBuildPrompt),
+                    Item("クリップボードにコピー(&C)", CommandId.CopyMacroBuildPrompt)),
                 Separator(),
                 Item("バージョン情報(&A)...", CommandId.About)),
         ]);

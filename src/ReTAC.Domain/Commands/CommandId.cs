@@ -122,6 +122,10 @@ public enum CommandId
     ViewContent = 0x901D,
     /// <summary>R-141-1: カーソルのフォルダを新しいウィンドウで開く。既定のキーは無い。</summary>
     OpenCursorFolderInNewWindow = 0x901E,
+    /// <summary>R-145-1: 外部ツールのマクロ構築プロンプトをマークダウン形式でエクスポートする。既定のキーは無い。</summary>
+    ExportMacroBuildPrompt = 0x901F,
+    /// <summary>R-145-1: 外部ツールのマクロ構築プロンプトをクリップボードにコピーする。既定のキーは無い。</summary>
+    CopyMacroBuildPrompt = 0x9020,
     ColorAndFontSettings = 0x8151,
     KeyAssignSettings = 0x8155,
     VisibleDriveSettings = 0x814C,

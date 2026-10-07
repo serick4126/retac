@@ -81,4 +81,14 @@ public class CommandLabelsTests
         Assert.Equal("デスクトップへ移動", CommandLabels.Of(CommandId.GoDesktop));
         Assert.Equal("数字キーのドライブ移動", CommandLabels.Of(CommandId.DriveByNumberKey));
     }
+
+    // R-145-1: ヘルプのサブメニューのコマンド。キー割り当ての一覧に出る（既定のキーは無い）
+    [Fact]
+    public void MacroBuildPromptCommandsAreAssignable()
+    {
+        Assert.Equal("外部ツールのマクロ構築プロンプトをエクスポート", CommandLabels.Of(CommandId.ExportMacroBuildPrompt));
+        Assert.Equal("外部ツールのマクロ構築プロンプトをコピー", CommandLabels.Of(CommandId.CopyMacroBuildPrompt));
+        Assert.DoesNotContain(ReTAC.Domain.Keys.DefaultKeyMap.Create().Bindings.Values,
+            t => t is BuiltinTarget { Command: CommandId.ExportMacroBuildPrompt or CommandId.CopyMacroBuildPrompt });
+    }
 }
