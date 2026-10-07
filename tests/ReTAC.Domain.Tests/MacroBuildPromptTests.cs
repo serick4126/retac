@@ -36,6 +36,9 @@ public class MacroBuildPromptTests
         // 実機確認（2026-10-07）で、AI が返事を待たずに「とりあえず」の設定案を出した
         Assert.Contains("返事を待ってから", instructions);
         Assert.Contains("設定案を出さない", instructions);
+        // 実機確認（2026-10-07）: 7z x に複数の書庫をまとめて渡す設定が返った
+        Assert.Contains("1 回の起動で複数の対象を受け取れるか", instructions);
+        Assert.Contains("入力ダイアログは最初に 1 回だけ", text);
         Assert.Contains(MenuPath, instructions);
         // VS Code の変数名を流用しているので、AI は表に無い ${relativeFile} などを作りがち
         Assert.Contains("表にあるものだけ", instructions);
