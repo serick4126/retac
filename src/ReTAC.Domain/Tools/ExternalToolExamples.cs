@@ -68,6 +68,34 @@ public static class ExternalToolExamples
                 [sub, a], sub, NoInput,
                 ["-a", "-cf", "work.zip", @".\sub", @".\a.txt"]),
 
+            // 実機確認（2026-10-07）で、AI がフォルダの項目と名前の項目を「つながる」と思い込み、別々の引数に分けた設定を返した
+            new("入力ダイアログで保存先と名前を決めて ZIP に圧縮する",
+                "保存先とファイル名は 1 つの引数（書庫のパス）なので、1 つのテキストの項目にまとめる。フォルダの項目と名前の項目に分けると、別々の引数になって tar が失敗する（行どうしはつながらない）。初期値はマクロで「カレントフォルダ\\先頭の対象の名前」にし、後ろに付ける .zip で拡張子を足す。",
+                new ExternalTool
+                {
+                    Name = "ZIP に圧縮（保存先を指定）", Path = @"C:\Windows\System32\tar.exe", Arguments = "${prompt}",
+                    Prompt = new PromptDefinition
+                    {
+                        Title = "ZIP に圧縮",
+                        Items =
+                        [
+                            new PromptItem
+                            {
+                                Id = 1, Kind = PromptItemKind.Text, Label = "保存先とファイル名",
+                                Initial = "${cwd}\\${pathBasenameNoExtension}", Suffix = ".zip", Required = true,
+                            },
+                        ],
+                        Arguments =
+                        [
+                            PromptArgument.Fixed("-a"), PromptArgument.Fixed("-cf"), PromptArgument.Item(1),
+                            PromptArgument.Template(".\\${pathBasename}!"),
+                        ],
+                    },
+                },
+                [sub, a], sub,
+                new Dictionary<int, PromptValue> { [1] = new(@"D:\backup\資料") },
+                ["-a", "-cf", @"D:\backup\資料.zip", @".\sub", @".\a.txt"]),
+
             new("カレントフォルダで Windows Terminal を開く",
                 "${cwd} はカレントフォルダ。対話型のシェルは自分で終わらないので「終了後もウィンドウを閉じない」は不要。",
                 new ExternalTool { Name = "ターミナル", Path = "wt.exe", Arguments = "-d ${cwd}" },
@@ -92,7 +120,7 @@ public static class ExternalToolExamples
                 ["--no-pager", "commit", "-m", "見出しを直す"]),
 
             new("入力ダイアログで展開先と上書きを選んで WinRAR で展開する",
-                "表示する順（展開先・上書き・バックグラウンド）と送る順（x・上書き・バックグラウンド・書庫・展開先）を別々に決める。引数欄は ${prompt} だけにし、書庫はマクロを含む引数の行 ${file} で間に挟む。展開先の後ろに \\ を付けてフォルダとして渡す。",
+                "表示する順（展開先・上書き・バックグラウンド）と送る順（x・上書き・バックグラウンド・書庫・展開先）を別々に決める。引数欄は ${prompt} だけにし、書庫はマクロを含む引数の行 ${file} で間に挟む。展開先の後ろに \\ を付けてフォルダとして渡す（\\ は展開先の値の末尾に付くだけで、ほかの行とはつながらない）。",
                 new ExternalTool
                 {
                     Name = "WinRAR で展開", Path = @"C:\Program Files\WinRAR\WinRAR.exe", Arguments = "${prompt}",

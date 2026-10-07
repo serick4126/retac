@@ -83,7 +83,9 @@ public static class ExternalToolHelp
             "ON なら、次からは前回 OK した値で開く。前回の文字は空欄も含めて優先し、マクロとして解釈し直さない。既定は OFF。"),
         new("PromptDefinition.Items", "表示する項目（表示順）", "画面に並ぶ入力の項目。10 個まで。上から表示する順に並べる。"),
         new("PromptDefinition.Arguments", "引数（送る順）",
-            "ツールへ送る引数の行。表示する順とは別に、送る順に並べる。項目の間に ${file} などを挟める。すべての項目を、どこかの行で 1 回送る必要がある。"),
+            "ツールへ送る引数の行。表示する順とは別に、送る順に並べる。項目の間に ${file} などを挟める。すべての項目を、どこかの行で 1 回送る必要がある。" +
+            "行はそれぞれ別の引数になり、行どうし（項目と項目、項目と固定の引数）を 1 つの引数につなげることはできない。" +
+            "保存先のフォルダとファイル名のように 1 つの引数にしたい値は、1 つの項目（テキストかファイル）にまとめ、初期値をマクロで組み立てる（例: ${cwd}\\${pathBasenameNoExtension}）。"),
 
         new("PromptItem.Kind", "種類", "テキスト・フォルダ・ファイル・チェックボックス・ドロップダウンリストのどれか。作った後には変えられない。"),
         new("PromptItem.Label", "ラベル", "項目の横に出る名前。空にできない。", MacroUse.Literal),
@@ -92,7 +94,7 @@ public static class ExternalToolHelp
         new("PromptItem.Prefix", "前に付ける",
             "テキスト・フォルダ・ファイルの値の前に付ける文字。空白で終われば別の引数、終わらなければ値とつながる（-o なら -oE:\\展開先、-m の後に空白なら -m と値の 2 つ）。", MacroUse.Literal),
         new("PromptItem.Suffix", "後ろに付ける",
-            "テキスト・フォルダ・ファイルの値の後ろに付ける文字。空白で始まれば別の引数、始まらなければ値とつながる。", MacroUse.Literal),
+            "テキスト・フォルダ・ファイルの値の後ろに付ける文字。空白で始まれば別の引数、始まらなければ値とつながる。つながるのは同じ項目の値だけで、次の行（ほかの項目など）とはつながらない。", MacroUse.Literal),
         new("PromptItem.Required", "入力を必須にする",
             "テキスト・フォルダ・ファイルで ON なら、空欄では OK できない。OFF なら、テキスト・ファイルの空欄は付ける文字ごと送らない。"),
         new("PromptItem.FolderEmptyBehavior", "空欄のとき", "必須でないフォルダが空欄のときに送るもの（下の値を参照）。"),
@@ -119,7 +121,7 @@ public static class ExternalToolHelp
 
         new("PromptArgumentKind.Fixed", "固定の引数", "書いた値をそのまま 1 つの引数として送る。マクロも引用符も解釈しない（空なら空の引数）。"),
         new("PromptArgumentKind.Template", "マクロを含む引数", "引数欄と同じ書き方。${file} などのマクロを展開して送る（${prompt} は書けない）。"),
-        new("PromptArgumentKind.Item", "項目", "表示する項目の 1 つ。その項目の入力から作った引数を送る。"),
+        new("PromptArgumentKind.Item", "項目", "表示する項目の 1 つ。その項目の入力から作った引数を送る。前後の行とはつながらない。"),
 
         new("PromptFolderEmptyBehavior.CurrentFolder", "現在のフォルダパスを送信", "空欄ならカレントフォルダのパスを送る（既定）。"),
         new("PromptFolderEmptyBehavior.SendEmpty", "そのまま送信", "空欄なら長さ 0 の値を 1 つの引数として送る。前後に付ける文字も使う。"),

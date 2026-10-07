@@ -143,6 +143,35 @@ public class MacroBuildPromptTests
         Assert.Equal("ON: 実際に渡すコマンドラインを見せ、OK を押すまで起動しない。\nOFF: そのまま起動する。", ExternalToolHelp.ConfirmBeforeRun.ToolTip);
     }
 
+    // 実機確認（2026-10-07）: 別の AI が「後ろに付ける \」で次の項目とつながると読み、引数を分けた設定を返した
+    [Fact]
+    public void PromptSaysRowsAreSeparateArguments()
+    {
+        var text = Prompt();
+        var dialog = text[text.IndexOf("## 5.", StringComparison.Ordinal)..text.IndexOf("## 6.", StringComparison.Ordinal)];
+        Assert.Contains("1 つの引数につなげることはできない", dialog);
+        Assert.Contains("次の行（ほかの項目など）とはつながらない", dialog);
+        Assert.Contains("### 入力ダイアログで保存先と名前を決めて ZIP に圧縮する\n", text);
+    }
+
+    /// <summary>プロンプトの説明の裏付け: フォルダの項目の「後ろに付ける \」は、次の項目とつながらない。</summary>
+    [Fact]
+    public void ItemRowsDoNotJoin()
+    {
+        var prompt = new PromptDefinition
+        {
+            Items =
+            [
+                new PromptItem { Id = 1, Kind = PromptItemKind.Folder, Label = "保存先フォルダ", Suffix = "\\", Required = true },
+                new PromptItem { Id = 2, Kind = PromptItemKind.Text, Label = "ZIPファイル名", Required = true },
+            ],
+            Arguments = [PromptArgument.Fixed("-cf"), PromptArgument.Item(1), PromptArgument.Item(2)],
+        };
+        var values = new Dictionary<int, PromptValue> { [1] = new(@"D:\backup"), [2] = new("test.zip") };
+        Assert.Equal(new[] { "-cf", @"D:\backup\", "test.zip" },
+            PromptExpander.Expand(new PromptInput(prompt, values), new MacroContext([], null, @"C:\work")));
+    }
+
     [Fact]
     public void ExampleWithoutTargetsSaysSo()
     {
