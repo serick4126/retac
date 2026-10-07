@@ -97,6 +97,12 @@ public static class DropRules
     private static bool SameDrive(string a, string b) =>
         PathEquals(Path.GetPathRoot(a), Path.GetPathRoot(b));
 
+    /// <summary>
+    /// R-146-1 / S1: 書庫の中など、パスを持たない項目のドロップ。修飾キー・宛先・ブックマークの指定（R-140）にかかわらずコピーだけ。
+    /// 移動を返すと、ドラッグ元（エクスプローラー）が書庫から元の項目を消すことがある。
+    /// </summary>
+    public static DropAction DecideVirtual(bool copyAllowed) => copyAllowed ? DropAction.Copy : DropAction.None;
+
     private static bool PathEquals(string? a, string? b) =>
         a is not null && b is not null
         && string.Equals(Path.TrimEndingDirectorySeparator(a), Path.TrimEndingDirectorySeparator(b),

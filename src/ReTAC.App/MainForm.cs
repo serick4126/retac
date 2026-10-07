@@ -230,7 +230,7 @@ public sealed class MainForm : Form, IBookmarkHost
         _addressBar.JumpRequested += (_, e) => OnAddressJump(e.Text, e.Explorer);
         _addressBar.Cancelled += (_, _) => _list.Focus();
         _addressBar.IconClicked += (_, _) => OpenInExplorer(_currentFolder);
-        _addressBar.CopyPathRequested += (_, path) => TryClipboard(() => Clipboard.SetText(path));
+        _addressBar.CopyPathRequested += (_, path) => ClipboardNotice.CopyText(path, TryClipboard, ShowStatusMessage);   // R-146
         _addressBar.OpenInNewWindowRequested += (_, folder) => BeginInvoke(() => OpenInNewWindow(folder));   // R-141
         _addressBar.FilesDropped += (_, drop) => AcceptDrop(DropReceptacle.AddressBar, drop.Files, drop.Destination, drop.Allowed, drop.Ctrl, drop.Shift);
         // ドライブのボタンの右クリックはリストの項目と同じ扱い。移動はしない
@@ -1547,12 +1547,9 @@ public sealed class MainForm : Form, IBookmarkHost
         return MarkCommand(state => state.MarkByWildcard(dialog.Value));
     }
 
-    /// <summary>R-57-2: 複数対象は改行区切りでまとめてクリップボードへ。</summary>
-    private void CopyNames(IReadOnlyList<Entry> targets, NameFormat format)
-    {
-        var text = NameFormats.Format(targets, format);
-        if (text.Length > 0) TryClipboard(() => Clipboard.SetText(text));
-    }
+    /// <summary>R-57-2: 複数対象は改行区切りでまとめてクリップボードへ。R-146: 入れられたら知らせる。</summary>
+    private void CopyNames(IReadOnlyList<Entry> targets, NameFormat format) =>
+        ClipboardNotice.CopyText(NameFormats.Format(targets, format), TryClipboard, ShowStatusMessage);
 
     /// <summary>`R`（プロパティ・0x82F2）。R-56-2: 実効対象すべてを一度に開く（10 件以上は確認。R-56-3）。</summary>
     private bool ShowProperties()

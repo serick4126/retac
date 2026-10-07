@@ -143,4 +143,13 @@ public class DropRoutingTests
         Assert.Equal(DropAction.Move, DropRouting.Menu(@"C:\a\x.txt", @"C:\b", true, true, false)!.Value.Default);
         Assert.Equal(DropAction.Copy, DropRouting.Menu(@"C:\a\x.txt", @"D:\b", true, true, false)!.Value.Default);
     }
+
+    // R-146-1 / S1: 仮想項目の右ボタンのメニューはコピーだけ使え、太字もコピー
+    [Fact]
+    public void VirtualMenu_CopyOnly()
+    {
+        Assert.Equal(new DropMenuModel(DropAction.Copy, CopyEnabled: true, MoveEnabled: false, LinkEnabled: false), DropRouting.VirtualMenu(true));
+        Assert.Null(DropRouting.VirtualMenu(false));
+        Assert.Equal(DropChoice.Copy, DropRouting.RightDragEffect(DropRouting.VirtualMenu(true)!.Value));
+    }
 }
