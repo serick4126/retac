@@ -44,6 +44,8 @@ public interface IBookmarkHost
     /// ctrl / shift はドロップの時点の値（DragDrop のイベントの中で読む）。
     /// </summary>
     void TransferDropped(string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift, BookmarkDropMode mode);
+    /// <summary>R-146-1: 書庫の中など、パスを持たない項目をブックマークのフォルダへ落とした。指定（R-140）にかかわらずコピー。items の解放は実装側が引き受ける。</summary>
+    void TransferVirtual(VirtualItems items, string destination, DragDropEffects allowed);
 }
 
 /// <summary>R-89 / R-90 / R-91: ブックマークを ToolStripItem にする。バーのボタンとメニューの項目で同じ規則を使う。</summary>

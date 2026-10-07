@@ -62,6 +62,9 @@ public sealed class AddressBar : Control
     /// </summary>
     public event EventHandler<(string Destination, string[] Files, DragDropEffects Allowed, bool Ctrl, bool Shift)>? FilesDropped;
 
+    /// <summary>R-146-1: 書庫の中など、パスを持たない項目が落とされた。受け取った側が Items を解放する。</summary>
+    public event EventHandler<(string Destination, VirtualItems Items, DragDropEffects Allowed)>? VirtualDropped;
+
     /// <summary>先頭のフォルダのアイコン。中身を読まない汎用の絵（応答しないドライブで待たない。N-05）。</summary>
     private Bitmap? _icon;
     private readonly ToolTip _tip = new();
@@ -497,9 +500,16 @@ public sealed class AddressBar : Control
             var shown = _dropPart;
             ResetDrop();
             // 表示が禁止だった所へは落とさない
-            if (shown < 0 || shown != DropPartAt(e) || e.Data?.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files) return;
+            if (shown < 0 || shown != DropPartAt(e)) return;
+            var destination = _segments[_parts[shown].Index].Path;
+            if (e.Data?.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files)
+            {
+                // R-146-1: 書庫の中など、パスを持たない項目
+                if (VirtualDropped is { } handler && DropData.CaptureVirtual(e.Data) is { } items) handler(this, (destination, items, e.AllowedEffect));
+                return;
+            }
             var (ctrl, shift) = DropFeedback.Modifiers(e);   // 後に回すとキーは離されている
-            FilesDropped?.Invoke(this, (_segments[_parts[shown].Index].Path, files, e.AllowedEffect, ctrl, shift));
+            FilesDropped?.Invoke(this, (destination, files, e.AllowedEffect, ctrl, shift));
         }));
     }
 

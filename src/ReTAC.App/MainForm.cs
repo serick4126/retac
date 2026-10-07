@@ -238,6 +238,10 @@ public sealed class MainForm : Form, IBookmarkHost
         // R-65 ②③: 落とされたファイルの転送はどちらも同じ経路を通す
         _list.FilesDropped += (_, drop) => AcceptDrop(DropReceptacle.FileList, drop.Files, drop.Destination, drop.Allowed, drop.Ctrl, drop.Shift);
         _driveBar.FilesDropped += (_, drop) => AcceptDrop(DropReceptacle.DriveBar, drop.Files, drop.Path, drop.Allowed, drop.Ctrl, drop.Shift);
+        // R-146-1: 書庫の中など、パスを持たない項目。既存のパスの経路とは別の入口を通す
+        _list.VirtualDropped += (_, drop) => AcceptVirtualDrop(DropReceptacle.FileList, drop.Items, drop.Destination, drop.Allowed);
+        _driveBar.VirtualDropped += (_, drop) => AcceptVirtualDrop(DropReceptacle.DriveBar, drop.Items, drop.Destination, drop.Allowed);
+        _addressBar.VirtualDropped += (_, drop) => AcceptVirtualDrop(DropReceptacle.AddressBar, drop.Items, drop.Destination, drop.Allowed);
 
         _watcher.SynchronizingObject = this;   // R-23: 通知を UI スレッドで受ける
         _watcher.Created += (_, _) => ScheduleAutoRefresh();
@@ -2211,6 +2215,9 @@ public sealed class MainForm : Form, IBookmarkHost
     // ブックマークのフォルダとその中のメニューの両方がここを通る
     void IBookmarkHost.TransferDropped(string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift, BookmarkDropMode mode) =>
         AcceptDrop(DropReceptacle.BookmarkFolder, files, destination, allowed, ctrl, shift, mode);
+
+    void IBookmarkHost.TransferVirtual(VirtualItems items, string destination, DragDropEffects allowed) =>
+        AcceptVirtualDrop(DropReceptacle.BookmarkFolder, items, destination, allowed);
 
     /// <summary>
     /// R-111-2 / INV-RIGHT-DROP-SAME-ROUTE: ReTAC の受け口に落とされたファイルを、受け口ごとの経路へ渡す。
