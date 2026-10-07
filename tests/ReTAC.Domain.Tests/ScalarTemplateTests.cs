@@ -21,6 +21,15 @@ public class ScalarTemplateTests
         Assert.Equal(" C:\\work\\v1.2|a|C:\\work\\a.txt|b \"", scalar.Expand(Context(), out _));
     }
 
+    // R-144
+    [Fact]
+    public void Scalar_BasenameUsesFirstTarget()
+    {
+        var scalar = ScalarTemplate.Parse(".\\${pathBasename}|${pathBasenameNoExtension}|${cursorPathBasenameNoExtension}");
+        Assert.True(scalar.IsValid);
+        Assert.Equal(".\\v1.2|v1.2|b", scalar.Expand(Context(), out _));
+    }
+
     [Theory]
     [InlineData("", "")]
     [InlineData(" \t\"a b\" ", " \t\"a b\" ")]

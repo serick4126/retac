@@ -14,29 +14,48 @@ public enum MacroUsage { Arguments, PromptArgument, InitialValue, ItemValue }
 /// </summary>
 public static class MacroCatalog
 {
-    public const string MacroGroup = "マクロ";
+    // R-144-1: マクロが増えて 1 つのグループでは探しにくいので、対象の系統ごとに分ける。見出しが区切りになる。
+    // 各グループの中は、ファイルだけを返すものを先に、同じ系統ではフルパス・拡張子なしのパス・名前・拡張子なしの名前・拡張子の順。
+    public const string FileGroup = "ファイル（フォルダを除く）";
+    public const string PathGroup = "パス（フォルダも含む）";
+    public const string CursorGroup = "カーソルの項目";
+    public const string CwdGroup = "カレントフォルダ";
+    public const string PromptGroup = "入力ダイアログ";
     public const string SyntaxGroup = "書き方";
     public const string ScriptGroup = "スクリプトを実行する";
 
-    private static MacroCatalogEntry Macro(string insert, string summary, string description) =>
-        new(MacroGroup, insert, insert, insert.Length, summary, description);
+    public static IReadOnlyList<string> MacroGroups { get; } = [FileGroup, PathGroup, CursorGroup, CwdGroup, PromptGroup];
+
+    public static bool IsMacro(MacroCatalogEntry entry) => MacroGroups.Contains(entry.Group);
+
+    private static MacroCatalogEntry Macro(string group, string insert, string summary, string description) =>
+        new(group, insert, insert, insert.Length, summary, description);
 
     public static IReadOnlyList<MacroCatalogEntry> Entries { get; } =
     [
-        Macro("${file}", "対象ファイルのフルパス（フォルダ除外）", "実効対象のファイルのパス。マークがあればマークしたファイルすべて（一覧の表示順に 1 件ずつ別の引数）、無ければカーソル位置のファイル。フォルダと「..」は含めない。"),
-        Macro("${path}", "対象のフルパス（フォルダも含む）", "実効対象の項目のパス。${file} と違いフォルダも含める。「..」はカレントフォルダになる。"),
-        Macro("${fileBasenameNoExtension}", "対象ファイルの拡張子なしの名前", "${file} の、拡張子を除いた名前（パスなし）。例: 動画.avi → 動画"),
-        Macro("${fileExtname}", "対象ファイルの拡張子（. を含む）", "${file} の拡張子（. を含む）。例: 動画.avi → .avi"),
-        Macro("${cursorFile}", "カーソルのファイルのフルパス", "マークに関係なく、カーソル位置のファイルだけ。フォルダと「..」なら空。"),
-        Macro("${cursorPath}", "カーソルの項目のフルパス", "マークに関係なく、カーソル位置の項目だけ。「..」ならカレントフォルダ。"),
-        Macro("${cwd}", "実行時のフォルダのフルパス", "カレントフォルダ。"),
+        Macro(FileGroup, "${file}", "対象ファイルのフルパス（フォルダ除外）", "実効対象のファイルのパス。マークがあればマークしたファイルすべて（一覧の表示順に 1 件ずつ別の引数）、無ければカーソル位置のファイル。フォルダと「..」は含めない。"),
+        Macro(FileGroup, "${fileBasenameNoExtension}", "対象ファイルの拡張子なしの名前", "${file} の、拡張子を除いた名前（パスなし）。例: 動画.avi → 動画"),
+        Macro(FileGroup, "${fileExtname}", "対象ファイルの拡張子（. を含む）", "${file} の拡張子（. を含む）。例: 動画.avi → .avi"),
+
+        Macro(PathGroup, "${path}", "対象のフルパス（フォルダも含む）", "実効対象の項目のパス。${file} と違いフォルダも含める。「..」はカレントフォルダになる。"),
+        Macro(PathGroup, "${pathBase}", "対象の拡張子なしのパス（フォルダはそのまま）", "実効対象の拡張子を除いたフルパス。フォルダはそのまま、「..」はカレントフォルダ。"),
+        // R-144
+        Macro(PathGroup, "${pathBasename}", "対象の名前（フォルダも含む）", "実効対象の項目の名前（パスなし）。${path} と同じ対象で、フォルダも含める。「..」なら空。例: .\\${pathBasename} でカレントフォルダからの相対パスになる（対象がカレントフォルダ直下のときだけ。ツリーで選んだフォルダなど、カレントフォルダの外の対象でも名前だけを返す）"),
+        Macro(PathGroup, "${pathBasenameNoExtension}", "対象の拡張子なしの名前（フォルダはそのまま）", "${pathBasename} から拡張子を除いた名前。フォルダはそのまま。「..」なら空。"),
+
+        Macro(CursorGroup, "${cursorFile}", "カーソルのファイルのフルパス", "マークに関係なく、カーソル位置のファイルだけ。フォルダと「..」なら空。"),
+        Macro(CursorGroup, "${cursorFileBasenameNoExtension}", "カーソルのファイルの拡張子なしの名前", "カーソル位置のファイルの拡張子を除いた名前。フォルダと「..」なら空。"),
+        Macro(CursorGroup, "${cursorPath}", "カーソルの項目のフルパス", "マークに関係なく、カーソル位置の項目だけ。「..」ならカレントフォルダ。"),
+        Macro(CursorGroup, "${cursorPathBase}", "カーソルの拡張子なしのパス（フォルダはそのまま）", "カーソル位置の拡張子を除いたフルパス。フォルダはそのまま、「..」はカレントフォルダ。"),
+        Macro(CursorGroup, "${cursorPathBasename}", "カーソルの項目の名前", "マークに関係なく、カーソル位置の項目の名前。「..」なら空。.\\ を付けた相対パスは、項目がカレントフォルダ直下のときだけ正しい。"),
+        Macro(CursorGroup, "${cursorPathBasenameNoExtension}", "カーソルの項目の拡張子なしの名前", "カーソル位置の項目の拡張子を除いた名前。フォルダはそのまま。「..」なら空。"),
+
+        Macro(CwdGroup, "${cwd}", "実行時のフォルダのフルパス", "カレントフォルダ。"),
         // R-137
-        Macro("${cwdBasename}", "実行時のフォルダ名", "カレントフォルダの名前だけ。末尾の区切りを除き、ドットは名前に残す。ドライブルートは C:、共有ルートは共有名。"),
-        Macro("${cursorFileBasenameNoExtension}", "カーソルのファイルの拡張子なしの名前", "カーソル位置のファイルの拡張子を除いた名前。フォルダと「..」なら空。"),
-        Macro("${pathBase}", "対象の拡張子なしのパス（フォルダはそのまま）", "実効対象の拡張子を除いたフルパス。フォルダはそのまま、「..」はカレントフォルダ。"),
-        Macro("${cursorPathBase}", "カーソルの拡張子なしのパス（フォルダはそのまま）", "カーソル位置の拡張子を除いたフルパス。フォルダはそのまま、「..」はカレントフォルダ。"),
+        Macro(CwdGroup, "${cwdBasename}", "実行時のフォルダ名", "カレントフォルダの名前だけ。末尾の区切りを除き、ドットは名前に残す。ドライブルートは C:、共有ルートは共有名。"),
+
         // R-130
-        Macro("${prompt}", "起動前に入力ダイアログを表示",
+        Macro(PromptGroup, "${prompt}", "起動前に入力ダイアログを表示",
             "起動の前に入力ダイアログを出す。項目（テキスト・フォルダ・ファイル・チェックボックス・ドロップダウンリスト）と送る順は「入力ダイアログ編集」で設定する。引数欄に 1 つだけ、それだけで 1 つの引数として書く。設定していなければ、ツールの名前のテキストを 1 つ出す。"),
 
         new(SyntaxGroup, "!（マクロの直後）", "!", 1,

@@ -145,7 +145,7 @@ internal static class TemplateParser
             var names = _parts.OfType<MacroPart>().Select(p => p.Name).ToList();
             if (mode == TemplateMode.Arguments && names.Any(MacroValues.IsPathFamily) && names.Any(MacroValues.IsFileFamily))
                 _errors.Add(new TemplateError(_argumentStart,
-                    "1 つの引数に ${path}・${pathBase} と ${file} 系を混ぜられません。"));
+                    "1 つの引数に ${path} 系と ${file} 系を混ぜられません。"));
 
             // R-130: ${prompt} は定義の引数の並びに置き換わるので、ほかの文字とつなげられない
             if (mode == TemplateMode.Arguments && _parts.Any(p => p is MacroPart { Name: MacroName.Prompt }) && (_parts.Count != 1 || _quoted))

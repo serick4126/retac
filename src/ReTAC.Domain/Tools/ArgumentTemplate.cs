@@ -15,6 +15,10 @@ public enum MacroName
     CursorFileBasenameNoExtension,
     PathBase,
     CursorPathBase,
+    PathBasename,
+    PathBasenameNoExtension,
+    CursorPathBasename,
+    CursorPathBasenameNoExtension,
 }
 
 public abstract record TemplatePart;
@@ -50,6 +54,11 @@ public sealed class ArgumentTemplate
         ["cursorFileBasenameNoExtension"] = MacroName.CursorFileBasenameNoExtension,
         ["pathBase"] = MacroName.PathBase,
         ["cursorPathBase"] = MacroName.CursorPathBase,
+        // R-144
+        ["pathBasename"] = MacroName.PathBasename,
+        ["pathBasenameNoExtension"] = MacroName.PathBasenameNoExtension,
+        ["cursorPathBasename"] = MacroName.CursorPathBasename,
+        ["cursorPathBasenameNoExtension"] = MacroName.CursorPathBasenameNoExtension,
     };
 
     private ArgumentTemplate(IReadOnlyList<TemplateArgument> arguments, IReadOnlyList<TemplateError> errors)

@@ -3870,7 +3870,11 @@
         "CwdBasename",
         "CursorFileBasenameNoExtension",
         "PathBase",
-        "CursorPathBase"
+        "CursorPathBase",
+        "PathBasename",
+        "PathBasenameNoExtension",
+        "CursorPathBasename",
+        "CursorPathBasenameNoExtension"
       ]
     },
     "ReTAC.Domain.Tools.MacroPart": {
@@ -7723,11 +7727,11 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
-        "line": 33
+        "line": 37
       },
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
-        "line": 35
+        "line": 39
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
@@ -8605,7 +8609,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
-        "line": 25
+        "line": 26
       }
     ],
     "R-10": [
@@ -11507,7 +11511,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
-        "line": 65
+        "line": 74
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
@@ -11515,7 +11519,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 38
+        "line": 57
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -11885,7 +11889,7 @@
     "R-137": [
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 33
+        "line": 54
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
@@ -11893,7 +11897,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
-        "line": 25
+        "line": 26
       }
     ],
     "R-138": [
@@ -11903,7 +11907,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
-        "line": 77
+        "line": 96
       }
     ],
     "R-139": [
@@ -12286,6 +12290,26 @@
       {
         "file": "src/ReTAC.App/ImeBlock.cs",
         "line": 7
+      }
+    ],
+    "R-144": [
+      {
+        "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
+        "line": 57
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
+        "line": 42
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
+        "line": 53
+      }
+    ],
+    "R-144-1": [
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
+        "line": 17
       }
     ],
     "R-15": [
@@ -13765,7 +13789,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
-        "line": 33
+        "line": 37
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
@@ -15322,6 +15346,10 @@
       {
         "file": "src/ReTAC.Domain/FileOps/DropRules.cs",
         "line": 35
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/MacroValues.cs",
+        "line": 54
       },
       {
         "file": "src/ReTAC.Shell/DragImageWindow.cs",

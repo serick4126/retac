@@ -73,8 +73,8 @@ public sealed class MacroReferenceDialog : Form
 
         Shown += (_, _) =>
         {
-            var start = showScripts ? MacroCatalog.ScriptGroup : MacroCatalog.MacroGroup;
-            var first = _entries.Items.Cast<ListViewItem>().FirstOrDefault(i => ((MacroCatalogEntry)i.Tag!).Group == start);
+            var first = _entries.Items.Cast<ListViewItem>().FirstOrDefault(i => (MacroCatalogEntry)i.Tag! is var e
+                && (showScripts ? e.Group == MacroCatalog.ScriptGroup : MacroCatalog.IsMacro(e)));
             if (first is not null)
             {
                 first.Selected = true;

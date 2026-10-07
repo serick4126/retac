@@ -8,7 +8,8 @@ internal static class MacroValues
     internal static bool IsFileFamily(MacroName name) =>
         name is MacroName.File or MacroName.FileBasenameNoExtension or MacroName.FileExtname;
 
-    internal static bool IsPathFamily(MacroName name) => name is MacroName.Path or MacroName.PathBase;
+    internal static bool IsPathFamily(MacroName name) =>
+        name is MacroName.Path or MacroName.PathBase or MacroName.PathBasename or MacroName.PathBasenameNoExtension;
 
     internal static IReadOnlyList<Entry> Targets(MacroName name, MacroContext context) =>
         IsFileFamily(name) ? context.Targets.Where(e => e.Kind == EntryKind.File).ToList()
@@ -39,11 +40,22 @@ internal static class MacroValues
             MacroName.CursorFileBasenameNoExtension => context.Cursor is { Kind: EntryKind.File } file ? file.BaseName : "",
             MacroName.CursorPath => PathValue(context.Cursor, false),
             MacroName.CursorPathBase => PathValue(context.Cursor, true),
+            MacroName.PathBasename => NameValue(target, false),
+            MacroName.PathBasenameNoExtension => NameValue(target, true),
+            MacroName.CursorPathBasename => NameValue(context.Cursor, false),
+            MacroName.CursorPathBasenameNoExtension => NameValue(context.Cursor, true),
             MacroName.Cwd => Form(context.CurrentFolder),
             MacroName.CwdBasename => LastPart(context.CurrentFolder),
             _ => "",
         };
     }
+
+    // R-144: .\ を付けて相対パスにする用途なので、カレントフォルダを指す「..」は空にする（${path} と違う）。
+    // カレントフォルダの外の対象（R-97-3 のツリーの対象）でも名前だけを返す。8.3 形式の短縮は名前に掛けない。
+    private static string NameValue(Entry? entry, bool withoutExtension) =>
+        entry is null || entry.IsParent ? ""
+        : withoutExtension && entry.Kind == EntryKind.File ? entry.BaseName
+        : entry.Name;
 
     private static string LastPart(string path)
     {
