@@ -2262,25 +2262,28 @@ public sealed class MainForm : Form, IBookmarkHost
     /// </summary>
     private void AcceptVirtualDrop(DropReceptacle receptacle, VirtualItems items, string destination, DragDropEffects allowed)
     {
-        var copyAllowed = allowed.HasFlag(DragDropEffects.Copy);
-        var plan = DropRouting.Plan(receptacle, fromReTAC: false, DragButtonState.Right);
-        // S1: コピーだけ。メニューでも移動・ショートカットは選べない
-        if (DropRules.DecideVirtual(copyAllowed) == DropAction.None
-            || plan.ShowMenu && (DropRouting.VirtualMenu(copyAllowed) is not { } model || DropMenu.Show(Handle, model, Cursor.Position) != DropChoice.Copy))
+        var handedOver = false;
+        try
         {
-            items.Dispose();
-            return;
-        }
-        BeginInvoke(() =>
-        {
-            try
+            var copyAllowed = allowed.HasFlag(DragDropEffects.Copy);
+            var plan = DropRouting.Plan(receptacle, fromReTAC: false, DragButtonState.Right);
+            // S1: コピーだけ。メニューでも移動・ショートカットは選べない
+            if (DropRules.DecideVirtual(copyAllowed) == DropAction.None
+                || plan.ShowMenu && (DropRouting.VirtualMenu(copyAllowed) is not { } model || DropMenu.Show(Handle, model, Cursor.Position) != DropChoice.Copy))
+                return;   // finally が解放する
+            BeginInvoke(() =>
             {
-                Activate();   // パスワードの画面・ダイアログがドロップ元の窓の後ろに隠れないように
-                if (plan.Route == DropRoute.Dialog) CopyFromArchiveViaDialog(items, destination);
-                else CopyFromArchive(items, destination);
-            }
-            finally { items.Dispose(); }
-        });
+                try
+                {
+                    Activate();   // パスワードの画面・ダイアログがドロップ元の窓の後ろに隠れないように
+                    if (plan.Route == DropRoute.Dialog) CopyFromArchiveViaDialog(items, destination);
+                    else CopyFromArchive(items, destination);
+                }
+                finally { items.Dispose(); }
+            });
+            handedOver = true;   // BeginInvoke に渡した後は、渡した先が解放する
+        }
+        finally { if (!handedOver) items.Dispose(); }   // メニューの表示や BeginInvoke が例外でも解放する
     }
 
     /// <summary>
@@ -2294,13 +2297,15 @@ public sealed class MainForm : Form, IBookmarkHost
         {
             try
             {
-                using var operation = new ShellFileOperation(Handle, silentOverwrite: false);
+                using var operation = ShellFileOperation.ForArchiveCopy(Handle);   // S2: 衝突は Windows の確認画面
                 foreach (var item in items.Items) operation.CopyIdList(item.IdList, destination);   // 安全: 書庫の項目を宛先へ複製するだけ。宛先の既存のファイルは Windows の確認画面を経る。ReTAC は何も消さない
                 operation.Execute();
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Runtime.InteropServices.COMException)
             {
-                // 中止・失敗は Windows の画面で知らせ済み。できた分は宛先に残りうる
+                // コピーが始まる前の失敗（宛先が消えた等）は Windows の画面が出ない。RunOperation と同じく普通のエラーとして知らせる（6 章）。
+                // 途中の失敗・中止は Windows の画面で知らせ済みだが、この知らせが重なっても害はない。できた分は宛先に残りうる
+                MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
         Reload();

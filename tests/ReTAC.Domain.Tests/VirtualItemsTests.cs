@@ -64,6 +64,19 @@ public class VirtualItemsTests
     }));
 
     [Fact]
+    public void ArchiveCopy_AsksWindowsAboutConflicts() => Sta.Run(() =>
+    {
+        // R-146-1 / S2: 書庫の項目のコピーは、衝突の確認と画面を Windows に任せる（黙って上書きしない）
+        const uint NoConfirmation = 0x0010, Silent = 0x0004, NoErrorUi = 0x0400, AllowUndo = 0x0040;
+        using var operation = ShellFileOperation.ForArchiveCopy(IntPtr.Zero);
+        Assert.Equal(0u, operation.Flags & (NoConfirmation | Silent | NoErrorUi));
+        // 陽性対照: フラグは実際に入っている。silentOverwrite: true なら確認が省かれる
+        Assert.Equal(AllowUndo, operation.Flags);
+        using var silent = new ShellFileOperation(IntPtr.Zero, silentOverwrite: true);
+        Assert.NotEqual(0u, silent.Flags & NoConfirmation);
+    });
+
+    [Fact]
     public void FileSystemItems_AreNotVirtual() => Sta.Run(() => Sta.WithTempFolder(root =>
     {
         var file = Path.Combine(root, "real.txt");

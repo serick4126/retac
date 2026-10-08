@@ -127,6 +127,57 @@ public class DestructiveApiTests
     }
 
     [Fact]
+    public void ArchivePath_HasNoDestructiveOrMovingCalls()
+    {
+        // R-146-1 / S4・S8: 書庫の経路（メソッドの本体。位置ではなく波括弧で切り出す）に、消す・移す・上書きする呼び出しや、
+        // 移動・ReTAC の転送の本体・元に戻すの記録が無い。件数の基準だけでは、別の呼び出しとの入れ替わりを見逃す
+        var text = File.ReadAllText(Path.Combine(SchemaManifest.RepoRoot(), "src/ReTAC.App/MainForm.cs"));
+        var regions = new[]
+        {
+            Body(text, "private void CopyFromArchive(VirtualItems"),
+            Body(text, "private void CopyFromArchiveViaDialog(VirtualItems"),
+            Body(text, "private void AcceptVirtualDrop("),
+            Body(text, "private bool ClipboardPaste()", "DropData.CaptureVirtual(data)"),
+        };
+        foreach (var region in regions)
+        {
+            Assert.Equal(0, CodeLines(region).Sum(CallsIn));
+            Assert.DoesNotMatch(@"moving:\s*true|Recording\(|RunOperation\(|TransferCore\(|ExecuteTransfer\(|new ShellFileOperation\(|_recorder", string.Join("\n", CodeLines(region)));
+        }
+        // 陽性対照: 区間は実在し、中身がある。検出器は、足された削除を数える
+        Assert.Contains("CopyIdList", regions[0]);
+        Assert.Contains("ForArchiveCopy", regions[0]);
+        Assert.Contains("CopyFromArchive(", regions[3]);
+        Assert.Equal(1, CodeLines(regions[0] + "\n    File.Delete(x);").Sum(CallsIn));
+    }
+
+    private static IEnumerable<string> CodeLines(string region) =>
+        region.Split('\n').Select(l => { var i = l.IndexOf("//", StringComparison.Ordinal); return i >= 0 ? l[..i] : l; });
+
+    /// <summary>signature で始まるメソッドの本体（波括弧の対応で切り出す）。from があれば、その位置から最初の波括弧の対を取る</summary>
+    private static string Body(string text, string signature, string? from = null)
+    {
+        var at = text.IndexOf(signature, StringComparison.Ordinal);
+        Assert.True(at >= 0, signature);
+        if (from is not null)
+        {
+            // メソッドの中の一部の分岐（貼り付けの書庫の分岐）: 条件の行から、次の閉じる波括弧までの return true; の手前まで
+            var start = text.IndexOf(from, at, StringComparison.Ordinal);
+            Assert.True(start >= 0, from);
+            var end = text.IndexOf("return true;", start, StringComparison.Ordinal);
+            return text[start..end];
+        }
+        var open = text.IndexOf('{', at);
+        var depth = 0;
+        for (var i = open; i < text.Length; i++)
+        {
+            if (text[i] == '{') depth++;
+            else if (text[i] == '}' && --depth == 0) return text[open..(i + 1)];
+        }
+        throw new InvalidOperationException(signature);
+    }
+
+    [Fact]
     public void Probe_HasNoDestructiveCalls()
     {
         // 実機調査の部品は、消す・移す・上書きする操作を持たない（新規作成だけ）

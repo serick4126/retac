@@ -23,6 +23,24 @@ public sealed class ShellFileOperation : IDisposable
         ? (long)System.Diagnostics.Stopwatch.GetElapsedTime(_executeStarted, first).TotalMilliseconds
         : null;
 
+    /// <summary>IFileOperation に渡したフラグ。</summary>
+    public uint Flags { get; }
+
+    /// <summary>R-19: 削除はごみ箱経由。silentOverwrite のときだけ衝突の確認を省き、noUi のときだけ画面を出さない。</summary>
+    internal static uint OperationFlags(bool silentOverwrite, bool noUi)
+    {
+        var flags = FOF_ALLOWUNDO;
+        if (silentOverwrite) flags |= FOF_NOCONFIRMATION;
+        if (noUi) flags |= FOF_SILENT | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
+        return flags;
+    }
+
+    /// <summary>
+    /// R-146-1 / S2: 書庫の中の項目のコピー用。衝突の確認・進捗・パスワードの入力は Windows の画面に任せる
+    /// （silentOverwrite: false。noUi にしない）。書庫の経路はこの 1 か所から作る。
+    /// </summary>
+    public static ShellFileOperation ForArchiveCopy(IntPtr owner) => new(owner, silentOverwrite: false, noUi: false);
+
     /// <summary>R-84: 成功して項目ができた操作。Execute の後に読む。中止しても成功した分は残る。</summary>
     public IReadOnlyList<OperationResult> Results => _sink.Results;
 
@@ -38,10 +56,8 @@ public sealed class ShellFileOperation : IDisposable
         _operation = (IFileOperation)Activator.CreateInstance(type)!;
         if (owner != IntPtr.Zero) Check(_operation.SetOwnerWindow(owner));
 
-        var flags = FOF_ALLOWUNDO;                       // R-19: 削除はごみ箱経由
-        if (silentOverwrite) flags |= FOF_NOCONFIRMATION;
-        if (noUi) flags |= FOF_SILENT | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
-        Check(_operation.SetOperationFlags(flags));
+        Flags = OperationFlags(silentOverwrite, noUi);
+        Check(_operation.SetOperationFlags(Flags));
         Check(_operation.Advise(_sink, out _cookie));
     }
 
