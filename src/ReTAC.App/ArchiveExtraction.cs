@@ -59,7 +59,7 @@ internal static class ArchiveExtraction
 }
 
 /// <summary>
-/// S4: この処理が新しく作った一時フォルダ。作った直後に開いて、片付けが終わるまでそのハンドルを持ち続ける。
+/// S4: この処理が新しく作った一時フォルダ。作成と同時に得たハンドルを、片付けが終わるまで持ち続ける。
 /// 持っている間は、ほかからこのフォルダを移す・名前を変えることができない（共有に DELETE を許さない）ので、
 /// 確認したフォルダと消すフォルダが別の物になる窓が無い。パスや名前の形だけでは消さない（同じ形の、ほかが作ったフォルダを消さないため）。
 /// </summary>
@@ -82,30 +82,62 @@ internal sealed class OwnedTempFolder
         TryCreate(tempRoot, ArchiveExtraction.FolderPrefix + Guid.NewGuid().ToString("N"));
 
     /// <summary>
-    /// 名前を決めて作る（テストの入口）。「この呼び出しが作った」ことは作成の結果で保証する（既にあれば失敗する CreateDirectoryW。
-    /// tempRoot が無いときも親は作らず失敗）。作った直後に開いて固定し、空でなければ・識別子が使えなければ・リンクなら使わない
-    /// （開いたハンドルは閉じるが、作ったフォルダは消さない。S8）。
-    /// 作成と開くの間の窓は受け入れる: その間に置き換えられても、開いて確かめるのは「空のフォルダ」だけで、何も消さない。
+    /// 名前を決めて作る（テストの入口）。作成とハンドルの取得を NtCreateFile の 1 回の呼び出しで行う（FILE_CREATE。既にあれば失敗）。
+    /// S4・S8: 所有の根拠は「この呼び出しが作り、そのハンドルを持っている」こと。作ってから別の呼び出しで開くと、その間にほかの
+    /// フォルダへ置き換わったとき、置き換わった先の識別子を保存して所有扱いしてしまう（空かどうかは自分が作った証明にならない）。
+    /// 識別子は作成で得たハンドルから取る。tempRoot が無いときは親を開けず失敗し、親は作らない。
+    /// 識別子が使えない・リンクなら使わない（ハンドルは閉じるが、作ったフォルダは消さない。S8）。
     /// </summary>
-    internal static OwnedTempFolder? TryCreate(string tempRoot, string name)
+    /// <param name="afterCreate">テストの入口: 作成の直後、識別子を取る前に呼ばれる（引数は作ったフォルダのパス。製品では使わない）</param>
+    internal static OwnedTempFolder? TryCreate(string tempRoot, string name, Action<string>? afterCreate = null)
     {
         SafeFileHandle? handle = null;
         try
         {
-            var fullPath = Path.Combine(Path.GetFullPath(tempRoot), name);
-            if (!CreateDirectoryW(fullPath, IntPtr.Zero)) return null;
-            // DELETE は自分で消すため。共有に DELETE を付けないので、開いている間は移す・名前を変える・消すことをほかにさせない（S4）
-            handle = CreateFile(fullPath, DELETE | FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE, IntPtr.Zero, OPEN_EXISTING,
-                FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, IntPtr.Zero);
-            if (handle.IsInvalid || InfoOf(handle) is not { } info || (info.Attributes & (uint)FileAttributes.ReparsePoint) != 0) return null;
+            var root = Path.GetFullPath(tempRoot);
+            var fullPath = Path.Combine(root, name);
+            handle = CreateNew(root, name);
+            if (handle is null) return null;
+            afterCreate?.Invoke(fullPath);
+            if (InfoOf(handle) is not { } info || (info.Attributes & (uint)FileAttributes.ReparsePoint) != 0) return null;
             var id = (info.Volume, info.Index);
-            if (!IsUsable(id) || Directory.EnumerateFileSystemEntries(fullPath).Any()) return null;
+            if (!IsUsable(id)) return null;
             var owned = new OwnedTempFolder(fullPath, id, handle);
             handle = null;   // 持ち主が OwnedTempFolder に移った（Delete が閉じる）
             return owned;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; }
         finally { handle?.Dispose(); }
+    }
+
+    /// <summary>
+    /// tempRoot の直下に、名前のフォルダを新しく作って、そのハンドルを返す（既にあれば null）。
+    /// 親は CreateFile で開いて RootDirectory に渡し、ObjectName には相対の名前だけを渡す（DOS のパスを NT のパスへ変える処理が要らず、UNC でも動く）。
+    /// 権限は DELETE（自分で消すため）・FILE_READ_ATTRIBUTES・SYNCHRONIZE、共有は READ・WRITE だけ。DELETE を許さないので、
+    /// 持っている間はほかから移す・名前を変える・消すことができない（S4）。
+    /// </summary>
+    private static SafeFileHandle? CreateNew(string root, string name)
+    {
+        using var parent = CreateFile(root, FILE_LIST_DIRECTORY | FILE_ADD_SUBDIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            IntPtr.Zero, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, IntPtr.Zero);
+        if (parent.IsInvalid) return null;
+        var buffer = Marshal.StringToHGlobalUni(name);
+        var unicode = Marshal.AllocHGlobal(Marshal.SizeOf<UnicodeString>());
+        try
+        {
+            var length = checked((ushort)(name.Length * 2));
+            Marshal.StructureToPtr(new UnicodeString { Length = length, MaximumLength = length, Buffer = buffer }, unicode, false);
+            var attributes = new ObjectAttributes
+            {
+                Length = (uint)Marshal.SizeOf<ObjectAttributes>(), RootDirectory = parent.DangerousGetHandle(), ObjectName = unicode,
+                Attributes = OBJ_CASE_INSENSITIVE,
+            };
+            var status = NtCreateFile(out var raw, DELETE | FILE_READ_ATTRIBUTES | SYNCHRONIZE, ref attributes, out _, IntPtr.Zero,
+                FILE_ATTRIBUTE_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE, FILE_CREATE,
+                FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT | FILE_OPEN_FOR_BACKUP_INTENT | FILE_OPEN_REPARSE_POINT, IntPtr.Zero, 0);
+            return status >= 0 ? new SafeFileHandle(raw, ownsHandle: true) : null;
+        }
+        finally { Marshal.FreeHGlobal(unicode); Marshal.FreeHGlobal(buffer); }
     }
 
     /// <summary>S8: 識別子が取れていない（0, 0）ものは照合に使えない。</summary>
@@ -166,9 +198,30 @@ internal sealed class OwnedTempFolder
             ? (info.VolumeSerialNumber, ((ulong)info.FileIndexHigh << 32) | info.FileIndexLow, info.FileAttributes)
             : null;
 
-    private const uint DELETE = 0x10000, FILE_READ_ATTRIBUTES = 0x80, FILE_SHARE_READ = 0x1, FILE_SHARE_WRITE = 0x2, OPEN_EXISTING = 3;
-    private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000, FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
+    private const uint DELETE = 0x10000, SYNCHRONIZE = 0x100000, FILE_READ_ATTRIBUTES = 0x80, FILE_LIST_DIRECTORY = 0x1, FILE_ADD_SUBDIRECTORY = 0x4;
+    private const uint FILE_SHARE_READ = 0x1, FILE_SHARE_WRITE = 0x2, FILE_SHARE_DELETE = 0x4, OPEN_EXISTING = 3, FILE_ATTRIBUTE_DIRECTORY = 0x10;
+    private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
+    // NtCreateFile: 作成のみ（既にあれば失敗）。ディレクトリとして・同期で・バックアップ意図で・リンクをたどらずに開く
+    private const uint FILE_CREATE = 2, OBJ_CASE_INSENSITIVE = 0x40;
+    private const uint FILE_DIRECTORY_FILE = 0x1, FILE_SYNCHRONOUS_IO_NONALERT = 0x20, FILE_OPEN_FOR_BACKUP_INTENT = 0x4000, FILE_OPEN_REPARSE_POINT = 0x200000;
     private const int FileDispositionInfoClass = 4;
+
+    // 64 ビットでは 16 バイト（Length 2・MaximumLength 2・詰め物 4・Buffer 8）。Length はバイト数で、終端の NUL を含めない
+    [StructLayout(LayoutKind.Sequential)]
+    private struct UnicodeString { public ushort Length, MaximumLength; public IntPtr Buffer; }
+
+    // 64 ビットでは 48 バイト（Length 4・詰め物 4・RootDirectory 8・ObjectName 8・Attributes 4・詰め物 4・SecurityDescriptor 8・SecurityQualityOfService 8）
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ObjectAttributes
+    {
+        public uint Length;
+        public IntPtr RootDirectory, ObjectName;   // ObjectName は UnicodeString へのポインター
+        public uint Attributes;
+        public IntPtr SecurityDescriptor, SecurityQualityOfService;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct IoStatusBlock { public IntPtr Status; public UIntPtr Information; }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct FileDispositionInfo { public byte DeleteFile; }
@@ -184,9 +237,10 @@ internal sealed class OwnedTempFolder
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true, EntryPoint = "CreateFileW")]
     private static extern SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
 
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool CreateDirectoryW(string path, IntPtr security);
+    // 作成とハンドルの取得を 1 回で行う（FILE_CREATE。消す・移す・上書きする指定は使わない）。戻り値は NTSTATUS（0 以上が成功）
+    [DllImport("ntdll.dll")]
+    private static extern int NtCreateFile(out IntPtr handle, uint access, ref ObjectAttributes attributes, out IoStatusBlock status,
+        IntPtr allocationSize, uint fileAttributes, uint share, uint disposition, uint options, IntPtr extendedAttributes, uint extendedAttributesLength);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

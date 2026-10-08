@@ -21,7 +21,10 @@ public class DestructiveApiTests
         // そのほかの消す・移す手段（Win32 の API、閉じると消す指定、新しい削除の指定）。名前の一致だけの見張りの抜け穴にしない
         @"\b(DeleteFile|RemoveDirectory|MoveFileEx|MoveFile|ReplaceFile|CopyFileEx|CopyFile)[AW]?\(|" +
         @"\b(NtSetInformationFile|ZwSetInformationFile|SHFileOperation)[AW]?\(|" +
-        @"FILE_FLAG_DELETE_ON_CLOSE|FileOptions\.DeleteOnClose|FileDispositionInfoEx|FileDispositionInformationEx",
+        @"FILE_FLAG_DELETE_ON_CLOSE|FileOptions\.DeleteOnClose|FileDispositionInfoEx|FileDispositionInformationEx|" +
+        // NtCreateFile は呼び出しそのものは数えない（FILE_CREATE の作成だけなら消す・移す・上書きする手段ではない）。
+        // 消す・上書きする指定（閉じると消す・既存を置き換える disposition）が付いたときだけ数える
+        @"\bFILE_DELETE_ON_CLOSE\b|\bFILE_(SUPERSEDE|OVERWRITE|OVERWRITE_IF)\b",
         RegexOptions.Compiled);
 
     /// <summary>既存のファイルの数。2026-10-07 の確認で固定した。増やさない（新しいものは Strict に足す）</summary>
@@ -174,6 +177,11 @@ public class DestructiveApiTests
     [InlineData("var c = FileDispositionInformationEx;", 1)]
     [InlineData("NtSetInformationFile(h, ref io, ref info, 4, 64);", 1)]
     [InlineData("SHFileOperationW(ref op);", 1)]
+    // NtCreateFile: 作成だけ（FILE_CREATE）なら数えない。閉じると消す・既存を置き換える指定が付いたら数える
+    [InlineData("var status = NtCreateFile(out var raw, access, ref attributes, out _, IntPtr.Zero, 0x10, share, FILE_CREATE, FILE_DIRECTORY_FILE, IntPtr.Zero, 0);", 0)]
+    [InlineData("var options = FILE_DIRECTORY_FILE | FILE_DELETE_ON_CLOSE;", 1)]
+    [InlineData("NtCreateFile(out h, access, ref a, out s, IntPtr.Zero, 0, share, FILE_OVERWRITE_IF, options, IntPtr.Zero, 0);", 1)]
+    [InlineData("NtCreateFile(out h, access, ref a, out s, IntPtr.Zero, 0, share, FILE_SUPERSEDE, options, IntPtr.Zero, 0);", 1)]
     [InlineData("CommandId.CopyFileName => ShowNameFormatPopup(),", 0)]
     [InlineData("Marshal.GetLastWin32Error();", 0)]
     // 同じ行の複数の呼び出しは、それぞれ数える（レビューの指摘: 行で数えていた）

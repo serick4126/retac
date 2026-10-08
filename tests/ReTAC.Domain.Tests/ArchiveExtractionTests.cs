@@ -150,8 +150,70 @@ public class ArchiveExtractionTests
         // S4: 作るときに既にあったら使わない（中身のあるほかのフォルダを、自分のものとして消さない）
         var existing = Directory.CreateDirectory(Path.Combine(root, ArchiveExtraction.FolderPrefix + "same")).FullName;
         File.WriteAllText(Path.Combine(existing, "precious.txt"), "!");   // 安全: テストが新しく作ったフォルダ（Sta.WithTempFolder）の中
-        Assert.Null(OwnedTempFolder.TryCreate(root, ArchiveExtraction.FolderPrefix + "same"));
+        var called = false;
+        Assert.Null(OwnedTempFolder.TryCreate(root, ArchiveExtraction.FolderPrefix + "same", _ => called = true));
+        Assert.False(called);   // 作っていないので、作成の直後の差し込み口にも来ない
         Assert.Equal("!", File.ReadAllText(Path.Combine(existing, "precious.txt")));
+        Assert.True(Directory.Exists(existing));
+        // 空の既存フォルダでも同じ（空であることは自分が作った証明にならない）。消えず、固定もされない
+        var empty = Directory.CreateDirectory(Path.Combine(root, ArchiveExtraction.FolderPrefix + "empty")).FullName;
+        Assert.Null(OwnedTempFolder.TryCreate(root, ArchiveExtraction.FolderPrefix + "empty"));
+        Directory.Move(empty, Path.Combine(root, "retac-vtest-empty-moved"));   // 安全: テストが作った空のフォルダを、テストのフォルダの中で移す（固定されていないことの確認）
+    });
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFileW(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetFileInformationByHandle(Microsoft.Win32.SafeHandles.SafeFileHandle handle, out ByHandleInfo info);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ByHandleInfo
+    {
+        public uint FileAttributes;
+        public System.Runtime.InteropServices.ComTypes.FILETIME CreationTime, LastAccessTime, LastWriteTime;
+        public uint VolumeSerialNumber, FileSizeHigh, FileSizeLow, NumberOfLinks, FileIndexHigh, FileIndexLow;
+    }
+
+    /// <summary>パスで開き直して識別子を読む（所有のハンドルとは別の手段。共有はすべて許す）</summary>
+    private static (uint Volume, ulong Index) IdentityByPath(string path)
+    {
+        using var h = CreateFileW(path, 0x80, 7, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero);
+        Assert.False(h.IsInvalid);
+        Assert.True(GetFileInformationByHandle(h, out var info));
+        return (info.VolumeSerialNumber, ((ulong)info.FileIndexHigh << 32) | info.FileIndexLow);
+    }
+
+    [Theory]
+    [InlineData(true)]    // 作成の直後に、作ったフォルダを移して、おとりを同じパスに置こうとする
+    [InlineData(false)]   // 陽性対照: 何もしなければ、同じ確認で通り、片付けで消える
+    public void Owned_IdentityIsOfCreatedFolderEvenIfReplaceIsAttemptedRightAfterCreate(bool interfere) => Sta.WithTempFolder(root =>
+    {
+        // S4 / S8: 作成とハンドルの取得は 1 回。作成の直後（識別子を取る前）に置き換えを試みても、別のフォルダを所有扱いしない
+        var decoy = Directory.CreateDirectory(Path.Combine(root, "retac-vtest-decoy-create")).FullName;
+        var precious = Path.Combine(decoy, "precious.txt");
+        File.WriteAllText(precious, "!");   // 安全: テストが新しく作ったフォルダ（Sta.WithTempFolder）の中
+        var attempts = 0;
+        var replaced = false;
+        (uint Volume, ulong Index) created = default;
+        var owned = OwnedTempFolder.TryCreate(root, ArchiveExtraction.FolderPrefix + "create-race", path =>
+        {
+            attempts++;
+            created = IdentityByPath(path);   // 作った直後に、別の手段で読んだ識別子
+            if (!interfere) return;
+            try { Directory.Move(path, Path.Combine(root, "retac-vtest-created-moved")); }   // 安全: 作ったフォルダを、テストのフォルダの中で移そうとする（固定されていれば失敗する）
+            catch (IOException) { return; }
+            Directory.Move(decoy, path);   // 安全: 移せてしまったときだけ。テストのおとり（テストが作った）を同じパスへ置く
+            replaced = true;
+        });
+        Assert.Equal(1, attempts);   // 差し込み口に実際に来た（来ていなければ何も確かめていない）
+        Assert.False(replaced);
+        Assert.NotNull(owned);
+        Assert.Equal(created, owned!.Identity);   // 保存された識別子は、作ったフォルダのもの
+        Assert.NotEqual(IdentityByPath(decoy), owned.Identity);
+        Assert.True(owned.Delete());   // 安全: テストのフォルダの中で作った所有のフォルダ
+        Assert.False(Directory.Exists(owned.FullPath));   // 作ったフォルダだけが片付く
+        Assert.Equal("!", File.ReadAllText(precious));   // おとりは変更も削除もされない
     });
 
     /// <summary>

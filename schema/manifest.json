@@ -12738,11 +12738,11 @@
       },
       {
         "file": "src/ReTAC.App/ArchiveExtraction.cs",
-        "line": 154
+        "line": 186
       },
       {
         "file": "src/ReTAC.App/ArchiveExtraction.cs",
-        "line": 200
+        "line": 254
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
@@ -14094,7 +14094,7 @@
     "R-62": [
       {
         "file": "src/ReTAC.App/ArchiveExtraction.cs",
-        "line": 238
+        "line": 292
       },
       {
         "file": "src/ReTAC.App/ChoiceDialog.cs",
