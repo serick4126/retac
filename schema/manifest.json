@@ -11624,7 +11624,7 @@
     "R-126": [
       {
         "file": "src/ReTAC.App/ArchiveExtraction.cs",
-        "line": 38
+        "line": 41
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
@@ -12726,19 +12726,23 @@
       },
       {
         "file": "src/ReTAC.App/ArchiveExtraction.cs",
-        "line": 33
+        "line": 26
       },
       {
         "file": "src/ReTAC.App/ArchiveExtraction.cs",
-        "line": 38
+        "line": 36
       },
       {
         "file": "src/ReTAC.App/ArchiveExtraction.cs",
-        "line": 114
+        "line": 41
       },
       {
         "file": "src/ReTAC.App/ArchiveExtraction.cs",
-        "line": 150
+        "line": 148
+      },
+      {
+        "file": "src/ReTAC.App/ArchiveExtraction.cs",
+        "line": 194
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
@@ -14090,7 +14094,7 @@
     "R-62": [
       {
         "file": "src/ReTAC.App/ArchiveExtraction.cs",
-        "line": 184
+        "line": 232
       },
       {
         "file": "src/ReTAC.App/ChoiceDialog.cs",

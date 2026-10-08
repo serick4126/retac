@@ -154,18 +154,95 @@ public class ArchiveExtractionTests
         Assert.Equal("!", File.ReadAllText(Path.Combine(existing, "precious.txt")));
     });
 
-    [Fact]
-    public void Owned_ReplacedFolderIsNotDeleted() => Sta.WithTempFolder(root =>
+    /// <summary>
+    /// S4 / S8: 片付けの 3 つの時点（所有確認の後・走査の途中・削除の直前）で、作ったフォルダを移して同じパスにおとりを置こうとする。
+    /// 固定していれば移せず、おとりは置けない。移せてしまった場合はおとりを置く（その場合、おとりが消えるので失敗する）。
+    /// 返り値: 移せてしまったか
+    /// </summary>
+    private static bool TryReplace(string root, OwnedTempFolder owned, string decoy, string tag)
     {
-        // S4: 作った後で同じパスに別のフォルダができたら（識別子が違えば）消さない
-        var owned = OwnedTempFolder.TryCreate(root, ArchiveExtraction.FolderPrefix + "swap")!;
-        Directory.Delete(owned.FullPath);   // 安全: テストのフォルダの中で作った所有のフォルダを、置き換わりを模すために消す
-        Directory.CreateDirectory(owned.FullPath);
-        File.WriteAllText(Path.Combine(owned.FullPath, "precious.txt"), "!");   // 安全: テストが新しく作ったフォルダ（Sta.WithTempFolder）の中
-        // 陽性対照: 置き換えたフォルダの識別子は、作ったときのものと実際に違う（違わなければ、この試験は何も確かめていない）
-        Assert.NotEqual(owned.Identity, OwnedTempFolder.IdOf(owned.FullPath));
-        Assert.False(owned.Delete());   // 安全: 識別子が違うので消さないことを確かめる
-        Assert.Equal("!", File.ReadAllText(Path.Combine(owned.FullPath, "precious.txt")));
+        var moved = Path.Combine(root, "retac-vtest-moved-" + tag);
+        try { Directory.Move(owned.FullPath, moved); }   // 安全: テストのフォルダの中で、所有のフォルダを移そうとする（失敗することを確かめる）
+        catch (IOException) { return false; }
+        Directory.Move(decoy, owned.FullPath);   // 安全: 移せてしまったときだけ。テストのおとり（テストが作った）を同じパスへ置く
+        return true;
+    }
+
+    /// <summary>おとり（中身入り）と、中身・サブフォルダ・読み取り専用ファイルを持つ所有のフォルダを作る</summary>
+    private static (OwnedTempFolder Owned, string Decoy, string Precious) ArrangeReplace(string root, string tag)
+    {
+        var decoy = Directory.CreateDirectory(Path.Combine(root, "retac-vtest-decoy-" + tag)).FullName;
+        var precious = Path.Combine(decoy, "precious.txt");
+        File.WriteAllText(precious, "!");   // 安全: テストが新しく作ったフォルダ（Sta.WithTempFolder）の中
+        var owned = OwnedTempFolder.TryCreate(root, ArchiveExtraction.FolderPrefix + "pin-" + tag)!;
+        Directory.CreateDirectory(Path.Combine(owned.FullPath, "sub"));
+        File.WriteAllText(Path.Combine(owned.FullPath, "sub", "y.txt"), "y");   // 安全: Run と同じ、テストが作った所有のフォルダの中
+        File.WriteAllText(Path.Combine(owned.FullPath, "x.txt"), "x");   // 安全: 同上
+        return (owned, decoy, precious);
+    }
+
+    [Theory]
+    [InlineData(0)]   // AfterOwnership
+    [InlineData(1)]   // DuringScan
+    [InlineData(2)]   // BeforeRemove
+    public void Owned_CannotBeReplacedWhileHeld(int phaseNumber) => Sta.WithTempFolder(root =>
+    {
+        var phase = (OwnedTempFolder.DeletePhase)phaseNumber;
+        // S4: 確認した対象を、削除が終わるまで固定する。どの時点で置き換えようとしても、おとりのフォルダは残る
+        var (owned, decoy, precious) = ArrangeReplace(root, phase.ToString());
+        var attempts = 0;
+        var replaced = false;
+        owned.Hook = p =>
+        {
+            if (p != phase) return;
+            attempts++;
+            replaced |= TryReplace(root, owned, decoy, phase.ToString());
+        };
+        var result = owned.Delete();   // 安全: テストのフォルダの中で作った所有のフォルダ
+        Assert.Equal(1, attempts);   // 置き換えの試みが実際にその時点で行われた（行われていなければ何も確かめていない）
+        Assert.False(replaced);
+        Assert.True(result);
+        Assert.False(Directory.Exists(owned.FullPath));   // 作ったフォルダは片付いた
+        Assert.Equal("!", File.ReadAllText(precious));   // おとりは無事
+    });
+
+    [Fact]
+    public void Owned_DeleteWithoutInterferenceRemovesFolder() => Sta.WithTempFolder(root =>
+    {
+        // 陽性対照: 差し込み口で何もしなければ、作ったフォルダ（中身ごと）は消える
+        var (owned, _, precious) = ArrangeReplace(root, "none");
+        var phases = new List<OwnedTempFolder.DeletePhase>();
+        owned.Hook = phases.Add;
+        Assert.True(owned.Delete());   // 安全: テストのフォルダの中で作った所有のフォルダ
+        Assert.Equal([OwnedTempFolder.DeletePhase.AfterOwnership, OwnedTempFolder.DeletePhase.DuringScan, OwnedTempFolder.DeletePhase.BeforeRemove], phases);
+        Assert.False(Directory.Exists(owned.FullPath));
+        Assert.Equal("!", File.ReadAllText(precious));
+    });
+
+    [Fact]
+    public void Owned_HeldFolderCannotBeMovedOrDeletedByOthers() => Sta.WithTempFolder(root =>
+    {
+        // S4: 作った直後から固定している。移す・名前を変える・パスで消すは、ほかからはできない
+        var owned = OwnedTempFolder.TryCreate(root, ArchiveExtraction.FolderPrefix + "held")!;
+        Assert.Throws<IOException>(() => Directory.Move(owned.FullPath, Path.Combine(root, "retac-vtest-elsewhere")));   // 安全: 失敗することを確かめる（移せたらテストが失敗する）
+        Assert.Throws<IOException>(() => Directory.Delete(owned.FullPath));   // 安全: 失敗することを確かめる（空の、所有のフォルダ）
+        Assert.True(Directory.Exists(owned.FullPath));
+        Assert.True(owned.Delete());   // 安全: テストのフォルダの中で作った所有のフォルダ
+        Assert.False(Directory.Exists(owned.FullPath));
+    });
+
+    [Fact]
+    public void Owned_DeleteClosesHandleEvenWhenNotDeleted() => Sta.WithTempFolder(root =>
+    {
+        // 消せなかった場合（中身が増えた・直下に開いたままのファイルがある）でも、ハンドルは閉じる（固定が残り続けない）
+        var owned = OwnedTempFolder.TryCreate(root, ArchiveExtraction.FolderPrefix + "busy")!;
+        var file = Path.Combine(owned.FullPath, "locked.txt");
+        using (var stream = new FileStream(file, FileMode.CreateNew, FileAccess.Write, FileShare.None))   // 安全: 新規作成。テストが作った所有のフォルダの中
+        {
+            Assert.False(owned.Delete());   // 安全: 中のファイルが開かれていて消せない。消えないことを確かめる
+        }
+        Assert.True(Directory.Exists(owned.FullPath));
+        Directory.Move(owned.FullPath, Path.Combine(root, "retac-vtest-released"));   // 安全: ハンドルが閉じていれば移せる。テストのフォルダの中で移すだけ
     });
 
     /// <summary>テストのフォルダの中だけに結合点（ジャンクション）を作る。作れなければ失敗にする（黙って飛ばさない）</summary>
@@ -198,25 +275,6 @@ public class ArchiveExtractionTests
     });
 
     [Fact]
-    public void Owned_RootReplacedByJunctionIsNotDeleted() => Sta.WithTempFolder(root =>
-    {
-        // S8: 作ったフォルダの場所がリンクに置き換わっていたら、リンクもリンク先も触らない
-        var target = Directory.CreateDirectory(Path.Combine(root, "retac-vtest-target")).FullName;
-        var victim = Path.Combine(target, "victim.txt");
-        File.WriteAllText(victim, "keep");   // 安全: テストが新しく作ったフォルダ（Sta.WithTempFolder）の中
-        var owned = OwnedTempFolder.TryCreate(root, ArchiveExtraction.FolderPrefix + "jroot")!;
-        Directory.Delete(owned.FullPath);   // 安全: テストのフォルダの中で作った空の所有のフォルダを、置き換わりを模すために消す
-        MakeJunction(owned.FullPath, target);
-        try
-        {
-            Assert.False(owned.Delete());   // 安全: リンクに置き換わっているので消さないことを確かめる
-            Assert.True(Directory.Exists(owned.FullPath));
-            Assert.Equal("keep", File.ReadAllText(victim));
-        }
-        finally { Directory.Delete(owned.FullPath); }   // 安全: このテストが作ったリンクそのもの（非再帰。リンク先は消えない）。後片付けが止まらないように
-    });
-
-    [Fact]
     public void Owned_MissingTempRootCreatesNothing() => Sta.WithTempFolder(root =>
     {
         var missing = Path.Combine(root, "no-such", "deeper");
@@ -242,15 +300,47 @@ public class ArchiveExtractionTests
     });
 
     [Fact]
-    public void Run_MatchReadFailureIsAbort() => Sta.WithTempFolder(root =>
+    public void Match_UnreadableFolderThrowsIOException() => Sta.WithTempFolder(root =>
     {
+        // R-146-1 / S6: 結果を読む所（直下の一覧）で読めないときは IOException。Run はこれを取り出しの失敗と同じく中断にする
+        // （一時フォルダは固定されているので、Run の中から消して読めない状態を作ることはできない。Run 側は Run_FailureDoesNotThrow が確かめる）
+        Assert.ThrowsAny<IOException>(() => ExtractedFolder.Match(Path.Combine(root, "no-such"), Names, Displays));
+    });
+
+    [Fact]
+    public void Match_DuplicateNamesAreRejected() => Sta.WithTempFolder(root =>
+    {
+        // S6: 指定が x.txt, x.txt で、実際が x.txt と x (2).txt（別名になった）。数が合っても通さない
+        File.WriteAllText(Path.Combine(root, "x.txt"), "x");   // 安全: テストが新しく作ったフォルダ（Sta.WithTempFolder）の中
+        File.WriteAllText(Path.Combine(root, "x (2).txt"), "x");   // 安全: 同上
+        string[] displays = [@"C:\dl\a.zip\x.txt", @"C:\dl\a.zip\x.txt"];
+        Assert.Null(ExtractedFolder.Match(root, ["x.txt", "x.txt"], displays));
+        // 陽性対照: 重複の無い正しい指定なら通る（この入力が照合できる状態であることの確認）
+        Assert.NotNull(ExtractedFolder.Match(root, ["x.txt", "x (2).txt"], displays));
+    });
+
+    [Fact]
+    public void Match_CaseOnlyDuplicateIsRejected() => Sta.WithTempFolder(root =>
+    {
+        File.WriteAllText(Path.Combine(root, "a.txt"), "a");   // 安全: テストが新しく作ったフォルダ（Sta.WithTempFolder）の中
+        File.WriteAllText(Path.Combine(root, "b.txt"), "b");   // 安全: 同上
+        string[] displays = [@"C:\dl\a.zip\a.txt", @"C:\dl\a.zip\A.TXT"];
+        Assert.Null(ExtractedFolder.Match(root, ["a.txt", "A.TXT"], displays));
+        Assert.NotNull(ExtractedFolder.Match(root, ["a.txt", "B.TXT"], displays));   // 大小文字を無視して照合できる
+    });
+
+    [Theory]
+    [InlineData("x.txt", "x.txt")]
+    [InlineData("a.txt", "A.TXT")]
+    public void Run_DuplicateNamesAreNotExtracted(string first, string second) => Sta.WithTempFolder(root =>
+    {
+        var extracted = false;
         var called = false;
-        // R-146-1 / S6: 取り出しは終わったと答えたのに、結果を読む所（直下の一覧）で読めない。例外を外へ出さず、何も送らない
-        var result = ArchiveExtraction.Run(root, Names, Displays,
-            folder => { Directory.Delete(folder, recursive: true); return true; }, _ => called = true);   // 安全: Run が作った一時フォルダ（テストのフォルダの中）を、読めない状態を模すために消す
-        Assert.False(result);
+        // S6: 重複する名前は、取り出す前に断る（extract も next も呼ばない。一時フォルダも作らない）
+        Assert.False(ArchiveExtraction.Run(root, [first, second], [@"C:\dl\a.zip\1", @"C:\dl\a.zip\2"], _ => extracted = true, _ => called = true));
+        Assert.False(extracted);
         Assert.False(called);
-        Assert.Empty(Leftovers(root));
+        Assert.Empty(Directory.GetFileSystemEntries(root));
     });
 
     [Theory]

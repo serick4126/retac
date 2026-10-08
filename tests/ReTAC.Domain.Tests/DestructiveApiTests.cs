@@ -15,7 +15,9 @@ public class DestructiveApiTests
         @"Directory\.Delete|File\.Delete|\.Delete\(|File\.Move|Directory\.Move|File\.Copy|File\.Replace|" +
         @"WriteAll(Text|Bytes|Lines)|FileMode\.(Create|Truncate|OpenOrCreate)\b|\.MoveTo\(|\.CopyTo\(|" +
         // Windows のファイル操作（ShellFileOperation の Move・Copy・Rename と、IFileOperation の各項目の操作）
-        @"\.Move\(|\.Copy\(|\.Rename\(|\b(Move|Copy|Delete|Rename)Items?\(",
+        @"\.Move\(|\.Copy\(|\.Rename\(|\b(Move|Copy|Delete|Rename)Items?\(|" +
+        // ハンドルに削除の印を付けて消す手段（FileDispositionInfo。ハンドルを閉じるときに消える）。見張りの抜け穴にしない
+        @"\bSetFileInformationByHandle\(",
         RegexOptions.Compiled);
 
     /// <summary>既存のファイルの数。2026-10-07 の確認で固定した。増やさない（新しいものは Strict に足す）</summary>
@@ -58,7 +60,9 @@ public class DestructiveApiTests
     /// <summary>2026-10-07 より後に足すもの（ファイル → 件数と理由）。理由は「S8:」で、照合して消すこと・新規作成だけで書くことを書く</summary>
     private static readonly Dictionary<string, (int Count, string Reason)> Strict = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["src/ReTAC.App/ArchiveExtraction.cs"] = (2, "S8: R-146-1。この処理が作った一時フォルダだけを、作ったときの識別子（ボリュームとファイル番号）と照合し、リンクでないことを確かめて消す（Directory.Delete と、その呼び出し）"),   // 安全: 基準の表の文字列（呼び出しではない）
+        ["src/ReTAC.App/ArchiveExtraction.cs"] = (5, "S8: R-146-1。この処理が作った一時フォルダだけを、作った直後から開いて固定したハンドルで、作ったときの識別子（ボリュームとファイル番号）と照合し、リンクでないことを確かめて消す。" +
+            "中身は固定した根の直下の項目だけを消し（File.Delete・Directory.Delete。リンクはリンクそのもの）、根は照合したハンドルへ SetFileInformationByHandle（FileDispositionInfo）で消す。" +
+            "呼び出しの内訳は、Run からの Delete 1・Remove の 2・SetFileInformationByHandle の呼び出しと宣言 2"),   // 安全: 基準の表の文字列（呼び出しではない）
         ["src/ReTAC.Shell/ShellFileOperation.cs"] = (1, "S8: R-146-1。CopyIdList の CopyItem。複写先は ReTAC が新しく作り識別子で照合した一時フォルダで、既にある物を消さず、書庫の側は読むだけ"),   // 安全: 基準の表の文字列（呼び出しではない）
     };
 
@@ -151,6 +155,7 @@ public class DestructiveApiTests
     [InlineData("Check(_operation.DeleteItem(Item(path), IntPtr.Zero));", 1)]
     [InlineData("Check(_operation.RenameItem(Item(path), newName, IntPtr.Zero));", 1)]
     [InlineData("_operation.DeleteItems(items);", 1)]
+    [InlineData("SetFileInformationByHandle(handle, FileDispositionInfoClass, ref disposition, 1);", 1)]
     // 同じ行の複数の呼び出しは、それぞれ数える（レビューの指摘: 行で数えていた）
     [InlineData("Directory.Delete(a); File.Delete(b);", 2)]
     [InlineData("File.Delete(a); File.Delete(b); operation.Move(c, d);", 3)]

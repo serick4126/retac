@@ -22,6 +22,9 @@ internal static class ArchiveExtraction
     {
         // S6: 取り出す前に名前を確かめる。書庫の中の名前で外へ書き出さないことは Windows に頼る（取り出した後の検査では防げない）
         if (names.Count == 0 || names.Count != displayPaths.Count || !names.All(IsSingleName)) return false;
+        // S6: 名前の重複（大小文字だけの違いを含む）は取り出す前に断る。重複を許すと、実際の結果が別名（x (2).txt）になっても
+        // 数だけ合って照合が通り、同じ転送元が 2 回並ぶ（R-146-1）
+        if (names.Distinct(StringComparer.OrdinalIgnoreCase).Count() != names.Count) return false;
         if (OwnedTempFolder.TryCreate(tempRoot) is not { } owned) return false;   // S4
 
         try
@@ -50,34 +53,53 @@ internal static class ArchiveExtraction
 }
 
 /// <summary>
-/// S4: この処理が新しく作った一時フォルダ。作ったときのパスとフォルダの識別子（ボリュームとファイル番号）を持ち、
-/// 消すときに今のフォルダと照合する。パスや名前の形だけでは消さない（同じ形の、ほかが作ったフォルダを消さないため）。
+/// S4: この処理が新しく作った一時フォルダ。作った直後に開いて、片付けが終わるまでそのハンドルを持ち続ける。
+/// 持っている間は、ほかからこのフォルダを移す・名前を変えることができない（共有に DELETE を許さない）ので、
+/// 確認したフォルダと消すフォルダが別の物になる窓が無い。パスや名前の形だけでは消さない（同じ形の、ほかが作ったフォルダを消さないため）。
 /// </summary>
 internal sealed class OwnedTempFolder
 {
-    private readonly (uint Volume, ulong Index) _id;
+    /// <summary>テストの入口: 片付けの途中で、置き換えを試みる時点</summary>
+    internal enum DeletePhase { AfterOwnership, DuringScan, BeforeRemove }
 
-    private OwnedTempFolder(string fullPath, (uint Volume, ulong Index) id) => (FullPath, _id) = (fullPath, id);
+    private readonly (uint Volume, ulong Index) _id;
+    private readonly SafeFileHandle _handle;
+
+    private OwnedTempFolder(string fullPath, (uint Volume, ulong Index) id, SafeFileHandle handle) => (FullPath, _id, _handle) = (fullPath, id, handle);
 
     public string FullPath { get; }
+
+    /// <summary>テストの確認用: 片付けの各時点で呼ばれる（製品では使わない）</summary>
+    internal Action<DeletePhase>? Hook { get; set; }
 
     public static OwnedTempFolder? TryCreate(string tempRoot) =>
         TryCreate(tempRoot, ArchiveExtraction.FolderPrefix + Guid.NewGuid().ToString("N"));
 
     /// <summary>
     /// 名前を決めて作る（テストの入口）。「この呼び出しが作った」ことは作成の結果で保証する（既にあれば失敗する CreateDirectoryW。
-    /// tempRoot が無いときも親は作らず失敗）。作った直後に空でなければ・識別子が使えなければ使わない（作ったフォルダは消さない。S8）
+    /// tempRoot が無いときも親は作らず失敗）。作った直後に開いて固定し、空でなければ・識別子が使えなければ・リンクなら使わない
+    /// （開いたハンドルは閉じるが、作ったフォルダは消さない。S8）。
+    /// 作成と開くの間の窓は受け入れる: その間に置き換えられても、開いて確かめるのは「空のフォルダ」だけで、何も消さない。
     /// </summary>
     internal static OwnedTempFolder? TryCreate(string tempRoot, string name)
     {
+        SafeFileHandle? handle = null;
         try
         {
             var fullPath = Path.Combine(Path.GetFullPath(tempRoot), name);
             if (!CreateDirectoryW(fullPath, IntPtr.Zero)) return null;
-            if (Directory.EnumerateFileSystemEntries(fullPath).Any() || IdOf(fullPath) is not { } id || !IsUsable(id)) return null;
-            return new OwnedTempFolder(fullPath, id);
+            // DELETE は自分で消すため。共有に DELETE を付けないので、開いている間は移す・名前を変える・消すことをほかにさせない（S4）
+            handle = CreateFile(fullPath, DELETE | FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE, IntPtr.Zero, OPEN_EXISTING,
+                FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, IntPtr.Zero);
+            if (handle.IsInvalid || InfoOf(handle) is not { } info || (info.Attributes & (uint)FileAttributes.ReparsePoint) != 0) return null;
+            var id = (info.Volume, info.Index);
+            if (!IsUsable(id) || Directory.EnumerateFileSystemEntries(fullPath).Any()) return null;
+            var owned = new OwnedTempFolder(fullPath, id, handle);
+            handle = null;   // 持ち主が OwnedTempFolder に移った（Delete が閉じる）
+            return owned;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; }
+        finally { handle?.Dispose(); }
     }
 
     /// <summary>S8: 識別子が取れていない（0, 0）ものは照合に使えない。</summary>
@@ -86,46 +108,64 @@ internal sealed class OwnedTempFolder
     /// <summary>テストの確認用: 作ったときの識別子</summary>
     internal (uint Volume, ulong Index) Identity => _id;
 
-    /// <summary>作ったフォルダが今もそのまま（同じ識別子・リンクでない）なら中身ごと消す。違えば何もしない。消せなくても無視する。</summary>
+    /// <summary>
+    /// 持っているハンドルの先が、作ったフォルダのまま（同じ識別子・リンクでない）なら中身ごと消す。違えば何もしない。消せなくても無視する。
+    /// どの場合も最後にハンドルを閉じる。
+    /// </summary>
     public bool Delete()
     {
         try
         {
-            var info = new DirectoryInfo(FullPath);
-            if (!info.Exists || (info.Attributes & FileAttributes.ReparsePoint) != 0 || IdOf(FullPath) != _id) return false;
+            // 照合はパスで開き直さず、固定しているハンドルで行う（開き直すと、その間にパスが別の物に変わりうる）
+            if (InfoOf(_handle) is not { } now || (now.Volume, now.Index) != _id || (now.Attributes & (uint)FileAttributes.ReparsePoint) != 0) return false;
+            Hook?.Invoke(DeletePhase.AfterOwnership);
             // 読み取り専用のまま取り出されたファイルがあると Directory.Delete が止まる。
             // 中のリンク（再解析ポイント）へはたどらず、属性も触らない。
             // 隠し・システム属性のものも見る（既定では飛ばされ、読み取り専用が外されず一時フォルダが残る）。
-            // フォルダのリンク（ジャンクション）が中にあると、再帰の削除がアクセス拒否で止まるので、リンクそのものだけを先に外す（リンク先は消えない）
+            // フォルダのリンク（ジャンクション）が中にあると、再帰の削除がアクセス拒否で止まるので、リンクそのものだけを先に外す（リンク先は消えない）。
+            // 根は固定されているので、パスはずっと同じフォルダの中を指す
+            var info = new DirectoryInfo(FullPath);
             var links = new List<string>();
             var pending = new Stack<DirectoryInfo>();
             pending.Push(info);
+            var first = true;
             while (pending.Count > 0)
                 foreach (var entry in pending.Pop().EnumerateFileSystemInfos("*", new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0 }))
                 {
+                    if (first) { first = false; Hook?.Invoke(DeletePhase.DuringScan); }
                     if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) { if (entry is DirectoryInfo) links.Add(entry.FullName); }
                     else if (entry is DirectoryInfo dir) pending.Push(dir);
                     else if ((entry.Attributes & FileAttributes.ReadOnly) != 0) entry.Attributes &= ~FileAttributes.ReadOnly;
                 }
             foreach (var link in links) Remove(link, recursive: false);   // 安全: S4。作ったフォルダの中のリンクそのもの（非再帰。リンク先へはたどらない）
-            Remove(FullPath, recursive: true);   // 安全: S4。識別子が一致し、リンクでない、作ったフォルダだけ
-            return true;
+            // 根は自分のハンドルが消すので、直下の項目を 1 つずつ消す（根をパスで消すと、共有に DELETE を許さない自分のハンドルで失敗する）
+            foreach (var entry in info.EnumerateFileSystemInfos("*", new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0 }).ToList())
+                Remove(entry.FullName, recursive: true);   // 安全: S4。固定した、作ったフォルダの直下の項目だけ（リンクはリンクそのもの）
+            Hook?.Invoke(DeletePhase.BeforeRemove);
+            var disposition = new FileDispositionInfo { DeleteFile = 1 };
+            return SetFileInformationByHandle(_handle, FileDispositionInfoClass, ref disposition, 1);   // 安全: S4。識別子を照合した固定のハンドルで、作ったフォルダ（空）だけを消す
         }
         catch (Exception) { return false; }   // R-146-1: finally から呼ばれる。ここの例外で Run の結果や続きの処理の例外を隠さない
+        finally { _handle.Dispose(); }
     }
 
-    private static void Remove(string path, bool recursive) => Directory.Delete(path, recursive);   // 安全: S4。呼び出しは Delete だけ（識別子の照合の後）
-
-    internal static (uint Volume, ulong Index)? IdOf(string path)
+    private static void Remove(string path, bool recursive)   // 安全: S4。呼び出しは Delete だけ（識別子の照合の後）
     {
-        using var handle = CreateFile(path, FILE_READ_ATTRIBUTES, FILE_SHARE_ALL, IntPtr.Zero, OPEN_EXISTING,
-            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, IntPtr.Zero);
-        if (handle.IsInvalid || !GetFileInformationByHandle(handle, out var info)) return null;
-        return (info.VolumeSerialNumber, ((ulong)info.FileIndexHigh << 32) | info.FileIndexLow);
+        if (Directory.Exists(path)) Directory.Delete(path, recursive);   // 安全: S4。Delete が渡した、固定したフォルダの中の項目（フォルダのリンクは非再帰）
+        else File.Delete(path);   // 安全: S4。同上（ファイル、またはファイルのリンクそのもの）
     }
 
-    private const uint FILE_READ_ATTRIBUTES = 0x80, FILE_SHARE_ALL = 0x7, OPEN_EXISTING = 3;
+    private static (uint Volume, ulong Index, uint Attributes)? InfoOf(SafeFileHandle handle) =>
+        GetFileInformationByHandle(handle, out var info)
+            ? (info.VolumeSerialNumber, ((ulong)info.FileIndexHigh << 32) | info.FileIndexLow, info.FileAttributes)
+            : null;
+
+    private const uint DELETE = 0x10000, FILE_READ_ATTRIBUTES = 0x80, FILE_SHARE_READ = 0x1, FILE_SHARE_WRITE = 0x2, OPEN_EXISTING = 3;
     private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000, FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
+    private const int FileDispositionInfoClass = 4;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct FileDispositionInfo { public byte DeleteFile; }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct ByHandleFileInformation
@@ -145,6 +185,10 @@ internal sealed class OwnedTempFolder
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetFileInformationByHandle(SafeFileHandle handle, out ByHandleFileInformation info);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetFileInformationByHandle(SafeFileHandle handle, int infoClass, ref FileDispositionInfo info, uint size);   // 安全: S4。宣言（呼び出しは Delete だけ）
 }
 
 /// <summary>R-146-1: 取り出した一時フォルダ。転送元（Paths）と、衝突の確認に出す書庫の中のパスへの読み替え。</summary>
@@ -164,8 +208,12 @@ internal sealed class ExtractedFolder
     internal static ExtractedFolder? Match(string folder, IReadOnlyList<string> names, IReadOnlyList<string> displayPaths)
     {
         if (names.Count == 0 || names.Count != displayPaths.Count) return null;
-        var actual = Directory.EnumerateFileSystemEntries(folder).Select(Path.GetFileName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (actual.Count != names.Count || !names.All(actual.Contains)) return null;
+        // S6: 一対一の照合。名前の重複があれば作らない（Run が先に断るが、Match 単独でも守る）。
+        // 数が同じで互いに対応するときだけ通す（x.txt, x.txt と実際の x.txt, x (2).txt を通さない）
+        var expected = names.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (expected.Count != names.Count) return null;
+        var actual = Directory.EnumerateFileSystemEntries(folder).Select(p => Path.GetFileName(p)!).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (actual.Count != names.Count || !expected.SetEquals(actual)) return null;
         return new ExtractedFolder(folder, [.. names.Select(name => Path.Combine(folder, name))], displayPaths);
     }
 
