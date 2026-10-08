@@ -219,8 +219,9 @@ internal sealed class OwnedTempFolder
     {
         var asDirectory = (listed & (uint)FileAttributes.Directory) != 0 && (listed & (uint)FileAttributes.ReparsePoint) == 0;
         var access = DELETE | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE | (asDirectory ? FILE_LIST_DIRECTORY : 0);
-        // 読み取り専用の物は、DELETE を付けて開くと拒否される。属性だけ外せる権限で開いて外し、同じ物（識別子が同じ）を DELETE 付きで開き直す
-        using var child = (listed & (uint)FileAttributes.ReadOnly) != 0 ? OpenReadOnlyForDelete(parent, name, access) : OpenChild(parent, name, access);
+        // 読み取り専用の物も、DELETE 付きで開くこと自体は通る（実機で確認）。拒否されるのは削除の印を付けるとき（アクセス拒否）なので、
+        // 同じハンドルで属性を外してから印を付ける。開き直さないので、別の物とすり替わる窓が無い
+        using var child = OpenChild(parent, name, access);
         if (child is null || InfoOf(child) is not { } info) return false;
         if ((info.Attributes & (uint)FileAttributes.ReadOnly) != 0 && !ClearReadOnly(child)) return false;
         if ((info.Attributes & (uint)FileAttributes.ReparsePoint) == 0 && (info.Attributes & (uint)FileAttributes.Directory) != 0
@@ -231,21 +232,6 @@ internal sealed class OwnedTempFolder
     private static SafeFileHandle? OpenChild(SafeFileHandle parent, string name, uint access) =>
         NtOpen(parent, name, access, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN,
             FILE_SYNCHRONOUS_IO_NONALERT | FILE_OPEN_FOR_BACKUP_INTENT | FILE_OPEN_REPARSE_POINT);
-
-    private static SafeFileHandle? OpenReadOnlyForDelete(SafeFileHandle parent, string name, uint access)
-    {
-        using var first = OpenChild(parent, name, FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE);
-        if (first is null || InfoOf(first) is not { } before) return null;
-        if ((before.Attributes & (uint)FileAttributes.ReadOnly) != 0 && !ClearReadOnly(first)) return null;
-        var second = OpenChild(parent, name, access);
-        // 開き直す間に別の物に変わっていたら使わない（S8: 識別子を照合した物だけを消す）
-        if (second is null || InfoOf(second) is not { } after || (after.Volume, after.Index) != (before.Volume, before.Index))
-        {
-            second?.Dispose();
-            return null;
-        }
-        return second;
-    }
 
     /// <summary>ハンドルの先の読み取り専用を外す（属性を NORMAL にする。時刻は変えない）。パスでは属性を変えない。</summary>
     private static bool ClearReadOnly(SafeFileHandle handle)
