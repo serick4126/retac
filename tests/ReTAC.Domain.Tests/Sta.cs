@@ -17,13 +17,6 @@ internal static class Sta
         if (error is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
     }
 
-    /// <summary>
-    /// %TEMP% の下に毎回新しいフォルダを作り、終わっても消さない（片付けは利用者が手で行う。S8）。
-    /// ジャンクションや読み取り専用のファイルを残すテスト用。消す側（WithTempFolder）は、リンクを含むフォルダを正しく消せない。
-    /// </summary>
-    public static void WithKeptFolder(Action<string> action) =>
-        action(Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "retac-vtest-kept-" + Guid.NewGuid().ToString("N"))).FullName);
-
     /// <summary>%TEMP% の下に使い捨てのフォルダを作り、終わったら消す。名前は ReTAC- で始めない（本物の一時フォルダと見分ける）</summary>
     public static void WithTempFolder(Action<string> action)
     {

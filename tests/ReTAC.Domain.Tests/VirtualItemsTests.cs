@@ -48,7 +48,7 @@ public class VirtualItemsTests
     }));
 
     [Fact]
-    public void Extract_KeepsArchiveTimestamp() => Sta.Run(() => Sta.WithTempFolder(root =>
+    public void CopiedItem_KeepsArchiveTimestamp() => Sta.Run(() => Sta.WithTempFolder(root =>
     {
         var zip = MakeZip(root);
         var data = ShellDataObject.For([Path.Combine(zip, "x.txt")]);
@@ -59,30 +59,8 @@ public class VirtualItemsTests
             operation.CopyIdList(items.Items[0].IdList, dest);
             Assert.True(operation.Execute());
         }
-        // S2: 取り出した時刻になると「新しい時に複写」が誤って上書きする。違ったら実装を止めて報告する
+        // R-146-1: ファイルの日時は書庫の中の日時のまま届く（コピーした時刻にならない）。違ったら実装を止めて報告する
         Assert.Equal(Stamp, File.GetLastWriteTime(Path.Combine(dest, "x.txt")));
-    }));
-
-    [Fact]
-    public void NewerOnly_DoesNotOverwriteNewerDestination() => Sta.Run(() => Sta.WithTempFolder(root =>
-    {
-        var zip = MakeZip(root);
-        var data = ShellDataObject.For([Path.Combine(zip, "x.txt")]);
-        using var items = VirtualItems.FromDataObject(data!)!;
-        var extracted = Directory.CreateDirectory(Path.Combine(root, "tmp")).FullName;
-        using (var operation = new ShellFileOperation(IntPtr.Zero, silentOverwrite: false, noUi: true))
-        {
-            operation.CopyIdList(items.Items[0].IdList, extracted);
-            Assert.True(operation.Execute());
-        }
-        var dest = Directory.CreateDirectory(Path.Combine(root, "dest")).FullName;
-        var newer = Path.Combine(dest, "x.txt");
-        File.WriteAllText(newer, "keep");   // 安全: テストが新しく作ったフォルダ（Sta.WithTempFolder）の中
-        File.SetLastWriteTime(newer, Stamp.AddDays(1));
-
-        // S2: 宛先のほうが新しければ、新しい時に複写では何も送らない
-        var plan = CopyPlanner.Build([Path.Combine(extracted, "x.txt")], dest, CopyCondition.NewerOnly);
-        Assert.Empty(plan.Items);
     }));
 
     [Fact]

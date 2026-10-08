@@ -70,11 +70,7 @@ public class DestructiveApiTests
     /// <summary>2026-10-07 より後に足すもの（ファイル → 件数と理由）。理由は「S8:」で、照合して消すこと・新規作成だけで書くことを書く</summary>
     private static readonly Dictionary<string, (int Count, string Reason)> Strict = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["src/ReTAC.App/ArchiveExtraction.cs"] = (5, "S8: R-146-1。この処理が作った一時フォルダだけを、作った直後から開いて固定したハンドルで、作ったときの識別子（ボリュームとファイル番号）と照合し、リンクでないことを確かめて消す。" +
-            "中身も、パスは使わず、固定した根のハンドルからの相対で開いた物（FILE_OPEN。リンクはたどらずリンクそのもの）だけを、そのハンドルで消す（FileDispositionInfo）。" +
-            "読み取り専用の属性もそのハンドルで外す（FileBasicInfo）。Directory.Delete・File.Delete・パスでの属性変更は使わない。" +
-            "呼び出しの内訳は、Run からの Delete 1・SetFileInformationByHandle の呼び出し 2（SetDisposition・ClearReadOnly）と宣言 2"),   // 安全: 基準の表の文字列（呼び出しではない）
-        ["src/ReTAC.Shell/ShellFileOperation.cs"] = (1, "S8: R-146-1。CopyIdList の CopyItem。複写先は ReTAC が新しく作り識別子で照合した一時フォルダで、既にある物を消さず、書庫の側は読むだけ"),   // 安全: 基準の表の文字列（呼び出しではない）
+        ["src/ReTAC.Shell/ShellFileOperation.cs"] = (1, "S8: R-146-1。CopyIdList の CopyItem。書庫の中の項目を宛先へ複製するだけで、何も消さず移さない。宛先の既存の同名は呼び出し側が silentOverwrite: false で Windows の確認画面に任せる"),   // 安全: 基準の表の文字列（呼び出しではない）
     };
 
     /// <summary>
@@ -120,24 +116,14 @@ public class DestructiveApiTests
     }
 
     [Fact]
-    public void ArchiveExtraction_CleanupNeverUsesThePath()
+    public void ArchiveExtractionFile_IsGone()
     {
-        // S4・S8: 片付け（Delete から ClearChildren・RemoveChild などの、ListChildren までの区間）は、パスを使わない。
-        // パスは途中のリンクが切り替わると別の場所を指す。一覧・属性の変更・削除は、固定したハンドルからの相対だけで行う。
-        // 基準の件数では、パスでの削除を足しても Directory.Delete などの置き換えと区別がつかないので、位置と語で守る
-        var text = File.ReadAllText(Path.Combine(SchemaManifest.RepoRoot(), "src/ReTAC.App/ArchiveExtraction.cs"));
-        var start = text.IndexOf("public bool Delete()", StringComparison.Ordinal);
-        var end = text.IndexOf("private static (uint Volume, ulong Index, uint Attributes)? InfoOf", StringComparison.Ordinal);
-        Assert.True(start > 0 && end > start);
-        var region = string.Join("\n", text[start..end].Split('\n').Where(l => !l.TrimStart().StartsWith("//", StringComparison.Ordinal)));
-        // PathStillPointsHere（送る物の取り違えを防ぐ確認。パスを開くが削除には使わない）は区間から除く
-        var check = region.IndexOf("internal bool PathStillPointsHere()", StringComparison.Ordinal);
-        var checkEnd = region.IndexOf("private const int MaxDepth", StringComparison.Ordinal);
-        Assert.True(check > 0 && checkEnd > check);
-        region = region[..check] + region[checkEnd..];
-        Assert.DoesNotContain("FullPath", region);
-        Assert.DoesNotMatch(@"(?<![\w])(File|Directory|Path|FileInfo|DirectoryInfo)\.", region);
-        Assert.DoesNotMatch(@"\b(DirectoryInfo|FileInfo|EnumerateFileSystem\w*|Remove)\b", region);
+        // S4・S8: R-146-1。書庫の項目は Windows のコピーで宛先へ直接コピーする。一時フォルダを消す処理（ArchiveExtraction.cs）は戻さない
+        var root = SchemaManifest.RepoRoot();
+        Assert.False(File.Exists(Path.Combine(root, "src/ReTAC.App/ArchiveExtraction.cs")));
+        Assert.DoesNotContain(Legacy.Keys.Concat(Strict.Keys), k => k.EndsWith("ArchiveExtraction.cs", StringComparison.OrdinalIgnoreCase));
+        // 陽性対照: 表は実在するファイルを指している（空の表で通っているのではない）
+        Assert.Contains("src/ReTAC.Shell/ShellFileOperation.cs", Strict.Keys);
     }
 
     [Fact]
