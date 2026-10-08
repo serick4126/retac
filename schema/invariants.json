@@ -709,6 +709,24 @@
       "rule": "受けた起動要求は UI スレッドで、要求の処理（窓を作って開き始める）を済ませてから成功を返す（後に回さない）。同じ Id はプロセスが終わるまで 1 回だけ実行する。終わる途中（更新の終了依頼・ExitThread の後）は受け付けない。受けた側はファイルシステムに触らない（存在は送る側が確かめる）。",
       "enforcedBy": "SingleInstanceHost.Accept（PipeListener が Control.Invoke で呼ぶ）",
       "testedBy": "tests/ReTAC.Domain.Tests/SingleInstanceTests.cs"
+    },
+    {
+      "id": "INV-ARCHIVE-DROP-COPY-ONLY",
+      "status": "enforced",
+      "specIds": ["R-146-1"],
+      "applies": ["app:MainForm", "app:DropFeedback", "type:ReTAC.Domain.FileOps.DropRules"],
+      "rule": "パスを持たない項目（書庫の中など）のドロップ・貼り付けは、修飾キー・右ボタン・ブックマークの指定にかかわらずコピーだけ。ドラッグ元へ移動の効果を返さず、書庫へ書き込まない。一時フォルダから宛先へは moving: false で既存の転送の本体に渡し、衝突の判定（R-41-4）を省かない。取り出した項目では存在しない宛先の別名複写を出さない。",
+      "enforcedBy": "DropRules.DecideVirtual・DropRouting.VirtualMenu・DropFeedback.Apply・ShellTreeDropTap.ClampVirtual・NameSpaceTreeHost.TreeVirtualEffect・MainForm.AcceptVirtualDrop・CopyFromArchive・MissingDestinationChoices",
+      "testedBy": "tests/ReTAC.Domain.Tests/DropRulesTests.cs, tests/ReTAC.Domain.Tests/DropRoutingTests.cs, tests/ReTAC.Domain.Tests/DropFeedbackTests.cs, tests/ReTAC.Domain.Tests/ShellTreeDropTapTests.cs, tests/ReTAC.Domain.Tests/MissingDestinationTests.cs, tests/ReTAC.Domain.Tests/VirtualItemsTests.cs"
+    },
+    {
+      "id": "INV-ARCHIVE-TEMP-OWNED",
+      "status": "enforced",
+      "specIds": ["R-146-1"],
+      "applies": ["app:ArchiveExtraction"],
+      "rule": "書庫の中の項目は、落とした項目の名前を取り出す前に確かめ、新しく作った空の一時フォルダ（%TEMP% の直下・ReTAC- で始まる名前）へ取り出す。取り出し先の外へ書き出さないことは Windows に頼り、テストで確かめる。すべて取り出せ、直下の項目が落とした項目と数・名前で一致したときだけ続きの処理（同期）へ渡し、続きの処理が終わってから、作ったフォルダだけを、作ったときの識別子と照合して消す（パスや名前の形だけでは消さない）。識別子による照合ができないもの（前回の起動で残った一時フォルダなど）の削除には一切手を付けない（S8）。取り出しと結果の読み取りの中止・失敗では何も渡さず、例外を外へ出さない。項目はドロップの中で識別子の複製として覚え、ドラッグのデータを持ち越さない。",
+      "enforcedBy": "ArchiveExtraction.Run・IsSingleName・OwnedTempFolder.TryCreate・Delete・ExtractedFolder.Match・VirtualItems.FromDataObject・FromShellItemArray",
+      "testedBy": "tests/ReTAC.Domain.Tests/ArchiveExtractionTests.cs, tests/ReTAC.Domain.Tests/ArchiveSafetyTests.cs, tests/ReTAC.Domain.Tests/VirtualItemsTests.cs"
     }
   ]
 }
