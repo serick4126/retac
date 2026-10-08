@@ -71,8 +71,9 @@ public class DestructiveApiTests
     private static readonly Dictionary<string, (int Count, string Reason)> Strict = new(StringComparer.OrdinalIgnoreCase)
     {
         ["src/ReTAC.App/ArchiveExtraction.cs"] = (5, "S8: R-146-1。この処理が作った一時フォルダだけを、作った直後から開いて固定したハンドルで、作ったときの識別子（ボリュームとファイル番号）と照合し、リンクでないことを確かめて消す。" +
-            "中身は固定した根の直下の項目だけを消し（File.Delete・Directory.Delete。リンクはリンクそのもの）、根は照合したハンドルへ SetFileInformationByHandle（FileDispositionInfo）で消す。" +
-            "呼び出しの内訳は、Run からの Delete 1・Remove の 2・SetFileInformationByHandle の呼び出しと宣言 2"),   // 安全: 基準の表の文字列（呼び出しではない）
+            "中身も、パスは使わず、固定した根のハンドルからの相対で開いた物（FILE_OPEN。リンクはたどらずリンクそのもの）だけを、そのハンドルで消す（FileDispositionInfo）。" +
+            "読み取り専用の属性もそのハンドルで外す（FileBasicInfo）。Directory.Delete・File.Delete・パスでの属性変更は使わない。" +
+            "呼び出しの内訳は、Run からの Delete 1・SetFileInformationByHandle の呼び出し 2（SetDisposition・ClearReadOnly）と宣言 2"),   // 安全: 基準の表の文字列（呼び出しではない）
         ["src/ReTAC.Shell/ShellFileOperation.cs"] = (1, "S8: R-146-1。CopyIdList の CopyItem。複写先は ReTAC が新しく作り識別子で照合した一時フォルダで、既にある物を消さず、書庫の側は読むだけ"),   // 安全: 基準の表の文字列（呼び出しではない）
     };
 
@@ -119,26 +120,24 @@ public class DestructiveApiTests
     }
 
     [Fact]
-    public void ArchiveExtraction_OnlyDeleteCallsRemove()
+    public void ArchiveExtraction_CleanupNeverUsesThePath()
     {
-        // S8: 一時フォルダを消す入口は OwnedTempFolder.Delete（識別子の照合の後）だけ。
-        // 基準は「.Delete(」の件数なので、Remove を Delete の外から呼んでも数が変わらず、検出できない。位置で守る
+        // S4・S8: 片付け（Delete から ClearChildren・RemoveChild などの、ListChildren までの区間）は、パスを使わない。
+        // パスは途中のリンクが切り替わると別の場所を指す。一覧・属性の変更・削除は、固定したハンドルからの相対だけで行う。
+        // 基準の件数では、パスでの削除を足しても Directory.Delete などの置き換えと区別がつかないので、位置と語で守る
         var text = File.ReadAllText(Path.Combine(SchemaManifest.RepoRoot(), "src/ReTAC.App/ArchiveExtraction.cs"));
         var start = text.IndexOf("public bool Delete()", StringComparison.Ordinal);
-        Assert.True(start > 0);
-        // Delete の本体（波括弧の対応で切る）。位置の近さには頼らない
-        var open = text.IndexOf('{', start);
-        var depth = 0;
-        var end = open;
-        for (; end < text.Length; end++)
-        {
-            if (text[end] == '{') depth++;
-            else if (text[end] == '}' && --depth == 0) break;
-        }
-        var remove = new Regex(@"(?<![\w.])Remove\(");
-        Assert.Equal(2, remove.Count(text[open..(end + 1)]));
-        // ファイル全体では、本体の 2 件と宣言の 1 件だけ
-        Assert.Equal(3, remove.Count(text));
+        var end = text.IndexOf("private static (uint Volume, ulong Index, uint Attributes)? InfoOf", StringComparison.Ordinal);
+        Assert.True(start > 0 && end > start);
+        var region = string.Join("\n", text[start..end].Split('\n').Where(l => !l.TrimStart().StartsWith("//", StringComparison.Ordinal)));
+        // PathStillPointsHere（送る物の取り違えを防ぐ確認。パスを開くが削除には使わない）は区間から除く
+        var check = region.IndexOf("internal bool PathStillPointsHere()", StringComparison.Ordinal);
+        var checkEnd = region.IndexOf("private const int MaxDepth", StringComparison.Ordinal);
+        Assert.True(check > 0 && checkEnd > check);
+        region = region[..check] + region[checkEnd..];
+        Assert.DoesNotContain("FullPath", region);
+        Assert.DoesNotMatch(@"(?<![\w])(File|Directory|Path|FileInfo|DirectoryInfo)\.", region);
+        Assert.DoesNotMatch(@"\b(DirectoryInfo|FileInfo|EnumerateFileSystem\w*|Remove)\b", region);
     }
 
     [Fact]

@@ -337,6 +337,120 @@ public class ArchiveExtractionTests
     });
 
     [Fact]
+    public void Run_WithoutSwap_ClearsEverythingAndKeepsJunctionTarget() => Sta.WithKeptFolder(root =>
+    {
+        // 陽性対照: リンクを切り替えないとき、中にリンク・読み取り専用・隠し・システム属性・入れ子のフォルダがあっても、すべて片付く。
+        // ジャンクションを含んでも片付けが失敗しないこと（パスでの再帰の削除はここで止まっていた）と、リンクの先が無事なことを確かめる
+        var (a, b, j) = ArrangeSwap(root);
+        var target = Directory.CreateDirectory(Path.Combine(root, "retac-vtest-target")).FullName;
+        var victim = Path.Combine(target, "victim.txt");
+        File.WriteAllText(victim, "keep");   // 安全: テストが新しく作ったフォルダ（Sta.WithTempFolder）の中
+        File.SetAttributes(victim, FileAttributes.ReadOnly);
+        var beforeB = Snapshot(b);
+        var called = false;
+        var result = ArchiveExtraction.Run(j, Names, Displays, folder =>
+        {
+            ExtractBoth(folder);
+            var all = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReadOnly;
+            File.SetAttributes(Path.Combine(folder, "x.txt"), FileAttributes.ReadOnly);
+            File.SetAttributes(Path.Combine(folder, "sub", "y.txt"), all);
+            var deeper = Directory.CreateDirectory(Path.Combine(folder, "sub", "deep", "deeper")).FullName;
+            File.WriteAllText(Path.Combine(deeper, "z.txt"), "z");   // 安全: Run が作った一時フォルダ（テストのフォルダの中）
+            File.SetAttributes(Path.Combine(deeper, "z.txt"), all);
+            File.SetAttributes(Path.Combine(folder, "sub", "deep"), FileAttributes.Hidden | FileAttributes.System);
+            MakeJunction(Path.Combine(folder, "sub", "link"), target);
+            return true;
+        }, _ => called = true);
+        Assert.True(result);
+        Assert.True(called);
+        Assert.Empty(Directory.GetDirectories(a, ArchiveExtraction.FolderPrefix + "*"));
+        Assert.Equal("keep", File.ReadAllText(victim));
+        Assert.True((File.GetAttributes(victim) & FileAttributes.ReadOnly) != 0);
+        Assert.Equal(beforeB, Snapshot(b));
+    });
+
+    /// <summary>本物の場所 A、別の場所 B（読み取り専用の precious.txt と中身のあるサブフォルダ）、A を指すジャンクション J を、テストのフォルダの中に作る</summary>
+    private static (string A, string B, string J) ArrangeSwap(string root)
+    {
+        var a = Directory.CreateDirectory(Path.Combine(root, "retac-vtest-real-a")).FullName;
+        var b = Directory.CreateDirectory(Path.Combine(root, "retac-vtest-other-b")).FullName;
+        var precious = Path.Combine(b, "precious.txt");
+        File.WriteAllText(precious, "!");   // 安全: テストが新しく作ったフォルダ（Sta.WithTempFolder）の中
+        File.SetAttributes(precious, FileAttributes.ReadOnly);
+        Directory.CreateDirectory(Path.Combine(b, "keep"));
+        File.WriteAllText(Path.Combine(b, "keep", "deep.txt"), "d");   // 安全: 同上
+        var j = Path.Combine(root, "retac-vtest-link-j");
+        MakeJunction(j, a);
+        return (a, b, j);
+    }
+
+    /// <summary>
+    /// J を消さずに B へ切り替える: J を同じテストのフォルダの中で別の名前へ移し、同じ名前で B を指す新しいジャンクションを作る
+    /// （S8: テストの中で何も消さない。移した古い J は残る）
+    /// </summary>
+    private static void SwapLink(string root, string j, string b)
+    {
+        Directory.Move(j, Path.Combine(root, "retac-vtest-link-j-old"));   // 安全: テストが作ったジャンクションを、テストのフォルダの中で別の名前へ移すだけ
+        MakeJunction(j, b);
+    }
+
+    /// <summary>B に、一時フォルダと同じ名前のフォルダ（落とした項目と同じ名前の、読み取り専用の中身入り）を用意する。切り替えたパスがここを指す</summary>
+    private static void PlantDecoy(string b, string name)
+    {
+        var decoy = Directory.CreateDirectory(Path.Combine(b, name)).FullName;
+        File.WriteAllText(Path.Combine(decoy, "x.txt"), "decoy");   // 安全: テストが新しく作ったフォルダの中
+        File.SetAttributes(Path.Combine(decoy, "x.txt"), FileAttributes.ReadOnly);
+        Directory.CreateDirectory(Path.Combine(decoy, "sub"));
+        File.WriteAllText(Path.Combine(decoy, "sub", "y.txt"), "decoy");   // 安全: 同上
+    }
+
+    /// <summary>名前・属性・中身の一覧（読み取り専用や隠しも含め、変わっていないことの確認用）</summary>
+    private static List<string> Snapshot(string dir) =>
+        Directory.EnumerateFileSystemEntries(dir, "*", new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = 0 })
+            .Order(StringComparer.Ordinal)
+            .Select(p =>
+            {
+                var attributes = File.GetAttributes(p);
+                return $"{Path.GetRelativePath(dir, p)}|{attributes}|{((attributes & FileAttributes.Directory) != 0 ? "" : File.ReadAllText(p))}";
+            }).ToList();
+
+    [Theory]
+    [InlineData(0)]   // 取り出しの前（TryCreate の後）
+    [InlineData(1)]   // 片付け: 所有確認の後
+    [InlineData(2)]   // 片付け: 走査の途中（最初の子を処理する前）
+    [InlineData(3)]   // 片付け: 根を消す直前
+    public void Run_LinkSwappedToOtherFolder_LeavesOtherFolderUntouched(int when) => Sta.WithKeptFolder(root =>
+    {
+        // S4 / S8: %TEMP% のようなパスの途中のリンクが、別の場所の同名のフォルダを指すように切り替わっても、
+        // 別の場所の中身・属性（読み取り専用）・サブフォルダは変わらない。片付けはパスを使わず固定したハンドルだけで行う
+        var (a, b, j) = ArrangeSwap(root);
+        List<string>? before = null;
+        var swaps = 0;
+        var called = false;
+        void SwapNow(OwnedTempFolder owned)
+        {
+            PlantDecoy(b, Path.GetFileName(owned.FullPath));
+            before = Snapshot(b);
+            SwapLink(root, j, b);
+            swaps++;
+        }
+        var result = ArchiveExtraction.Run(j, Names, Displays,
+            folder => when == 0 || ExtractBoth(folder),   // 取り出しの前に切り替えるときは、何も書かない（別の場所を変えないことを正確に比べるため）
+            _ => called = true, ExtractedFolder.Match,
+            owned =>
+            {
+                if (when == 0) { SwapNow(owned); return; }
+                var phase = (OwnedTempFolder.DeletePhase)(when - 1);
+                owned.Hook = p => { if (p == phase) SwapNow(owned); };
+            });
+        Assert.Equal(1, swaps);   // 切り替えが実際にその時点で行われた（行われていなければ何も確かめていない）
+        Assert.Equal(when != 0, result);   // 取り出しの前の切り替えは中断。送る物の取り違えを防ぐ
+        Assert.Equal(when != 0, called);
+        Assert.Equal(before, Snapshot(b));
+        Assert.Empty(Directory.GetDirectories(a, ArchiveExtraction.FolderPrefix + "*"));   // 作った一時フォルダは、ハンドルで片付いている
+    });
+
+    [Fact]
     public void Owned_MissingTempRootCreatesNothing() => Sta.WithTempFolder(root =>
     {
         var missing = Path.Combine(root, "no-such", "deeper");

@@ -24,7 +24,8 @@ internal static class ArchiveExtraction
     /// <summary>テストの入口: 照合の関数を差し替える（結果を読む所の失敗が、Run を通して中断になることを確かめるため）。製品は ExtractedFolder.Match を渡す。</summary>
     internal static bool Run(string tempRoot, IReadOnlyList<string> names, IReadOnlyList<string> displayPaths,
         Func<string, bool> extract, Action<ExtractedFolder> next,
-        Func<string, IReadOnlyList<string>, IReadOnlyList<string>, ExtractedFolder?> match)
+        Func<string, IReadOnlyList<string>, IReadOnlyList<string>, ExtractedFolder?> match,
+        Action<OwnedTempFolder>? afterCreate = null)
     {
         // S6: 取り出す前に名前を確かめる。書庫の中の名前で外へ書き出さないことは Windows に頼る（取り出した後の検査では防げない）
         if (names.Count == 0 || names.Count != displayPaths.Count || !names.All(IsSingleName)) return false;
@@ -35,10 +36,17 @@ internal static class ArchiveExtraction
 
         try
         {
+            afterCreate?.Invoke(owned);   // テストの入口: 取り出しの前に、パスの途中のリンクを切り替える（製品では使わない）
             ExtractedFolder? extracted;
             try
             {
                 if (!extract(owned.FullPath)) return false;   // S3: 1 件でも終わらなければ何も送らない
+                // S4・S8: 保存したパスが今も固定したフォルダを指していることを、取り出しの後・照合の前に確かめる。パスの途中（%TEMP% など）のリンクが
+                // 切り替わっていると、パスは別の場所の同名のフォルダを指す。そこを照合して転送すると、別の場所のファイルを送ってしまう。
+                // この確認は送る物の取り違えを防ぐだけで、削除には使わない（片付けはパスを使わず、固定したハンドルだけで行う）。
+                // 確認の後で切り替わる窓は残るが、その場合も消えるのは固定したフォルダの中だけで、別の場所は変わらない。
+                // 取り出し（IFileOperation）自体はパスへ書くので、切り替わっていれば別の場所へ書き出しうる。それは新しく書くだけで、消さずにそのまま残す（S8）
+                if (!owned.PathStillPointsHere()) return false;
                 // S6: 送るものの取り違えを防ぐ照合。結果を読む所の失敗も、取り出しの失敗と同じく中断にする（R-146-1）
                 extracted = match(owned.FullPath, names, displayPaths);
             }
@@ -121,6 +129,14 @@ internal sealed class OwnedTempFolder
         using var parent = CreateFile(root, FILE_LIST_DIRECTORY | FILE_ADD_SUBDIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
             IntPtr.Zero, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, IntPtr.Zero);
         if (parent.IsInvalid) return null;
+        // FILE_LIST_DIRECTORY: 片付けで、このハンドルから直下の一覧を取るため（パスで列挙しない）
+        return NtOpen(parent, name, DELETE | FILE_READ_ATTRIBUTES | FILE_LIST_DIRECTORY | SYNCHRONIZE, FILE_ATTRIBUTE_DIRECTORY,
+            FILE_SHARE_READ | FILE_SHARE_WRITE, FILE_CREATE, FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT | FILE_OPEN_FOR_BACKUP_INTENT | FILE_OPEN_REPARSE_POINT);
+    }
+
+    /// <summary>親のハンドルからの相対の名前を NtCreateFile で開く（または作る）。リンクはたどらない指定は呼び出し側が options に入れる。</summary>
+    private static SafeFileHandle? NtOpen(SafeFileHandle parent, string name, uint access, uint fileAttributes, uint share, uint disposition, uint options)
+    {
         var buffer = Marshal.StringToHGlobalUni(name);
         var unicode = Marshal.AllocHGlobal(Marshal.SizeOf<UnicodeString>());
         try
@@ -132,9 +148,7 @@ internal sealed class OwnedTempFolder
                 Length = (uint)Marshal.SizeOf<ObjectAttributes>(), RootDirectory = parent.DangerousGetHandle(), ObjectName = unicode,
                 Attributes = OBJ_CASE_INSENSITIVE,
             };
-            var status = NtCreateFile(out var raw, DELETE | FILE_READ_ATTRIBUTES | SYNCHRONIZE, ref attributes, out _, IntPtr.Zero,
-                FILE_ATTRIBUTE_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE, FILE_CREATE,
-                FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT | FILE_OPEN_FOR_BACKUP_INTENT | FILE_OPEN_REPARSE_POINT, IntPtr.Zero, 0);
+            var status = NtCreateFile(out var raw, access, ref attributes, out _, IntPtr.Zero, fileAttributes, share, disposition, options, IntPtr.Zero, 0);
             return status >= 0 ? new SafeFileHandle(raw, ownsHandle: true) : null;
         }
         finally { Marshal.FreeHGlobal(unicode); Marshal.FreeHGlobal(buffer); }
@@ -157,40 +171,122 @@ internal sealed class OwnedTempFolder
             // 照合はパスで開き直さず、固定しているハンドルで行う（開き直すと、その間にパスが別の物に変わりうる）
             if (InfoOf(_handle) is not { } now || (now.Volume, now.Index) != _id || (now.Attributes & (uint)FileAttributes.ReparsePoint) != 0) return false;
             Hook?.Invoke(DeletePhase.AfterOwnership);
-            // 読み取り専用のまま取り出されたファイルがあると Directory.Delete が止まる。
-            // 中のリンク（再解析ポイント）へはたどらず、属性も触らない。
-            // 隠し・システム属性のものも見る（既定では飛ばされ、読み取り専用が外されず一時フォルダが残る）。
-            // フォルダのリンク（ジャンクション）が中にあると、再帰の削除がアクセス拒否で止まるので、リンクそのものだけを先に外す（リンク先は消えない）。
-            // 根は固定されているので、パスはずっと同じフォルダの中を指す
-            var info = new DirectoryInfo(FullPath);
-            var links = new List<string>();
-            var pending = new Stack<DirectoryInfo>();
-            pending.Push(info);
-            var first = true;
-            while (pending.Count > 0)
-                foreach (var entry in pending.Pop().EnumerateFileSystemInfos("*", new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0 }))
-                {
-                    if (first) { first = false; Hook?.Invoke(DeletePhase.DuringScan); }
-                    if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) { if (entry is DirectoryInfo) links.Add(entry.FullName); }
-                    else if (entry is DirectoryInfo dir) pending.Push(dir);
-                    else if ((entry.Attributes & FileAttributes.ReadOnly) != 0) entry.Attributes &= ~FileAttributes.ReadOnly;
-                }
-            foreach (var link in links) Remove(link, recursive: false);   // 安全: S4。作ったフォルダの中のリンクそのもの（非再帰。リンク先へはたどらない）
-            // 根は自分のハンドルが消すので、直下の項目を 1 つずつ消す（根をパスで消すと、共有に DELETE を許さない自分のハンドルで失敗する）
-            foreach (var entry in info.EnumerateFileSystemInfos("*", new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0 }).ToList())
-                Remove(entry.FullName, recursive: true);   // 安全: S4。固定した、作ったフォルダの直下の項目だけ（リンクはリンクそのもの）
+            // S4・S8: 中身の一覧・属性の変更・削除は、すべて固定した根のハンドルからの相対で行い、パス（FullPath）は一切使わない。
+            // パスは途中（%TEMP% など）のリンクが切り替わると別の場所を指す。一覧や削除にパスを使うと、根のハンドルは元のフォルダのまま、
+            // 中身の処理だけが別の場所へ向いてしまう。確認の直前に照合し直しても、その後の切り替えを防げない。
+            // ハンドルからの相対なら、パスが何を指していても、触れるのは固定したフォルダの中の物だけになる。
+            var cleared = ClearChildren(_handle, () => Hook?.Invoke(DeletePhase.DuringScan), 0);
             Hook?.Invoke(DeletePhase.BeforeRemove);
-            var disposition = new FileDispositionInfo { DeleteFile = 1 };
-            return SetFileInformationByHandle(_handle, FileDispositionInfoClass, ref disposition, 1);   // 安全: S4。識別子を照合した固定のハンドルで、作ったフォルダ（空）だけを消す
+            return cleared && SetDisposition(_handle);   // 根は、照合した固定のハンドルで、空になってから消す
         }
         catch (Exception) { return false; }   // R-146-1: finally から呼ばれる。ここの例外で Run の結果や続きの処理の例外を隠さない
         finally { _handle.Dispose(); }
     }
 
-    private static void Remove(string path, bool recursive)   // 安全: S4。呼び出しは Delete だけ（識別子の照合の後）
+    /// <summary>確認用: 保存したパスが今も固定したフォルダ（同じ識別子）を指しているか。送る物の取り違えを防ぐ確認で、削除には使わない。</summary>
+    internal bool PathStillPointsHere()
     {
-        if (Directory.Exists(path)) Directory.Delete(path, recursive);   // 安全: S4。Delete が渡した、固定したフォルダの中の項目（フォルダのリンクは非再帰）
-        else File.Delete(path);   // 安全: S4。同上（ファイル、またはファイルのリンクそのもの）
+        using var opened = CreateFile(FullPath, FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            IntPtr.Zero, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, IntPtr.Zero);
+        return !opened.IsInvalid && InfoOf(opened) is { } now && (now.Volume, now.Index) == _id;
+    }
+
+    private const int MaxDepth = 128;   // 異常に深い入れ子で呼び出しの深さが尽きないように。超えたら残して false
+
+    /// <summary>
+    /// ハンドルのフォルダの直下の物をすべて消す（入れ子は再帰）。消せない物は残して先へ進み、1 つでも残れば false。
+    /// 一覧は先に全部取る（消しながら列挙しない）。隠し・システム属性のものも含む。
+    /// </summary>
+    private static bool ClearChildren(SafeFileHandle directory, Action? onFirst, int depth)
+    {
+        if (depth > MaxDepth || ListChildren(directory) is not { } children) return false;
+        var ok = true;
+        foreach (var (name, listed) in children)
+        {
+            onFirst?.Invoke();
+            onFirst = null;
+            ok &= RemoveChild(directory, name, listed, depth);
+        }
+        return ok;
+    }
+
+    /// <summary>
+    /// 親のハンドルからの相対の名前で子を開く（FILE_OPEN。作らない）。リンクはたどらず、リンクそのものを開く。
+    /// 子が普通のフォルダなら中を処理して空にし、リンクならたどらずリンクそのものだけを消す。
+    /// 読み取り専用の属性は開いたハンドルで外す。
+    /// </summary>
+    private static bool RemoveChild(SafeFileHandle parent, string name, uint listed, int depth)
+    {
+        var asDirectory = (listed & (uint)FileAttributes.Directory) != 0 && (listed & (uint)FileAttributes.ReparsePoint) == 0;
+        var access = DELETE | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE | (asDirectory ? FILE_LIST_DIRECTORY : 0);
+        // 読み取り専用の物は、DELETE を付けて開くと拒否される。属性だけ外せる権限で開いて外し、同じ物（識別子が同じ）を DELETE 付きで開き直す
+        using var child = (listed & (uint)FileAttributes.ReadOnly) != 0 ? OpenReadOnlyForDelete(parent, name, access) : OpenChild(parent, name, access);
+        if (child is null || InfoOf(child) is not { } info) return false;
+        if ((info.Attributes & (uint)FileAttributes.ReadOnly) != 0 && !ClearReadOnly(child)) return false;
+        if ((info.Attributes & (uint)FileAttributes.ReparsePoint) == 0 && (info.Attributes & (uint)FileAttributes.Directory) != 0
+            && !ClearChildren(child, null, depth + 1)) return false;
+        return SetDisposition(child);
+    }
+
+    private static SafeFileHandle? OpenChild(SafeFileHandle parent, string name, uint access) =>
+        NtOpen(parent, name, access, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN,
+            FILE_SYNCHRONOUS_IO_NONALERT | FILE_OPEN_FOR_BACKUP_INTENT | FILE_OPEN_REPARSE_POINT);
+
+    private static SafeFileHandle? OpenReadOnlyForDelete(SafeFileHandle parent, string name, uint access)
+    {
+        using var first = OpenChild(parent, name, FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE);
+        if (first is null || InfoOf(first) is not { } before) return null;
+        if ((before.Attributes & (uint)FileAttributes.ReadOnly) != 0 && !ClearReadOnly(first)) return null;
+        var second = OpenChild(parent, name, access);
+        // 開き直す間に別の物に変わっていたら使わない（S8: 識別子を照合した物だけを消す）
+        if (second is null || InfoOf(second) is not { } after || (after.Volume, after.Index) != (before.Volume, before.Index))
+        {
+            second?.Dispose();
+            return null;
+        }
+        return second;
+    }
+
+    /// <summary>ハンドルの先の読み取り専用を外す（属性を NORMAL にする。時刻は変えない）。パスでは属性を変えない。</summary>
+    private static bool ClearReadOnly(SafeFileHandle handle)
+    {
+        var basic = new FileBasicInfo { FileAttributes = FILE_ATTRIBUTE_NORMAL };
+        return SetFileInformationByHandle(handle, FileBasicInfoClass, ref basic, (uint)Marshal.SizeOf<FileBasicInfo>());   // 安全: S4。識別子を照合して固定した、作ったフォルダの中の物の属性だけ
+    }
+
+    private static bool SetDisposition(SafeFileHandle handle)
+    {
+        var disposition = new FileDispositionInfo { DeleteFile = 1 };
+        return SetFileInformationByHandle(handle, FileDispositionInfoClass, ref disposition, 1);   // 安全: S4。識別子を照合した固定のハンドル、またはそこからの相対で開いた、作ったフォルダの中の物だけを消す
+    }
+
+    /// <summary>ハンドルのフォルダの直下の名前と属性の一覧（「.」「..」は除く）。取れなければ null。</summary>
+    private static List<(string Name, uint Attributes)>? ListChildren(SafeFileHandle directory)
+    {
+        const int size = 64 * 1024, ErrorNoMoreFiles = 18;
+        var result = new List<(string Name, uint Attributes)>();
+        var buffer = Marshal.AllocHGlobal(size);
+        try
+        {
+            var infoClass = FileFullDirectoryRestartInfoClass;
+            while (true)
+            {
+                if (!GetFileInformationByHandleEx(directory, infoClass, buffer, size))
+                    return Marshal.GetLastWin32Error() == ErrorNoMoreFiles ? result : null;
+                infoClass = FileFullDirectoryInfoClass;
+                // FILE_FULL_DIR_INFO（64 ビット）: NextEntryOffset@0・FileAttributes@56・FileNameLength@60（バイト）・FileName@68
+                for (var offset = 0; ;)
+                {
+                    var next = Marshal.ReadInt32(buffer, offset);
+                    var attributes = (uint)Marshal.ReadInt32(buffer, offset + 56);
+                    var name = Marshal.PtrToStringUni(buffer + offset + 68, Marshal.ReadInt32(buffer, offset + 60) / 2);
+                    if (name is not ("." or "..")) result.Add((name, attributes));
+                    if (next == 0) break;
+                    offset += next;
+                }
+            }
+        }
+        finally { Marshal.FreeHGlobal(buffer); }
     }
 
     private static (uint Volume, ulong Index, uint Attributes)? InfoOf(SafeFileHandle handle) =>
@@ -204,7 +300,13 @@ internal sealed class OwnedTempFolder
     // NtCreateFile: 作成のみ（既にあれば失敗）。ディレクトリとして・同期で・バックアップ意図で・リンクをたどらずに開く
     private const uint FILE_CREATE = 2, OBJ_CASE_INSENSITIVE = 0x40;
     private const uint FILE_DIRECTORY_FILE = 0x1, FILE_SYNCHRONOUS_IO_NONALERT = 0x20, FILE_OPEN_FOR_BACKUP_INTENT = 0x4000, FILE_OPEN_REPARSE_POINT = 0x200000;
-    private const int FileDispositionInfoClass = 4;
+    // 子を開く（FILE_OPEN。作らない）。属性を外す権限と、通常の属性
+    private const uint FILE_OPEN = 1, FILE_WRITE_ATTRIBUTES = 0x100, FILE_ATTRIBUTE_NORMAL = 0x80;
+    private const int FileBasicInfoClass = 0, FileDispositionInfoClass = 4, FileFullDirectoryInfoClass = 14, FileFullDirectoryRestartInfoClass = 15;
+
+    // 64 ビットでは 40 バイト（時刻 4 つ 32・FileAttributes 4・詰め物 4）。時刻は 0（変更しない）にする
+    [StructLayout(LayoutKind.Sequential)]
+    private struct FileBasicInfo { public long CreationTime, LastAccessTime, LastWriteTime, ChangeTime; public uint FileAttributes; }
 
     // 64 ビットでは 16 バイト（Length 2・MaximumLength 2・詰め物 4・Buffer 8）。Length はバイト数で、終端の NUL を含めない
     [StructLayout(LayoutKind.Sequential)]
@@ -248,7 +350,15 @@ internal sealed class OwnedTempFolder
 
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetFileInformationByHandle(SafeFileHandle handle, int infoClass, ref FileDispositionInfo info, uint size);   // 安全: S4。宣言（呼び出しは Delete だけ）
+    private static extern bool GetFileInformationByHandleEx(SafeFileHandle handle, int infoClass, IntPtr buffer, int size);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetFileInformationByHandle(SafeFileHandle handle, int infoClass, ref FileDispositionInfo info, uint size);   // 安全: S4。宣言（呼び出しは SetDisposition だけ）
+
+    [DllImport("kernel32.dll", SetLastError = true, EntryPoint = "SetFileInformationByHandle")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetFileInformationByHandle(SafeFileHandle handle, int infoClass, ref FileBasicInfo info, uint size);   // 安全: S4。宣言（呼び出しは ClearReadOnly だけ）
 }
 
 /// <summary>R-146-1: 取り出した一時フォルダ。転送元（Paths）と、衝突の確認に出す書庫の中のパスへの読み替え。</summary>
