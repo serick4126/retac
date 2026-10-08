@@ -1281,7 +1281,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         var com = Marshal.GetObjectForIUnknown(data);
         // FromDataObject は項目の識別子を複写して返す。RCW は取るたびに数が増えるので、使い終えたら同じ数だけ戻す
         try { return VirtualItems.FromDataObject(com); }
-        finally { Marshal.ReleaseComObject(com); }
+        finally { if (Marshal.IsComObject(com)) Marshal.ReleaseComObject(com); }
     }
 
     private void DropFrom(IntPtr over, IntPtr data, uint keyState, ref uint effect)

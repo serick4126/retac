@@ -62,27 +62,32 @@ public class DestructiveApiTests
         ["src/ReTAC.Shell/ShellFileOperation.cs"] = (1, "S8: R-146-1。CopyIdList の CopyItem。複写先は ReTAC が新しく作り識別子で照合した一時フォルダで、既にある物を消さず、書庫の側は読むだけ"),   // 安全: 基準の表の文字列（呼び出しではない）
     };
 
-    /// <summary>1 つのファイルの基準。既存（凍結）の件数と、後から足した件数の合計</summary>
-    private static int Allowed(string file) =>
-        (Legacy.TryGetValue(file, out var legacy) ? legacy.Count : 0) + (Strict.TryGetValue(file, out var strict) ? strict.Count : 0);
+    /// <summary>
+    /// 後から足した（Strict の）呼び出しの行に付ける印。同じファイルに既存の呼び出しと混ざるとき、行ごとにどちらの表かを決める
+    /// （合計だけで見ると、既存の 1 件が消え、別の 1 件が足されても相殺されて見逃す）
+    /// </summary>
+    private const string StrictMarker = "安全: S";
 
     [Fact]
     public void DestructiveCalls_DoNotExceedBaseline()
     {
-        var actual = Count(SchemaManifest.RepoRoot());
+        var (legacy, strict) = Count(SchemaManifest.RepoRoot());
         var problems = new List<string>();
-        foreach (var (file, count) in actual)
-        {
-            var allowed = Allowed(file);
-            if (count > allowed) problems.Add($"{file}: {count} 件（基準 {allowed}）。消す・移す・上書きする呼び出しが増えた。S8 を満たすことを確かめ、Strict に理由を書いて足す");
-        }
-        foreach (var file in Legacy.Keys.Concat(Strict.Keys).Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            var count = Allowed(file);
-            var now = actual.GetValueOrDefault(file);
-            if (now < count) problems.Add($"{file}: {now} 件（基準 {count}）。基準を下げる");
-        }
+        Compare("Legacy", legacy, Legacy.ToDictionary(p => p.Key, p => p.Value.Count, StringComparer.OrdinalIgnoreCase), problems);
+        Compare("Strict", strict, Strict.ToDictionary(p => p.Key, p => p.Value.Count, StringComparer.OrdinalIgnoreCase), problems);
         Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems));
+    }
+
+    /// <summary>表ごと・ファイルごとに、増えても減っても失敗にする（Legacy は凍結。Strict は印のある行）</summary>
+    private static void Compare(string table, Dictionary<string, int> actual, Dictionary<string, int> baseline, List<string> problems)
+    {
+        foreach (var file in actual.Keys.Concat(baseline.Keys).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var now = actual.GetValueOrDefault(file);
+            var allowed = baseline.GetValueOrDefault(file);
+            if (now > allowed) problems.Add($"{file}: {table} {now} 件（基準 {allowed}）。消す・移す・上書きする呼び出しが増えた。S8 を満たすことを確かめ、その行に「// {StrictMarker}…」の印を付けて Strict に理由を書いて足す");
+            else if (now < allowed) problems.Add($"{file}: {table} {now} 件（基準 {allowed}）。基準を下げる");
+        }
     }
 
     [Fact]
@@ -106,18 +111,28 @@ public class DestructiveApiTests
         // 基準は「.Delete(」の件数なので、Remove を Delete の外から呼んでも数が変わらず、検出できない。位置で守る
         var text = File.ReadAllText(Path.Combine(SchemaManifest.RepoRoot(), "src/ReTAC.App/ArchiveExtraction.cs"));
         var start = text.IndexOf("public bool Delete()", StringComparison.Ordinal);
-        var declaration = text.IndexOf("private static void Remove(", StringComparison.Ordinal);
-        Assert.InRange(start, 1, declaration - 1);
-        var calls = Regex.Matches(text, @"(?<![\w.])Remove\(").Select(m => m.Index).Where(i => i != declaration + "private static void ".Length);
-        Assert.All(calls, i => Assert.InRange(i, start, declaration));
-        Assert.Equal(2, calls.Count());
+        Assert.True(start > 0);
+        // Delete の本体（波括弧の対応で切る）。位置の近さには頼らない
+        var open = text.IndexOf('{', start);
+        var depth = 0;
+        var end = open;
+        for (; end < text.Length; end++)
+        {
+            if (text[end] == '{') depth++;
+            else if (text[end] == '}' && --depth == 0) break;
+        }
+        var remove = new Regex(@"(?<![\w.])Remove\(");
+        Assert.Equal(2, remove.Count(text[open..(end + 1)]));
+        // ファイル全体では、本体の 2 件と宣言の 1 件だけ
+        Assert.Equal(3, remove.Count(text));
     }
 
     [Fact]
     public void Probe_HasNoDestructiveCalls()
     {
         // 実機調査の部品は、消す・移す・上書きする操作を持たない（新規作成だけ）
-        var probe = Count(SchemaManifest.RepoRoot()).Where(p => p.Key.Contains("/Probe/", StringComparison.OrdinalIgnoreCase)).ToList();
+        var (legacy, strict) = Count(SchemaManifest.RepoRoot());
+        var probe = legacy.Concat(strict).Where(p => p.Key.Contains("/Probe/", StringComparison.OrdinalIgnoreCase)).ToList();
         Assert.Empty(probe);
     }
 
@@ -158,19 +173,24 @@ public class DestructiveApiTests
     private static int CallsIn(string line) =>
         line.TrimStart().StartsWith("//", StringComparison.Ordinal) ? 0 : Destructive.Matches(line).Count;
 
-    private static Dictionary<string, int> Count(string root)
+    private static (Dictionary<string, int> Legacy, Dictionary<string, int> Strict) Count(string root)
     {
         var files = Directory.EnumerateFiles(Path.Combine(root, "src"), "*.cs", SearchOption.AllDirectories)
             .Concat(Directory.EnumerateFiles(Path.Combine(root, "tests"), "*.cs", SearchOption.AllDirectories)
                 .Where(f => f.Contains($"{Path.DirectorySeparatorChar}Probe{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)));
-        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var legacy = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var strict = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var file in files)
         {
             var parts = file.Split(Path.DirectorySeparatorChar);
             if (parts.Contains("bin", StringComparer.OrdinalIgnoreCase) || parts.Contains("obj", StringComparer.OrdinalIgnoreCase)) continue;
-            var count = File.ReadLines(file).Sum(CallsIn);
-            if (count > 0) counts[Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/')] = count;
+            var key = Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/');
+            var lines = File.ReadLines(file).ToList();
+            var strictCount = lines.Where(l => l.Contains(StrictMarker, StringComparison.Ordinal)).Sum(CallsIn);
+            var legacyCount = lines.Where(l => !l.Contains(StrictMarker, StringComparison.Ordinal)).Sum(CallsIn);
+            if (legacyCount > 0) legacy[key] = legacyCount;
+            if (strictCount > 0) strict[key] = strictCount;
         }
-        return counts;
+        return (legacy, strict);
     }
 }

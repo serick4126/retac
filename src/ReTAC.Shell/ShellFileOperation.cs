@@ -78,7 +78,7 @@ public sealed class ShellFileOperation : IDisposable
         if (hr != 0 || unknown == IntPtr.Zero) throw new IOException($"項目を解決できません。(0x{hr:X})");
         var item = (IShellItem)Marshal.GetObjectForIUnknown(unknown);
         Marshal.Release(unknown);
-        Check(_operation.CopyItem(item, Destination(destinationFolder), null, IntPtr.Zero));
+        Check(_operation.CopyItem(item, Destination(destinationFolder), null, IntPtr.Zero));   // 安全: S8。複写先は ReTAC が作った一時フォルダ（既存の物を消さない）
         _hasWork = true;
     }
 
