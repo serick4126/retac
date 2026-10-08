@@ -154,17 +154,24 @@ public class DestructiveApiTests
     [Fact]
     public void ArchiveCopy_ExecuteIsInRunningPhase_AndWarningIsGated()
     {
-        // R-146-1: Execute は「実行中」の側にあり、警告は判断の関数を通る（Windows が知らせた失敗に重ねない）
+        // R-146-1: execute は「実行中」の側にあり、警告は判断の関数を通る（Windows が知らせた失敗に重ねない）
         var text = File.ReadAllText(Path.Combine(SchemaManifest.RepoRoot(), "src/ReTAC.App/MainForm.cs"));
-        var body = string.Join("\n", CodeLines(Body(text, "private void CopyFromArchive(VirtualItems")));
-        var register = body.IndexOf("CopyIdList(", StringComparison.Ordinal);
-        var running = body.IndexOf("phase = ArchiveCopyPhase.Running;", StringComparison.Ordinal);
-        var execute = body.IndexOf("operation.Execute()", StringComparison.Ordinal);
-        Assert.True(register >= 0 && running > register && execute > running, "CopyIdList < Running への切り替え < Execute の順");
-        Assert.Contains("var phase = ArchiveCopyPhase.Preparing;", body);
-        var warn = body.Split('\n').Where(l => l.Contains("MessageBox.Show(", StringComparison.Ordinal)).ToList();
+        var run = string.Join("\n", CodeLines(Body(text, "internal static string? RunArchiveCopy(")));
+        var prepare = run.IndexOf("prepare()", StringComparison.Ordinal);
+        var running = run.IndexOf("phase = ArchiveCopyPhase.Running;", StringComparison.Ordinal);
+        var execute = run.IndexOf("execute();", StringComparison.Ordinal);
+        Assert.True(prepare >= 0 && running > prepare && execute > running, "prepare() < Running への切り替え < execute() の順");
+        Assert.Contains("var phase = ArchiveCopyPhase.Preparing;", run);
+        Assert.Contains("ShouldWarnArchiveCopy(phase, ex)", run);
+        Assert.DoesNotContain("MessageBox", run);
+        // 呼び出し側: 項目の登録は prepare の中、execute は実行側に返し、警告は RunArchiveCopy の結果だけ
+        var copy = string.Join("\n", CodeLines(Body(text, "private void CopyFromArchive(VirtualItems")));
+        Assert.Contains("RunArchiveCopy(", copy);
+        Assert.Contains("return operation.Execute;", copy);
+        Assert.DoesNotContain("Execute()", copy);
+        var warn = copy.Split('\n').Where(l => l.Contains("MessageBox.Show(", StringComparison.Ordinal)).ToList();
         Assert.Single(warn);
-        Assert.Contains("ShouldWarnArchiveCopy(phase, ex)", warn[0]);
+        Assert.Contains("warning is not null", warn[0]);
     }
 
     private static IEnumerable<string> CodeLines(string region) =>

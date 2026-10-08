@@ -2295,8 +2295,7 @@ public sealed class MainForm : Form, IBookmarkHost
     /// 一部成功の後の失敗は、例外からは区別が付かないので Running として同じに扱う。
     /// </summary>
     internal static bool ShouldWarnArchiveCopy(ArchiveCopyPhase phase, Exception ex) =>
-        phase == ArchiveCopyPhase.Preparing
-        && ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Runtime.InteropServices.COMException;
+        phase == ArchiveCopyPhase.Preparing && IsArchiveCopyFailure(ex);
 
     /// <summary>
     /// R-146-1: 書庫の中の項目を、Windows のコピーで宛先へ直接コピーする。ReTAC はここで何も消さず、移さない。
@@ -2305,24 +2304,48 @@ public sealed class MainForm : Form, IBookmarkHost
     /// </summary>
     private void CopyFromArchive(VirtualItems items, string destination)
     {
+        string? warning;
         using (var running = s_quitGate.BeginOperation())   // R-109-3: コピーの途中でアップデータの終了依頼を受けない
         {
-            var phase = ArchiveCopyPhase.Preparing;
-            try
+            ShellFileOperation? operation = null;
+            warning = RunArchiveCopy(() =>
             {
-                using var operation = ShellFileOperation.ForArchiveCopy(Handle);   // S2: 衝突は Windows の確認画面
+                operation = ShellFileOperation.ForArchiveCopy(Handle);   // S2: 衝突は Windows の確認画面
                 foreach (var item in items.Items) operation.CopyIdList(item.IdList, destination);   // 安全: 書庫の項目を宛先へ複製するだけ。宛先の既存のファイルは Windows の確認画面を経る。ReTAC は何も消さない
-                phase = ArchiveCopyPhase.Running;   // ここから先は Windows の画面が失敗を知らせる
-                operation.Execute();
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Runtime.InteropServices.COMException)
+                return operation.Execute;
+            });
+            try { operation?.Dispose(); }
+            catch (Exception ex) when (IsArchiveCopyFailure(ex))
             {
-                // 始まる前の失敗（宛先が消えた等）は Windows の画面が出ないので、ReTAC が知らせる（6 章）。
-                // 実行中の失敗・中止は Windows の画面が知らせ済みなので、追加のダイアログは出さない（R-146-1）。できた分は宛先に残りうる
-                if (ShouldWarnArchiveCopy(phase, ex)) MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                // 後始末の失敗は、Windows の処理が終わった後のことで、Windows の画面が知らせる側に入れる。ReTAC の警告は出さない（R-146-1）
             }
         }
+        if (warning is not null) MessageBox.Show(this, warning, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         Reload();
+    }
+
+    private static bool IsArchiveCopyFailure(Exception ex) =>
+        ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Runtime.InteropServices.COMException;
+
+    /// <summary>
+    /// R-146-1: 準備（操作の作成と項目の登録）と実行を分けて行い、ReTAC が出す警告の文を返す（無ければ null）。
+    /// 準備の失敗だけ警告する。実行（prepare が返した execute）の失敗は Windows が画面で知らせるので返さない。
+    /// 利用者の中止は execute が false を返すだけで、例外にならない。これも警告しない。
+    /// </summary>
+    internal static string? RunArchiveCopy(Func<Func<bool>> prepare)
+    {
+        var phase = ArchiveCopyPhase.Preparing;
+        try
+        {
+            var execute = prepare();
+            phase = ArchiveCopyPhase.Running;   // ここから先は Windows の画面が失敗を知らせる
+            execute();
+            return null;
+        }
+        catch (Exception ex) when (IsArchiveCopyFailure(ex))
+        {
+            return ShouldWarnArchiveCopy(phase, ex) ? ex.Message : null;   // できた分は宛先に残りうる
+        }
     }
 
     /// <summary>

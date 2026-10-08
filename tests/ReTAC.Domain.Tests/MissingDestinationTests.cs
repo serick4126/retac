@@ -42,9 +42,18 @@ public class MissingDestinationTests
     [Fact]
     public void ArchiveCopy_UserCancel_DoesNotWarn()
     {
-        // 利用者の中止は Execute が false を返すだけで例外にならない。例外が来ても実行中なら警告しない
-        Assert.False(MainForm.ShouldWarnArchiveCopy(MainForm.ArchiveCopyPhase.Running, new OperationCanceledException()));
-        // 陽性対照: 予期しない種類の例外は、段階にかかわらず対象外（catch に入らず、そのまま外へ出る）
-        Assert.False(MainForm.ShouldWarnArchiveCopy(MainForm.ArchiveCopyPhase.Preparing, new OperationCanceledException()));
+        // 実際の中止の経路: Execute は例外を投げず false を返すだけ
+        var executed = false;
+        Assert.Null(MainForm.RunArchiveCopy(() => () => { executed = true; return false; }));
+        Assert.True(executed);   // 陽性対照: 実行まで進んでいる
+    }
+
+    [Fact]
+    public void ArchiveCopy_Run_WarnsOnlyBeforeStart()
+    {
+        Assert.Equal("prep", MainForm.RunArchiveCopy(() => throw new IOException("prep")));
+        Assert.Null(MainForm.RunArchiveCopy(() => () => throw new IOException("run")));
+        Assert.Null(MainForm.RunArchiveCopy(() => () => throw new System.Runtime.InteropServices.COMException("run")));
+        Assert.Null(MainForm.RunArchiveCopy(() => () => true));
     }
 }
