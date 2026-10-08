@@ -237,13 +237,13 @@ internal sealed class OwnedTempFolder
     private static bool ClearReadOnly(SafeFileHandle handle)
     {
         var basic = new FileBasicInfo { FileAttributes = FILE_ATTRIBUTE_NORMAL };
-        return SetFileInformationByHandle(handle, FileBasicInfoClass, ref basic, (uint)Marshal.SizeOf<FileBasicInfo>());   // 安全: S4。識別子を照合して固定した、作ったフォルダの中の物の属性だけ
+        return SetFileInformationByHandle(handle, FileBasicInfoClass, ref basic, (uint)Marshal.SizeOf<FileBasicInfo>());   // 安全: S4。固定した根のハンドルからの相対で 1 回だけ開いた、作ったフォルダの中の物のハンドルの属性だけ
     }
 
     private static bool SetDisposition(SafeFileHandle handle)
     {
         var disposition = new FileDispositionInfo { DeleteFile = 1 };
-        return SetFileInformationByHandle(handle, FileDispositionInfoClass, ref disposition, 1);   // 安全: S4。識別子を照合した固定のハンドル、またはそこからの相対で開いた、作ったフォルダの中の物だけを消す
+        return SetFileInformationByHandle(handle, FileDispositionInfoClass, ref disposition, 1);   // 安全: S4。識別子を照合した固定の根のハンドル、または固定した根のハンドルからの相対で 1 回だけ開いたハンドル（作ったフォルダの中の物）だけを消す
     }
 
     /// <summary>ハンドルのフォルダの直下の名前と属性の一覧（「.」「..」は除く）。取れなければ null。</summary>
