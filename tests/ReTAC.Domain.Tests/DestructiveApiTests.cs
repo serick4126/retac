@@ -17,11 +17,15 @@ public class DestructiveApiTests
         // Windows のファイル操作（ShellFileOperation の Move・Copy・Rename と、IFileOperation の各項目の操作）
         @"\.Move\(|\.Copy\(|\.Rename\(|\b(Move|Copy|Delete|Rename)Items?\(|" +
         // ハンドルに削除の印を付けて消す手段（FileDispositionInfo。ハンドルを閉じるときに消える）。見張りの抜け穴にしない
-        @"\bSetFileInformationByHandle\(",
+        @"\bSetFileInformationByHandle\(|" +
+        // そのほかの消す・移す手段（Win32 の API、閉じると消す指定、新しい削除の指定）。名前の一致だけの見張りの抜け穴にしない
+        @"\b(DeleteFile|RemoveDirectory|MoveFileEx|MoveFile|ReplaceFile|CopyFileEx|CopyFile)[AW]?\(|" +
+        @"\b(NtSetInformationFile|ZwSetInformationFile|SHFileOperation)[AW]?\(|" +
+        @"FILE_FLAG_DELETE_ON_CLOSE|FileOptions\.DeleteOnClose|FileDispositionInfoEx|FileDispositionInformationEx",
         RegexOptions.Compiled);
 
     /// <summary>既存のファイルの数。2026-10-07 の確認で固定した。増やさない（新しいものは Strict に足す）</summary>
-    private const int LegacyFileCount = 26;
+    private const int LegacyFileCount = 27;   // 26 + Replacer.cs（検出の対象を広げて数え始めた、2026-10-07 より前からあるコード）
 
     /// <summary>2026-10-07 に確認した既存の呼び出し（ファイル → 件数と判定）。判定は「問題なし:」「誤検出:」「要確認:」で始める</summary>
     private static readonly Dictionary<string, (int Count, string Judgment)> Legacy = new(StringComparer.OrdinalIgnoreCase)
@@ -49,7 +53,10 @@ public class DestructiveApiTests
             "何を消す・移すかは呼び出し側が決め、呼び出し側がこの基準に載る"),
         ["src/ReTAC.Shell/ShellImageInterop.cs"] = (1, "誤検出: メモリの写し（Marshal.Copy）"),
         ["src/ReTAC.Updater/Core/StagingFolder.cs"] = (2, "問題なし: 今回書いたと記録したファイルだけ（リンクは消さない）と、空になった準備フォルダ（非再帰）を消す"),
-        ["src/ReTAC.Updater/Core/ZipPackage.cs"] = (1, "誤検出: ストリームへの写し（Stream.CopyTo）"),
+        ["src/ReTAC.Updater/Core/ZipPackage.cs"] = (2, "誤検出: ストリームへの写し（Stream.CopyTo）。問題なし: 新規作成（CreateNew）したダウンロード先のファイルを、閉じたら消す（DeleteOnClose）。" +
+            "検出の対象を広げたとき（2026-10-08）に初めて数えた。コードは 2026-10-07 より前からある"),
+        ["src/ReTAC.Updater/Core/Replacer.cs"] = (2, "問題なし: R-109-4。準備フォルダのファイルを正規の名前へ MoveFileEx で付け替える（呼び出しと宣言）。" +
+            "検出の対象を広げたとき（2026-10-08）に初めて数えた。コードは 2026-10-07 より前からある"),
         ["src/ReTAC.Updater/ElevatedReplace.cs"] = (1, "問題なし: アップデータの作業フォルダの progress.txt に結果を書く"),
         ["src/ReTAC.Updater/Fetchers.cs"] = (1, "誤検出: ストリームへの写し（Stream.CopyTo）"),
         ["src/ReTAC.Updater/Options.cs"] = (1, "問題なし: デバッグの一時停止の印を作業フォルダに書く（デバッグの引数のときだけ）"),
@@ -156,6 +163,19 @@ public class DestructiveApiTests
     [InlineData("Check(_operation.RenameItem(Item(path), newName, IntPtr.Zero));", 1)]
     [InlineData("_operation.DeleteItems(items);", 1)]
     [InlineData("SetFileInformationByHandle(handle, FileDispositionInfoClass, ref disposition, 1);", 1)]
+    [InlineData("DeleteFileW(path);", 1)]
+    [InlineData("RemoveDirectoryW(path);", 1)]
+    [InlineData("MoveFileExW(a, b, flags);", 1)]
+    [InlineData("static extern bool MoveFileEx(string existing, string replacement, uint flags);", 1)]
+    [InlineData("CopyFile(a, b, false);", 1)]
+    [InlineData("var flags = FILE_FLAG_DELETE_ON_CLOSE;", 1)]
+    [InlineData("new FileStream(p, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.DeleteOnClose);", 1)]
+    [InlineData("var c = FileDispositionInfoEx;", 1)]
+    [InlineData("var c = FileDispositionInformationEx;", 1)]
+    [InlineData("NtSetInformationFile(h, ref io, ref info, 4, 64);", 1)]
+    [InlineData("SHFileOperationW(ref op);", 1)]
+    [InlineData("CommandId.CopyFileName => ShowNameFormatPopup(),", 0)]
+    [InlineData("Marshal.GetLastWin32Error();", 0)]
     // 同じ行の複数の呼び出しは、それぞれ数える（レビューの指摘: 行で数えていた）
     [InlineData("Directory.Delete(a); File.Delete(b);", 2)]
     [InlineData("File.Delete(a); File.Delete(b); operation.Move(c, d);", 3)]

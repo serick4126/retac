@@ -307,6 +307,25 @@ public class ArchiveExtractionTests
         Assert.ThrowsAny<IOException>(() => ExtractedFolder.Match(Path.Combine(root, "no-such"), Names, Displays));
     });
 
+    [Theory]
+    [InlineData(typeof(IOException))]
+    [InlineData(typeof(UnauthorizedAccessException))]
+    [InlineData(typeof(COMException))]
+    [InlineData(typeof(InvalidOperationException))]
+    public void Run_MatchReadFailureIsAbort(Type exception) => Sta.WithTempFolder(root =>
+    {
+        var called = false;
+        var matched = 0;
+        // R-146-1 / S6: 取り出しは終わったと答えたのに、結果を読む所（照合）で失敗する。例外を外へ出さず、何も送らず、一時フォルダは片付く。
+        // 照合の呼び出しが取り出しの失敗と同じ try の中にあることを、Run を通して守る
+        var result = ArchiveExtraction.Run(root, Names, Displays, ExtractBoth, _ => called = true,
+            (_, _, _) => { matched++; throw (Exception)Activator.CreateInstance(exception, "fail")!; });
+        Assert.Equal(1, matched);   // 照合まで進んだ（進んでいなければ何も確かめていない）
+        Assert.False(result);
+        Assert.False(called);
+        Assert.Empty(Leftovers(root));
+    });
+
     [Fact]
     public void Match_DuplicateNamesAreRejected() => Sta.WithTempFolder(root =>
     {

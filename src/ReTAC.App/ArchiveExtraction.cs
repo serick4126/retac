@@ -18,7 +18,13 @@ internal static class ArchiveExtraction
     /// <param name="next">取り出した項目を転送元にした続きの処理</param>
     /// <returns>続きの処理まで進んだら true。中断したら false（宛先には何も渡していない。S3）</returns>
     public static bool Run(string tempRoot, IReadOnlyList<string> names, IReadOnlyList<string> displayPaths,
-        Func<string, bool> extract, Action<ExtractedFolder> next)
+        Func<string, bool> extract, Action<ExtractedFolder> next) =>
+        Run(tempRoot, names, displayPaths, extract, next, ExtractedFolder.Match);
+
+    /// <summary>テストの入口: 照合の関数を差し替える（結果を読む所の失敗が、Run を通して中断になることを確かめるため）。製品は ExtractedFolder.Match を渡す。</summary>
+    internal static bool Run(string tempRoot, IReadOnlyList<string> names, IReadOnlyList<string> displayPaths,
+        Func<string, bool> extract, Action<ExtractedFolder> next,
+        Func<string, IReadOnlyList<string>, IReadOnlyList<string>, ExtractedFolder?> match)
     {
         // S6: 取り出す前に名前を確かめる。書庫の中の名前で外へ書き出さないことは Windows に頼る（取り出した後の検査では防げない）
         if (names.Count == 0 || names.Count != displayPaths.Count || !names.All(IsSingleName)) return false;
@@ -34,7 +40,7 @@ internal static class ArchiveExtraction
             {
                 if (!extract(owned.FullPath)) return false;   // S3: 1 件でも終わらなければ何も送らない
                 // S6: 送るものの取り違えを防ぐ照合。結果を読む所の失敗も、取り出しの失敗と同じく中断にする（R-146-1）
-                extracted = ExtractedFolder.Match(owned.FullPath, names, displayPaths);
+                extracted = match(owned.FullPath, names, displayPaths);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or COMException)
             {
