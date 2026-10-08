@@ -16,7 +16,21 @@ public class ShellTreeDropTapTests
         public int DragOver(uint keyState, long point, ref uint effect) { Calls.Add($"Over {keyState}"); return Answer(); }
         private int Answer() => Throws ? throw new InvalidOperationException() : Result;
         public int DragLeave() { Calls.Add("Leave"); return 0; }
-        public int Drop(IntPtr data, uint keyState, long point, ref uint effect) { Calls.Add($"Drop {keyState}"); return 0; }
+        public int Drop(IntPtr data, uint keyState, long point, ref uint effect) { Calls.Add($"Drop {keyState}"); SeenData = ShellTreeDropTap.DroppingData; return 0; }
+        public IntPtr SeenData { get; private set; }
+    }
+
+    [Fact]
+    public void 落としたデータは包んだ先のDropの中でだけ見える()
+    {
+        // R-146-1: NSTC の OnDrop には項目の一覧が来ない（実機）。仮想項目はこのデータから取り出す
+        var inner = new FakeTarget();
+        var tap = new ShellTreeDropTap(inner, _ => true);
+        uint effect = 3;
+        tap.DragEnter(IntPtr.Zero, 1, 0, ref effect);
+        tap.Drop(new IntPtr(1234), 0, 0, ref effect);
+        Assert.Equal(new IntPtr(1234), inner.SeenData);
+        Assert.Equal(IntPtr.Zero, ShellTreeDropTap.DroppingData);
     }
 
     [Fact]

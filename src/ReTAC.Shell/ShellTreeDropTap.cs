@@ -31,6 +31,13 @@ internal sealed class ShellTreeDropTap(IOleDropTarget inner, Func<IntPtr, bool> 
     // R-146-1 / S1: DragEnter で決め、DragOver・Drop で使う（DragOver にはデータが来ない）
     private bool _virtual;
 
+    /// <summary>
+    /// R-146-1: 包んだ先の Drop を呼んでいる間だけ、落とされたデータ（COM の IDataObject）。それ以外は Zero。
+    /// NSTC の OnDrop には項目の一覧が来ない（実機。位置の通知には来る）。パスを持つ項目はドラッグ中に覚えたパスで足りるが、
+    /// 仮想項目はドロップの時点のデータから取り出すので、ここで渡す。参照は OLE が Drop の間持っている
+    /// </summary>
+    internal static IntPtr DroppingData { get; private set; }
+
     // 包んだ先が失敗を返した・例外を投げたときは、右ボタンの印を消す。失敗の後に DragLeave / Drop が来るとは限らず、
     // 残すと次の左ボタンのドラッグが右ボタンに見える。印は包んだ先を呼ぶ前に立てる（NSTC の通知の中で読まれるため）
     public int DragEnter(IntPtr data, uint keyState, long point, ref uint effect)
@@ -88,9 +95,11 @@ internal sealed class ShellTreeDropTap(IOleDropTarget inner, Func<IntPtr, bool> 
     /// <summary>NSTC の OnDrop（ReTAC のメニューとダイアログ）はこの中で呼ばれる。終わってから印を消す。</summary>
     public int Drop(IntPtr data, uint keyState, long point, ref uint effect)
     {
+        DroppingData = data;
         try { return inner.Drop(data, keyState, point, ref effect); }
         finally
         {
+            DroppingData = IntPtr.Zero;
             // S1: 書庫の中の項目で、ドラッグ元へ移動を返さない（返すとエクスプローラーが書庫から消すことがある）
             if (_virtual) effect &= ~DROPEFFECT_MOVE;
             _virtual = false;

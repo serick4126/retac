@@ -1269,6 +1269,17 @@ public sealed class NameSpaceTreeHost : IDisposable
         destination is not null && ReTAC.Domain.FileOps.DropRules.DecideVirtual((allowed & DROPEFFECT_COPY) != 0) == ReTAC.Domain.FileOps.DropAction.Copy
             ? DROPEFFECT_COPY : 0u;
 
+    /// <summary>
+    /// R-146-1: NSTC の OnDrop には項目の一覧が来ない（実機）。そのときは包んだ受け口が Drop の間だけ渡すデータから取り出す。
+    /// 受け口を包めなかったときは取り出せず、ドロップは何もしない（パスを持つ項目と違い、ドラッグ中に覚えておける物が無い）
+    /// </summary>
+    private static VirtualItems? VirtualItemsOf(IntPtr array)
+    {
+        if (array != IntPtr.Zero) return VirtualItems.FromShellItemArray(array);
+        var data = ShellTreeDropTap.DroppingData;
+        return data == IntPtr.Zero ? null : VirtualItems.FromDataObject(Marshal.GetObjectForIUnknown(data));
+    }
+
     private void DropFrom(IntPtr over, IntPtr data, uint keyState, ref uint effect)
     {
         var allowed = effect;
@@ -1279,7 +1290,7 @@ public sealed class NameSpaceTreeHost : IDisposable
             if (_acceptEvents && destination is not null && _dropSources.Length > 0)
                 FilesDropped?.Invoke(this, new ShellTreeDropEventArgs(_dropSources, destination, keyState, (DragDropEffects)allowed));
             else if (_acceptEvents && destination is not null && _dropVirtual && FilesDropped is { } handler
-                     && VirtualItems.FromShellItemArray(data) is { } items)
+                     && VirtualItemsOf(data) is { } items)
                 handler(this, new ShellTreeDropEventArgs([], destination, keyState, (DragDropEffects)allowed) { Virtual = items });   // R-146-1
         }
         finally

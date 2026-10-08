@@ -10392,7 +10392,7 @@
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 1315
+        "line": 1326
       },
       {
         "file": "src/ReTAC.Shell/ShellTreeDropTap.cs",
@@ -12850,7 +12850,11 @@
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 1283
+        "line": 1273
+      },
+      {
+        "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
+        "line": 1294
       },
       {
         "file": "src/ReTAC.Shell/ShellFileOperation.cs",
@@ -12862,7 +12866,11 @@
       },
       {
         "file": "src/ReTAC.Shell/ShellTreeDropTap.cs",
-        "line": 56
+        "line": 35
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellTreeDropTap.cs",
+        "line": 63
       },
       {
         "file": "src/ReTAC.Shell/VirtualItems.cs",
@@ -15840,7 +15848,7 @@
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 1373
+        "line": 1384
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreePolicy.cs",
@@ -15974,23 +15982,23 @@
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 1303
+        "line": 1314
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 1337
+        "line": 1348
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 1357
+        "line": 1368
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 1385
+        "line": 1396
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",
-        "line": 1428
+        "line": 1439
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeInterop.cs",
