@@ -108,6 +108,21 @@ public class ArchiveExtractionTests
     });
 
     [Fact]
+    public void Run_DeletesHiddenAndSystemFiles() => Sta.WithTempFolder(root =>
+    {
+        // 既定の列挙は隠し・システム属性を飛ばす。読み取り専用も重なると外されず、一時フォルダが残った
+        Assert.True(ArchiveExtraction.Run(root, Names, Displays, folder =>
+        {
+            ExtractBoth(folder);
+            var attributes = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReadOnly;
+            File.SetAttributes(Path.Combine(folder, "sub", "y.txt"), attributes);
+            File.SetAttributes(Path.Combine(folder, "x.txt"), attributes);
+            return true;
+        }, _ => { }));
+        Assert.Empty(Leftovers(root));
+    });
+
+    [Fact]
     public void Run_UsesNewFolderEachTime() => Sta.WithTempFolder(root =>
     {
         var folders = new List<string>();

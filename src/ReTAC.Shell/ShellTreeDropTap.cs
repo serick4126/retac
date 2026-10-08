@@ -43,7 +43,9 @@ internal sealed class ShellTreeDropTap(IOleDropTarget inner, Func<IntPtr, bool> 
     public int DragEnter(IntPtr data, uint keyState, long point, ref uint effect)
     {
         DragButtonState.Enter(keyState);
-        _virtual = isVirtual(data);
+        // 判定の例外で右ボタンの印を残さない（失敗の後に DragLeave / Drop が来るとは限らない）。例外なら仮想項目ではない扱い
+        try { _virtual = isVirtual(data); }
+        catch (Exception) { _virtual = false; }
         var allowed = effect;
         try { return ResetIfFailed(inner.DragEnter(data, keyState, point, ref effect)); }
         catch { DragButtonState.Reset(); throw; }
@@ -70,13 +72,16 @@ internal sealed class ShellTreeDropTap(IOleDropTarget inner, Func<IntPtr, bool> 
     private static bool HasVirtualItems(IntPtr data)
     {
         if (data == IntPtr.Zero) return false;
+        object? obj = null;
         try
         {
-            if (Marshal.GetObjectForIUnknown(data) is not System.Runtime.InteropServices.ComTypes.IDataObject com) return false;
+            obj = Marshal.GetObjectForIUnknown(data);
+            if (obj is not System.Runtime.InteropServices.ComTypes.IDataObject com) return false;
             var forms = new System.Windows.Forms.DataObject(com);
             return !forms.GetDataPresent(System.Windows.Forms.DataFormats.FileDrop) && forms.GetDataPresent(VirtualItems.ShellIdListFormat);
         }
         catch (Exception ex) when (ex is COMException or InvalidCastException) { return false; }
+        finally { if (obj is not null && Marshal.IsComObject(obj)) Marshal.ReleaseComObject(obj); }   // 取るたびに RCW の数が増える。使い終えたら戻す
     }
 
     private static int ResetIfFailed(int hr)

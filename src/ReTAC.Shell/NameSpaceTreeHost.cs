@@ -1277,7 +1277,11 @@ public sealed class NameSpaceTreeHost : IDisposable
     {
         if (array != IntPtr.Zero) return VirtualItems.FromShellItemArray(array);
         var data = ShellTreeDropTap.DroppingData;
-        return data == IntPtr.Zero ? null : VirtualItems.FromDataObject(Marshal.GetObjectForIUnknown(data));
+        if (data == IntPtr.Zero) return null;
+        var com = Marshal.GetObjectForIUnknown(data);
+        // FromDataObject は項目の識別子を複写して返す。RCW は取るたびに数が増えるので、使い終えたら同じ数だけ戻す
+        try { return VirtualItems.FromDataObject(com); }
+        finally { Marshal.ReleaseComObject(com); }
     }
 
     private void DropFrom(IntPtr over, IntPtr data, uint keyState, ref uint effect)

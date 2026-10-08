@@ -43,7 +43,7 @@ public class DestructiveApiTests
         ["src/ReTAC.Domain/Selection/LassoGesture.cs"] = (3, "誤検出: 投げ縄の移動（lasso.Move）"),
         ["src/ReTAC.Shell/DragImageWindow.cs"] = (1, "誤検出: メモリの写し（Marshal.Copy）"),
         ["src/ReTAC.Shell/ShellFileBrowser.cs"] = (2, "誤検出: 文字列のバッファへの写し（Span.CopyTo・Marshal.Copy）"),
-        ["src/ReTAC.Shell/ShellFileOperation.cs"] = (13, "問題なし: Windows のファイル操作の入口（Copy・CopyIdList・Move・Delete・Rename）と、IFileOperation の宣言。" +
+        ["src/ReTAC.Shell/ShellFileOperation.cs"] = (12, "問題なし: Windows のファイル操作の入口（Copy・CopyIdList・Move・Delete・Rename）と、IFileOperation の宣言。" +
             "何を消す・移すかは呼び出し側が決め、呼び出し側がこの基準に載る"),
         ["src/ReTAC.Shell/ShellImageInterop.cs"] = (1, "誤検出: メモリの写し（Marshal.Copy）"),
         ["src/ReTAC.Updater/Core/StagingFolder.cs"] = (2, "問題なし: 今回書いたと記録したファイルだけ（リンクは消さない）と、空になった準備フォルダ（非再帰）を消す"),
@@ -59,7 +59,12 @@ public class DestructiveApiTests
     private static readonly Dictionary<string, (int Count, string Reason)> Strict = new(StringComparer.OrdinalIgnoreCase)
     {
         ["src/ReTAC.App/ArchiveExtraction.cs"] = (2, "S8: R-146-1。この処理が作った一時フォルダだけを、作ったときの識別子（ボリュームとファイル番号）と照合し、リンクでないことを確かめて消す（Directory.Delete と、その呼び出し）"),   // 安全: 基準の表の文字列（呼び出しではない）
+        ["src/ReTAC.Shell/ShellFileOperation.cs"] = (1, "S8: R-146-1。CopyIdList の CopyItem。複写先は ReTAC が新しく作り識別子で照合した一時フォルダで、既にある物を消さず、書庫の側は読むだけ"),   // 安全: 基準の表の文字列（呼び出しではない）
     };
+
+    /// <summary>1 つのファイルの基準。既存（凍結）の件数と、後から足した件数の合計</summary>
+    private static int Allowed(string file) =>
+        (Legacy.TryGetValue(file, out var legacy) ? legacy.Count : 0) + (Strict.TryGetValue(file, out var strict) ? strict.Count : 0);
 
     [Fact]
     public void DestructiveCalls_DoNotExceedBaseline()
@@ -68,11 +73,12 @@ public class DestructiveApiTests
         var problems = new List<string>();
         foreach (var (file, count) in actual)
         {
-            var allowed = Legacy.TryGetValue(file, out var legacy) ? legacy.Count : Strict.TryGetValue(file, out var strict) ? strict.Count : 0;
+            var allowed = Allowed(file);
             if (count > allowed) problems.Add($"{file}: {count} 件（基準 {allowed}）。消す・移す・上書きする呼び出しが増えた。S8 を満たすことを確かめ、Strict に理由を書いて足す");
         }
-        foreach (var (file, count) in Legacy.Select(p => (p.Key, p.Value.Count)).Concat(Strict.Select(p => (p.Key, p.Value.Count))))
+        foreach (var file in Legacy.Keys.Concat(Strict.Keys).Distinct(StringComparer.OrdinalIgnoreCase))
         {
+            var count = Allowed(file);
             var now = actual.GetValueOrDefault(file);
             if (now < count) problems.Add($"{file}: {now} 件（基準 {count}）。基準を下げる");
         }
@@ -91,7 +97,20 @@ public class DestructiveApiTests
     public void Strict_ReasonsStateS8()
     {
         Assert.All(Strict, p => Assert.StartsWith("S8: ", p.Value.Reason));
-        Assert.Empty(Strict.Keys.Intersect(Legacy.Keys, StringComparer.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ArchiveExtraction_OnlyDeleteCallsRemove()
+    {
+        // S8: 一時フォルダを消す入口は OwnedTempFolder.Delete（識別子の照合の後）だけ。
+        // 基準は「.Delete(」の件数なので、Remove を Delete の外から呼んでも数が変わらず、検出できない。位置で守る
+        var text = File.ReadAllText(Path.Combine(SchemaManifest.RepoRoot(), "src/ReTAC.App/ArchiveExtraction.cs"));
+        var start = text.IndexOf("public bool Delete()", StringComparison.Ordinal);
+        var declaration = text.IndexOf("private static void Remove(", StringComparison.Ordinal);
+        Assert.InRange(start, 1, declaration - 1);
+        var calls = Regex.Matches(text, @"(?<![\w.])Remove\(").Select(m => m.Index).Where(i => i != declaration + "private static void ".Length);
+        Assert.All(calls, i => Assert.InRange(i, start, declaration));
+        Assert.Equal(2, calls.Count());
     }
 
     [Fact]

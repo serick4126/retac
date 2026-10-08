@@ -95,12 +95,13 @@ internal sealed class OwnedTempFolder
             if (!info.Exists || (info.Attributes & FileAttributes.ReparsePoint) != 0 || IdOf(FullPath) != _id) return false;
             // 読み取り専用のまま取り出されたファイルがあると Directory.Delete が止まる。
             // 中のリンク（再解析ポイント）へはたどらず、属性も触らない。
+            // 隠し・システム属性のものも見る（既定では飛ばされ、読み取り専用が外されず一時フォルダが残る）。
             // フォルダのリンク（ジャンクション）が中にあると、再帰の削除がアクセス拒否で止まるので、リンクそのものだけを先に外す（リンク先は消えない）
             var links = new List<string>();
             var pending = new Stack<DirectoryInfo>();
             pending.Push(info);
             while (pending.Count > 0)
-                foreach (var entry in pending.Pop().EnumerateFileSystemInfos("*", new EnumerationOptions { IgnoreInaccessible = true }))
+                foreach (var entry in pending.Pop().EnumerateFileSystemInfos("*", new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0 }))
                 {
                     if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) { if (entry is DirectoryInfo) links.Add(entry.FullName); }
                     else if (entry is DirectoryInfo dir) pending.Push(dir);

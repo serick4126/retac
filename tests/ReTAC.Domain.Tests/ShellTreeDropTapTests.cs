@@ -34,6 +34,22 @@ public class ShellTreeDropTapTests
     }
 
     [Fact]
+    public void 仮想項目の判定が例外でも右ボタンの印を残さず仮想ではない扱い()
+    {
+        // R-146-1: 判定の例外で DragButtonState.Enter の印が残ると、次の左ボタンのドラッグが右に見える
+        var inner = new FakeTarget();
+        var tap = new ShellTreeDropTap(inner, _ => throw new InvalidOperationException());
+        uint effect = 7;
+        tap.DragEnter(IntPtr.Zero, 2, 0, ref effect);
+        Assert.Equal(7u, effect);   // 仮想項目なら絞られるが、そうではない扱い
+        tap.DragLeave();
+        Assert.False(DragButtonState.Right);
+        // 判定が例外でも、包んだ先へは渡る
+        Assert.Equal(["Enter 2", "Leave"], inner.Calls);
+        DragButtonState.Reset();
+    }
+
+    [Fact]
     public void 右ボタンのドラッグを覚えて包んだ先へそのまま渡す()
     {
         var inner = new FakeTarget();
