@@ -2308,16 +2308,20 @@ public sealed class MainForm : Form, IBookmarkHost
         using (var running = s_quitGate.BeginOperation())   // R-109-3: コピーの途中でアップデータの終了依頼を受けない
         {
             ShellFileOperation? operation = null;
-            warning = RunArchiveCopy(() =>
+            try
             {
-                operation = ShellFileOperation.ForArchiveCopy(Handle);   // S2: 衝突は Windows の確認画面
-                foreach (var item in items.Items) operation.CopyIdList(item.IdList, destination);   // 安全: 書庫の項目を宛先へ複製するだけ。宛先の既存のファイルは Windows の確認画面を経る。ReTAC は何も消さない
-                return operation.Execute;
-            });
-            try { operation?.Dispose(); }
-            catch (Exception ex) when (IsArchiveCopyFailure(ex))
+                warning = RunArchiveCopy(() =>
+                {
+                    operation = ShellFileOperation.ForArchiveCopy(Handle);   // S2: 衝突は Windows の確認画面
+                    foreach (var item in items.Items) operation.CopyIdList(item.IdList, destination);   // 安全: 書庫の項目を宛先へ複製するだけ。宛先の既存のファイルは Windows の確認画面を経る。ReTAC は何も消さない
+                    return operation.Execute;
+                });
+            }
+            finally
             {
-                // 後始末の失敗は、Windows の処理が終わった後のことで、Windows の画面が知らせる側に入れる。ReTAC の警告は出さない（R-146-1）
+                // どの経路でも解放する（Unadvise と COM の解放）。解放の失敗は Windows の処理の後始末なので、ReTAC の警告は出さない（R-146-1）
+                try { operation?.Dispose(); }
+                catch (Exception ex) when (IsArchiveCopyFailure(ex)) { }
             }
         }
         if (warning is not null) MessageBox.Show(this, warning, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);

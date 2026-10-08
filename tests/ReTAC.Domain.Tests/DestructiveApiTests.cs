@@ -132,13 +132,20 @@ public class DestructiveApiTests
         // R-146-1 / S4・S8: 書庫の経路（メソッドの本体。位置ではなく波括弧で切り出す）に、消す・移す・上書きする呼び出しや、
         // 移動・ReTAC の転送の本体・元に戻すの記録が無い。件数の基準だけでは、別の呼び出しとの入れ替わりを見逃す
         var text = File.ReadAllText(Path.Combine(SchemaManifest.RepoRoot(), "src/ReTAC.App/MainForm.cs"));
-        var regions = new[]
+        var regions = new List<string>
         {
             Body(text, "private void CopyFromArchive(VirtualItems"),
             Body(text, "private void CopyFromArchiveViaDialog(VirtualItems"),
             Body(text, "private void AcceptVirtualDrop("),
             Body(text, "private bool ClipboardPaste()", "DropData.CaptureVirtual(data)"),
         };
+        // 名前に Archive を含む MainForm のメソッドは、書庫の経路に切り出した関数として自動で対象に入れる（足し忘れの防止）
+        var named = Regex.Matches(text, @"^\s*(?:private|internal|public)\s[^=;(\r\n]*?\b(\w*Archive\w*)\s*\(", RegexOptions.Multiline)
+            .Select(m => m.Groups[1].Value).Distinct().ToList();
+        foreach (var name in named) regions.Add(DeclarationBody(text, name));
+        Assert.Contains("RunArchiveCopy", named);   // 陽性対照: 見つけられている
+        Assert.Contains("ShouldWarnArchiveCopy", named);
+        Assert.Contains("CopyFromArchiveViaDialog", named);
         foreach (var region in regions)
         {
             Assert.Equal(0, CodeLines(region).Sum(CallsIn));
@@ -176,6 +183,17 @@ public class DestructiveApiTests
 
     private static IEnumerable<string> CodeLines(string region) =>
         region.Split('\n').Select(l => { var i = l.IndexOf("//", StringComparison.Ordinal); return i >= 0 ? l[..i] : l; });
+
+    /// <summary>名前で宣言を探し、本体を返す。式形式（=>）なら次の ; まで、そうでなければ波括弧の対まで</summary>
+    private static string DeclarationBody(string text, string name)
+    {
+        var m = Regex.Match(text, @"^\s*(?:private|internal|public)\s[^=;(\r\n]*?\b" + Regex.Escape(name) + @"\s*\(", RegexOptions.Multiline);
+        Assert.True(m.Success, name);
+        var open = text.IndexOf('{', m.Index);
+        var arrow = text.IndexOf("=>", m.Index, StringComparison.Ordinal);
+        if (arrow >= 0 && (open < 0 || arrow < open)) return text[m.Index..text.IndexOf(';', arrow)];
+        return Body(text, m.Value);
+    }
 
     /// <summary>signature で始まるメソッドの本体（波括弧の対応で切り出す）。from があれば、その位置から最初の波括弧の対を取る</summary>
     private static string Body(string text, string signature, string? from = null)
