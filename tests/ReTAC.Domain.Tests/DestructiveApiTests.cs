@@ -151,6 +151,22 @@ public class DestructiveApiTests
         Assert.Equal(1, CodeLines(regions[0] + "\n    File.Delete(x);").Sum(CallsIn));
     }
 
+    [Fact]
+    public void ArchiveCopy_ExecuteIsInRunningPhase_AndWarningIsGated()
+    {
+        // R-146-1: Execute は「実行中」の側にあり、警告は判断の関数を通る（Windows が知らせた失敗に重ねない）
+        var text = File.ReadAllText(Path.Combine(SchemaManifest.RepoRoot(), "src/ReTAC.App/MainForm.cs"));
+        var body = string.Join("\n", CodeLines(Body(text, "private void CopyFromArchive(VirtualItems")));
+        var register = body.IndexOf("CopyIdList(", StringComparison.Ordinal);
+        var running = body.IndexOf("phase = ArchiveCopyPhase.Running;", StringComparison.Ordinal);
+        var execute = body.IndexOf("operation.Execute()", StringComparison.Ordinal);
+        Assert.True(register >= 0 && running > register && execute > running, "CopyIdList < Running への切り替え < Execute の順");
+        Assert.Contains("var phase = ArchiveCopyPhase.Preparing;", body);
+        var warn = body.Split('\n').Where(l => l.Contains("MessageBox.Show(", StringComparison.Ordinal)).ToList();
+        Assert.Single(warn);
+        Assert.Contains("ShouldWarnArchiveCopy(phase, ex)", warn[0]);
+    }
+
     private static IEnumerable<string> CodeLines(string region) =>
         region.Split('\n').Select(l => { var i = l.IndexOf("//", StringComparison.Ordinal); return i >= 0 ? l[..i] : l; });
 

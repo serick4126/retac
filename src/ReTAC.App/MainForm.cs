@@ -2286,6 +2286,18 @@ public sealed class MainForm : Form, IBookmarkHost
         finally { if (!handedOver) items.Dispose(); }   // メニューの表示や BeginInvoke が例外でも解放する
     }
 
+    /// <summary>書庫の項目のコピーの段階。Preparing は操作の作成と項目の登録、Running は Execute（Windows の画面が出る）。</summary>
+    internal enum ArchiveCopyPhase { Preparing, Running }
+
+    /// <summary>
+    /// R-146-1: ReTAC が警告を出すか。Windows の画面が出る前の失敗（Preparing）だけ出す。
+    /// 実行中（Running）の失敗は、中止・パスワード・一部成功の後の失敗を含め、Windows が画面で知らせるので出さない。
+    /// 一部成功の後の失敗は、例外からは区別が付かないので Running として同じに扱う。
+    /// </summary>
+    internal static bool ShouldWarnArchiveCopy(ArchiveCopyPhase phase, Exception ex) =>
+        phase == ArchiveCopyPhase.Preparing
+        && ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Runtime.InteropServices.COMException;
+
     /// <summary>
     /// R-146-1: 書庫の中の項目を、Windows のコピーで宛先へ直接コピーする。ReTAC はここで何も消さず、移さない。
     /// 衝突・進捗・パスワードの入力は Windows の画面（silentOverwrite: false。noUi にしない）。
@@ -2295,17 +2307,19 @@ public sealed class MainForm : Form, IBookmarkHost
     {
         using (var running = s_quitGate.BeginOperation())   // R-109-3: コピーの途中でアップデータの終了依頼を受けない
         {
+            var phase = ArchiveCopyPhase.Preparing;
             try
             {
                 using var operation = ShellFileOperation.ForArchiveCopy(Handle);   // S2: 衝突は Windows の確認画面
                 foreach (var item in items.Items) operation.CopyIdList(item.IdList, destination);   // 安全: 書庫の項目を宛先へ複製するだけ。宛先の既存のファイルは Windows の確認画面を経る。ReTAC は何も消さない
+                phase = ArchiveCopyPhase.Running;   // ここから先は Windows の画面が失敗を知らせる
                 operation.Execute();
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Runtime.InteropServices.COMException)
             {
-                // コピーが始まる前の失敗（宛先が消えた等）は Windows の画面が出ない。RunOperation と同じく普通のエラーとして知らせる（6 章）。
-                // 途中の失敗・中止は Windows の画面で知らせ済みだが、この知らせが重なっても害はない。できた分は宛先に残りうる
-                MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                // 始まる前の失敗（宛先が消えた等）は Windows の画面が出ないので、ReTAC が知らせる（6 章）。
+                // 実行中の失敗・中止は Windows の画面が知らせ済みなので、追加のダイアログは出さない（R-146-1）。できた分は宛先に残りうる
+                if (ShouldWarnArchiveCopy(phase, ex)) MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
         Reload();

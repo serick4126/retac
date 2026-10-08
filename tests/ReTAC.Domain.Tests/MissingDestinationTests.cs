@@ -22,4 +22,29 @@ public class MissingDestinationTests
 
     [Fact]
     public void DifferentialOption_OfferedForPaths() => Assert.True(MainForm.DifferentialOptionAvailable(virtualSource: false));   // 陽性対照
+
+    // R-146-1: 書庫の項目のコピーの失敗。Windows の画面が出る前の失敗だけ ReTAC が警告する
+    public static TheoryData<Exception> Failures => new()
+    {
+        new IOException("x"), new System.Runtime.InteropServices.COMException("x"),
+        new UnauthorizedAccessException("x"), new InvalidOperationException("x"),
+    };
+
+    [Theory, MemberData(nameof(Failures))]
+    public void ArchiveCopy_FailureBeforeStart_Warns(Exception ex) =>
+        Assert.True(MainForm.ShouldWarnArchiveCopy(MainForm.ArchiveCopyPhase.Preparing, ex));
+
+    // 実行中の失敗（Windows の処理の失敗・パスワードの中止や誤り・一部成功の後の失敗。どれも例外からは区別が付かない）
+    [Theory, MemberData(nameof(Failures))]
+    public void ArchiveCopy_FailureWhileRunning_DoesNotWarn(Exception ex) =>
+        Assert.False(MainForm.ShouldWarnArchiveCopy(MainForm.ArchiveCopyPhase.Running, ex));
+
+    [Fact]
+    public void ArchiveCopy_UserCancel_DoesNotWarn()
+    {
+        // 利用者の中止は Execute が false を返すだけで例外にならない。例外が来ても実行中なら警告しない
+        Assert.False(MainForm.ShouldWarnArchiveCopy(MainForm.ArchiveCopyPhase.Running, new OperationCanceledException()));
+        // 陽性対照: 予期しない種類の例外は、段階にかかわらず対象外（catch に入らず、そのまま外へ出る）
+        Assert.False(MainForm.ShouldWarnArchiveCopy(MainForm.ArchiveCopyPhase.Preparing, new OperationCanceledException()));
+    }
 }
