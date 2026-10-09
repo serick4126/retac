@@ -15646,7 +15646,11 @@
       },
       {
         "file": "src/ReTAC.Shell/CurrentPathShellItemFilter.cs",
-        "line": 50
+        "line": 25
+      },
+      {
+        "file": "src/ReTAC.Shell/CurrentPathShellItemFilter.cs",
+        "line": 60
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",

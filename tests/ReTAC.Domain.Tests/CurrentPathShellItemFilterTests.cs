@@ -127,6 +127,23 @@ public class CurrentPathShellItemFilterTests
         }
     }
 
+    // R-97: Windows はドライブのルート（C:\ など）に隠し・システム属性を付けている。デスクトップツリーの PC の下で
+    // これを隠しフォルダとして除くと、今のフォルダが別のドライブにある間に列挙されたとき、そのドライブへ辿れなくなる
+    // （隠しを表示しない設定で J: から C: へ移ると、展開の期限切れになった。2026-10-09）。
+    [Fact]
+    public void ドライブのルートは隠し属性があっても除かない()
+    {
+        var systemRoot = Path.GetPathRoot(Environment.SystemDirectory)!;
+        Assert.True((File.GetAttributes(systemRoot) & (FileAttributes.Hidden | FileAttributes.System)) != 0,
+            "前提: システムのドライブのルートには Windows が隠し・システム属性を付けている");
+        var otherDrive = char.ToUpperInvariant(systemRoot[0]) == 'Q' ? @"R:\elsewhere" : @"Q:\elsewhere";
+        var filter = new CurrentPathShellItemFilter(otherDrive, new ShellTreeVisibility(false, false), allowVirtualItems: true);
+
+        Assert.True(IsIncluded(filter, systemRoot));
+        Assert.True(filter.IncludesPath(systemRoot));
+        Assert.False(filter.RequiresException(systemRoot));
+    }
+
     private static EnumFlags EnumFlagsFor(CurrentPathShellItemFilter filter, string path)
     {
         var item = ShellItemPath.Create(path);
