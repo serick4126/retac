@@ -75,6 +75,35 @@ public static class NameSpaceTreePolicy
     internal static bool ShouldReissueExpand(bool expanded, long requestedAt, long now, long interval, bool alreadyReissued) =>
         !expanded && !alreadyReissued && requestedAt != 0 && now - requestedAt >= interval;
 
+    /// <summary>
+    /// R-97-5: 同期で来たフォルダが、直前にツリーで確定したフォルダと同じなら、ツリーからの移動とみなす。
+    /// ツリーの確定は FolderCommitted → フォルダを開く → 同期 の順で同じフォルダに戻ってくるので、
+    /// 呼び出し元（MainForm）に起点を渡させなくても、ツリーの側だけで見分けられる。
+    /// </summary>
+    public static bool IsTreeCommit(string? committedFolder, string syncedFolder) =>
+        committedFolder is not null
+        && string.Equals(Normalize(committedFolder), Normalize(syncedFolder), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// R-97-5: 選び終えたときに左端・中央付近へ合わせるかは、移動の起点だけで決める。
+    /// ツリーからの移動でも、例外として出す枝が変わればルートを入れ直す（rebuilt）。それを理由に合わせると、
+    /// 利用者がクリックした位置からツリーが勝手に動く。rebuilt は判定に使わないことをテストで固定するために受け取る。
+    /// </summary>
+    public static bool ShouldAlignAfterSelection(bool fromTree, bool rebuilt) => !fromTree;
+
+    /// <summary>
+    /// R-97-5: 子の無かった今のフォルダに子が足されると、NSTC は自分で今のフォルダを展開し、そのスクロールで
+    /// 今のフォルダを最下段へ動かす（実測）。そのときだけ描画を止めて、動く前の位置へ戻す。
+    /// 既に展開済みなら子はその場に足されるだけで動かない。選択の途中は自分で辿っているので触らない。
+    /// </summary>
+    public static bool ShouldHoldForAutoExpand(bool selectionPending, string? selectedPath, string addedPath,
+        bool selectedExpanded)
+    {
+        if (selectionPending || selectedExpanded || selectedPath is null) return false;
+        return Path.GetDirectoryName(Normalize(addedPath)) is { } parent
+            && string.Equals(Normalize(parent), Normalize(selectedPath), StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string Normalize(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path))

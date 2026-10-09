@@ -104,4 +104,47 @@ public class NameSpaceTreePolicyTests
     {
         Assert.Equal(expected, NameSpaceTreePolicy.ShouldReissueExpand(expanded, requestedAt, now, 1_500, alreadyReissued));
     }
+
+    // R-97-5: 位置を合わせるかは移動の起点だけで決める。例外として出す枝が変わるとツリーからの移動でも
+    // 作り直しになるので、「作り直したら合わせる」と書くと、ツリーから・作り直しありの行が失敗する。
+    [Theory]
+    [InlineData("ツリーから・作り直しなし", true, false, false)]
+    [InlineData("ツリーから・例外の枝が変わって作り直し", true, true, false)]
+    [InlineData("一覧の側から・作り直しなし", false, false, true)]
+    [InlineData("一覧の側から・作り直し", false, true, true)]
+    public void 位置合わせは移動の起点だけで決める(string _, bool fromTree, bool rebuilt, bool expected)
+    {
+        Assert.Equal(expected, NameSpaceTreePolicy.ShouldAlignAfterSelection(fromTree, rebuilt));
+    }
+
+    [Theory]
+    [InlineData(@"C:\a\b", @"C:\a\b", true)]
+    [InlineData(@"C:\a\b\", @"C:\a\b", true)]
+    [InlineData(@"c:\A\B", @"C:\a\b", true)]
+    [InlineData(@"\\server\share\a", @"\\SERVER\share\a\", true)]
+    [InlineData(@"C:\a\b", @"C:\a", false)]
+    [InlineData(@"C:\a", @"C:\a\b", false)]
+    [InlineData(null, @"C:\a", false)]
+    public void ツリーで確定したフォルダへの同期だけをツリーからの移動とする(string? committed, string synced, bool expected)
+    {
+        Assert.Equal(expected, NameSpaceTreePolicy.IsTreeCommit(committed, synced));
+    }
+
+    // R-97-5: 今のフォルダに初めての子ができると、ツリーが自分で展開して今のフォルダを最下段へ動かす。
+    // そのときだけ描画を止める。止める必要の無い場面で止めると、0.5 秒の戻しまでツリーが描かれない。
+    [Theory]
+    [InlineData("今のフォルダに初めての子", false, @"C:\a", @"C:\a\new", false, true)]
+    [InlineData("表記の違い", false, @"c:\A\", @"C:\a\new", false, true)]
+    [InlineData("選択の途中", true, @"C:\a", @"C:\a\new", false, false)]
+    [InlineData("既に展開済み", false, @"C:\a", @"C:\a\new", true, false)]
+    [InlineData("兄弟", false, @"C:\a", @"C:\b", false, false)]
+    [InlineData("孫", false, @"C:\a", @"C:\a\b\new", false, false)]
+    [InlineData("今のフォルダ無し", false, null, @"C:\a\new", false, false)]
+    [InlineData("ドライブの直下", false, @"C:\", @"C:\new", false, true)]
+    public void 今のフォルダが自分で展開されるときだけ描画を止める(
+        string _, bool selectionPending, string? selectedPath, string addedPath, bool selectedExpanded, bool expected)
+    {
+        Assert.Equal(expected,
+            NameSpaceTreePolicy.ShouldHoldForAutoExpand(selectionPending, selectedPath, addedPath, selectedExpanded));
+    }
 }

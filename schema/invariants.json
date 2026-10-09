@@ -457,6 +457,21 @@
       "note": "DropInto を使うと確認ダイアログが出ない(ファイルリストの通常のドロップと同じ挙動になってしまう)。ツリーは §9 の例外で、宛先を見せて確認する側を使う。"
     },
     {
+      "id": "INV-TREE-ALIGN-BY-ORIGIN",
+      "status": "enforced",
+      "specIds": [
+        "R-97-5"
+      ],
+      "applies": [
+        "shell:NameSpaceTreeHost",
+        "app:DriveTreeView"
+      ],
+      "rule": "ドライブツリー・デスクトップツリーの位置合わせ（左端・中央付近）は移動の起点だけで決め、ツリーを作り直したかどうかでは決めない。ツリーからの移動では合わせない。起点は選択の要求（PrepareSelection）に持たせ、例外の枝が変わってルートを入れ直す経路でも引き継ぐ。ツリーが自分で今のフォルダを展開して動かすときは、描画を止めて動く前の位置に戻し、止めた描画は展開が来なくても 0.5 秒で必ず戻す。",
+      "enforcedBy": "shell:NameSpaceTreePolicy.ShouldAlignAfterSelection / IsTreeCommit / ShouldHoldForAutoExpand、shell:NameSpaceTreeHost.SelectPath（作り直しの分岐で align をそのまま渡す）・ContinuePendingSelection・HoldForAutoExpand / ReleaseRedrawHold、app:DriveTreeView.SyncCurrentFolder / CommitFolder",
+      "testedBy": "tests/ReTAC.Domain.Tests/NameSpaceTreePolicyTests.cs",
+      "note": "実際のスクロール位置とちらつきは自動テストでは確かめられない。実機確認で見る。"
+    },
+    {
       "id": "INV-INPANEL-DROP-VIA-DIALOG",
       "status": "enforced",
       "specIds": ["R-110-1"],

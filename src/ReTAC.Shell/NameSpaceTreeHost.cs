@@ -119,6 +119,15 @@ public sealed class NameSpaceTreeHost : IDisposable
     private bool _ignoreSelectionEvents;
     private bool _selectingItem;
     private int _selectionVersion;
+    /// <summary>
+    /// R-97-5: 今の選択の要求を選び終えたら、左端・中央付近へ合わせるか。要求を受けた時点（移動の起点）で決め、
+    /// ルートの入れ直しを挟んでも持ち続ける。次の要求が来たら上書きされ、そちらの起点に従う。
+    /// </summary>
+    private bool _alignOnComplete;
+    /// <summary>R-97-5: NSTC が自分で今のフォルダを展開する間、描画を止めている印。null なら止めていない。</summary>
+    private object? _redrawHold;
+    private int _heldVertical;
+    private int _heldHorizontal;
     private int _lifetime;
     private CancellationTokenSource? _selectionFallback;
     /// <summary>
@@ -205,38 +214,40 @@ public sealed class NameSpaceTreeHost : IDisposable
             throw new Win32Exception(Marshal.GetLastWin32Error(), "名前空間ツリーをリサイズできません。");
     }
 
-    public void SetRoot(string rootPath, string currentPath, ShellTreeVisibility visibility)
-        => SetRoot(rootPath, currentPath, visibility, null);
+    public void SetRoot(string rootPath, string currentPath, ShellTreeVisibility visibility, bool align)
+        => SetRoot(rootPath, currentPath, visibility, null, align);
 
     private void SetRoot(string rootPath, string currentPath, ShellTreeVisibility visibility,
-        IReadOnlySet<string>? expandedPaths)
+        IReadOnlySet<string>? expandedPaths, bool align)
     {
         VerifyOwner();
         var normalizedRoot = ShellItemPath.RootOf(rootPath);
         if (!string.Equals(normalizedRoot, ShellItemPath.RootOf(currentPath), StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("現在位置は指定したルート内にありません。", nameof(currentPath));
         ApplyRoot(desktopMode: false, normalizedRoot, () => ShellItemPath.Create(normalizedRoot),
-            currentPath, visibility, allowVirtualItems: false, expandedPaths);
+            currentPath, visibility, allowVirtualItems: false, expandedPaths, align);
         ShellTreeDropTap.Install(_treeHwnd); // R-111-2 / T1: 右ボタンのドロップを見分けるため。作り直しのたびに包み直す
     }
 
     /// <summary>R-97: デスクトップツリーのルート。PC 全体で単一・固定で、ドライブ/UNC共有の変化では作り直さない。</summary>
-    public void SetDesktopRoot(string currentPath, ShellTreeVisibility visibility)
-        => SetDesktopRoot(currentPath, visibility, null);
+    public void SetDesktopRoot(string currentPath, ShellTreeVisibility visibility, bool align)
+        => SetDesktopRoot(currentPath, visibility, null, align);
 
-    private void SetDesktopRoot(string currentPath, ShellTreeVisibility visibility, IReadOnlySet<string>? expandedPaths)
+    private void SetDesktopRoot(string currentPath, ShellTreeVisibility visibility, IReadOnlySet<string>? expandedPaths,
+        bool align)
     {
         VerifyOwner();
         ApplyRoot(desktopMode: true, NameSpaceTreePolicy.DesktopRootMarker, ShellItemPath.CreateDesktopRoot,
-            currentPath, visibility, allowVirtualItems: true, expandedPaths);
+            currentPath, visibility, allowVirtualItems: true, expandedPaths, align);
         ShellTreeDropTap.Install(_treeHwnd); // R-111-2 / T1: 右ボタンのドロップを見分けるため。作り直しのたびに包み直す
     }
 
     /// <summary>SetRoot と SetDesktopRoot の共通部分（ルート項目の生成先だけが違う）。</summary>
     private void ApplyRoot(bool desktopMode, string rootMarker, Func<IShellItem> createRoot, string currentPath,
-        ShellTreeVisibility visibility, bool allowVirtualItems, IReadOnlySet<string>? expandedPaths)
+        ShellTreeVisibility visibility, bool allowVirtualItems, IReadOnlySet<string>? expandedPaths, bool align)
     {
         var tree = RequireTree();
+        ReleaseRedrawHold();   // R-97-5: ルートを入れ直す前に。覚えた位置は入れ直した後のツリーでは意味を持たないが、描画は戻す
         _desktopMode = desktopMode;
 
         var removeHr = tree.RemoveAllRoots();
@@ -246,7 +257,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         _rootFilter = null;
         _rootPath = null;
         _selectedPath = null;
-        PrepareSelection(currentPath);
+        PrepareSelection(currentPath, align);
 
         // 現在位置の祖先が隠し・システム属性でもフィルターへ届くよう、最初の列挙候補には含める。
         // 同じ階層の不要な項目は CurrentPathShellItemFilter が表示設定に従って除外する。
@@ -286,7 +297,8 @@ public sealed class NameSpaceTreeHost : IDisposable
         finally { Release(ref newRoot); }
     }
 
-    public void SelectPath(string path)
+    /// <param name="align">R-97-5: 選び終えたら左端・中央付近へ合わせるか（移動の起点で呼び出し元が決める）</param>
+    public void SelectPath(string path, bool align)
     {
         var tree = RequireTree();
         VerifyOwner();
@@ -300,9 +312,11 @@ public sealed class NameSpaceTreeHost : IDisposable
         if (!SamePath(previousPath, path) && ExceptionBranchesChanged(filter, previousPath, path))
         {
             // NSTC には枝の再フィルター API がないため、例外枝が変わる場合だけ展開状態を退避してルートを入れ直す。
+            // R-97-5: ツリーからの移動でもここへ来る。入れ直したことを理由に合わせると、クリックした位置から
+            // ツリーが勝手に動くので、受け取った align をそのまま渡す
             var expandedPaths = ExpandedPaths(tree);
-            if (_desktopMode) SetDesktopRoot(path, filter.Visibility, expandedPaths);
-            else SetRoot(_rootPath, path, filter.Visibility, expandedPaths);
+            if (_desktopMode) SetDesktopRoot(path, filter.Visibility, expandedPaths, align);
+            else SetRoot(_rootPath, path, filter.Visibility, expandedPaths, align);
             return;
         }
 
@@ -314,7 +328,7 @@ public sealed class NameSpaceTreeHost : IDisposable
             return;
         }
 
-        BeginSelection(path);
+        BeginSelection(path, align);
     }
 
     private static string? CurrentSelectionPath(INameSpaceTreeControl tree)
@@ -425,6 +439,7 @@ public sealed class NameSpaceTreeHost : IDisposable
     {
         if (_pendingSelectionPath is null) return;
         _pendingSelectionPath = null;
+        _alignOnComplete = false;
         _pendingExpandedPaths.Clear();
         _selectionVersion++;
         _selectionContinuationPosted = false;
@@ -436,6 +451,7 @@ public sealed class NameSpaceTreeHost : IDisposable
     public void CancelPendingSelection()
     {
         _pendingSelectionPath = null;
+        _alignOnComplete = false;
         _selectionContinuationPosted = false;
         _selectionSignalPending = false;
         CancelSelectionFallback();
@@ -483,6 +499,8 @@ public sealed class NameSpaceTreeHost : IDisposable
         _selectedPath = null;
         _pendingExpandedPaths.Clear();
         _pendingSelectionPath = null;
+        _alignOnComplete = false;
+        _redrawHold = null;   // 窓ごと捨てたので、描画を戻す相手が無い
         _ownerContext = null;
         _selectionContinuationPosted = false;
         _selectionContinuationRunning = false;
@@ -516,9 +534,9 @@ public sealed class NameSpaceTreeHost : IDisposable
         item = null;
     }
 
-    private void BeginSelection(string path)
+    private void BeginSelection(string path, bool align)
     {
-        PrepareSelection(path);
+        PrepareSelection(path, align);
         try { ContinuePendingSelection(); }
         catch
         {
@@ -527,9 +545,11 @@ public sealed class NameSpaceTreeHost : IDisposable
         }
     }
 
-    private void PrepareSelection(string path)
+    private void PrepareSelection(string path, bool align)
     {
+        ReleaseRedrawHold();   // R-97-5: 新しい選択は辿る様子を見せるので、止めたままにしない
         _selectionVersion++;
+        _alignOnComplete = align;
         _selectionContinuationPosted = false;
         _selectionSignalPending = false;
         CancelSelectionFallback();
@@ -550,7 +570,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         {
             // ponytail: UNC 現在位置をマップ済みドライブ文字へ変換しての解決はやらない。This PC 配下は
             // ドライブ文字でしか一致しないため、リトライを続けても原理的に解決しない。選択なしで完了とする。
-            CompleteSelection(path);
+            CompleteSelection(path);   // R-97-5: 選んだ項目が無いので合わせない
             return;
         }
         if (_selectionContinuationRunning)
@@ -586,12 +606,15 @@ public sealed class NameSpaceTreeHost : IDisposable
             return;
         }
 
+        // R-97-5: 途中の段を辿る間のスクロールは今までどおりで、選択と展開の復元を終えたここで 1 回だけ合わせる
+        if (_alignOnComplete) AlignSelection();
         CompleteSelection(path);
     }
 
     private void CompleteSelection(string path)
     {
         _pendingSelectionPath = null;
+        _alignOnComplete = false;
         _selectionVersion++;
         _selectionContinuationPosted = false;
         _selectionSignalPending = false;
@@ -879,6 +902,123 @@ public sealed class NameSpaceTreeHost : IDisposable
         SendMessage(inner, TVM_EXPAND, TVE_EXPAND, hit.Item);
         return true;
     }
+
+    /// <summary>
+    /// R-97-5: 選んだ項目を、見えている行の中央付近に置き、左端までスクロールする。
+    /// 選択の途中の EnsureItemVisible は項目を「見える最小の動き」で出すので、深い所へ辿ると選択が最下段に、
+    /// 横は名前の左端に寄り、サブフォルダとアイコン・親の線が隠れる。
+    /// 中央は「n/2 行上の項目を先頭の行にする」で作る。末尾に近ければツリー自身がスクロールできる所で止める。
+    /// 表示の調整なので戻り値は見ず、失敗しても選択の完了は妨げない。
+    /// </summary>
+    private void AlignSelection()
+    {
+        var inner = InnerTree();
+        if (inner == IntPtr.Zero) return;
+        var selected = SendMessage(inner, TVM_GETNEXTITEM, TVGN_CARET, IntPtr.Zero);
+        if (selected != IntPtr.Zero)
+        {
+            var rowsAbove = (int)SendMessage(inner, TVM_GETVISIBLECOUNT, IntPtr.Zero, IntPtr.Zero) / 2;
+            var top = selected;
+            for (var i = 0; i < rowsAbove; i++)
+            {
+                var previous = SendMessage(inner, TVM_GETNEXTITEM, TVGN_PREVIOUSVISIBLE, top);
+                if (previous == IntPtr.Zero) break;
+                top = previous;
+            }
+            SendMessage(inner, TVM_SELECTITEM, TVGN_FIRSTVISIBLE, top);
+        }
+        SendMessage(inner, WM_HSCROLL, SB_LEFT, IntPtr.Zero);
+    }
+
+    private IntPtr InnerTree() =>
+        _treeHwnd == IntPtr.Zero ? IntPtr.Zero : FindWindowEx(_treeHwnd, IntPtr.Zero, "SysTreeView32", null);
+
+    /// <summary>
+    /// R-97-5: 子の無かった今のフォルダに子が足されると、NSTC は直後に自分で今のフォルダを展開し、
+    /// そのスクロールで今のフォルダを最下段へ動かす（実測。足されてから約 15 ms 後）。動いた後に合わせ直すと
+    /// 動いて戻る途中が見えうるので、足された時点で描画を止め、展開の後に元の位置へ戻してから描画を再開する。
+    /// 位置は項目のハンドルではなくスクロール位置で覚える。止めている間に項目が消されると、無効なハンドルを渡すことになる。
+    /// </summary>
+    private void HoldForAutoExpand(IntPtr item)
+    {
+        if (_redrawHold is not null || _ownerContext is null) return;
+        var inner = InnerTree();
+        if (inner == IntPtr.Zero || ShellItemPath.FileSystemPathOf(item) is not { } path) return;
+        var selected = SendMessage(inner, TVM_GETNEXTITEM, TVGN_CARET, IntPtr.Zero);
+        if (selected == IntPtr.Zero) return;
+        var expanded = ((long)SendMessage(inner, TVM_GETITEMSTATE, selected, (IntPtr)TVIS_EXPANDED) & TVIS_EXPANDED) != 0;
+        if (!NameSpaceTreePolicy.ShouldHoldForAutoExpand(SelectionPending, _selectedPath, path, expanded)) return;
+
+        _heldVertical = GetScrollPos(inner, SB_VERT);
+        _heldHorizontal = GetScrollPos(inner, SB_HORZ);
+        SendMessage(inner, WM_SETREDRAW, IntPtr.Zero, IntPtr.Zero);
+        var hold = new object();
+        _redrawHold = hold;
+        // 展開が来ない（利用者が折りたたんでいた等）と描画が止まったままになるので、必ず戻す予約もしておく
+        _ = ReleaseRedrawHoldLater(hold, _lifetime);
+    }
+
+    private async Task ReleaseRedrawHoldLater(object hold, int lifetime)
+    {
+        await Task.Delay(RedrawHoldMilliseconds).ConfigureAwait(false);
+        _ownerContext?.Post(_ => { if (lifetime == _lifetime) ReleaseRedrawHold(hold); }, null);
+    }
+
+    private const int RedrawHoldMilliseconds = 500;
+
+    /// <summary>R-97-5: 今のフォルダの展開が来たら戻す。NSTC 自身のスクロールが終わった後で戻すため、すぐには戻さず投げる。</summary>
+    private void OnExpandedWhileHeld(IntPtr item)
+    {
+        if (_redrawHold is not { } hold || _selectedPath is not { } selected) return;
+        if (ShellItemPath.FileSystemPathOf(item) is not { } path || !SamePath(path, selected)) return;
+        var lifetime = _lifetime;
+        _ownerContext?.Post(_ => { if (lifetime == _lifetime) ReleaseRedrawHold(hold); }, null);
+    }
+
+    /// <summary>
+    /// 止めた位置へ戻して描画を再開する。何度呼ばれても、止めているものに 1 回だけ効く。
+    /// hold を渡すと、その停止のときだけ戻す（遅れて届いた古い予約が、後の停止を解かないように）。
+    /// 縦は WM_VSCROLL の SB_THUMBPOSITION では戻らない（位置の値を渡しても動かなかった。実測）ので、
+    /// 今の先頭の項目から差の行数だけ辿った項目を先頭にする。項目はここで取り直すので、消された項目は渡らない。
+    /// 横は NSTC の展開で動かないことが多いが、念のため止める前が左端なら左端へ戻す。
+    /// ponytail: 横を左端以外の途中の位置へ戻すことはしない。必要になったら行の幅から送り数を求める。
+    /// </summary>
+    private void ReleaseRedrawHold(object? hold = null)
+    {
+        if (_redrawHold is null || (hold is not null && !ReferenceEquals(hold, _redrawHold))) return;
+        _redrawHold = null;
+        var inner = InnerTree();
+        if (inner == IntPtr.Zero) return;
+        var delta = _heldVertical - GetScrollPos(inner, SB_VERT);
+        var top = SendMessage(inner, TVM_GETNEXTITEM, TVGN_FIRSTVISIBLE, IntPtr.Zero);
+        var step = delta > 0 ? TVGN_NEXTVISIBLE : TVGN_PREVIOUSVISIBLE;
+        for (var i = 0; i < Math.Abs(delta) && top != IntPtr.Zero; i++)
+        {
+            var next = SendMessage(inner, TVM_GETNEXTITEM, step, top);
+            if (next == IntPtr.Zero) break;
+            top = next;
+        }
+        if (delta != 0 && top != IntPtr.Zero) SendMessage(inner, TVM_SELECTITEM, TVGN_FIRSTVISIBLE, top);
+        if (_heldHorizontal == 0) SendMessage(inner, WM_HSCROLL, SB_LEFT, IntPtr.Zero);
+        SendMessage(inner, WM_SETREDRAW, (IntPtr)1, IntPtr.Zero);
+        InvalidateRect(inner, IntPtr.Zero, true);
+    }
+
+    private const uint TVM_GETITEMSTATE = 0x1127;
+    private const int TVIS_EXPANDED = 0x20;
+    private const uint WM_SETREDRAW = 0x000B;
+    private const int SB_HORZ = 0;
+    private const int SB_VERT = 1;
+
+    private const uint TVM_GETNEXTITEM = 0x110A;
+    private const uint TVM_SELECTITEM = 0x110B;
+    private const uint TVM_GETVISIBLECOUNT = 0x1110;
+    private static readonly IntPtr TVGN_FIRSTVISIBLE = 0x5;
+    private static readonly IntPtr TVGN_NEXTVISIBLE = 0x6;
+    private static readonly IntPtr TVGN_PREVIOUSVISIBLE = 0x7;
+    private static readonly IntPtr TVGN_CARET = 0x9;
+    private const uint WM_HSCROLL = 0x0114;
+    private static readonly IntPtr SB_LEFT = 6;
 
     private const uint TVM_EXPAND = 0x1102;
     private const uint TVM_HITTEST = 0x1111;
@@ -1420,6 +1560,8 @@ public sealed class NameSpaceTreeHost : IDisposable
         public int OnBeforeExpand(IntPtr item) => S_OK;
         public int OnAfterExpand(IntPtr item)
         {
+            try { _host?.OnExpandedWhileHeld(item); }
+            catch (Exception) { }
             try
             {
                 _host?.ScheduleSelectionContinuation(
@@ -1434,6 +1576,8 @@ public sealed class NameSpaceTreeHost : IDisposable
         public int OnBeforeItemDelete(IntPtr item) => S_OK;
         public int OnItemAdded(IntPtr item, bool isRoot)
         {
+            try { if (!isRoot) _host?.HoldForAutoExpand(item); }
+            catch (Exception) { }
             try
             {
                 _host?.ScheduleSelectionContinuation(
@@ -1494,6 +1638,12 @@ public sealed class NameSpaceTreeHost : IDisposable
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr childAfter, string className, string? windowName);
+
+    [DllImport("user32.dll")]
+    private static extern int GetScrollPos(IntPtr hwnd, int bar);
+
+    [DllImport("user32.dll")]
+    private static extern bool InvalidateRect(IntPtr hwnd, IntPtr rect, bool erase);
 
     [DllImport("uxtheme.dll", CharSet = CharSet.Unicode)]
     private static extern int SetWindowTheme(IntPtr hwnd, string? subAppName, string? subIdList);
