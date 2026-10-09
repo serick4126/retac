@@ -287,6 +287,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         catch
         {
             _pendingSelectionPath = null;
+            ShowSelection();   // R-97-5: 止めた描画を 1 秒待たせずに戻す
             tree.RemoveAllRoots();
             Release(ref _rootItem);
             _rootFilter = null;
@@ -545,6 +546,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         catch
         {
             _pendingSelectionPath = null;
+            ShowSelection();   // R-97-5: 止めた描画を 1 秒待たせずに戻す
             throw;
         }
     }
@@ -658,6 +660,7 @@ public sealed class NameSpaceTreeHost : IDisposable
             catch (Exception ex)
             {
                 _pendingSelectionPath = null;
+                ShowSelection();   // R-97-5: 止めた描画を 1 秒待たせずに戻す
                 _selectionVersion++;
                 _selectionContinuationPosted = false;
                 SynchronizationFailed?.Invoke(this, new ShellTreeSynchronizationFailedEventArgs(ex));
@@ -701,6 +704,7 @@ public sealed class NameSpaceTreeHost : IDisposable
             catch (Exception ex)
             {
                 _pendingSelectionPath = null;
+                ShowSelection();   // R-97-5: 止めた描画を 1 秒待たせずに戻す
                 _selectionVersion++;
                 SynchronizationFailed?.Invoke(this, new ShellTreeSynchronizationFailedEventArgs(ex));
             }

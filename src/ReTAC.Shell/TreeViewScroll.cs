@@ -31,7 +31,7 @@ internal static class TreeViewScroll
         }
         // ponytail: SB_THUMBPOSITION の位置は 16 ビットなので、横 65535 ピクセルを超える位置はそこで止まる
         var horizontal = Math.Clamp(position.Horizontal, 0, 0xFFFF);
-        SendMessage(tree, WM_HSCROLL, (IntPtr)((horizontal << 16) | SB_THUMBPOSITION), IntPtr.Zero);
+        SendMessage(tree, WM_HSCROLL, (nint)(uint)((horizontal << 16) | SB_THUMBPOSITION), IntPtr.Zero);
     }
 
     private const uint TVM_GETNEXTITEM = 0x110A;

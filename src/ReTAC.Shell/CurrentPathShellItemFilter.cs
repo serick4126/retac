@@ -27,7 +27,7 @@ internal sealed class CurrentPathShellItemFilter(
     /// そのドライブへ移っても辿れない（例外の枝の判定はドライブの下の段から見るので、作り直しも起きない）。
     /// </summary>
     private static bool IsDriveRoot(string path) =>
-        string.Equals(Path.TrimEndingDirectorySeparator(Path.GetPathRoot(path) ?? ""),
+        !string.IsNullOrEmpty(path) && string.Equals(Path.TrimEndingDirectorySeparator(Path.GetPathRoot(path) ?? ""),
             Path.TrimEndingDirectorySeparator(path), StringComparison.OrdinalIgnoreCase);
 
     internal bool RequiresException(string path)
