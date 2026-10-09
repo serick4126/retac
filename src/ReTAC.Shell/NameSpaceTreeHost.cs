@@ -126,8 +126,7 @@ public sealed class NameSpaceTreeHost : IDisposable
     private bool _alignOnComplete;
     /// <summary>R-97-5: NSTC が自分で今のフォルダを展開する間、描画を止めている印。null なら止めていない。</summary>
     private object? _redrawHold;
-    private int _heldVertical;
-    private int _heldHorizontal;
+    private TreeViewScroll.Position _heldPosition;
     private int _lifetime;
     private CancellationTokenSource? _selectionFallback;
     /// <summary>
@@ -949,8 +948,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         var expanded = ((long)SendMessage(inner, TVM_GETITEMSTATE, selected, (IntPtr)TVIS_EXPANDED) & TVIS_EXPANDED) != 0;
         if (!NameSpaceTreePolicy.ShouldHoldForAutoExpand(SelectionPending, _selectedPath, path, expanded)) return;
 
-        _heldVertical = GetScrollPos(inner, SB_VERT);
-        _heldHorizontal = GetScrollPos(inner, SB_HORZ);
+        _heldPosition = TreeViewScroll.Capture(inner);
         SendMessage(inner, WM_SETREDRAW, IntPtr.Zero, IntPtr.Zero);
         var hold = new object();
         _redrawHold = hold;
@@ -978,10 +976,6 @@ public sealed class NameSpaceTreeHost : IDisposable
     /// <summary>
     /// 止めた位置へ戻して描画を再開する。何度呼ばれても、止めているものに 1 回だけ効く。
     /// hold を渡すと、その停止のときだけ戻す（遅れて届いた古い予約が、後の停止を解かないように）。
-    /// 縦は WM_VSCROLL の SB_THUMBPOSITION では戻らない（位置の値を渡しても動かなかった。実測）ので、
-    /// 今の先頭の項目から差の行数だけ辿った項目を先頭にする。項目はここで取り直すので、消された項目は渡らない。
-    /// 横は NSTC の展開で動かないことが多いが、念のため止める前が左端なら左端へ戻す。
-    /// ponytail: 横を左端以外の途中の位置へ戻すことはしない。必要になったら行の幅から送り数を求める。
     /// </summary>
     private void ReleaseRedrawHold(object? hold = null)
     {
@@ -989,17 +983,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         _redrawHold = null;
         var inner = InnerTree();
         if (inner == IntPtr.Zero) return;
-        var delta = _heldVertical - GetScrollPos(inner, SB_VERT);
-        var top = SendMessage(inner, TVM_GETNEXTITEM, TVGN_FIRSTVISIBLE, IntPtr.Zero);
-        var step = delta > 0 ? TVGN_NEXTVISIBLE : TVGN_PREVIOUSVISIBLE;
-        for (var i = 0; i < Math.Abs(delta) && top != IntPtr.Zero; i++)
-        {
-            var next = SendMessage(inner, TVM_GETNEXTITEM, step, top);
-            if (next == IntPtr.Zero) break;
-            top = next;
-        }
-        if (delta != 0 && top != IntPtr.Zero) SendMessage(inner, TVM_SELECTITEM, TVGN_FIRSTVISIBLE, top);
-        if (_heldHorizontal == 0) SendMessage(inner, WM_HSCROLL, SB_LEFT, IntPtr.Zero);
+        TreeViewScroll.Restore(inner, _heldPosition);
         SendMessage(inner, WM_SETREDRAW, (IntPtr)1, IntPtr.Zero);
         InvalidateRect(inner, IntPtr.Zero, true);
     }
@@ -1007,14 +991,11 @@ public sealed class NameSpaceTreeHost : IDisposable
     private const uint TVM_GETITEMSTATE = 0x1127;
     private const int TVIS_EXPANDED = 0x20;
     private const uint WM_SETREDRAW = 0x000B;
-    private const int SB_HORZ = 0;
-    private const int SB_VERT = 1;
 
     private const uint TVM_GETNEXTITEM = 0x110A;
     private const uint TVM_SELECTITEM = 0x110B;
     private const uint TVM_GETVISIBLECOUNT = 0x1110;
     private static readonly IntPtr TVGN_FIRSTVISIBLE = 0x5;
-    private static readonly IntPtr TVGN_NEXTVISIBLE = 0x6;
     private static readonly IntPtr TVGN_PREVIOUSVISIBLE = 0x7;
     private static readonly IntPtr TVGN_CARET = 0x9;
     private const uint WM_HSCROLL = 0x0114;
@@ -1638,9 +1619,6 @@ public sealed class NameSpaceTreeHost : IDisposable
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr childAfter, string className, string? windowName);
-
-    [DllImport("user32.dll")]
-    private static extern int GetScrollPos(IntPtr hwnd, int bar);
 
     [DllImport("user32.dll")]
     private static extern bool InvalidateRect(IntPtr hwnd, IntPtr rect, bool erase);

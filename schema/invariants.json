@@ -467,8 +467,8 @@
         "app:DriveTreeView"
       ],
       "rule": "ドライブツリー・デスクトップツリーの位置合わせ（左端・中央付近）は移動の起点だけで決め、ツリーを作り直したかどうかでは決めない。ツリーからの移動では合わせない。起点は移動の要求（OpenFolderAsync の fromTree）に付けて同期まで運び、ツリーの側で確定を覚えておかない（開けなかった移動の印が残らないように）。選択の要求（PrepareSelection）に持たせ、例外の枝が変わってルートを入れ直す経路でも引き継ぐ。ツリーが自分で今のフォルダを展開して動かすときは、描画を止めて動く前の位置に戻し、止めた描画は展開が来なくても 0.5 秒で必ず戻す。",
-      "enforcedBy": "shell:NameSpaceTreePolicy.ShouldAlignAfterSelection / ShouldHoldForAutoExpand、shell:NameSpaceTreeHost.SelectPath（作り直しの分岐で align をそのまま渡す）・ContinuePendingSelection・HoldForAutoExpand / ReleaseRedrawHold、app:DriveTreeView.SyncCurrentFolder（fromTree を受け取り、覚えておかない）、app:MainForm.OpenFolderAsync / Apply（ツリーの確定の受け口だけが fromTree を付ける）",
-      "testedBy": "tests/ReTAC.Domain.Tests/NameSpaceTreePolicyTests.cs",
+      "enforcedBy": "shell:NameSpaceTreePolicy.ShouldAlignAfterSelection / ShouldHoldForAutoExpand、shell:NameSpaceTreeHost.SelectPath（作り直しの分岐で align をそのまま渡す）・ContinuePendingSelection・HoldForAutoExpand / ReleaseRedrawHold、shell:TreeViewScroll（縦は先頭の項目を辿り、横は SB_THUMBPOSITION で戻す）、app:DriveTreeView.SyncCurrentFolder（fromTree を受け取り、覚えておかない）、app:MainForm.OpenFolderAsync / Apply（ツリーの確定の受け口だけが fromTree を付ける）",
+      "testedBy": "tests/ReTAC.Domain.Tests/NameSpaceTreePolicyTests.cs, tests/ReTAC.Domain.Tests/DriveTreeViewOriginTests.cs, tests/ReTAC.Domain.Tests/TreeViewScrollTests.cs",
       "note": "実際のスクロール位置とちらつきは自動テストでは確かめられない。実機確認で見る。"
     },
     {
