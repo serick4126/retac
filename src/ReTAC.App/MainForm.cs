@@ -139,8 +139,16 @@ public sealed class MainForm : Form, IBookmarkHost
         // R-97-3: 右クリックは実フォルダだけシェルメニューの対象(パスが無ければ Path イベントが来ない)。開くだけでは移動しない
         // R-97-3 / §9: ツリーへのドロップも既存の宛先入り転送ダイアログ(TransferDropped)を必ず通す（INV-TREE-DROP-VIA-DIALOG）。
         // R-111-2: 右ボタンでも、メニューの後に同じダイアログを通す
-        _driveTree.FilesDropped += (_, e) => AcceptDrop(DropReceptacle.DriveTree, e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
-        _desktopTree.FilesDropped += (_, e) => AcceptDrop(DropReceptacle.DesktopTree, e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
+        _driveTree.FilesDropped += (_, e) =>
+        {
+            if (e.Virtual is { } items) AcceptVirtualDrop(DropReceptacle.DriveTree, items, e.Destination, e.AllowedEffect);   // R-146-1
+            else AcceptDrop(DropReceptacle.DriveTree, e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
+        };
+        _desktopTree.FilesDropped += (_, e) =>
+        {
+            if (e.Virtual is { } items) AcceptVirtualDrop(DropReceptacle.DesktopTree, items, e.Destination, e.AllowedEffect);   // R-146-1
+            else AcceptDrop(DropReceptacle.DesktopTree, e.Files, e.Destination, e.AllowedEffect, e.Ctrl, e.Shift);
+        };
         // R-96-2: 上端の選択欄もメニューと同じ入口を通す（表示・保存・ラジオ印の反映を 1 か所にする）
         _leftPanel.ViewRequested += (_, kind) => ExecuteLeftPanelCommand(LeftPanel.CommandOf(kind), fromSelector: true);
 
@@ -230,7 +238,7 @@ public sealed class MainForm : Form, IBookmarkHost
         _addressBar.JumpRequested += (_, e) => OnAddressJump(e.Text, e.Explorer);
         _addressBar.Cancelled += (_, _) => _list.Focus();
         _addressBar.IconClicked += (_, _) => OpenInExplorer(_currentFolder);
-        _addressBar.CopyPathRequested += (_, path) => TryClipboard(() => Clipboard.SetText(path));
+        _addressBar.CopyPathRequested += (_, path) => ClipboardNotice.CopyText(path, TryClipboard, ShowStatusMessage);   // R-146
         _addressBar.OpenInNewWindowRequested += (_, folder) => BeginInvoke(() => OpenInNewWindow(folder));   // R-141
         _addressBar.FilesDropped += (_, drop) => AcceptDrop(DropReceptacle.AddressBar, drop.Files, drop.Destination, drop.Allowed, drop.Ctrl, drop.Shift);
         // ドライブのボタンの右クリックはリストの項目と同じ扱い。移動はしない
@@ -238,6 +246,10 @@ public sealed class MainForm : Form, IBookmarkHost
         // R-65 ②③: 落とされたファイルの転送はどちらも同じ経路を通す
         _list.FilesDropped += (_, drop) => AcceptDrop(DropReceptacle.FileList, drop.Files, drop.Destination, drop.Allowed, drop.Ctrl, drop.Shift);
         _driveBar.FilesDropped += (_, drop) => AcceptDrop(DropReceptacle.DriveBar, drop.Files, drop.Path, drop.Allowed, drop.Ctrl, drop.Shift);
+        // R-146-1: 書庫の中など、パスを持たない項目。既存のパスの経路とは別の入口を通す
+        _list.VirtualDropped += (_, drop) => AcceptVirtualDrop(DropReceptacle.FileList, drop.Items, drop.Destination, drop.Allowed);
+        _driveBar.VirtualDropped += (_, drop) => AcceptVirtualDrop(DropReceptacle.DriveBar, drop.Items, drop.Destination, drop.Allowed);
+        _addressBar.VirtualDropped += (_, drop) => AcceptVirtualDrop(DropReceptacle.AddressBar, drop.Items, drop.Destination, drop.Allowed);
 
         _watcher.SynchronizingObject = this;   // R-23: 通知を UI スレッドで受ける
         _watcher.Created += (_, _) => ScheduleAutoRefresh();
@@ -993,7 +1005,7 @@ public sealed class MainForm : Form, IBookmarkHost
             hints: ["Shift+Enter:フォルダ参照   ↑:フォルダ履歴   ↓:クイックアクセス"],
             // R-41-6: 差分の主経路。衝突のたびに問う方式より優先する。
             // R-51: 移動のダイアログはコピーと同一仕様（文言だけが違う）
-            optionText: "複写先にある同名の古いファイルのみ置き換える(&X)");
+            optionText: DifferentialOptionAvailable(virtualSource: false) ? DifferentialOptionText : null);
 
         if (dialog.ShowDialog(this) != DialogResult.OK) return TransferStep.Cancelled;
 
@@ -1062,19 +1074,27 @@ public sealed class MainForm : Form, IBookmarkHost
 
     /// <summary>
     /// R-62: 「フォルダを新しく作成する」（既定）か「別の名前に変えて複写する」か。
-    /// 移動に別名複写は無い（R-63-2）ので選択肢自体を出さない。
+    /// 移動に別名複写は無い（R-63-2）。R-146-1: 書庫の中の項目も、複写先が書庫の中になり書き込めないので出さない。
     /// 出しておいて選ばれても何も起きない、という状態にはしない
     /// </summary>
-    private MissingDestination AskMissingDestination(string destination, bool moving)
-    {
-        var choices = moving
-            ? new[] { "フォルダを新しく作成する(&C)" }
+    private const string DifferentialOptionText = "複写先にある同名の古いファイルのみ置き換える(&X)";
+
+    /// <summary>
+    /// R-41-6: 差分の選択肢をダイアログに出すか。書庫の中の項目は Windows のコピーに任せ、衝突は Windows の確認画面で決めるので出さない（R-146-1）。
+    /// </summary>
+    internal static bool DifferentialOptionAvailable(bool virtualSource) => !virtualSource;
+
+    internal static string[] MissingDestinationChoices(bool moving, bool renameAllowed) =>
+        moving || !renameAllowed
+            ? ["フォルダを新しく作成する(&C)"]
             : ["フォルダを新しく作成する(&C)", "別の名前に変えて複写する(&R)"];
 
+    private MissingDestination AskMissingDestination(string destination, bool moving, bool renameAllowed = true)
+    {
         using var dialog = new ChoiceDialog(
             "指定のパスが見つかりません",
             $"{destination} は存在しません。どうしますか。",
-            choices);
+            MissingDestinationChoices(moving, renameAllowed));
         return dialog.ShowDialog(this) != DialogResult.OK
             ? MissingDestination.Cancel
             : dialog.SelectedIndex == 0 ? MissingDestination.CreateFolder : MissingDestination.RenameCopy;
@@ -1547,12 +1567,9 @@ public sealed class MainForm : Form, IBookmarkHost
         return MarkCommand(state => state.MarkByWildcard(dialog.Value));
     }
 
-    /// <summary>R-57-2: 複数対象は改行区切りでまとめてクリップボードへ。</summary>
-    private void CopyNames(IReadOnlyList<Entry> targets, NameFormat format)
-    {
-        var text = NameFormats.Format(targets, format);
-        if (text.Length > 0) TryClipboard(() => Clipboard.SetText(text));
-    }
+    /// <summary>R-57-2: 複数対象は改行区切りでまとめてクリップボードへ。R-146: 入れられたら知らせる。</summary>
+    private void CopyNames(IReadOnlyList<Entry> targets, NameFormat format) =>
+        ClipboardNotice.CopyText(NameFormats.Format(targets, format), TryClipboard, ShowStatusMessage);
 
     /// <summary>`R`（プロパティ・0x82F2）。R-56-2: 実効対象すべてを一度に開く（10 件以上は確認。R-56-3）。</summary>
     private bool ShowProperties()
@@ -2212,6 +2229,9 @@ public sealed class MainForm : Form, IBookmarkHost
     void IBookmarkHost.TransferDropped(string[] files, string destination, DragDropEffects allowed, bool ctrl, bool shift, BookmarkDropMode mode) =>
         AcceptDrop(DropReceptacle.BookmarkFolder, files, destination, allowed, ctrl, shift, mode);
 
+    void IBookmarkHost.TransferVirtual(VirtualItems items, string destination, DragDropEffects allowed) =>
+        AcceptVirtualDrop(DropReceptacle.BookmarkFolder, items, destination, allowed);
+
     /// <summary>
     /// R-111-2 / INV-RIGHT-DROP-SAME-ROUTE: ReTAC の受け口に落とされたファイルを、受け口ごとの経路へ渡す。
     /// 右ボタンなら、ドロップの処理の中で同期してメニューを出し、選んだ操作を修飾キーに読み替えて、左ボタンと同じ経路へ渡す。
@@ -2234,6 +2254,147 @@ public sealed class MainForm : Form, IBookmarkHost
         }
         if (plan.Route == DropRoute.Dialog) TransferDropped(files, destination, allowed, ctrl, shift, mode);
         else DropInto(destination, files, allowed, ctrl, shift);
+    }
+
+    /// <summary>
+    /// R-146-1: 書庫の中など、パスを持たない項目が落とされた。右ボタンのメニューまではドロップの中で済ませ、
+    /// Windows のコピーで宛先へ渡す処理を後に回す（ドラッグ元を待たせない）。items の解放（識別子のメモリだけ。ファイルは消さない）はここが引き受ける。
+    /// </summary>
+    private void AcceptVirtualDrop(DropReceptacle receptacle, VirtualItems items, string destination, DragDropEffects allowed)
+    {
+        var handedOver = false;
+        try
+        {
+            var copyAllowed = allowed.HasFlag(DragDropEffects.Copy);
+            var plan = DropRouting.Plan(receptacle, fromReTAC: false, DragButtonState.Right);
+            // S1: コピーだけ。メニューでも移動・ショートカットは選べない
+            if (DropRules.DecideVirtual(copyAllowed) == DropAction.None
+                || plan.ShowMenu && (DropRouting.VirtualMenu(copyAllowed) is not { } model || DropMenu.Show(Handle, model, Cursor.Position) != DropChoice.Copy))
+                return;   // finally が解放する
+            BeginInvoke(() =>
+            {
+                try
+                {
+                    Activate();   // パスワードの画面・ダイアログがドロップ元の窓の後ろに隠れないように
+                    if (plan.Route == DropRoute.Dialog) CopyFromArchiveViaDialog(items, destination);
+                    else CopyFromArchive(items, destination);
+                }
+                finally { items.Dispose(); }
+            });
+            handedOver = true;   // BeginInvoke に渡した後は、渡した先が解放する
+        }
+        finally { if (!handedOver) items.Dispose(); }   // メニューの表示や BeginInvoke が例外でも解放する
+    }
+
+    /// <summary>書庫の項目のコピーの段階。Preparing は操作の作成と項目の登録、Running は Execute（Windows の画面が出る）。</summary>
+    internal enum ArchiveCopyPhase { Preparing, Running }
+
+    /// <summary>
+    /// R-146-1: ReTAC が警告を出すか。Windows の画面が出る前の失敗（Preparing）だけ出す。
+    /// 実行中（Running）の失敗は、中止・パスワード・一部成功の後の失敗を含め、Windows が画面で知らせるので出さない。
+    /// 一部成功の後の失敗は、例外からは区別が付かないので Running として同じに扱う。
+    /// </summary>
+    internal static bool ShouldWarnArchiveCopy(ArchiveCopyPhase phase, Exception ex) =>
+        phase == ArchiveCopyPhase.Preparing && IsArchiveCopyFailure(ex);
+
+    /// <summary>
+    /// R-146-1: 書庫の中の項目を、Windows のコピーで宛先へ直接コピーする。ReTAC はここで何も消さず、移さない。
+    /// 衝突・進捗・パスワードの入力は Windows の画面（silentOverwrite: false。noUi にしない）。
+    /// 元に戻すの記録には載せない（RunOperation を使わない。R-84）。完了の知らせ（R-129）も出さない。
+    /// </summary>
+    private void CopyFromArchive(VirtualItems items, string destination)
+    {
+        string? warning;
+        using (var running = s_quitGate.BeginOperation())   // R-109-3: コピーの途中でアップデータの終了依頼を受けない
+        {
+            ShellFileOperation? operation = null;
+            try
+            {
+                warning = RunArchiveCopy(() =>
+                {
+                    operation = ShellFileOperation.ForArchiveCopy(Handle);   // S2: 衝突は Windows の確認画面
+                    foreach (var item in items.Items) operation.CopyIdList(item.IdList, destination);   // 安全: 書庫の項目を宛先へ複製するだけ。宛先の既存のファイルは Windows の確認画面を経る。ReTAC は何も消さない
+                    return operation.Execute;
+                });
+            }
+            finally
+            {
+                // どの経路でも解放する（Unadvise と COM の解放）。解放の失敗は Windows の処理の後始末なので、ReTAC の警告は出さない（R-146-1）
+                try { operation?.Dispose(); }
+                catch (Exception ex) when (IsArchiveCopyFailure(ex)) { }
+            }
+        }
+        if (warning is not null) MessageBox.Show(this, warning, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        Reload();
+    }
+
+    private static bool IsArchiveCopyFailure(Exception ex) =>
+        ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Runtime.InteropServices.COMException;
+
+    /// <summary>
+    /// R-146-1: 準備（操作の作成と項目の登録）と実行を分けて行い、ReTAC が出す警告の文を返す（無ければ null）。
+    /// 準備の失敗だけ警告する。実行（prepare が返した execute）の失敗は Windows が画面で知らせるので返さない。
+    /// 利用者の中止は execute が false を返すだけで、例外にならない。これも警告しない。
+    /// </summary>
+    internal static string? RunArchiveCopy(Func<Func<bool>> prepare)
+    {
+        var phase = ArchiveCopyPhase.Preparing;
+        try
+        {
+            var execute = prepare();
+            phase = ArchiveCopyPhase.Running;   // ここから先は Windows の画面が失敗を知らせる
+            execute();
+            return null;
+        }
+        catch (Exception ex) when (IsArchiveCopyFailure(ex))
+        {
+            return ShouldWarnArchiveCopy(phase, ex) ? ex.Message : null;   // できた分は宛先に残りうる
+        }
+    }
+
+    /// <summary>
+    /// R-146-1: 宛先入りのダイアログを経る受け口（R-93 / R-97-3）。宛先の初期値は入れるが、差分の選択肢は出さない。
+    /// 宛先が無いときの選択肢は「フォルダを新しく作成する」だけ。作ったフォルダは元に戻すの記録に載せない。
+    /// </summary>
+    private void CopyFromArchiveViaDialog(VirtualItems items, string preset)
+    {
+        var what = items.Items.Count == 1 ? items.Items[0].Name : $"{items.Items.Count} 個の項目";
+        while (true)
+        {
+            using var dialog = new PathInputDialog(
+                "ファイルのコピー",
+                heading: $"{what} のコピー先は？",
+                preset: preset,
+                _history, _quickAccess, _currentFolder,
+                acceptText: "OK",
+                hints: ["Shift+Enter:フォルダ参照   ↑:フォルダ履歴   ↓:クイックアクセス"],
+                optionText: DifferentialOptionAvailable(virtualSource: true) ? DifferentialOptionText : null);
+            if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+            if (dialog.Path.Length == 0)
+            {
+                MessageBox.Show(this, "コピー先を指定してください。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                continue;
+            }
+            if (PathResolver.Resolve(_currentFolder, dialog.Path) is not { } destination)
+            {
+                MessageBox.Show(this, $"{dialog.Path} は宛先として解決できません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                continue;
+            }
+            if (!Directory.Exists(destination))
+            {
+                if (AskMissingDestination(destination, moving: false, renameAllowed: false) != MissingDestination.CreateFolder) return;
+                try { Directory.CreateDirectory(destination); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    MessageBox.Show(this, ex.Message, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+            _history.Remember(destination);
+            CopyFromArchive(items, destination);
+            return;
+        }
     }
 
     /// <summary>R-111-2 / R-140: 右ボタンのメニューで選んだ操作は修飾キーに読み替え、フォルダの指定は戻す（選んだ操作に従う）。</summary>
@@ -2402,7 +2563,13 @@ public sealed class MainForm : Form, IBookmarkHost
     {
         IDataObject? data = null;
         if (!TryClipboard(() => data = Clipboard.GetDataObject())) return true;
-        if (data?.GetData(DataFormats.FileDrop) is not string[] paths || paths.Length == 0) return true;
+        if (data?.GetData(DataFormats.FileDrop) is not string[] paths || paths.Length == 0)
+        {
+            // R-146-1: エクスプローラーでコピー・切り取りした書庫の中の項目。切り取りでもコピーにし、エクスプローラーへは何も伝えない（S1）
+            if (DropData.CaptureVirtual(data) is { } items)
+                using (items) CopyFromArchive(items, _currentFolder);
+            return true;
+        }
 
         var cut = data.GetData("Preferred DropEffect") is MemoryStream stream
                   && stream.Length >= 4

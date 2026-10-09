@@ -172,6 +172,9 @@ public sealed class FileListView : Control
     /// <summary>他アプリからファイルが落とされた（T8-2）。転送は呼び出し側が行う。</summary>
     public event EventHandler<Drop>? FilesDropped;
 
+    /// <summary>R-146-1: 書庫の中など、パスを持たない項目が落とされた。受け取った側が Items を解放する。</summary>
+    public event EventHandler<(string Destination, VirtualItems Items, DragDropEffects Allowed)>? VirtualDropped;
+
     public ListState State => _state;
 
     [System.ComponentModel.Browsable(false)]
@@ -1818,6 +1821,10 @@ public sealed class FileListView : Control
             {
                 var (ctrl, shift) = DropFeedback.Modifiers(e);
                 FilesDropped?.Invoke(this, new Drop(paths, destination, e.AllowedEffect, ctrl, shift));
+            }
+            else if (VirtualDropped is { } handler && DropData.CaptureVirtual(e.Data) is { } items)
+            {
+                handler(this, (destination, items, e.AllowedEffect));   // R-146-1
             }
         });
     }, EndDrop);

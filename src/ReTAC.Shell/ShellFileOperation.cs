@@ -23,6 +23,24 @@ public sealed class ShellFileOperation : IDisposable
         ? (long)System.Diagnostics.Stopwatch.GetElapsedTime(_executeStarted, first).TotalMilliseconds
         : null;
 
+    /// <summary>IFileOperation に渡したフラグ。</summary>
+    public uint Flags { get; }
+
+    /// <summary>R-19: 削除はごみ箱経由。silentOverwrite のときだけ衝突の確認を省き、noUi のときだけ画面を出さない。</summary>
+    internal static uint OperationFlags(bool silentOverwrite, bool noUi)
+    {
+        var flags = FOF_ALLOWUNDO;
+        if (silentOverwrite) flags |= FOF_NOCONFIRMATION;
+        if (noUi) flags |= FOF_SILENT | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
+        return flags;
+    }
+
+    /// <summary>
+    /// R-146-1 / S2: 書庫の中の項目のコピー用。衝突の確認・進捗・パスワードの入力は Windows の画面に任せる
+    /// （silentOverwrite: false。noUi にしない）。書庫の経路はこの 1 か所から作る。
+    /// </summary>
+    public static ShellFileOperation ForArchiveCopy(IntPtr owner) => new(owner, silentOverwrite: false, noUi: false);
+
     /// <summary>R-84: 成功して項目ができた操作。Execute の後に読む。中止しても成功した分は残る。</summary>
     public IReadOnlyList<OperationResult> Results => _sink.Results;
 
@@ -38,10 +56,8 @@ public sealed class ShellFileOperation : IDisposable
         _operation = (IFileOperation)Activator.CreateInstance(type)!;
         if (owner != IntPtr.Zero) Check(_operation.SetOwnerWindow(owner));
 
-        var flags = FOF_ALLOWUNDO;                       // R-19: 削除はごみ箱経由
-        if (silentOverwrite) flags |= FOF_NOCONFIRMATION;
-        if (noUi) flags |= FOF_SILENT | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
-        Check(_operation.SetOperationFlags(flags));
+        Flags = OperationFlags(silentOverwrite, noUi);
+        Check(_operation.SetOperationFlags(Flags));
         Check(_operation.Advise(_sink, out _cookie));
     }
 
@@ -64,6 +80,21 @@ public sealed class ShellFileOperation : IDisposable
     public void Copy(string source, string destinationFolder, string? newName = null)
     {
         Check(_operation.CopyItem(Item(source), Destination(destinationFolder), newName, IntPtr.Zero));
+        _hasWork = true;
+    }
+
+    /// <summary>
+    /// R-146-1: 識別子（書庫の中の項目など、パスを持たない項目の絶対の識別子）の項目をコピーする。
+    /// 書庫の中の項目は解析名から作り直さない（ドロップの後に作り直せる保証が無い）。識別子は呼び出し側のもので、ここでは解放しない。
+    /// </summary>
+    public void CopyIdList(IntPtr idList, string destinationFolder)
+    {
+        var guid = IID_IShellItem;
+        var hr = SHCreateItemFromIDList(idList, ref guid, out var unknown);
+        if (hr != 0 || unknown == IntPtr.Zero) throw new IOException($"項目を解決できません。(0x{hr:X})");
+        var item = (IShellItem)Marshal.GetObjectForIUnknown(unknown);
+        Marshal.Release(unknown);
+        Check(_operation.CopyItem(item, Destination(destinationFolder), null, IntPtr.Zero));   // 安全: S8。宛先へ複製する。既存の同名は呼び出し側が silentOverwrite: false で Windows の確認画面に任せる。何も消さない
         _hasWork = true;
     }
 
@@ -155,6 +186,9 @@ public sealed class ShellFileOperation : IDisposable
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern int SHCreateItemFromParsingName(string path, IntPtr bindContext,
         ref Guid riid, out IntPtr item);
+
+    [DllImport("shell32.dll")]
+    private static extern int SHCreateItemFromIDList(IntPtr idList, ref Guid riid, out IntPtr item);
 
     [ComImport, Guid("43826D1E-E718-42EE-BC55-A1E261C37BFE"),
      InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

@@ -21,24 +21,67 @@ internal interface IOleDropTarget
 /// そのときは外からの右ボタンのドロップを左ボタンと同じに扱う（ダイアログを経るので黙って転送はしない）。
 /// </summary>
 [ComVisible(true), ClassInterface(ClassInterfaceType.None)]
-internal sealed class ShellTreeDropTap(IOleDropTarget inner) : IOleDropTarget
+internal sealed class ShellTreeDropTap(IOleDropTarget inner, Func<IntPtr, bool> isVirtual) : IOleDropTarget
 {
     private const string DropTargetProp = "OleDropTargetInterface";
+    private const uint DROPEFFECT_COPY = 1, DROPEFFECT_MOVE = 2;
+
+    public ShellTreeDropTap(IOleDropTarget inner) : this(inner, HasVirtualItems) { }
+
+    // R-146-1 / S1: DragEnter で決め、DragOver・Drop で使う（DragOver にはデータが来ない）
+    private bool _virtual;
+
+    /// <summary>
+    /// R-146-1: 包んだ先の Drop を呼んでいる間だけ、落とされたデータ（COM の IDataObject）。それ以外は Zero。
+    /// NSTC の OnDrop には項目の一覧が来ない（実機。位置の通知には来る）。パスを持つ項目はドラッグ中に覚えたパスで足りるが、
+    /// 仮想項目はドロップの時点のデータから取り出すので、ここで渡す。参照は OLE が Drop の間持っている
+    /// </summary>
+    internal static IntPtr DroppingData { get; private set; }
 
     // 包んだ先が失敗を返した・例外を投げたときは、右ボタンの印を消す。失敗の後に DragLeave / Drop が来るとは限らず、
     // 残すと次の左ボタンのドラッグが右ボタンに見える。印は包んだ先を呼ぶ前に立てる（NSTC の通知の中で読まれるため）
     public int DragEnter(IntPtr data, uint keyState, long point, ref uint effect)
     {
         DragButtonState.Enter(keyState);
+        // 判定の例外で右ボタンの印を残さない（失敗の後に DragLeave / Drop が来るとは限らない）。例外なら仮想項目ではない扱い
+        try { _virtual = isVirtual(data); }
+        catch (Exception) { _virtual = false; }
+        var allowed = effect;
         try { return ResetIfFailed(inner.DragEnter(data, keyState, point, ref effect)); }
         catch { DragButtonState.Reset(); throw; }
+        finally { if (_virtual) effect = ClampVirtual(allowed, effect); }
     }
 
     public int DragOver(uint keyState, long point, ref uint effect)
     {
         DragButtonState.Over(keyState);
+        var allowed = effect;
         try { return ResetIfFailed(inner.DragOver(keyState, point, ref effect)); }
         catch { DragButtonState.Reset(); throw; }
+        finally { if (_virtual) effect = ClampVirtual(allowed, effect); }
+    }
+
+    /// <summary>
+    /// R-146-1 / S1: 仮想項目は、Windows が落とせると答えた所（効果が 0 でない）でだけ、コピーにする。
+    /// コピーを許さないドラッグ元なら不可。表示の文（「◯◯へ移動」など）はシェルが決めるので、そろうかは実機で確かめる。
+    /// </summary>
+    internal static uint ClampVirtual(uint allowed, uint chosen) =>
+        chosen != 0 && (allowed & DROPEFFECT_COPY) != 0 ? DROPEFFECT_COPY : 0u;
+
+    /// <summary>FileDrop（CF_HDROP）が無く、Shell IDList があれば仮想項目の候補</summary>
+    private static bool HasVirtualItems(IntPtr data)
+    {
+        if (data == IntPtr.Zero) return false;
+        object? obj = null;
+        try
+        {
+            obj = Marshal.GetObjectForIUnknown(data);
+            if (obj is not System.Runtime.InteropServices.ComTypes.IDataObject com) return false;
+            var forms = new System.Windows.Forms.DataObject(com);
+            return !forms.GetDataPresent(System.Windows.Forms.DataFormats.FileDrop) && forms.GetDataPresent(VirtualItems.ShellIdListFormat);
+        }
+        catch (Exception ex) when (ex is COMException or InvalidCastException) { return false; }
+        finally { if (obj is not null && Marshal.IsComObject(obj)) Marshal.ReleaseComObject(obj); }   // 取るたびに RCW の数が増える。使い終えたら戻す
     }
 
     private static int ResetIfFailed(int hr)
@@ -50,14 +93,23 @@ internal sealed class ShellTreeDropTap(IOleDropTarget inner) : IOleDropTarget
     public int DragLeave()
     {
         DragButtonState.Reset();
+        _virtual = false;
         return inner.DragLeave();
     }
 
     /// <summary>NSTC の OnDrop（ReTAC のメニューとダイアログ）はこの中で呼ばれる。終わってから印を消す。</summary>
     public int Drop(IntPtr data, uint keyState, long point, ref uint effect)
     {
+        DroppingData = data;
         try { return inner.Drop(data, keyState, point, ref effect); }
-        finally { DragButtonState.Reset(); }
+        finally
+        {
+            DroppingData = IntPtr.Zero;
+            // S1: 書庫の中の項目で、ドラッグ元へ移動を返さない（返すとエクスプローラーが書庫から消すことがある）
+            if (_virtual) effect &= ~DROPEFFECT_MOVE;
+            _virtual = false;
+            DragButtonState.Reset();
+        }
     }
 
     /// <summary>

@@ -24,6 +24,17 @@ internal static class DropFeedback
     /// <summary>右ボタンの状態を引数で受ける版（ハンドル無しのテスト用）。</summary>
     internal static void Apply(DragEventArgs e, string? destination, string label, BookmarkDropMode mode, bool right)
     {
+        if (destination is { Length: > 0 } && DropData.HasVirtual(e.Data))
+        {
+            // R-146-1 / S1: 書庫の中などの項目はコピーだけ（修飾キー・指定・ボタンにかかわらない）。移動を返すとドラッグ元が書庫から消す
+            var copy = DropRules.DecideVirtual(e.AllowedEffect.HasFlag(DragDropEffects.Copy)) == DropAction.Copy;
+            (e.Effect, e.DropImageType, e.Message) = copy
+                ? (DragDropEffects.Copy, DropImageType.Copy, right ? "" : "%1 へコピー")
+                : (DragDropEffects.None, DropImageType.None, "");
+            e.MessageReplacementToken = label;
+            return;
+        }
+
         var action = DropAction.None;
         var files = destination is { Length: > 0 } ? e.Data?.GetData(DataFormats.FileDrop) as string[] : null;
         // 判定は先頭の項目で行う（エクスプローラーと同じ）。実際の転送は項目ごとに判定する

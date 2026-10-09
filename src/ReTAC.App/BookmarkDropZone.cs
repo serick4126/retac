@@ -157,10 +157,12 @@ internal sealed class BookmarkDropZone
         var reorder = s_dragging is not null && e.Data?.GetDataPresent(Format) == true;
         // R3: 外からは FileDrop だけ。URL・テキスト・仮想ファイルは受けない
         var files = !reorder && e.Data?.GetDataPresent(DataFormats.FileDrop) == true;
+        // R-146-1: 書庫の中など、パスを持たない項目は転送（フォルダの中央）だけ受ける。ブックマークへの追加（R3）には使わない（パスが無い）
+        var virtualItems = !reorder && !files && DropData.HasVirtual(e.Data);
 
         var effect = Effect(reorder, e.AllowedEffect);
         string message;
-        if (!accepts || !reorder && !files)
+        if (!accepts || !reorder && !files && !(virtualItems && onto?.Tag is Bookmark { Kind: BookmarkKind.Folder }))
         {
             e.Effect = DragDropEffects.None;
             message = "";
@@ -203,7 +205,7 @@ internal sealed class BookmarkDropZone
             _hold.Stop();
             _holding = onto as ToolStripDropDownItem;
             // グループは中へ入れるため、フォルダはファイルを中のサブフォルダへ落とすため（R-93）に開く
-            if (_holding is { Tag: Bookmark { Kind: BookmarkKind.Group } } || files && _holding is { Tag: Bookmark { Kind: BookmarkKind.Folder } })
+            if (HoldOpens(_holding?.Tag as Bookmark, files || virtualItems))
                 _hold.Start();
         }
         var shown = e.Effect == DragDropEffects.None ? (DropSpot?)null : spot;
@@ -213,6 +215,13 @@ internal sealed class BookmarkDropZone
             _strip.Invalidate();
         }
     }
+
+    /// <summary>
+    /// R-93 / R-146-1: ホールドで開くか。グループはいつも。フォルダは、転送できるもの（ディスク上の項目か、書庫の中など）を運んでいるときだけ。
+    /// onto はフォルダの中央に乗っているときだけ入る（追加の位置では null なので開かない）。
+    /// </summary>
+    internal static bool HoldOpens(Bookmark? onto, bool transferable) =>
+        onto is { Kind: BookmarkKind.Group } || transferable && onto is { Kind: BookmarkKind.Folder };
 
     /// <summary>
     /// ドラッグ元が許す中から選ぶ。ファイルは Move にしない。移動と受け取った元（エクスプローラー）が、元のファイルを消すことがある。
@@ -239,6 +248,12 @@ internal sealed class BookmarkDropZone
                 (slots[s.Index] as ToolStripDropDownItem)?.HideDropDown();   // ホールドで開いていたら閉じる
                 CloseMenus(_strip);
                 _host.TransferDropped(files, onto.Target, e.AllowedEffect, ctrl, shift, onto.DropMode);   // R-140
+            }
+            else if (s_dragging is null && DropData.CaptureVirtual(e.Data) is { } items)
+            {
+                (slots[s.Index] as ToolStripDropDownItem)?.HideDropDown();
+                CloseMenus(_strip);
+                _host.TransferVirtual(items, onto.Target, e.AllowedEffect);   // R-146-1: 指定（R-140）にかかわらずコピー
             }
             return;
         }
@@ -394,7 +409,17 @@ internal sealed class ExpansionDropZone
         var (folder, _) = Target(e);
         var shown = _frame.Shown;
         Reset();
-        if (!shown || e.Data?.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files) return;
+        if (!shown) return;
+        if (e.Data?.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files)
+        {
+            // R-146-1
+            if (DropData.CaptureVirtual(e.Data) is { } items)
+            {
+                BookmarkDropZone.CloseMenus(_menu);
+                _host.TransferVirtual(items, folder, e.AllowedEffect);
+            }
+            return;
+        }
         var (ctrl, shift) = DropFeedback.Modifiers(e);   // 後に回すとキーは離されている
         BookmarkDropZone.CloseMenus(_menu);
         _host.TransferDropped(files, folder, e.AllowedEffect, ctrl, shift, _mode);

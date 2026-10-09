@@ -152,4 +152,11 @@ public class DropRulesTests
         Assert.Empty(copies);
         Assert.Equal(2, moves.Count);
     }
+
+    // R-146-1 / S1: 書庫の中などの項目は、修飾キー・宛先にかかわらずコピーだけ。移動は返さない（ドラッグ元が書庫から消すため）
+    [Theory]
+    [InlineData(true, DropAction.Copy)]
+    [InlineData(false, DropAction.None)]
+    public void DecideVirtual_CopyOnly(bool copyAllowed, DropAction expected) =>
+        Assert.Equal(expected, DropRules.DecideVirtual(copyAllowed));
 }

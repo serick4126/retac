@@ -75,4 +75,10 @@ public static class DropRouting
         DropChoice.Move => (false, true),
         _ => throw new ArgumentOutOfRangeException(nameof(choice)),
     };
+
+    /// <summary>R-146-1 / S1: 仮想項目の右ボタンのメニュー。コピーだけ使える（太字もコピー）。コピーを許さなければ出さない。</summary>
+    public static DropMenuModel? VirtualMenu(bool copyAllowed) =>
+        DropRules.DecideVirtual(copyAllowed) == DropAction.Copy
+            ? new DropMenuModel(DropAction.Copy, CopyEnabled: true, MoveEnabled: false, LinkEnabled: false)
+            : null;
 }

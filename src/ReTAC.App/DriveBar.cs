@@ -66,6 +66,9 @@ public sealed class DriveBar : Control
     /// <summary>ドライブのボタンにファイルが落とされた（T8-3）。転送は呼び出し側が行う。</summary>
     public event EventHandler<(string Path, string[] Files, DragDropEffects Allowed, bool Ctrl, bool Shift)>? FilesDropped;
 
+    /// <summary>R-146-1: 書庫の中など、パスを持たない項目が落とされた。受け取った側が Items を解放する。</summary>
+    public event EventHandler<(string Destination, VirtualItems Items, DragDropEffects Allowed)>? VirtualDropped;
+
     /// <summary>
     /// ドライブのボタンが右クリックされた。エクスプローラーと同じく Windows 標準のメニューを出す。
     /// 実際に出すのは呼び出し側（リストの右クリックと同じ経路を通す）。移動はしない。
@@ -403,7 +406,12 @@ public sealed class DriveBar : Control
             var point = PointToClient(new Point(e.X, e.Y));
             if (e.Effect == DragDropEffects.None
                 || _buttons.FirstOrDefault(b => b.Bounds.Contains(point) && IsShown(b)) is not { } button) return;
-            if (e.Data?.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files) return;
+            if (e.Data?.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files)
+            {
+                // R-146-1: 書庫の中など、パスを持たない項目
+                if (VirtualDropped is { } handler && DropData.CaptureVirtual(e.Data) is { } items) handler(this, (button.Path, items, e.AllowedEffect));
+                return;
+            }
             var (ctrl, shift) = DropFeedback.Modifiers(e);
             FilesDropped?.Invoke(this, (button.Path, files, e.AllowedEffect, ctrl, shift));
         });

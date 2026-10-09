@@ -386,13 +386,14 @@ public sealed class BookmarkTreeView : TreeView
         var dragging = BookmarkDropZone.Dragging;
         var reorder = dragging is not null && e.Data?.GetDataPresent(BookmarkDropZone.Format) == true;
         var files = !reorder && e.Data?.GetDataPresent(DataFormats.FileDrop) == true;
+        var virtualItems = !reorder && !files && DropData.HasVirtual(e.Data);
         var set = _items.Host.Bookmarks;
         var node = GetNodeAt(client);
 
         Drop? drop = null;
         TreeNode? onto = null;
         (TreeNode Node, int After)? insert = null;
-        if (!reorder && !files) { }
+        if (!reorder && !files && !virtualItems) { }
         else if (node is null)
         {
             drop = new Drop(set.Other, set.Other.Count, null);   // 最後の行より下の空いた所は、最後のルートの末尾
@@ -429,6 +430,9 @@ public sealed class BookmarkTreeView : TreeView
                 insert = (node, spot.Index);
             }
         }
+
+        // R-146-1: 仮想項目は転送だけ。ブックマークへの追加・グループへの差し込みには使わない（パスが無い）
+        if (virtualItems && drop?.Transfer is null) { drop = null; onto = null; insert = null; }
 
         string message;
         if (drop?.Transfer is { } folder)
@@ -473,6 +477,10 @@ public sealed class BookmarkTreeView : TreeView
             {
                 var (ctrl, shift) = DropFeedback.Modifiers(e);   // 後に回すとキーは離されている
                 _items.Host.TransferDropped(files, folder, e.AllowedEffect, ctrl, shift, drop.Mode);
+            }
+            else if (BookmarkDropZone.Dragging is null && DropData.CaptureVirtual(e.Data) is { } items)
+            {
+                _items.Host.TransferVirtual(items, folder, e.AllowedEffect);   // R-146-1
             }
             return;
         }
