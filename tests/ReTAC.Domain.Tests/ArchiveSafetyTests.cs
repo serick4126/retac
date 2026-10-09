@@ -61,6 +61,20 @@ public class ArchiveSafetyTests
     });
 
     [Fact]
+    public void Judge_FailsOnAttributesChangedOnly() => Sta.WithTempFolder(root =>
+    {
+        // 中身が同じでも、読み取り専用・隠しなどの属性だけが変わったら見逃さない
+        var dest = Directory.CreateDirectory(Path.Combine(root, "out")).FullName;
+        var sentinel = Path.Combine(root, "sentinel.txt");
+        File.WriteAllText(sentinel, "original");
+        var before = OutsideWriteCheck.Snapshot([root], dest);
+
+        File.SetAttributes(sentinel, FileAttributes.ReadOnly | FileAttributes.Hidden);
+        try { Assert.StartsWith("FAIL", OutsideWriteCheck.Judge(before, OutsideWriteCheck.Snapshot([root], dest))); }
+        finally { File.SetAttributes(sentinel, FileAttributes.Normal); }   // 後始末で一時フォルダを消せるように戻す
+    });
+
+    [Fact]
     public void Judge_WatchesEveryRoot() => Sta.WithTempFolder(root =>
     {
         // 絶対パスの項目が指す別の場所も見張る

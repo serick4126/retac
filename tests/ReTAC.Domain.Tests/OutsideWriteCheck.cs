@@ -8,12 +8,15 @@ namespace ReTAC.Domain.Tests;
 /// </summary>
 internal static class OutsideWriteCheck
 {
-    /// <summary>見張る場所にある、取り出し先（dest）の外のファイルと中身のハッシュ（見張りのファイルも含む）</summary>
+    /// <summary>
+    /// 見張る場所にある、取り出し先（dest）の外のファイルと、中身のハッシュ・属性（見張りのファイルも含む）。
+    /// 属性も比べるのは、中身を変えずに読み取り専用・隠しだけを変える書き換えも、外を変えたことになるため。
+    /// </summary>
     public static Dictionary<string, string> Snapshot(IEnumerable<string> roots, string dest) =>
         roots.SelectMany(root => Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
             .Where(file => !file.StartsWith(Path.TrimEndingDirectorySeparator(dest) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(file => file, file => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(file))), StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(file => file, file => $"{Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(file)))} {File.GetAttributes(file)}", StringComparer.OrdinalIgnoreCase);
 
     /// <summary>外に新しいファイルができた・既存のファイル（見張り）が変わった・消えたら FAIL。どれも無ければ PASS</summary>
     public static string Judge(IReadOnlyDictionary<string, string> before, IReadOnlyDictionary<string, string> after)
