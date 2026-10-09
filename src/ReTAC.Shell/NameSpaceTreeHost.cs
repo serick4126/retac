@@ -126,6 +126,8 @@ public sealed class NameSpaceTreeHost : IDisposable
     private bool _alignOnComplete;
     /// <summary>R-97-5: NSTC が自分で今のフォルダを展開する間、描画を止めている印。null なら止めていない。</summary>
     private object? _redrawHold;
+    /// <summary>R-97-5: 位置を合わせる選択の途中、描画を止めている印。null なら止めていない。</summary>
+    private object? _selectionHide;
     private TreeViewScroll.Position _heldPosition;
     private int _lifetime;
     private CancellationTokenSource? _selectionFallback;
@@ -439,6 +441,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         if (_pendingSelectionPath is null) return;
         _pendingSelectionPath = null;
         _alignOnComplete = false;
+        ShowSelection();
         _pendingExpandedPaths.Clear();
         _selectionVersion++;
         _selectionContinuationPosted = false;
@@ -451,6 +454,7 @@ public sealed class NameSpaceTreeHost : IDisposable
     {
         _pendingSelectionPath = null;
         _alignOnComplete = false;
+        ShowSelection();
         _selectionContinuationPosted = false;
         _selectionSignalPending = false;
         CancelSelectionFallback();
@@ -500,6 +504,7 @@ public sealed class NameSpaceTreeHost : IDisposable
         _pendingSelectionPath = null;
         _alignOnComplete = false;
         _redrawHold = null;   // 窓ごと捨てたので、描画を戻す相手が無い
+        _selectionHide = null;
         _ownerContext = null;
         _selectionContinuationPosted = false;
         _selectionContinuationRunning = false;
@@ -547,8 +552,10 @@ public sealed class NameSpaceTreeHost : IDisposable
     private void PrepareSelection(string path, bool align)
     {
         ReleaseRedrawHold();   // R-97-5: 新しい選択は辿る様子を見せるので、止めたままにしない
+        ShowSelection();
         _selectionVersion++;
         _alignOnComplete = align;
+        if (align) HideSelection();
         _selectionContinuationPosted = false;
         _selectionSignalPending = false;
         CancelSelectionFallback();
@@ -605,8 +612,14 @@ public sealed class NameSpaceTreeHost : IDisposable
             return;
         }
 
-        // R-97-5: 途中の段を辿る間のスクロールは今までどおりで、選択と展開の復元を終えたここで 1 回だけ合わせる
-        if (_alignOnComplete) AlignSelection();
+        // R-97-5: 途中の段を辿る間のスクロールは今までどおりで、選択と展開の復元を終えたここで 1 回だけ合わせる。
+        // 一覧の側から移ったときは今のフォルダも 1 段開く。開かないとサブフォルダが見えず、移った意味が薄い
+        // （ツリーからの移動では開かない。クリックした行の下が勝手に広がるのは、エクスプローラーとも違う）
+        if (_alignOnComplete)
+        {
+            ExpandSelectedRow();
+            AlignSelection();
+        }
         CompleteSelection(path);
     }
 
@@ -614,6 +627,7 @@ public sealed class NameSpaceTreeHost : IDisposable
     {
         _pendingSelectionPath = null;
         _alignOnComplete = false;
+        ShowSelection();
         _selectionVersion++;
         _selectionContinuationPosted = false;
         _selectionSignalPending = false;
@@ -927,6 +941,50 @@ public sealed class NameSpaceTreeHost : IDisposable
             SendMessage(inner, TVM_SELECTITEM, TVGN_FIRSTVISIBLE, top);
         }
         SendMessage(inner, WM_HSCROLL, SB_LEFT, IntPtr.Zero);
+    }
+
+    /// <summary>
+    /// R-97-5: 位置を合わせる移動では、辿る途中（段ごとの EnsureItemVisible で今のフォルダが最下段に出る等）を見せず、
+    /// 合わせ終えてから見せる（フォルダ参照ツリーの R-52-5 と同じ考え方）。ネットワークで辿るのが遅いと古いツリーの
+    /// まま止まって見えるので、1 秒たったら途中でも見せる。止めるのは選択の途中だけで、HoldForAutoExpand（選択の途中では
+    /// 働かない）とは場面が重ならない。PrepareSelection は先に ReleaseRedrawHold するので、両方が同時に止めていることはない。
+    /// </summary>
+    private void HideSelection()
+    {
+        var inner = InnerTree();
+        if (inner == IntPtr.Zero || _ownerContext is null) return;
+        SendMessage(inner, WM_SETREDRAW, IntPtr.Zero, IntPtr.Zero);
+        var hide = new object();
+        _selectionHide = hide;
+        _ = ShowSelectionLater(hide, _lifetime);
+    }
+
+    private async Task ShowSelectionLater(object hide, int lifetime)
+    {
+        await Task.Delay(SelectionHideMilliseconds).ConfigureAwait(false);
+        _ownerContext?.Post(_ => { if (lifetime == _lifetime) ShowSelection(hide); }, null);
+    }
+
+    private const int SelectionHideMilliseconds = 1000;
+
+    /// <summary>止めた描画を戻す。何度呼ばれても 1 回だけ効き、hide を渡すとその停止のときだけ戻す。</summary>
+    private void ShowSelection(object? hide = null)
+    {
+        if (_selectionHide is null || (hide is not null && !ReferenceEquals(hide, _selectionHide))) return;
+        _selectionHide = null;
+        var inner = InnerTree();
+        if (inner == IntPtr.Zero) return;
+        SendMessage(inner, WM_SETREDRAW, (IntPtr)1, IntPtr.Zero);
+        InvalidateRect(inner, IntPtr.Zero, true);
+    }
+
+    /// <summary>R-97-5: 選んだ行（今のフォルダ）を 1 段開く。子が後から届く（ネットワーク）ときも、展開済みなのでその場に足される。</summary>
+    private void ExpandSelectedRow()
+    {
+        var inner = InnerTree();
+        if (inner == IntPtr.Zero) return;
+        var selected = SendMessage(inner, TVM_GETNEXTITEM, TVGN_CARET, IntPtr.Zero);
+        if (selected != IntPtr.Zero) SendMessage(inner, TVM_EXPAND, TVE_EXPAND, selected);
     }
 
     private IntPtr InnerTree() =>
