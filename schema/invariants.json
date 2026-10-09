@@ -724,7 +724,7 @@
       "status": "enforced",
       "specIds": ["R-146-1"],
       "applies": ["app:MainForm"],
-      "rule": "書庫の中の項目（パスを持たない項目）は、Windows のコピー（IFileOperation の CopyItem）で宛先へ直接コピーし、この経路に消す・移す処理を持たない。一時フォルダ・取り出し・照合・片付けは作らない。衝突は Windows の確認画面に任せ（silentOverwrite: false）、ReTAC の衝突の判定・差分は使わない。項目はドロップの中で識別子の複製として覚え、ドラッグのデータを持ち越さない。",
+      "rule": "書庫の中の項目（パスを持たない項目）は、Windows のコピー（IFileOperation の CopyItem）で宛先へ直接コピーし、この経路に消す・移す処理を持たない。一時フォルダ・取り出し・照合・片付けは作らない。衝突は Windows の確認画面に任せ（silentOverwrite: false）、ReTAC の衝突の判定・差分は使わない。項目はドロップの中で識別子の複製として覚え、ドラッグのデータを持ち越さない。書庫の経路から MainForm に関数を切り出すときは、名前に Archive を含める（消す・移す呼び出しの検査が、名前で自動的に対象へ入れるため。含めないと検査から漏れる）。",
       "enforcedBy": "MainForm.CopyFromArchive・RunArchiveCopy・ShouldWarnArchiveCopy・CopyFromArchiveViaDialog / ShellFileOperation.ForArchiveCopy / VirtualItems.FromDataObject・FromShellItemArray",
       "testedBy": "tests/ReTAC.Domain.Tests/DestructiveApiTests.cs (ArchiveExtractionFile_IsGone・ArchivePath_HasNoDestructiveOrMovingCalls・ArchiveCopy_ExecuteIsInRunningPhase_AndWarningIsGated), tests/ReTAC.Domain.Tests/MissingDestinationTests.cs, tests/ReTAC.Domain.Tests/VirtualItemsTests.cs (Capture_SurvivesReleasingData・ArchiveCopy_AsksWindowsAboutConflicts), tests/ReTAC.Domain.Tests/ArchiveSafetyTests.cs"
     }
