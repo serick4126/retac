@@ -25,6 +25,7 @@ public static class NameSpaceTreeInterop
     internal enum TreeStyle2 : uint
     {
         None = 0,
+        InterruptNotifications = 0x00000001,
         NoSingletonAutoExpand = 0x00000010,
         NeverInsertNonEnumerated = 0x00000020,
     }

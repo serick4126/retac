@@ -128,8 +128,8 @@ public sealed class MainForm : Form, IBookmarkHost
         _fileTypes = _settings.ToFileTypeFilter();
         _sortOrder = _settings.ToSortOrder();
         // R-97-2: ツリーのマウス確定はフォーカスを動かさない。Enter は FocusFileViewRequested 側でリストへ戻す
-        _driveTree.FolderCommitted += (_, path) => _ = OpenFolderAsync(path, keepFocus: true);
-        _desktopTree.FolderCommitted += (_, path) => _ = OpenFolderAsync(path, keepFocus: true);
+        _driveTree.FolderCommitted += (_, path) => _ = OpenFolderAsync(path, keepFocus: true, fromTree: true);
+        _desktopTree.FolderCommitted += (_, path) => _ = OpenFolderAsync(path, keepFocus: true, fromTree: true);
         // R-97: パスを持たない項目を確定してもファイル表示パネルは動かさず、案内だけ出す
         _driveTree.NoPathItemCommitted += (_, _) => _statusBar.ShowMessage(NoPathItemMessage);
         _desktopTree.NoPathItemCommitted += (_, _) => _statusBar.ShowMessage(NoPathItemMessage);
@@ -3241,13 +3241,17 @@ public sealed class MainForm : Form, IBookmarkHost
     /// （コンテキストメニューを開いたまま別の項目を右クリックしたときの戻り・ちらつき）
     /// </param>
     /// <param name="keepFocus">R-97-2: ツリーのマウス確定。フォーカスをツリーに残す</param>
+    /// <param name="fromTree">
+    /// R-97-5: ツリーで確定した移動。ツリーは位置を合わせない。ツリーの側で確定を覚えておくと、開けなかった移動の印が残り、
+    /// 後で別の経路から同じフォルダへ移ったときに取り違えるので、この要求に付けて同期まで運ぶ
+    /// </param>
     /// <param name="revealCursor">
     /// R-123: その場の再表示（keepCursor）でも、カーソルの項目を見える位置へ出す。ソートの変更が渡す
     /// （並べ替えると全部の位置が変わるので、見ていた所ではなくカーソルを基準にする）
     /// </param>
     public async Task OpenFolderAsync(string folder, string? selectName = null, bool record = true,
                                       IReadOnlySet<string>? restoreMarks = null, bool keepCursor = false,
-                                      bool keepFocus = false, bool revealCursor = false)
+                                      bool keepFocus = false, bool revealCursor = false, bool fromTree = false)
     {
         // ドライブの切り替えは、開けなければ移動しないことで分かる。エラーは出さない（R-32 の運用）
         var quiet = FolderEnumerator.IsDriveRoot(folder);
@@ -3294,7 +3298,7 @@ public sealed class MainForm : Form, IBookmarkHost
 
         // R-123: その場の再表示（keepCursor。自動更新・W・F5・ファイル操作のあと）では、見ている所を動かさない。
         // コマンドがカーソルを置く項目を決めた再表示（名前の変更・新規作成の直後）と、ソートの変更は、カーソルの項目を見せる
-        Apply(folder, entries, selectName, record, restoreMarks, revealCursor: !keepCursor || revealCursor);
+        Apply(folder, entries, selectName, record, restoreMarks, revealCursor: !keepCursor || revealCursor, fromTree);
 
         // その場の再表示（keepCursor）ではフォーカスに触らない。
         // 自動更新もこの経路を通るので、`L` でドライブバーへ移った直後に
@@ -3308,7 +3312,7 @@ public sealed class MainForm : Form, IBookmarkHost
         Apply(folder, FolderEnumerator.Enumerate(folder, _sortOrder, Include), null, record: true, restoreMarks: null);
 
     private void Apply(string folder, IReadOnlyList<Entry> entries, string? selectName, bool record,
-                       IReadOnlySet<string>? restoreMarks, bool revealCursor = true)
+                       IReadOnlySet<string>? restoreMarks, bool revealCursor = true, bool fromTree = false)
     {
         // N-02: 移動の履歴とコピー先の履歴は共通のひとつ
         var previous = _currentFolder;
@@ -3339,8 +3343,8 @@ public sealed class MainForm : Form, IBookmarkHost
         else _search.Close(restore: false);
         WatchCurrentFolder();
         var treeVisibility = new ShellTreeVisibility(_fileTypes.HiddenFiles, _fileTypes.SystemFiles);
-        _driveTree.SyncCurrentFolder(folder, treeVisibility, resetExpansion: false);
-        _desktopTree.SyncCurrentFolder(folder, treeVisibility, resetExpansion: false);
+        _driveTree.SyncCurrentFolder(folder, treeVisibility, resetExpansion: false, fromTree);
+        _desktopTree.SyncCurrentFolder(folder, treeVisibility, resetExpansion: false, fromTree);
 
         // 再表示ではマークを名前で戻す（R-11-4 の「フォルダ移動で解除」とは別）
         if (restoreMarks is { Count: > 0 })

@@ -38,6 +38,9 @@ public sealed class DriveTreeView : Control, IMessageFilter
     private ShellTreeVisibility _appliedVisibility;
     private bool _resetPending = true;
     private bool _hostCreated;
+    /// <summary>R-97-5: 今の要求がツリーからの移動か。ツリーからなら選び終えても位置を合わせない。</summary>
+    private bool _requestedFromTree;
+    internal bool RequestedFromTree => _requestedFromTree;
     private long _selectionWatchStarted;
     /// <summary>R-97-2: NSTC は別ウィンドウの子なので、押下位置は WM_PARENTNOTIFY で拾っておく。</summary>
     private Point? _pendingDownPoint;
@@ -181,11 +184,17 @@ public sealed class DriveTreeView : Control, IMessageFilter
         else NoPathItemCommitted?.Invoke(this, EventArgs.Empty);
     }
 
-    public void SyncCurrentFolder(string currentFolder, ShellTreeVisibility visibility, bool resetExpansion)
+    /// <param name="fromTree">R-97-5: ツリーで確定した移動か（移動の要求に付いて来る）。ツリーからなら位置を合わせない</param>
+    public void SyncCurrentFolder(string currentFolder, ShellTreeVisibility visibility, bool resetExpansion, bool fromTree)
     {
         _ = NameSpaceTreePolicy.RootOf(currentFolder);
         if (!SamePath(_requestedFolder, currentFolder) || _requestedVisibility != visibility || resetExpansion)
+        {
             SelectedFolder = null;
+            // R-97-5: 新しい要求のときだけ起点を決める。同じフォルダの再同期（一覧の更新）では、
+            // 選択の途中のツリーからの移動を「一覧の側から」に書き換えてしまわないよう変えない
+            _requestedFromTree = fromTree;
+        }
         _requestedFolder = currentFolder;
         _requestedVisibility = visibility;
         _resetPending |= resetExpansion;
@@ -250,6 +259,8 @@ public sealed class DriveTreeView : Control, IMessageFilter
         _appliedFolder = null;
         _appliedRoot = null;
         SelectedFolder = null;
+        // R-97-5: 作り直した後の選択は、ツリーをクリックした続きではないので合わせる側にする
+        _requestedFromTree = false;
         _resetPending = true;
         _pendingDownPoint = null;
         base.OnHandleDestroyed(e);
@@ -314,12 +325,14 @@ public sealed class DriveTreeView : Control, IMessageFilter
                     _host.Create(Handle, ClientRectangle);
                     _hostCreated = true;
                 }
-                if (_rootKind == NameSpaceTreeRootKind.Drive) _host.SetRoot(root, folder, _requestedVisibility);
-                else _host.SetDesktopRoot(folder, _requestedVisibility);
+                var align = NameSpaceTreePolicy.ShouldAlignAfterSelection(_requestedFromTree, rebuilt: true);
+                if (_rootKind == NameSpaceTreeRootKind.Drive) _host.SetRoot(root, folder, _requestedVisibility, align);
+                else _host.SetDesktopRoot(folder, _requestedVisibility, align);
             }
             else if (!SamePath(_appliedFolder, folder))
             {
-                _host.SelectPath(folder);
+                // 例外として出す枝が変われば、ホストの中でルートを入れ直す。それでも起点だけで決めた値を渡す
+                _host.SelectPath(folder, NameSpaceTreePolicy.ShouldAlignAfterSelection(_requestedFromTree, rebuilt: false));
             }
             else
             {

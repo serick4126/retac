@@ -21,8 +21,18 @@ internal sealed class CurrentPathShellItemFilter(
         return previous;
     }
 
+    /// <summary>
+    /// R-97: ドライブのルートの隠し・システム属性は Windows が付けたもので、利用者が隠したフォルダではない。
+    /// 除くとデスクトップツリーの PC の下からそのドライブが消え、今のフォルダが別のドライブにある間に列挙された後は、
+    /// そのドライブへ移っても辿れない（例外の枝の判定はドライブの下の段から見るので、作り直しも起きない）。
+    /// </summary>
+    private static bool IsDriveRoot(string path) =>
+        !string.IsNullOrEmpty(path) && string.Equals(Path.TrimEndingDirectorySeparator(Path.GetPathRoot(path) ?? ""),
+            Path.TrimEndingDirectorySeparator(path), StringComparison.OrdinalIgnoreCase);
+
     internal bool RequiresException(string path)
     {
+        if (IsDriveRoot(path)) return false;
         try
         {
             var attributes = File.GetAttributes(path);
@@ -51,7 +61,7 @@ internal sealed class CurrentPathShellItemFilter(
             if (path is null) return allowVirtualItems ? S_OK : S_FALSE;
             var attributes = File.GetAttributes(path);
             if ((attributes & FileAttributes.Directory) == 0) return S_FALSE;
-            if (NameSpaceTreePolicy.IsCurrentPathOrAncestor(path, _currentPath)) return S_OK;
+            if (NameSpaceTreePolicy.IsCurrentPathOrAncestor(path, _currentPath) || IsDriveRoot(path)) return S_OK;
             if (!visibility.ShowHidden && (attributes & FileAttributes.Hidden) != 0) return S_FALSE;
             if (!visibility.ShowSystem && (attributes & FileAttributes.System) != 0) return S_FALSE;
             return S_OK;

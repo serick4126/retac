@@ -25,6 +25,7 @@ public class NameSpaceTreeInteropTests
 
         var styleType = typeof(NameSpaceTreeInterop).GetNestedType("TreeStyle2", BindingFlags.NonPublic);
         Assert.NotNull(styleType);
+        Assert.Equal(0x1u, Convert.ToUInt32(Enum.Parse(styleType, "InterruptNotifications")));
         Assert.Equal(0x10u, Convert.ToUInt32(Enum.Parse(styleType, "NoSingletonAutoExpand")));
         Assert.Equal(0x20u, Convert.ToUInt32(Enum.Parse(styleType, "NeverInsertNonEnumerated")));
     }
