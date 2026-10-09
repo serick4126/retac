@@ -8954,7 +8954,7 @@
       },
       {
         "file": "src/ReTAC.App/DriveTreeView.cs",
-        "line": 309
+        "line": 312
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -15752,15 +15752,15 @@
       },
       {
         "file": "src/ReTAC.App/DriveTreeView.cs",
-        "line": 350
+        "line": 353
       },
       {
         "file": "src/ReTAC.App/DriveTreeView.cs",
-        "line": 415
+        "line": 418
       },
       {
         "file": "src/ReTAC.App/DriveTreeView.cs",
-        "line": 422
+        "line": 425
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -16027,6 +16027,10 @@
       {
         "file": "src/ReTAC.App/DriveTreeView.cs",
         "line": 204
+      },
+      {
+        "file": "src/ReTAC.App/DriveTreeView.cs",
+        "line": 275
       },
       {
         "file": "src/ReTAC.Shell/NameSpaceTreeHost.cs",

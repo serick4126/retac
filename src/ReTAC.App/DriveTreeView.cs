@@ -272,6 +272,9 @@ public sealed class DriveTreeView : Control, IMessageFilter
         _appliedFolder = null;
         _appliedRoot = null;
         SelectedFolder = null;
+        // R-97-5: 作り直した後の選択は、ツリーをクリックした続きではないので合わせる側にする
+        _requestedFromTree = false;
+        _committedFolder = null;
         _resetPending = true;
         _pendingDownPoint = null;
         base.OnHandleDestroyed(e);
