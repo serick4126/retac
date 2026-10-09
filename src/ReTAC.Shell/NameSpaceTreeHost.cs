@@ -174,7 +174,10 @@ public sealed class NameSpaceTreeHost : IDisposable
                       | TreeStyle.RootHasExpando | TreeStyle.ShowSelectionAlways | TreeStyle.NoEditLabels | TreeStyle.TabStop
                       | TreeStyle.DisableDragDrop;
             Check(_tree.Initialize(parentHwnd, ref nativeBounds, style), "名前空間ツリーを初期化できません。");
-            var style2 = TreeStyle2.NeverInsertNonEnumerated;
+            // R-97-4: InterruptNotifications が無いと、ツリーはシェルを通した変更の知らせしか受け取らない。
+            // ReTAC 自身の Directory.CreateDirectory やほかのアプリが作ったフォルダに気づかず、
+            // そのフォルダへ移ると枝を辿れないまま選択の見張りが期限切れになる
+            var style2 = TreeStyle2.NeverInsertNonEnumerated | TreeStyle2.InterruptNotifications;
             Check(((INameSpaceTreeControl2)_tree).SetControlStyle2(style2, style2),
                 "名前空間ツリーの列挙方法を設定できません。");
             var sinkEvents = Marshal.GetComInterfaceForObject(_sink, typeof(INameSpaceTreeControlEvents));
