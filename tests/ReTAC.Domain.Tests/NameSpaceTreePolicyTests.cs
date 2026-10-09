@@ -117,19 +117,6 @@ public class NameSpaceTreePolicyTests
         Assert.Equal(expected, NameSpaceTreePolicy.ShouldAlignAfterSelection(fromTree, rebuilt));
     }
 
-    [Theory]
-    [InlineData(@"C:\a\b", @"C:\a\b", true)]
-    [InlineData(@"C:\a\b\", @"C:\a\b", true)]
-    [InlineData(@"c:\A\B", @"C:\a\b", true)]
-    [InlineData(@"\\server\share\a", @"\\SERVER\share\a\", true)]
-    [InlineData(@"C:\a\b", @"C:\a", false)]
-    [InlineData(@"C:\a", @"C:\a\b", false)]
-    [InlineData(null, @"C:\a", false)]
-    public void ツリーで確定したフォルダへの同期だけをツリーからの移動とする(string? committed, string synced, bool expected)
-    {
-        Assert.Equal(expected, NameSpaceTreePolicy.IsTreeCommit(committed, synced));
-    }
-
     // R-97-5: 今のフォルダに初めての子ができると、ツリーが自分で展開して今のフォルダを最下段へ動かす。
     // そのときだけ描画を止める。止める必要の無い場面で止めると、0.5 秒の戻しまでツリーが描かれない。
     [Theory]

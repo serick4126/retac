@@ -76,15 +76,6 @@ public static class NameSpaceTreePolicy
         !expanded && !alreadyReissued && requestedAt != 0 && now - requestedAt >= interval;
 
     /// <summary>
-    /// R-97-5: 同期で来たフォルダが、直前にツリーで確定したフォルダと同じなら、ツリーからの移動とみなす。
-    /// ツリーの確定は FolderCommitted → フォルダを開く → 同期 の順で同じフォルダに戻ってくるので、
-    /// 呼び出し元（MainForm）に起点を渡させなくても、ツリーの側だけで見分けられる。
-    /// </summary>
-    public static bool IsTreeCommit(string? committedFolder, string syncedFolder) =>
-        committedFolder is not null
-        && string.Equals(Normalize(committedFolder), Normalize(syncedFolder), StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>
     /// R-97-5: 選び終えたときに左端・中央付近へ合わせるかは、移動の起点だけで決める。
     /// ツリーからの移動でも、例外として出す枝が変わればルートを入れ直す（rebuilt）。それを理由に合わせると、
     /// 利用者がクリックした位置からツリーが勝手に動く。rebuilt は判定に使わないことをテストで固定するために受け取る。

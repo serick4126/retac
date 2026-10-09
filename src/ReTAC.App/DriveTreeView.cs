@@ -38,10 +38,9 @@ public sealed class DriveTreeView : Control, IMessageFilter
     private ShellTreeVisibility _appliedVisibility;
     private bool _resetPending = true;
     private bool _hostCreated;
-    /// <summary>R-97-5: ツリーで確定して FolderCommitted を出したフォルダ。次の同期で 1 回だけ起点の判断に使う。</summary>
-    private string? _committedFolder;
     /// <summary>R-97-5: 今の要求がツリーからの移動か。ツリーからなら選び終えても位置を合わせない。</summary>
     private bool _requestedFromTree;
+    internal bool RequestedFromTree => _requestedFromTree;
     private long _selectionWatchStarted;
     /// <summary>R-97-2: NSTC は別ウィンドウの子なので、押下位置は WM_PARENTNOTIFY で拾っておく。</summary>
     private Point? _pendingDownPoint;
@@ -181,21 +180,12 @@ public sealed class DriveTreeView : Control, IMessageFilter
         if (!NameSpaceTreePolicy.ShouldCommit(pending, PointToClient(MousePosition), dragStarted: false, buttonReleased: true))
             return;
 
-        if (e.Path is { } path) CommitFolder(path);
+        if (e.Path is { } path) FolderCommitted?.Invoke(this, path);
         else NoPathItemCommitted?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>
-    /// R-97-5: 確定を出す所はここに集める。コードからの選択でも NSTC は OnItemClick を出すので、
-    /// クリックの通知全般ではなく、確定の判定を通った後でだけ起点を覚える。
-    /// </summary>
-    private void CommitFolder(string path)
-    {
-        _committedFolder = path;
-        FolderCommitted?.Invoke(this, path);
-    }
-
-    public void SyncCurrentFolder(string currentFolder, ShellTreeVisibility visibility, bool resetExpansion)
+    /// <param name="fromTree">R-97-5: ツリーで確定した移動か（移動の要求に付いて来る）。ツリーからなら位置を合わせない</param>
+    public void SyncCurrentFolder(string currentFolder, ShellTreeVisibility visibility, bool resetExpansion, bool fromTree)
     {
         _ = NameSpaceTreePolicy.RootOf(currentFolder);
         if (!SamePath(_requestedFolder, currentFolder) || _requestedVisibility != visibility || resetExpansion)
@@ -203,10 +193,7 @@ public sealed class DriveTreeView : Control, IMessageFilter
             SelectedFolder = null;
             // R-97-5: 新しい要求のときだけ起点を決める。同じフォルダの再同期（一覧の更新）では、
             // 選択の途中のツリーからの移動を「一覧の側から」に書き換えてしまわないよう変えない
-            _requestedFromTree = NameSpaceTreePolicy.IsTreeCommit(_committedFolder, currentFolder);
-            // 確定は新しい要求 1 回にだけ使う。フォルダを開く処理は非同期なので、確定から同期までの間に
-            // 今のフォルダの再同期が挟まることがある。そこでは捨てない
-            _committedFolder = null;
+            _requestedFromTree = fromTree;
         }
         _requestedFolder = currentFolder;
         _requestedVisibility = visibility;
@@ -274,7 +261,6 @@ public sealed class DriveTreeView : Control, IMessageFilter
         SelectedFolder = null;
         // R-97-5: 作り直した後の選択は、ツリーをクリックした続きではないので合わせる側にする
         _requestedFromTree = false;
-        _committedFolder = null;
         _resetPending = true;
         _pendingDownPoint = null;
         base.OnHandleDestroyed(e);
@@ -294,7 +280,7 @@ public sealed class DriveTreeView : Control, IMessageFilter
 
     internal void CommitSelectedFolder()
     {
-        if (SelectedFolder is { } path) CommitFolder(path);
+        if (SelectedFolder is { } path) FolderCommitted?.Invoke(this, path);
         else if (_host.HasSelectionWithoutPath) NoPathItemCommitted?.Invoke(this, EventArgs.Empty);
     }
 
