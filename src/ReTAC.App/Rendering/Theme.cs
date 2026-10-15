@@ -4,7 +4,7 @@ using ReTAC.Domain.Entries;
 
 namespace ReTAC.App.Rendering;
 
-/// <summary>ドメイン定義 5-1 節「卓駆から引き継ぐ既定値」。R-20-2 により初期値として組み込む。</summary>
+/// <summary>ドメイン定義 5-1 節「ReTAC の既定値」。R-20-2 により初期値として組み込む。</summary>
 public sealed record Theme
 {
     public Color Background { get; init; } = ColorTranslator.FromHtml("#FFFFFF");
