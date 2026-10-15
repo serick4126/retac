@@ -51,6 +51,58 @@ internal sealed class DoubleClickTracker
 }
 
 /// <summary>
+/// R-91-2: バー直下のボタン（BarDropDownButton）のダブルクリックの状態。記録を 2 つに分ける。
+/// 1 つにまとめると、外側のクリックや Esc で閉じた直後の普通のクリックが、展開したときの記録と比べられてジャンプになる。
+/// <list type="bullet">
+/// <item>展開の記録: 閉じた状態で押して、離して展開した。展開している間の押下とだけ比べる（閉じた状態からのダブルクリック）。</item>
+/// <item>閉じた押下の記録: 展開している間にこのボタンを押して閉じた。閉じた状態の押下とだけ比べる（展開した状態からのダブルクリック）。</item>
+/// </list>
+/// 閉じたら閉じ方を問わず両方捨て、自分の押下で閉じたときだけ、閉じた後に閉じた押下を覚え直す。
+/// </summary>
+internal sealed class BarDoubleClickState
+{
+    private readonly DoubleClickTracker _opened = new();
+    private readonly DoubleClickTracker _closedByPress = new();
+
+    /// <summary>閉じた状態の押下。true ならダブルクリック（展開せずにジャンプする）。</summary>
+    public bool PressWhileClosed(DateTime time, Point pos, MouseButtons button, TimeSpan doubleClickTime, Size doubleClickSize) =>
+        _closedByPress.Decide(time, pos, button, doubleClickTime, doubleClickSize);
+
+    /// <summary>離して展開した。</summary>
+    public void OpenedByRelease(DateTime time, Point pos) => _opened.Remember(time, pos);
+
+    /// <summary>
+    /// 展開している間の押下。true ならダブルクリック（呼び出し側が閉じてジャンプする。close は呼ばない）。
+    /// false なら close で閉じる。close は標準の処理で閉じ、閉じたかどうかを返す（その中で <see cref="DropDownClosed"/> が
+    /// 来て両方の記録が捨てられる）。閉じた後で覚えるので、この押下の記録だけが残る。ジャンプを繋いでいない
+    /// ボタン（グループ）は覚えない。覚えると、次の押下が何も起きない押下になる。
+    /// </summary>
+    public bool PressWhileOpen(DateTime time, Point pos, MouseButtons button, TimeSpan doubleClickTime, Size doubleClickSize,
+        bool jumpWired, Func<bool> close)
+    {
+        if (_opened.Decide(time, pos, button, doubleClickTime, doubleClickSize)) return true;
+        if (close() && jumpWired) _closedByPress.Remember(time, pos);
+        return false;
+    }
+
+    /// <summary>展開した（マウス・キーボードを問わない）。</summary>
+    public void DropDownOpened() => _closedByPress.Forget();
+
+    /// <summary>閉じた（外側のクリック・Esc・自分の押下など、閉じ方を問わない）。</summary>
+    public void DropDownClosed()
+    {
+        _opened.Forget();
+        _closedByPress.Forget();
+    }
+
+    /// <summary>ボタンから外れた。別の場所をクリックして戻ってきた押下をダブルクリックにしない。</summary>
+    public void MouseLeft() => _closedByPress.Forget();
+
+    /// <summary>ドラッグを始めた。クリックとして成立しなかったので、どちらの記録も使わせない。</summary>
+    public void Cancel() => DropDownClosed();
+}
+
+/// <summary>
 /// ホバーで開くメニュー項目の DoubleClickTracker を項目に結び付け、ドラッグの開始（BookmarkDropZone.EnableDrag）から
 /// 項目の種類を気にせず捨てられるようにする対応表。BarDropDownButton は自分の CancelOpen で自分のトラッカーを直接
 /// 捨てるので登録しない（Forget を呼んでも登録が無ければ何もしない）。

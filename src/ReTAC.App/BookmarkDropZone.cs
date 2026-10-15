@@ -511,11 +511,13 @@ internal static class BarKeyboardNav
 /// 開いているときに押したら、今までどおり閉じる。ただしフォルダは、その 2 回目の押下が直前に開いた時刻・位置の
 /// ダブルクリックの範囲内なら「閉じてジャンプ」（R-91-2）にする。標準の DoubleClick はここには届かない
 /// （2 回目の押下は開いたメニューを閉じるのに使われ、Click イベントの対まで進まない）。
+/// 開いている状態からのダブルクリックは、1 回目の押下で閉じ、2 回目（閉じた状態）の押下でジャンプする。
+/// どの記録をどちらの押下と比べるかは BarDoubleClickState にまとめた。
 /// </summary>
 internal sealed class BarDropDownButton : ToolStripDropDownButton
 {
     private bool _openOnUp;
-    private readonly DoubleClickTracker _doubleClick = new();
+    private readonly BarDoubleClickState _doubleClick = new();
 
     /// <summary>閉じているときに左ボタンで押された。このときは MouseDown イベントが出ないので、ドラッグの始点はここで知らせる。</summary>
     public event MouseEventHandler? LeftPressedClosed;
@@ -559,20 +561,32 @@ internal sealed class BarDropDownButton : ToolStripDropDownButton
 
     protected override void OnMouseDown(MouseEventArgs e)
     {
+        var time = TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime);
         if (e.Button == MouseButtons.Left && !DropDown.Visible)
         {
+            // R-91-2: 展開した状態から自分の押下で閉じた直後なら、この 2 回目の押下でジャンプする（展開もドラッグもしない）
+            if (_doubleClick.PressWhileClosed(DateTime.UtcNow, e.Location, e.Button, time, SystemInformation.DoubleClickSize))
+            {
+                DoubleClicked?.Invoke(this, EventArgs.Empty);
+                return;
+            }
             _openOnUp = true;
             LeftPressedClosed?.Invoke(this, e);
             return;
         }
-        if (e.Button == MouseButtons.Left && DropDown.Visible
-            && _doubleClick.Decide(DateTime.UtcNow, e.Location, e.Button, TimeSpan.FromMilliseconds(SystemInformation.DoubleClickTime), SystemInformation.DoubleClickSize))
+        if (e.Button == MouseButtons.Left
+            && _doubleClick.PressWhileOpen(DateTime.UtcNow, e.Location, e.Button, time, SystemInformation.DoubleClickSize,
+                jumpWired: DoubleClicked is not null, close: () =>
+                {
+                    base.OnMouseDown(e);   // 標準の処理が同期的に閉じる（OnDropDownClosed が先に来る）
+                    return !DropDown.Visible;
+                }))
         {
             HideDropDown();
             DoubleClicked?.Invoke(this, EventArgs.Empty);
             return;
         }
-        base.OnMouseDown(e);
+        if (e.Button != MouseButtons.Left) base.OnMouseDown(e);   // 左ボタンは close の中で済ませた
     }
 
     protected override void OnMouseUp(MouseEventArgs e)
@@ -582,17 +596,35 @@ internal sealed class BarDropDownButton : ToolStripDropDownButton
             _openOnUp = false;
             ShowDropDown();
             // 開いた時刻・位置を覚える。次の左の押下（開いている間）がこの範囲内ならダブルクリック（R-91-2）
-            _doubleClick.Remember(DateTime.UtcNow, e.Location);
+            _doubleClick.OpenedByRelease(DateTime.UtcNow, e.Location);
             return;
         }
         base.OnMouseUp(e);
+    }
+
+    protected override void OnDropDownOpened(EventArgs e)
+    {
+        _doubleClick.DropDownOpened();
+        base.OnDropDownOpened(e);
+    }
+
+    protected override void OnDropDownClosed(EventArgs e)
+    {
+        _doubleClick.DropDownClosed();
+        base.OnDropDownClosed(e);
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        _doubleClick.MouseLeft();
+        base.OnMouseLeave(e);
     }
 
     /// <summary>ドラッグが始まったので、離しても開かない。古い開いた時刻・位置も次のクリックに使わせない。</summary>
     public void CancelOpen()
     {
         _openOnUp = false;
-        _doubleClick.Forget();
+        _doubleClick.Cancel();
     }
 }
 
