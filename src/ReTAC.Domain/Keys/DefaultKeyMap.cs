@@ -81,10 +81,9 @@ public static class DefaultKeyMap
         yield return Key(new KeyBinding(Vk.Function(8)), CommandId.GoBack);
         yield return Key(new KeyBinding(Vk.Function(9)), CommandId.GoForward);
 
-        // その他（Esc は未割り当て。R-18 により常に「中止」として働く）
+        // その他（Esc は R-18 により常に「中止」、BackSpace は固定のキーで常に親フォルダへ。R-25。どちらも枠に無い）
         yield return Key(new KeyBinding(Vk.Enter), CommandId.OpenFile);
         yield return Tool(new KeyBinding(Vk.Enter, Shift: true), DefaultExternalTools.EditorId);
-        yield return Key(new KeyBinding(Vk.Back), CommandId.GoParent);
         // B-23: 卓駆の利用者の設定を引き継いだ全選択／選択解除は、一般の利用者が期待する削除と食い違っていた
         yield return Key(new KeyBinding(Vk.Delete), CommandId.Delete);
 

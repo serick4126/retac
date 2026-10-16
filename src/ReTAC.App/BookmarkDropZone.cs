@@ -640,7 +640,7 @@ internal sealed class BarButton : ToolStripButton
     /// <summary>
     /// 今の Click が Space キー経由かどうか。OnClick の中でしか意味を持たない値なので、UI スレッドだけで
     /// 同期的に読み書きする（WinForms はシングルスレッドなので、static でも競合しない）。
-    /// MainForm 側はこれを見て、Space のときだけファイル一覧への焦点の戻しを省く。
+    /// MainForm 側はこれを見て、Space のときだけファイルリストへの焦点の戻しを省く。
     /// </summary>
     public static bool IsSpaceActivation { get; private set; }
 

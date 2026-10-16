@@ -98,6 +98,9 @@ public static class MenuBar
         // R-82 / R-83: Ctrl+Z は固定のキーなので、キーマップの逆引きでは出ない。表示を直接与える
         var undo = Item("元に戻す(&U)", CommandId.Undo);
         undo.ShortcutKeyDisplayString = "Ctrl+Z";
+        // R-25: BackSpace も固定のキー（いつも親フォルダへ）なので、同じく表示を直接与える
+        var goParent = Item("親フォルダへ(&U)", CommandId.GoParent);
+        goParent.ShortcutKeyDisplayString = "BackSpace";
 
         // R-104-1: 3 つの既存コマンドをサブメニューに展開する。CopyFileName 自体は直接の項目を持たなくなるが、
         // R-12-2 の例外条件（選択肢はサブメニューから届く）を満たす
@@ -179,7 +182,7 @@ public static class MenuBar
                 // R-104 / Q7: 現在のフォルダの右クリックメニューをここへ移す（呼び方は Q7 のとおり）
                 Item("現在のフォルダの右クリックメニュー(&B)", CommandId.ShowFolderBackgroundMenu),
                 Separator(),
-                Item("親フォルダへ(&U)", CommandId.GoParent),
+                goParent,
                 Item("ルートフォルダに戻る(&R)", CommandId.GoRoot),
                 Separator(),
                 Item("前のフォルダに戻る(&P)", CommandId.GoBack),

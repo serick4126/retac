@@ -55,7 +55,7 @@ public sealed class MainForm : Form, IBookmarkHost
     private ToolStripMenuItem _bookmarkBarMenuItem;
     /// <summary>
     /// R-107: `B` でバーへフォーカスしている間だけ true。File/Command のブックマークは実行しても
-    /// フォーカスを自分では動かさないので、ここが立っていたら実行後にファイル一覧へ戻す
+    /// フォーカスを自分では動かさないので、ここが立っていたら実行後にファイルリストへ戻す
     /// （利用者の実機確認により、Space のときだけは戻さずバーに留める。BarButton.IsSpaceActivation で見分ける。
     /// 親フォルダに戻る等を Space で連打できるようにするため）。
     /// バーが実際にフォーカスを失ったら（Esc・他の操作）LostFocus で必ず false に戻るので、立ったままにはならない。
@@ -458,6 +458,11 @@ public sealed class MainForm : Form, IBookmarkHost
             // ¥（JIS では VK_OEM_5）でルートへ
             case Keys.Oem5 or Keys.OemBackslash:
                 e.Handled = GoRoot();
+                return;
+            // R-25 / R-39: 修飾キーなしの BackSpace は親フォルダへ。ツリーから来たときも、R-97-3 のとおり
+            // ツリーの選択ではなくファイル表示パネルの今のフォルダの親へ移る。ファイルリストと同じ判定を使う
+            case Keys.Back when FixedKeys.IsGoParent((ushort)e.KeyCode, e.Shift, e.Control, e.Alt):
+                e.Handled = GoParentCommand();
                 return;
             // アプリケーションキー。マークがあればマーク集合、無ければカーソルの 1 件が対象。
             // R-97-3: ツリーから来たときは処理しない。NSTC 自身がツリーの選択項目にシェルメニューを出す

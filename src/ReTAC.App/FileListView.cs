@@ -1522,7 +1522,9 @@ public sealed class FileListView : Control
 
             // B-11: Enter / Shift+Enter はキーマップを通す（R-12）。ここで直接開くと
             // Shift+Enter（既定はテキストエディタ）まで関連付けで開かれ、割り当ての変更も効かなかった
-            case Keys.Back when !e.Control:   // Ctrl+BackSpace は割り当ての枠（F-06）なのでキーマップへ流す
+            // R-25: 固定のキー。修飾キーなしだけを親フォルダへ（MainForm.OnCommandKey と同じ判定）。
+            // Shift・Alt 付きは何もせず、Ctrl+BackSpace は割り当ての枠（F-06）なのでキーマップへ流す
+            case Keys.Back when ReTAC.Domain.Keys.FixedKeys.IsGoParent((ushort)e.KeyCode, e.Shift, e.Control, e.Alt):
                 ParentRequested?.Invoke(this, EventArgs.Empty);
                 return;
 

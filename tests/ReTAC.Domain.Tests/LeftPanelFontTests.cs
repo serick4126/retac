@@ -5,7 +5,7 @@ using ReTAC.App.Rendering;
 
 namespace ReTAC.Domain.Tests;
 
-/// <summary>R-101: 左パネルのフォントは、ファイル一覧のフォントとは別に持つ。</summary>
+/// <summary>R-101: 左パネルのフォントは、ファイルリストのフォントとは別に持つ。</summary>
 public class LeftPanelFontTests
 {
     [Fact]
@@ -69,7 +69,7 @@ public class LeftPanelFontTests
         var targets = page.Controls.OfType<ListBox>().Single();
 
         targets.SelectedIndex = 1;   // 左パネル（一覧と同じ メイリオ 16pt）
-        targets.SelectedIndex = 0;   // ファイル一覧
+        targets.SelectedIndex = 0;   // ファイルリスト
         targets.SelectedIndex = 1;
 
         // 捨てたフォントを使っていると、ここで ArgumentException("Parameter is not valid") になる

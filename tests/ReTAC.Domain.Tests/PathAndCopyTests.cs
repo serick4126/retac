@@ -208,12 +208,13 @@ public class KeyMapTests
     }
 
     [Fact]
-    public void 有効な割り当ては46件でCtrlはAとBとFとL()
+    public void 有効な割り当ては45件でCtrlはAとBとFとL()
     {
         // 卓駆の 65 枠のうち、元から未割り当て 20 枠 ＋ スコープ外 6 枠を除いた 39 枠
         // ＋ マウスボタンの既定 2 枠（B-17）＋ Ctrl+F（B-18）＋ Ctrl+L（B-19）
         // ＋ B（無印。B-21）＋ Ctrl+B（B-21）＋ Ctrl+A（B-23。Delete → Delete への変更は枠数を変えない）
-        Assert.Equal(46, Map.Bindings.Count);
+        // － BackSpace（固定のキーにした。R-25）
+        Assert.Equal(45, Map.Bindings.Count);
         Assert.Equal(
             [new KeyBinding(Vk.Letter('A'), Ctrl: true), new KeyBinding(Vk.Letter('B'), Ctrl: true),
              new KeyBinding(Vk.Letter('F'), Ctrl: true), new KeyBinding(Vk.Letter('L'), Ctrl: true)],

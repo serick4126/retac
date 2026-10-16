@@ -2,7 +2,8 @@ namespace ReTAC.Domain.Keys;
 
 /// <summary>
 /// キー割り当ての枠（5-2 節 / F-06）。表示と保存の表記は App の KeySlots が受け持つ。
-/// 修飾なし・Shift の 64 枠: 英字 26 ＋ 数字 10 ＋ F キー 12 ＋ Shift+F キー 12 ＋ その他 4（Enter・Shift+Enter・BackSpace・Delete）。
+/// 修飾なし・Shift の 63 枠: 英字 26 ＋ 数字 10 ＋ F キー 12 ＋ Shift+F キー 12 ＋ その他 3（Enter・Shift+Enter・Delete）。
+/// BackSpace は固定のキー（R-25。いつも親フォルダへ）なので枠に無い。Ctrl+BackSpace は枠に残す。
 /// 卓駆の `TACKEY.KFM` は 65 枠だが、Esc は割り当てさせない（R-18 により常に「中止」として働く）。
 /// Ctrl の 47 枠: 英字 22（C / X / V / Z は固定のキー・R-25 / R-83）＋ 数字 10 ＋ F キー 12 ＋ Enter・BackSpace・Delete。Ctrl+Shift は作らない。
 /// マウスの 3 枠（R-75-1）: ボタン3（ホイール押し込み）・ボタン4・ボタン5。左右のボタンは固定なので枠に無い。
@@ -20,7 +21,6 @@ public static class KeySlotList
         for (var n = 1; n <= 12; n++) slots.Add(new KeyBinding(Vk.Function(n), Shift: true));
         slots.Add(new KeyBinding(Vk.Enter));
         slots.Add(new KeyBinding(Vk.Enter, Shift: true));
-        slots.Add(new KeyBinding(Vk.Back));
         slots.Add(new KeyBinding(Vk.Delete));
 
         for (var c = 'A'; c <= 'Z'; c++)

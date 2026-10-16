@@ -5,7 +5,7 @@ namespace ReTAC.App.Rendering;
 
 /// <summary>
 /// R-78 / Q83: ドラッグ中にカーソルへ付ける小さな画像(アイコン＋名前)を作る。
-/// FileListView(ファイル一覧)とツリー(DriveTreeView)の両方が同じ見た目で使う。
+/// FileListView(ファイルリスト)とツリー(DriveTreeView)の両方が同じ見た目で使う。
 /// 既定の大きなドラッグ画像は指す先を隠す(Phase10.2 の実機確認で NG)ため、必ず小さい画像を渡す側で使うこと。
 /// </summary>
 internal static class DragImageRenderer

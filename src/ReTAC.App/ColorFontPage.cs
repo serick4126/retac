@@ -85,7 +85,7 @@ public sealed class ColorFontPage : UserControl
         AutoScaleMode = AutoScaleMode.Inherit;   // R-102-3: 拡大は SettingsDialog だけが行う
         Size = new Size(754, 488);   // 旧ダイアログのクライアント領域から OK/キャンセルの行を除いた大きさ
 
-        _targets.Items.AddRange(["ファイル一覧", "左パネル"]);
+        _targets.Items.AddRange(["ファイルリスト", "左パネル"]);
 
         // 描画できない字体を選ばせない。等幅かどうかは問わない（ファイル名は比例字体でも読める）
         _family.Items.AddRange([.. FontFamily.Families.Select(f => f.Name).Order(StringComparer.CurrentCulture)]);
@@ -325,7 +325,7 @@ public sealed class ColorFontPage : UserControl
     {
         // Control.Font は、値の等しい Font を代入しても差し替えず前の実体を持ち続ける。
         // 受け取られなかったほうを捨てないと、描いている最中のフォントを壊す
-        // （ファイル一覧と左パネルを同じ大きさにすると必ず起きる）
+        // （ファイルリストと左パネルを同じ大きさにすると必ず起きる）
         var wanted = FileListSelected
             ? new Font(_theme.FontFamily, _theme.FontSize)
             : new Font(_theme.LeftPanelFontFamily, _theme.LeftPanelFontSize);

@@ -7,10 +7,10 @@ namespace ReTAC.Domain.Tests;
 public class KeySlotListTests
 {
     [Fact]
-    public void 修飾なしとShiftの64枠とマウスの3枠にCtrlの47枠を足した114枠()
+    public void 修飾なしとShiftの63枠とマウスの3枠にCtrlの47枠を足した113枠()
     {
-        Assert.Equal(114, KeySlotList.All.Count);
-        Assert.Equal(67, KeySlotList.All.Count(s => !s.Ctrl));   // 従来の 64 ＋ マウス 3
+        Assert.Equal(113, KeySlotList.All.Count);
+        Assert.Equal(66, KeySlotList.All.Count(s => !s.Ctrl));   // 63 ＋ マウス 3（BackSpace は固定のキー。R-25）
         Assert.Equal(47, KeySlotList.All.Count(s => s.Ctrl));    // C / X / V / Z は固定のキー（R-25 / R-83）
         Assert.Equal(KeySlotList.All.Count, KeySlotList.All.Distinct().Count());
     }
@@ -48,6 +48,14 @@ public class KeySlotListTests
         Assert.Contains(new KeyBinding(Vk.Delete, Ctrl: true), KeySlotList.All);
         Assert.DoesNotContain(KeySlotList.All, s => s.Ctrl && s.Shift);
         Assert.DoesNotContain(KeySlotList.All, s => s.VirtualKey == Vk.Escape);   // R-18
+    }
+
+    [Fact]
+    public void 修飾なしのBackSpaceは固定のキーなので枠に無い()
+    {
+        // R-25: いつも親フォルダへ。Ctrl+BackSpace は枠に残る（上のテスト）
+        Assert.DoesNotContain(new KeyBinding(Vk.Back), KeySlotList.All);
+        Assert.DoesNotContain(DefaultKeyMap.Create().Bindings.Keys, key => key.VirtualKey == Vk.Back && !key.Ctrl);
     }
 
     [Fact]

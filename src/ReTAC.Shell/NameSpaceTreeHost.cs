@@ -1141,7 +1141,7 @@ public sealed class NameSpaceTreeHost : IDisposable
     private bool SetSelected(INameSpaceTreeControl tree, IShellItem item)
     {
         // R-97-2: NSTC はコードからの選択でも OnItemClick を出す。確定扱いにすると現在位置の同期のたびに
-        // 同じフォルダを開き直し、フォーカスもファイル一覧へ移ってしまう
+        // 同じフォルダを開き直し、フォーカスもファイルリストへ移ってしまう
         _selectingItem = true;
         try
         {
