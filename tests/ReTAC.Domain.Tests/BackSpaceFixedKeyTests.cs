@@ -30,28 +30,66 @@ public class BackSpaceFixedKeyTests
         Assert.False(FixedKeys.IsGoParent(Vk.Delete, false, false, false));
     }
 
+    // 保存の表記は KeySlots.Label（Windows のキー名）で、BackSpace は "Back"。"BackSpace" は画面の名前（Display）で、
+    // 変更の前から解析できない。解析できるが枠から外れたキーを捨てる処理を試すため、実際の表記で書く
+    private static readonly string BackLabel = KeySlots.Label(new KeyBinding(Vk.Back));
+    private static readonly string CtrlBackLabel = KeySlots.Label(new KeyBinding(Vk.Back, Ctrl: true));
+
+    [Fact]
+    public void 保存の表記はBackとCtrlとBack()
+    {
+        Assert.Equal("Back", BackLabel);
+        Assert.Equal("Ctrl+Back", CtrlBackLabel);
+        Assert.NotNull(KeySlots.Parse(BackLabel));   // 解析はできる（枠に無いだけ）
+    }
+
+    private static AppSettings SavedBinding(string label) =>
+        new() { KeyBindings = new() { [label] = new BuiltinTarget(CommandId.Refresh).Serialize() } };
+
     [Fact]
     public void 保存済みのBackSpaceの割り当ては読み込み時に無視される()
     {
         // 3.4.1 までは BackSpace が枠だった。移行はせず、枠に無いキーとして捨てる（Ctrl+Z と同じ）
-        var settings = new AppSettings { KeyBindings = new() { ["BackSpace"] = new BuiltinTarget(CommandId.Refresh).Serialize() } };
-        Assert.Null(settings.ToKeyMap().Resolve(new KeyBinding(Vk.Back)));
+        Assert.Null(SavedBinding(BackLabel).ToKeyMap().Resolve(new KeyBinding(Vk.Back)));
+    }
+
+    [Fact]
+    public void 保存済みのCtrlとBackSpaceの割り当ては読み込める()
+    {
+        // 陽性の対照: Ctrl+BackSpace は枠に残る
+        Assert.Equal(new BuiltinTarget(CommandId.Refresh),
+            SavedBinding(CtrlBackLabel).ToKeyMap().Resolve(new KeyBinding(Vk.Back, Ctrl: true)));
+    }
+
+    private static ImportResult? ImportJson(string label)
+    {
+        var defaults = DefaultKeyMap.Create();
+        var current = KeySlots.All.ToDictionary(slot => slot, slot => defaults.Resolve(slot));
+        int[] tools = [DefaultExternalTools.EditorId, DefaultExternalTools.ViewerId, DefaultExternalTools.TerminalId];
+        return KeyBindingFile.Import($"{{\"format\":\"ReTAC.KeyBindings\",\"keyBindings\":{{\"{label}\":\"Refresh\"}}}}", current, tools);
     }
 
     [Fact]
     public void 読み込むJSONのBackSpaceは解釈できないキーとして捨てて数える()
     {
         // R-103-2
-        var defaults = DefaultKeyMap.Create();
-        var current = KeySlots.All.ToDictionary(slot => slot, slot => defaults.Resolve(slot));
-        int[] tools = [DefaultExternalTools.EditorId, DefaultExternalTools.ViewerId, DefaultExternalTools.TerminalId];
-        var json = "{\"format\":\"ReTAC.KeyBindings\",\"keyBindings\":{\"BackSpace\":\"Refresh\"}}";
-
-        var result = KeyBindingFile.Import(json, current, tools);
+        var result = ImportJson(BackLabel);
 
         Assert.NotNull(result);
         Assert.Equal(1, result!.UnknownKey);
         Assert.Equal(0, result.Loaded);
+    }
+
+    [Fact]
+    public void 読み込むJSONのCtrlとBackSpaceは読み込める()
+    {
+        // 陽性の対照
+        var result = ImportJson(CtrlBackLabel);
+
+        Assert.NotNull(result);
+        Assert.Equal(0, result!.UnknownKey);
+        Assert.Equal(1, result.Loaded);
+        Assert.Equal(new BuiltinTarget(CommandId.Refresh), result.Assignments[new KeyBinding(Vk.Back, Ctrl: true)]);
     }
 
     // ---- ファイルリストのキー入力からイベントまで（仕様書の再レビューの指摘） ----
