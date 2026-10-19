@@ -9,6 +9,8 @@ namespace ReTAC.App;
 /// 同名ファイルの処理（16.8 節）。元と先の日時・サイズを並べ、複写条件を選ばせる（R-41-5）。
 /// スコープ内は 4 択（新しい時に複写＝既定 / 上書き / 名前を変更し複写 / 複写しない）。
 /// R-50: 「以降全て」は残りの衝突すべてに同じ判断を適用する。
+/// R-41-7: 「名前を変更し複写」を選ぶと名前を尋ね、入力された名前がまた当たればこのダイアログに戻る
+/// （戻ってきた衝突は「名前を変更し複写」を選んだ状態で出す）。
 /// </summary>
 public sealed class ConflictDialog : Form
 {
@@ -25,7 +27,8 @@ public sealed class ConflictDialog : Form
 
         Controls.Add(new Label
         {
-            Text = $"{System.IO.Path.GetFileName(conflict.Source)} は複写先に既に存在します。",
+            // 名前の変更から戻ってきた衝突（R-41-7）では、当たったのは入力した名前で、転送元の名前とは違う
+            Text = $"{System.IO.Path.GetFileName(conflict.Destination)} は複写先に既に存在します。",
             AutoSize = true,
             Location = new Point(16, 14),
             MaximumSize = new Size(490, 0),

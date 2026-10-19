@@ -83,24 +83,33 @@ public sealed record CopyPlan(IReadOnlyList<PlannedFolder> Folders, IReadOnlyLis
 public static class CopyPlanner
 {
     /// <summary>衝突 1 件。16.8 節のダイアログは元と先の日時・サイズを並べて示す。</summary>
+    /// <param name="Destination">衝突した宛先のパス。名前の変更から戻ってきた衝突では、転送元の名前と違う</param>
+    /// <param name="Retry">R-41-7: 名前の変更から戻ってきた衝突。「以降全て」でも問い直す</param>
     public sealed record Conflict(string Source, string Destination,
-        DateTime SourceTime, DateTime DestinationTime, long SourceSize, long DestinationSize);
+        DateTime SourceTime, DateTime DestinationTime, long SourceSize, long DestinationSize, bool Retry = false);
 
-    /// <summary>衝突条件を一括で決める場合（R-41-6 のチェックボックス）。</summary>
+    /// <summary>
+    /// 衝突条件を一括で決める場合（R-41-6 のチェックボックス）。
+    /// 名前を尋ねる相手がいないので、「名前を変更し複写」は渡せない（InvalidOperationException）。
+    /// </summary>
     public static CopyPlan Build(IEnumerable<string> sources, string destinationFolder, CopyCondition condition,
         Action<int>? scanned = null, bool moving = false) =>
-        Build(sources, destinationFolder, _ => condition, scanned, moving);
+        Build(sources, destinationFolder, _ => condition,
+            _ => throw new InvalidOperationException("一括の複写条件には、名前を尋ねる相手がいない"), scanned, moving);
 
     /// <param name="resolve">
     /// 衝突するたびに呼ばれ、その 1 件の複写条件を返す（R-41-5）。
     /// 「以降すべてに適用」は呼び出し側が同じ値を返し続けることで表す。
     /// </param>
+    /// <param name="rename">
+    /// 「名前を変更し複写」が選ばれたときに呼ばれ、入力された名前を返す（R-41-7）。null なら同名ファイルの処理に戻る（入力の取り消し）。
+    /// </param>
     /// <param name="scanned">たどった転送元のフォルダの数（ステータスバーの「調べています」用）</param>
     /// <param name="moving">移動か。同じドライブの中の移動は、リンクがあってもフォルダごと渡す（<see cref="SameVolume"/>）</param>
     public static CopyPlan Build(IEnumerable<string> sources, string destinationFolder,
-        Func<Conflict, CopyCondition> resolve, Action<int>? scanned = null, bool moving = false)
+        Func<Conflict, CopyCondition> resolve, Func<Conflict, string?> rename, Action<int>? scanned = null, bool moving = false)
     {
-        var builder = new Builder(resolve, scanned, moving);
+        var builder = new Builder(resolve, rename, scanned, moving);
         var (listing, exists) = Listing(destinationFolder);
         // 宛先のフォルダそのものが無ければ、フォルダごと渡す前に作る（OS は無いフォルダを宛先にできない）
         if (!exists) builder.Folders.Add(new PlannedFolder(destinationFolder, DestinationState.Absent, null));
@@ -159,7 +168,7 @@ public static class CopyPlanner
     private static DestinationState StateOf(Dictionary<string, FileSystemInfo> listing, string name) =>
         listing.TryGetValue(name, out var info) ? DestinationState.Of(info) : DestinationState.Absent;
 
-    private sealed class Builder(Func<Conflict, CopyCondition> resolve, Action<int>? scanned, bool moving)
+    private sealed class Builder(Func<Conflict, CopyCondition> resolve, Func<Conflict, string?> rename, Action<int>? scanned, bool moving)
     {
         public List<PlannedFolder> Folders { get; } = [];
         public List<CopyPlanItem> Items { get; } = [];
@@ -211,34 +220,39 @@ public static class CopyPlanner
 
         public void AddFile(FileInfo source, string destinationFolder, Dictionary<string, FileSystemInfo> listing)
         {
-            var state = StateOf(listing, source.Name);
-
-            // 宛先に同じ名前のファイルが無ければ衝突なし。同じ名前のフォルダがあるときも、今までどおり衝突にしない
-            // （OS が転送の失敗として知らせる）。状態は持たせ、転送の直前に変わっていないかを確かめる
-            if (state.Kind != DestinationKind.File)
+            // R-41-7: 「名前を変更し複写」で入力された名前は、元の名前と同じ衝突の流れ（一覧との照合）にもう一度かける。
+            // 一覧は大文字小文字を区別しないので、宛先に元からあるファイル・この計画が先に転送するファイル・
+            // 元の名前（大文字小文字だけの変更を含む）のどれに当たっても、同じ同名ファイルの処理で複写条件を問い直せる
+            var name = source.Name;
+            for (var retry = false; ; retry = true)
             {
-                Items.Add(new CopyPlanItem(source.FullName, destinationFolder) { Expected = state });
-                if (state.Kind == DestinationKind.Absent) listing[source.Name] = source;
+                var state = StateOf(listing, name);
+
+                // 宛先に同じ名前のファイルが無ければ衝突なし。同じ名前のフォルダがあるときも、今までどおり衝突にしない
+                // （OS が転送の失敗として知らせる）。状態は持たせ、転送の直前に変わっていないかを確かめる
+                if (state.Kind == DestinationKind.File)
+                {
+                    if (!retry) Conflicts++;   // 件数は衝突した転送元の数。名前を変えて当たり直しても増やさない
+                    // 一覧の項目は、宛先に元からあるファイルか、この計画が先に転送するファイル。どちらも日時とサイズを持つ
+                    var existing = (FileInfo)listing[name];
+                    var conflict = new Conflict(source.FullName, Path.Combine(destinationFolder, name),
+                        source.LastWriteTime, existing.LastWriteTime, source.Length, existing.Length, retry);
+                    var decision = ConflictResolver.Decide(source.LastWriteTime, existing.LastWriteTime, resolve(conflict));
+
+                    if (!decision.Transfer) { Skipped++; return; }
+                    if (decision.RenameTarget)
+                    {
+                        if (rename(conflict) is { } entered) name = entered;   // null は入力の取り消し。同じ名前の衝突に戻る
+                        continue;
+                    }
+                }
+
+                // 元の名前と同じ（大文字小文字も）なら NewName は付けない。File なら、上書きしたあとの宛先の姿を一覧に残す
+                Items.Add(new CopyPlanItem(source.FullName, destinationFolder,
+                    string.Equals(name, source.Name, StringComparison.Ordinal) ? null : name) { Expected = state });
+                if (state.Kind != DestinationKind.Folder) listing[name] = source;
                 return;
             }
-
-            Conflicts++;
-            // 一覧の項目は、宛先に元からあるファイルか、この計画が先に転送するファイル。どちらも日時とサイズを持つ
-            var existing = (FileInfo)listing[source.Name];
-            var condition = resolve(new Conflict(source.FullName, Path.Combine(destinationFolder, source.Name),
-                source.LastWriteTime, existing.LastWriteTime, source.Length, existing.Length));
-            var decision = ConflictResolver.Decide(source.LastWriteTime, existing.LastWriteTime, condition);
-
-            if (!decision.Transfer) { Skipped++; return; }
-            if (decision.RenameTarget)
-            {
-                var newName = UniqueName(listing, source.Name);
-                Items.Add(new CopyPlanItem(source.FullName, destinationFolder, newName));   // 別名の宛先は「無い」状態
-                listing[newName] = source;
-                return;
-            }
-            Items.Add(new CopyPlanItem(source.FullName, destinationFolder) { Expected = state });
-            listing[source.Name] = source;   // 上書きしたあとの宛先の姿
         }
 
         /// <summary>
@@ -259,18 +273,6 @@ public static class CopyPlanner
                 return false;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return true; }
-        }
-    }
-
-    /// <summary>「名前を変更し複写」。エクスプローラーと同じ `名前 (2).拡張子` の作法。宛先の一覧から空いている番号を探す。</summary>
-    private static string UniqueName(Dictionary<string, FileSystemInfo> listing, string name)
-    {
-        var baseName = Path.GetFileNameWithoutExtension(name);
-        var extension = Path.GetExtension(name);
-        for (var n = 2; ; n++)
-        {
-            var candidate = $"{baseName} ({n}){extension}";
-            if (!listing.ContainsKey(candidate)) return candidate;
         }
     }
 }

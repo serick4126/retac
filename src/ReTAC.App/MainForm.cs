@@ -1172,18 +1172,35 @@ public sealed class MainForm : Form, IBookmarkHost
             }
             else
             {
-                // 衝突のたびに問う（R-41-5）。「以降全て」を押されたらそれ以降は問わない（R-50）
+                // 衝突のたびに問う（R-41-5）。「以降全て」を押されたらそれ以降は問わない（R-50）。
+                // ただし名前の変更から戻ってきた衝突（Retry）は問い直す。入力した名前がまた当たったのに黙って同じ判断を
+                // 当てると、入力した名前が意図せず上書きされたり飛ばされたりする（R-41-7）
                 CopyCondition? applyToAll = null;
                 var cancelled = false;
                 plan = CopyPlanner.Build(sources, destination, conflict =>
                 {
                     if (cancelled) return CopyCondition.Skip;
-                    if (applyToAll is { } fixedCondition) return fixedCondition;
+                    if (applyToAll is { } fixedCondition && !conflict.Retry) return fixedCondition;
 
-                    using var conflictDialog = new ConflictDialog(conflict, ConflictResolver.Default);
+                    using var conflictDialog = new ConflictDialog(conflict, conflict.Retry ? CopyCondition.RenameCopy : ConflictResolver.Default);
                     if (conflictDialog.ShowDialog(this) != DialogResult.OK) { cancelled = true; return CopyCondition.Skip; }
                     if (conflictDialog.ApplyToAll) applyToAll = conflictDialog.Condition;
                     return conflictDialog.Condition;
+                }, conflict =>
+                {
+                    // R-41-7: 入力された名前は同名ファイルの処理に戻る。ファイルがある名前はそこで問うのでここでは拒否しない。
+                    // 同名ファイルの処理が示せるのはファイルどうしの衝突だけなので、フォルダがある名前だけここで差し戻す（R-48）
+                    var (folder, name) = (Path.GetDirectoryName(conflict.Destination)!, Path.GetFileName(conflict.Destination));
+                    using var nameDialog = new TextInputDialog(
+                        "名前を変更し複写", $"{name} の新しい名前は？", name,
+                        validate: value =>
+                        {
+                            if (FileNameRules.Validate(value) is { } invalid) return invalid;
+                            return Directory.Exists(Path.Combine(folder, value))
+                                ? $"{value} は既に存在します。別の名前を入力してください。"
+                                : null;
+                        });
+                    return nameDialog.ShowDialog(this) == DialogResult.OK ? nameDialog.Value : null;   // 取り消しは同名ファイルの処理に戻る
                 }, ScanProgress(), moving);
                 if (cancelled) return false;
             }

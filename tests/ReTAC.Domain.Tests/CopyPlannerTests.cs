@@ -39,6 +39,7 @@ public sealed class CopyPlannerTests : IDisposable
 
     private static readonly DateTime Old = new(2020, 1, 1, 0, 0, 0);
     private static readonly DateTime New = new(2026, 1, 1, 0, 0, 0);
+    private static readonly DateTime Newer = new(2026, 6, 1, 0, 0, 0);
 
     [Fact]
     public void 宛先が無ければそのまま転送する()
@@ -84,18 +85,193 @@ public sealed class CopyPlannerTests : IDisposable
         Assert.Single(CopyPlanner.Build(sources, destination, CopyCondition.Overwrite).Items);
     }
 
+    /// <summary>衝突のたびに、決めておいた複写条件を順に答える。呼ばれた衝突を記録する（答えが尽きたら失敗する）。</summary>
+    private static Func<CopyPlanner.Conflict, CopyCondition> Answers(List<CopyPlanner.Conflict> asked, params CopyCondition[] answers) =>
+        conflict => { asked.Add(conflict); return answers[asked.Count - 1]; };
+
+    /// <summary>「名前を変更し複写」のたびに、決めておいた名前を順に答える（null は入力の取り消し）。</summary>
+    private static Func<CopyPlanner.Conflict, string?> Names(params string?[] names)
+    {
+        var next = 0;
+        return _ => names[next++];
+    }
+
     [Fact]
-    public void 名前を変更し複写は空いている番号を付ける()
+    public void 名前を変更し複写は_入力された名前が空いていればその名前で転送する()
     {
         var source = Dir("src");
         var destination = Dir("dst");
         File_(source, "a.txt", Old);
         File_(destination, "a.txt", New);
-        File_(destination, "a (2).txt", New);
+        File_(destination, "a (2).txt", New);   // 番号を付けた名前で避けることはしない。入力された名前だけが使われる
+        var asked = new List<CopyPlanner.Conflict>();
 
-        var plan = CopyPlanner.Build([Path.Combine(source, "a.txt")], destination, CopyCondition.RenameCopy);
+        var plan = CopyPlanner.Build([Path.Combine(source, "a.txt")], destination,
+            Answers(asked, CopyCondition.RenameCopy), Names("b.txt"));
 
-        Assert.Equal("a (3).txt", plan.Items[0].NewName);
+        var item = Assert.Single(plan.Items);
+        Assert.Equal("b.txt", item.NewName);
+        Assert.Equal(Path.Combine(destination, "b.txt"), item.Target);
+        Assert.Equal(DestinationState.Absent, item.Expected);
+        Assert.Single(asked);   // 空いている名前なら、もう問わない
+        Assert.Equal(1, plan.Conflicts);
+        Assert.Equal(0, plan.Skipped);
+    }
+
+    [Theory]
+    [InlineData(CopyCondition.Overwrite, false, true)]
+    [InlineData(CopyCondition.NewerOnly, false, true)]    // 入力された名前のファイルより元の方が新しい
+    [InlineData(CopyCondition.NewerOnly, true, false)]    // 入力された名前のファイルの方が新しい。元の名前のファイルとは古さが違う
+    [InlineData(CopyCondition.Skip, false, false)]
+    public void 入力された名前のファイルが宛先にあれば_その名前で複写条件を問い直す(CopyCondition second, bool existingIsNewer, bool transferred)
+    {
+        var source = Dir("src");
+        var destination = Dir("dst");
+        File_(source, "a.txt", New);
+        File_(destination, "a.txt", New);
+        var existing = File_(destination, "b.txt", existingIsNewer ? Newer : Old);
+        var asked = new List<CopyPlanner.Conflict>();
+
+        var plan = CopyPlanner.Build([Path.Combine(source, "a.txt")], destination,
+            Answers(asked, CopyCondition.RenameCopy, second), Names("b.txt"));
+
+        Assert.Equal(2, asked.Count);
+        Assert.False(asked[0].Retry);
+        Assert.True(asked[1].Retry);
+        Assert.Equal(Path.Combine(destination, "b.txt"), asked[1].Destination);
+        Assert.Equal(File.GetLastWriteTime(existing), asked[1].DestinationTime);   // 問い直しは、入力された名前のファイルを示す
+        Assert.Equal(1, plan.Conflicts);   // 名前を変えて当たり直しても、衝突した転送元の数は増えない
+        if (transferred)
+        {
+            var item = Assert.Single(plan.Items);
+            Assert.Equal("b.txt", item.NewName);
+            Assert.Equal(DestinationState.Of(existing), item.Expected);   // 上書きするのは入力された名前のファイル
+            Assert.Equal(0, plan.Skipped);
+        }
+        else
+        {
+            Assert.Empty(plan.Items);
+            Assert.Equal(1, plan.Skipped);
+        }
+    }
+
+    [Theory]
+    [InlineData("a.txt")]
+    [InlineData("A.TXT")]   // 大文字小文字だけの違いも、同じ宛先のファイル
+    public void 元の名前と同じ名前を入力すると_元の宛先のファイルとの衝突に戻る(string entered)
+    {
+        var source = Dir("src");
+        var destination = Dir("dst");
+        File_(source, "a.txt", Old);
+        File_(destination, "a.txt", New);
+        var asked = new List<CopyPlanner.Conflict>();
+
+        var plan = CopyPlanner.Build([Path.Combine(source, "a.txt")], destination,
+            Answers(asked, CopyCondition.RenameCopy, CopyCondition.Skip), Names(entered));
+
+        Assert.Equal(2, asked.Count);
+        Assert.True(asked[1].Retry);
+        Assert.Equal(asked[0].DestinationTime, asked[1].DestinationTime);
+        Assert.Empty(plan.Items);
+        Assert.Equal(1, plan.Skipped);
+        Assert.Equal(1, plan.Conflicts);
+    }
+
+    [Fact]
+    public void 元の名前と同じ名前を入力して上書きすると_別名は付かない()
+    {
+        var source = Dir("src");
+        var destination = Dir("dst");
+        File_(source, "a.txt", New);
+        var existing = File_(destination, "a.txt", Old);
+
+        var plan = CopyPlanner.Build([Path.Combine(source, "a.txt")], destination,
+            Answers([], CopyCondition.RenameCopy, CopyCondition.Overwrite), Names("a.txt"));
+
+        var item = Assert.Single(plan.Items);
+        Assert.Null(item.NewName);
+        Assert.Equal(Path.Combine(destination, "a.txt"), item.Target);
+        Assert.Equal(DestinationState.Of(existing), item.Expected);
+    }
+
+    [Fact]
+    public void 名前の入力を取り消すと_同じ名前の衝突に戻る()
+    {
+        var source = Dir("src");
+        var destination = Dir("dst");
+        File_(source, "a.txt", New);
+        var existing = File_(destination, "a.txt", Old);
+        var asked = new List<CopyPlanner.Conflict>();
+
+        var plan = CopyPlanner.Build([Path.Combine(source, "a.txt")], destination,
+            Answers(asked, CopyCondition.RenameCopy, CopyCondition.Overwrite), Names((string?)null));
+
+        Assert.Equal(2, asked.Count);
+        Assert.False(asked[0].Retry);
+        Assert.True(asked[1].Retry);
+        Assert.Equal(asked[0].Destination, asked[1].Destination);
+        var item = Assert.Single(plan.Items);
+        Assert.Null(item.NewName);
+        Assert.Equal(DestinationState.Of(existing), item.Expected);
+        Assert.Equal(1, plan.Conflicts);
+    }
+
+    [Fact]
+    public void 入力された名前を繰り返し変えても_そのたびに問い直す()
+    {
+        var source = Dir("src");
+        var destination = Dir("dst");
+        File_(source, "a.txt", Old);
+        File_(destination, "a.txt", New);
+        File_(destination, "b.txt", New);
+        File_(destination, "c.txt", New);
+        var asked = new List<CopyPlanner.Conflict>();
+
+        var plan = CopyPlanner.Build([Path.Combine(source, "a.txt")], destination,
+            Answers(asked, CopyCondition.RenameCopy, CopyCondition.RenameCopy, CopyCondition.RenameCopy), Names("b.txt", "c.txt", "d.txt"));
+
+        Assert.Equal(
+            [Path.Combine(destination, "a.txt"), Path.Combine(destination, "b.txt"), Path.Combine(destination, "c.txt")],
+            asked.Select(c => c.Destination));
+        Assert.Equal([false, true, true], asked.Select(c => c.Retry));
+        var item = Assert.Single(plan.Items);
+        Assert.Equal("d.txt", item.NewName);
+        Assert.Equal(DestinationState.Absent, item.Expected);
+        Assert.Equal(1, plan.Conflicts);
+    }
+
+    [Fact]
+    public void 入力された名前が同じ計画の先の項目の宛先なら_その項目との衝突になる()
+    {
+        var (source, destination) = (Dir("src"), Dir("dst"));
+        var b = File_(source, "b.txt", Old);
+        var a = File_(source, "a.txt", Old);
+        File_(destination, "a.txt", New);
+        var asked = new List<CopyPlanner.Conflict>();
+
+        // b.txt は空いているので先に転送する計画に入る。a.txt は宛先の a.txt と衝突し、b.txt と名付けると、その先の項目と当たる
+        var plan = CopyPlanner.Build([b, a], destination,
+            Answers(asked, CopyCondition.RenameCopy, CopyCondition.Overwrite), Names("b.txt"));
+
+        Assert.Equal(2, asked.Count);
+        Assert.True(asked[1].Retry);
+        Assert.Equal(Path.Combine(destination, "b.txt"), asked[1].Destination);
+        Assert.Equal(new FileInfo(b).LastWriteTime, asked[1].DestinationTime);
+        Assert.Equal([b, a], plan.Items.Select(i => i.Source));
+        Assert.Equal([null, "b.txt"], plan.Items.Select(i => i.NewName));
+        // 上書きする相手は、先の項目を転送したあとの b.txt
+        Assert.Equal(DestinationState.OfFile(new FileInfo(b)), plan.Items[1].Expected);
+    }
+
+    [Fact]
+    public void 一括の複写条件では_名前を変更し複写を渡せない()
+    {
+        var (source, destination) = (Dir("src"), Dir("dst"));
+        File_(source, "a.txt", Old);
+        File_(destination, "a.txt", New);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            CopyPlanner.Build([Path.Combine(source, "a.txt")], destination, CopyCondition.RenameCopy));
     }
 
     [Fact]
@@ -295,9 +471,10 @@ public sealed class CopyPlannerTests : IDisposable
         Assert.Equal(DestinationState.Of(existing), overwrite.Expected);   // 計画の時点と、直に取った状態が同じ値になる
         Assert.Equal(DestinationKind.File, overwrite.Expected.Kind);
 
-        var renamed = Assert.Single(CopyPlanner.Build([Path.Combine(source, "a.txt")], destination, CopyCondition.RenameCopy).Items);
-        Assert.Equal("a (2).txt", renamed.NewName);
-        Assert.Equal(Path.Combine(destination, "a (2).txt"), renamed.Target);
+        var renamed = Assert.Single(CopyPlanner.Build([Path.Combine(source, "a.txt")], destination,
+            _ => CopyCondition.RenameCopy, Names("b.txt")).Items);
+        Assert.Equal("b.txt", renamed.NewName);
+        Assert.Equal(Path.Combine(destination, "b.txt"), renamed.Target);
         Assert.Equal(DestinationState.Absent, renamed.Expected);
     }
 
@@ -351,7 +528,7 @@ public sealed class CopyPlannerTests : IDisposable
         var newer = File_(second, "a.txt", New);
         var conflicts = new List<CopyPlanner.Conflict>();
 
-        var plan = CopyPlanner.Build([older, newer], destination, c => { conflicts.Add(c); return CopyCondition.NewerOnly; });
+        var plan = CopyPlanner.Build([older, newer], destination, Answers(conflicts, CopyCondition.NewerOnly), Names());
 
         // 1 件目はそのまま、2 件目は「1 件目を転送したあとの宛先」との衝突。新しいので上書きする
         Assert.Equal([older, newer], plan.Items.Select(i => i.Source));
@@ -376,12 +553,13 @@ public sealed class CopyPlannerTests : IDisposable
         var a2 = File_(source, "a (2).txt", New);
         File_(destination, "a.txt", Old);
 
-        var plan = CopyPlanner.Build([a, a2], destination, CopyCondition.RenameCopy);
+        // a.txt は宛先の a.txt と衝突して "a (2).txt" と名付ける。転送元の a (2).txt はその名前と衝突し、"a (3).txt" と名付ける
+        var plan = CopyPlanner.Build([a, a2], destination, _ => CopyCondition.RenameCopy, Names("a (2).txt", "a (3).txt"));
 
         Assert.Equal(2, plan.Items.Count);
         Assert.Equal(plan.Items.Count, plan.Items.Select(i => i.Target).Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.Equal(Path.Combine(destination, "a (2).txt"), plan.Items[0].Target);      // a.txt の別名
-        Assert.Equal(Path.Combine(destination, "a (2) (2).txt"), plan.Items[1].Target);  // 転送元の a (2).txt は、その別名と衝突して別名になる
+        Assert.Equal(Path.Combine(destination, "a (3).txt"), plan.Items[1].Target);      // 転送元の a (2).txt は、その別名と衝突して別名になる
     }
 
     [Theory]

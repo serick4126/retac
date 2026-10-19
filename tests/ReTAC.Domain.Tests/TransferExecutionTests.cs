@@ -203,14 +203,14 @@ public sealed class TransferExecutionTests : IDisposable
         var (source, destination) = (Dir("src"), Dir("dst"));
         Write(source, "a.txt", "source", New);
         Write(destination, "a.txt", "old", Old);
-        var plan = CopyPlanner.Build([Path.Combine(source, "a.txt")], destination, CopyCondition.RenameCopy);
-        Assert.Equal("a (2).txt", Assert.Single(plan.Items).NewName);
+        var plan = CopyPlanner.Build([Path.Combine(source, "a.txt")], destination, _ => CopyCondition.RenameCopy, _ => "b.txt");
+        Assert.Equal("b.txt", Assert.Single(plan.Items).NewName);
 
-        var outcome = Run(plan, moving: false, () => Write(destination, "a (2).txt", "appeared", Newer));
+        var outcome = Run(plan, moving: false, () => Write(destination, "b.txt", "appeared", Newer));
 
         Assert.False(outcome.Completed);
-        Assert.Equal(Path.Combine(destination, "a (2).txt"), outcome.Changed);
-        Assert.Equal("appeared", File.ReadAllText(Path.Combine(destination, "a (2).txt")));
+        Assert.Equal(Path.Combine(destination, "b.txt"), outcome.Changed);
+        Assert.Equal("appeared", File.ReadAllText(Path.Combine(destination, "b.txt")));
     }
 
     [Fact]
