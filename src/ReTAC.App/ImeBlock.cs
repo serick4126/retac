@@ -28,14 +28,12 @@ internal static class ImeBlock
         {
             if (context != IntPtr.Zero) ImmAssociateContextEx(control.Handle, context, IACE_CHILDREN);
         }
+        // 追跡を始めた時点でハンドルがある欄（作ってから足した欄）は、HandleCreated が二度と起きないのでその場で付ける
         void Track(Control control)
         {
             control.HandleCreated += (_, _) => Associate(control);
-            control.ControlAdded += (_, e) =>
-            {
-                Track(e.Control!);
-                if (e.Control!.IsHandleCreated) Associate(e.Control);
-            };
+            control.ControlAdded += (_, e) => Track(e.Control!);
+            if (control.IsHandleCreated) Associate(control);
             foreach (Control child in control.Controls) Track(child);
         }
 
@@ -44,8 +42,10 @@ internal static class ImeBlock
             context = ImmCreateContext();
             Associate(dialog);
         };
+        var carry = new CarryOver();
         dialog.HandleDestroyed += (_, _) =>
         {
+            carry.HandleDestroyed();
             if (context == IntPtr.Zero) return;
             ImmAssociateContextEx(dialog.Handle, IntPtr.Zero, IACE_CHILDREN | IACE_DEFAULT);
             ImmDestroyContext(context);
@@ -55,40 +55,100 @@ internal static class ImeBlock
         dialog.ControlAdded += (_, e) => Track(e.Control!);
 
         // R-143-1: 直前のダイアログの IME の状態（オン・オフと入力モード）を引き継ぐ。
-        // 新しいコンテキストの始まりを IME に任せると、オンで確定して閉じるたびにオンとオフが交互に出た（実機）。
-        // IMM（ImmSetOpenStatus）で決めても Copilot Keyboard などの TSF の IME は従わないので、TSF の状態を読み書きする。
-        // アクティブになった直後は IME が新しいコンテキストを初期化して上書きするので、待ち行列に回してから決める。
-        // 入力の誤りの知らせから戻ったときは決め直さない
-        var applied = false;
+        // アクティブになった直後は IME が新しいコンテキストを初期化して上書きするので、待ち行列に回してから書く
         dialog.Activated += (_, _) =>
         {
-            if (applied) return;
-            applied = true;
-            if (s_last is { } last) dialog.BeginInvoke(() => Tsf.Write(last));
+            if (carry.Activated() is { } ticket)
+                dialog.BeginInvoke(() => { if (carry.Due(ticket) is { } state && Tsf.Write(state)) carry.Written(); });
         };
-        // ダイアログがアクティブでなくなると WinForms が IME の状態を戻すので、戻される前に覚える。
-        // 閉じ始めはまだフォーカスがあるときだけ、閉じ終わった後は覚えない
-        var closed = false;
-        dialog.Deactivate += (_, _) => { if (!closed) s_last = Tsf.Read() ?? s_last; };
-        dialog.FormClosing += (_, _) => { if (dialog.ContainsFocus) s_last = Tsf.Read() ?? s_last; };
-        dialog.FormClosed += (_, _) => closed = true;
+        // ダイアログがアクティブでなくなると WinForms が IME の状態を戻すので、戻される前に覚える
+        dialog.Deactivate += (_, _) => carry.Deactivated(Tsf.Read());
+        dialog.FormClosing += (_, _) => carry.Closing(dialog.ContainsFocus, Tsf.Read());
+        dialog.FormClosed += (_, _) => carry.Closed();
     }
 
-    /// <summary>最後に閉じたダイアログの IME の状態。まだ無ければ null（IME に任せる）。</summary>
-    private static ImeState? s_last;
+    /// <summary>直前にアクティブでなくなったダイアログの IME の状態。まだ無ければ null（IME に任せる）。UI スレッドごと。</summary>
+    [ThreadStatic] internal static ImeState? s_last;
 
-    private readonly record struct ImeState(bool Open, int Conversion);
+    /// <summary>
+    /// R-143-1: 1 つのダイアログの、IME の状態の引き継ぎ。
+    /// 書き戻しは予約した後もダイアログがアクティブなままのときだけ行う。予約の後にアクティブでなくなった・閉じた・
+    /// ハンドルを作り直したときに書くと、移った先（別のダイアログや主ウィンドウ）の状態を書き換えてしまう。
+    /// 書き戻す前の状態は新しいコンテキストの初期値なので覚えない。書き戻せなかったら次のアクティブ化でやり直す。
+    /// </summary>
+    private sealed class CarryOver
+    {
+        private bool _active, _applied, _closed;
+        private int _lastTicket;
+        private int? _pending;
+
+        /// <returns>書き戻しを予約するなら、その予約の番号</returns>
+        internal int? Activated()
+        {
+            _active = true;
+            if (_applied || _closed) return null;
+            if (s_last is null) { _applied = true; return null; }   // 引き継ぐ元が無い。今の状態がこのダイアログの状態
+            return _pending = ++_lastTicket;
+        }
+
+        /// <returns>今書き戻す状態。予約が取り消されていれば null</returns>
+        internal ImeState? Due(int ticket)
+        {
+            if (_pending != ticket || !_active) return null;
+            _pending = null;
+            return s_last;
+        }
+
+        /// <summary>書き戻せた。書けなかったときは呼ばないので、次のアクティブ化でやり直す。</summary>
+        internal void Written() => _applied = true;
+
+        internal void Deactivated(ImeState? now)
+        {
+            _active = false;
+            _pending = null;
+            Remember(now);
+        }
+
+        /// <param name="hasFocus">閉じ始めにまだフォーカスがあるか（無ければ WinForms が状態を戻した後）</param>
+        internal void Closing(bool hasFocus, ImeState? now)
+        {
+            if (hasFocus) Remember(now);
+        }
+
+        internal void Closed()
+        {
+            _closed = true;
+            _active = false;
+            _pending = null;
+        }
+
+        /// <summary>作り直したハンドルには新しいコンテキストが付くので、次のアクティブ化で書き戻し直す。</summary>
+        internal void HandleDestroyed()
+        {
+            _pending = null;
+            _applied = false;
+        }
+
+        private void Remember(ImeState? now)
+        {
+            if (_applied && !_closed && now is { } state) s_last = state;
+        }
+    }
+
+    internal readonly record struct ImeState(bool Open, int Conversion);
 
     /// <summary>
     /// TSF のキーボードの状態（GUID_COMPARTMENT_KEYBOARD_OPENCLOSE と入力モード）。
     /// TSF が使えない環境では読み書きに失敗して null を返し、何もしない（IME に任せたままになる）。
     /// </summary>
-    private static class Tsf
+    internal static class Tsf
     {
         private static readonly Guid s_openClose = new("58273aad-01bb-4164-95c6-755ba0b5162d");
         private static readonly Guid s_conversion = new("ccf05dd8-4a87-11d7-a6e2-00065b84435c");
-        private static ITfThreadMgr? s_manager;
-        private static uint s_client;
+        // TSF のスレッドマネージャーはスレッドごと。別のスレッドで作ったものを使うと、そのスレッドが終わった後に
+        // InvalidComObjectException になる（テストの STA のスレッドで起きた）
+        [ThreadStatic] private static ITfThreadMgr? s_manager;
+        [ThreadStatic] private static uint s_client;
 
         internal static ImeState? Read()
         {
@@ -96,18 +156,23 @@ internal static class ImeBlock
             {
                 return Get(s_openClose) is { } open && Get(s_conversion) is { } conversion ? new ImeState(open != 0, conversion) : null;
             }
-            catch (Exception e) when (e is COMException or InvalidCastException) { return null; }
+            catch (Exception e) when (Unavailable(e)) { return null; }
         }
 
-        internal static void Write(ImeState state)
+        /// <returns>書けたか</returns>
+        internal static bool Write(ImeState state)
         {
             try
             {
                 Set(s_openClose, state.Open ? 1 : 0);
                 Set(s_conversion, state.Conversion);
+                return true;
             }
-            catch (Exception e) when (e is COMException or InvalidCastException) { }
+            catch (Exception e) when (Unavailable(e)) { return false; }
         }
+
+        /// <summary>TSF が無い・型が合わない・COM のオブジェクトが使えない。どれも何もしないで IME に任せる。</summary>
+        private static bool Unavailable(Exception e) => e is COMException or InvalidCastException or InvalidComObjectException;
 
         private static ITfCompartment Compartment(Guid id)
         {
@@ -126,7 +191,7 @@ internal static class ImeBlock
         private static void Set(Guid id, int value)
         {
             object boxed = value;
-            Compartment(id).SetValue(s_client, ref boxed);
+            Marshal.ThrowExceptionForHR(Compartment(id).SetValue(s_client, ref boxed));   // PreserveSig なので失敗は戻り値で返る
         }
 
         [ComImport, Guid("aa80e801-2021-11d2-93e0-0060b067b86e"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
