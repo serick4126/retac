@@ -31,6 +31,7 @@ public sealed class ConcatDialog : Form
 
     public ConcatDialog(IReadOnlyList<Entry> sources, FolderHistory history, string currentFolder)
     {
+        ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         _sources = [.. sources];
 
         Text = "ファイルの連結";

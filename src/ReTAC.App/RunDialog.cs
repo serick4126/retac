@@ -16,6 +16,7 @@ public sealed class RunDialog : Form
 
     public RunDialog(string preset, IReadOnlyList<string> history)
     {
+        ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         Text = "名前を指定して実行";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         ShowInTaskbar = false;   // ダイアログはタスクバーに出さない（既定は true）

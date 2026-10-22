@@ -7472,7 +7472,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 182
+        "line": 183
       },
       {
         "file": "src/ReTAC.Domain/Navigation/InputText.cs",
@@ -7678,7 +7678,7 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 119
+        "line": 120
       },
       {
         "file": "src/ReTAC.App/ChoiceDialog.cs",
@@ -7686,11 +7686,11 @@
       },
       {
         "file": "src/ReTAC.App/CommandPickerDialog.cs",
-        "line": 48
+        "line": 49
       },
       {
         "file": "src/ReTAC.App/ConcatDialog.cs",
-        "line": 64
+        "line": 65
       },
       {
         "file": "src/ReTAC.App/ConfirmDialog.cs",
@@ -7714,39 +7714,39 @@
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
-        "line": 100
+        "line": 101
       },
       {
         "file": "src/ReTAC.App/PromptArgumentDialog.cs",
-        "line": 55
+        "line": 56
       },
       {
         "file": "src/ReTAC.App/PromptDialog.cs",
-        "line": 91
+        "line": 92
       },
       {
         "file": "src/ReTAC.App/PromptItemDialog.cs",
-        "line": 203
+        "line": 204
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 117
+        "line": 118
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 69
+        "line": 70
       },
       {
         "file": "src/ReTAC.App/RunDialog.cs",
-        "line": 52
+        "line": 53
       },
       {
         "file": "src/ReTAC.App/SettingsDialog.cs",
-        "line": 98
+        "line": 99
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
-        "line": 90
+        "line": 91
       },
       {
         "file": "src/ReTAC.App/SortDialog.cs",
@@ -7754,7 +7754,7 @@
       },
       {
         "file": "src/ReTAC.App/TextInputDialog.cs",
-        "line": 72
+        "line": 73
       }
     ],
     "B-17": [
@@ -7858,7 +7858,7 @@
       },
       {
         "file": "src/ReTAC.App/ConcatDialog.cs",
-        "line": 62
+        "line": 63
       },
       {
         "file": "src/ReTAC.App/ConfirmDialog.cs",
@@ -7882,27 +7882,27 @@
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
-        "line": 98
+        "line": 99
       },
       {
         "file": "src/ReTAC.App/PromptDialog.cs",
-        "line": 90
+        "line": 91
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 67
+        "line": 68
       },
       {
         "file": "src/ReTAC.App/RunDialog.cs",
-        "line": 50
+        "line": 51
       },
       {
         "file": "src/ReTAC.App/SettingsDialog.cs",
-        "line": 92
+        "line": 93
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
-        "line": 88
+        "line": 89
       },
       {
         "file": "src/ReTAC.App/SortDialog.cs",
@@ -7910,7 +7910,7 @@
       },
       {
         "file": "src/ReTAC.App/TextInputDialog.cs",
-        "line": 70
+        "line": 71
       }
     ],
     "D-04": [
@@ -8260,7 +8260,7 @@
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
-        "line": 48
+        "line": 49
       }
     ],
     "K-2": [
@@ -8496,7 +8496,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 410
+        "line": 411
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -8564,11 +8564,11 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 98
+        "line": 99
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 168
+        "line": 169
       },
       {
         "file": "src/ReTAC.App/FolderBrowser.cs",
@@ -8584,15 +8584,15 @@
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
-        "line": 122
+        "line": 123
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 40
+        "line": 41
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 94
+        "line": 95
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -9036,7 +9036,7 @@
       },
       {
         "file": "src/ReTAC.App/SettingsDialog.cs",
-        "line": 88
+        "line": 89
       }
     ],
     "R-102-1": [
@@ -9102,7 +9102,7 @@
       },
       {
         "file": "src/ReTAC.App/SettingsDialog.cs",
-        "line": 172
+        "line": 173
       },
       {
         "file": "src/ReTAC.App/SettingsDraft.cs",
@@ -9270,7 +9270,7 @@
     "R-106-1": [
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 61
+        "line": 62
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -9300,7 +9300,7 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 55
+        "line": 56
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -10414,11 +10414,11 @@
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
-        "line": 28
+        "line": 29
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
-        "line": 63
+        "line": 64
       },
       {
         "file": "src/ReTAC.Domain/FileOps/ShortcutSource.cs",
@@ -11690,7 +11690,7 @@
     "R-127": [
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 151
+        "line": 152
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
@@ -11698,11 +11698,11 @@
       },
       {
         "file": "src/ReTAC.App/PromptDialog.cs",
-        "line": 284
+        "line": 285
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 73
+        "line": 74
       },
       {
         "file": "src/ReTAC.Domain/Navigation/InputText.cs",
@@ -11876,23 +11876,23 @@
       },
       {
         "file": "src/ReTAC.App/PromptDialog.cs",
-        "line": 74
+        "line": 75
       },
       {
         "file": "src/ReTAC.App/PromptDialog.cs",
-        "line": 107
+        "line": 108
       },
       {
         "file": "src/ReTAC.App/PromptDialog.cs",
-        "line": 202
+        "line": 203
       },
       {
         "file": "src/ReTAC.App/PromptDialog.cs",
-        "line": 292
+        "line": 293
       },
       {
         "file": "src/ReTAC.App/PromptDialog.cs",
-        "line": 323
+        "line": 324
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -11918,11 +11918,11 @@
       },
       {
         "file": "src/ReTAC.App/PromptDialog.cs",
-        "line": 74
+        "line": 75
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 543
+        "line": 544
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -12020,27 +12020,27 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 63
+        "line": 64
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 132
+        "line": 133
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 143
+        "line": 144
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 278
+        "line": 279
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 305
+        "line": 306
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 515
+        "line": 516
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -12078,15 +12078,15 @@
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 127
+        "line": 128
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 252
+        "line": 253
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
-        "line": 392
+        "line": 393
       },
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentSplitter.cs",
@@ -12138,7 +12138,7 @@
       },
       {
         "file": "src/ReTAC.App/PromptItemDialog.cs",
-        "line": 288
+        "line": 289
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalToolHelp.cs",
@@ -12252,11 +12252,11 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 50
+        "line": 51
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 68
+        "line": 69
       },
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
@@ -12599,6 +12599,64 @@
         "line": 7
       }
     ],
+    "R-143-1": [
+      {
+        "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
+        "line": 33
+      },
+      {
+        "file": "src/ReTAC.App/CommandPickerDialog.cs",
+        "line": 30
+      },
+      {
+        "file": "src/ReTAC.App/ConcatDialog.cs",
+        "line": 34
+      },
+      {
+        "file": "src/ReTAC.App/ImeBlock.cs",
+        "line": 17
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 32
+      },
+      {
+        "file": "src/ReTAC.App/PromptArgumentDialog.cs",
+        "line": 16
+      },
+      {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 48
+      },
+      {
+        "file": "src/ReTAC.App/PromptItemDialog.cs",
+        "line": 70
+      },
+      {
+        "file": "src/ReTAC.App/PromptSettingsDialog.cs",
+        "line": 46
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 21
+      },
+      {
+        "file": "src/ReTAC.App/RunDialog.cs",
+        "line": 19
+      },
+      {
+        "file": "src/ReTAC.App/SettingsDialog.cs",
+        "line": 43
+      },
+      {
+        "file": "src/ReTAC.App/ShortcutDialog.cs",
+        "line": 23
+      },
+      {
+        "file": "src/ReTAC.App/TextInputDialog.cs",
+        "line": 28
+      }
+    ],
     "R-144": [
       {
         "file": "src/ReTAC.Domain/Tools/ArgumentTemplate.cs",
@@ -12898,11 +12956,11 @@
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
-        "line": 84
+        "line": 85
       },
       {
         "file": "src/ReTAC.App/PromptDialog.cs",
-        "line": 70
+        "line": 71
       },
       {
         "file": "src/ReTAC.Domain/Keys/DefaultKeyMap.cs",
@@ -13252,7 +13310,7 @@
       },
       {
         "file": "src/ReTAC.App/ConcatDialog.cs",
-        "line": 51
+        "line": 52
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -13556,7 +13614,7 @@
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
-        "line": 74
+        "line": 75
       },
       {
         "file": "src/ReTAC.Domain/FileOps/CopyPlan.cs",
@@ -13630,7 +13688,7 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 105
+        "line": 106
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -13642,7 +13700,7 @@
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
-        "line": 96
+        "line": 97
       },
       {
         "file": "src/ReTAC.App/PathRecall.cs",
@@ -13650,15 +13708,15 @@
       },
       {
         "file": "src/ReTAC.App/PromptDialog.cs",
-        "line": 259
+        "line": 260
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 54
+        "line": 55
       },
       {
         "file": "src/ReTAC.App/RunDialog.cs",
-        "line": 48
+        "line": 49
       },
       {
         "file": "src/ReTAC.App/TextInputDialog.cs",
@@ -13666,7 +13724,7 @@
       },
       {
         "file": "src/ReTAC.App/TextInputDialog.cs",
-        "line": 68
+        "line": 69
       }
     ],
     "R-46-2": [
@@ -13710,7 +13768,7 @@
     "R-47": [
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 98
+        "line": 99
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
@@ -13722,13 +13780,13 @@
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 40
+        "line": 41
       }
     ],
     "R-48": [
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 110
+        "line": 111
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -13748,15 +13806,15 @@
       },
       {
         "file": "src/ReTAC.App/PromptArgumentDialog.cs",
-        "line": 49
+        "line": 50
       },
       {
         "file": "src/ReTAC.App/PromptDialog.cs",
-        "line": 270
+        "line": 271
       },
       {
         "file": "src/ReTAC.App/PromptItemDialog.cs",
-        "line": 353
+        "line": 354
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
@@ -13764,7 +13822,7 @@
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 60
+        "line": 61
       },
       {
         "file": "src/ReTAC.App/TextInputDialog.cs",
@@ -13772,7 +13830,7 @@
       },
       {
         "file": "src/ReTAC.App/TextInputDialog.cs",
-        "line": 56
+        "line": 57
       },
       {
         "file": "src/ReTAC.Domain/FileOps/FileNameRules.cs",
@@ -13830,7 +13888,7 @@
       },
       {
         "file": "src/ReTAC.App/TextInputDialog.cs",
-        "line": 46
+        "line": 47
       }
     ],
     "R-51": [
@@ -13874,15 +13932,15 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 153
+        "line": 154
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
-        "line": 147
+        "line": 148
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 87
+        "line": 88
       },
       {
         "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
@@ -14092,7 +14150,7 @@
       },
       {
         "file": "src/ReTAC.App/ShortcutDialog.cs",
-        "line": 98
+        "line": 99
       },
       {
         "file": "src/ReTAC.Domain/FileOps/ShortcutSource.cs",
@@ -14140,7 +14198,7 @@
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
-        "line": 104
+        "line": 105
       },
       {
         "file": "src/ReTAC.Domain/Navigation/JumpInput.cs",
@@ -14264,11 +14322,11 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 120
+        "line": 121
       },
       {
         "file": "src/ReTAC.App/CommandPickerDialog.cs",
-        "line": 37
+        "line": 38
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
@@ -14296,7 +14354,7 @@
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 70
+        "line": 71
       },
       {
         "file": "src/ReTAC.App/QuickAccessPage.cs",
@@ -16500,7 +16558,7 @@
     "V-10": [
       {
         "file": "src/ReTAC.App/TextInputDialog.cs",
-        "line": 49
+        "line": 50
       }
     ],
     "V-11": [

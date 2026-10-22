@@ -43,6 +43,7 @@ public sealed class PromptSettingsDialog : Form
 
     public PromptSettingsDialog(PromptDefinition? definition, string toolName, FolderHistory history, QuickAccessList? quickAccess, string currentFolder)
     {
+        ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         var source = definition ?? new PromptDefinition();
         _toolName = toolName;
         _history = history;

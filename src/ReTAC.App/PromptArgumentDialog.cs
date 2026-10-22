@@ -13,6 +13,7 @@ public sealed class PromptArgumentDialog : Form
 
     public PromptArgumentDialog(PromptArgumentKind kind, string text)
     {
+        ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         _kind = kind;
         var fixedValue = kind == PromptArgumentKind.Fixed;
         Text = fixedValue ? "固定の引数" : "マクロを含む引数";

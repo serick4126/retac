@@ -18,6 +18,7 @@ public sealed class QuickAccessEntryDialog : Form
     /// <param name="isEdit">既存項目の変更なら true。見出しだけが変わる</param>
     public QuickAccessEntryDialog(QuickAccessEntry? preset, string currentFolder, bool isEdit = false)
     {
+        ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         _currentFolder = currentFolder;
         Text = isEdit ? "アクセスフォルダの変更" : "アクセスフォルダの追加";
         FormBorderStyle = FormBorderStyle.FixedDialog;

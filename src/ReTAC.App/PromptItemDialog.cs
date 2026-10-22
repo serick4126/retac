@@ -67,6 +67,7 @@ public sealed class PromptItemDialog : Form
 
     public PromptItemDialog(PromptItem item)
     {
+        ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         _source = item;
         Result = item;
         Text = "項目の編集";

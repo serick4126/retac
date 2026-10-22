@@ -20,6 +20,7 @@ public sealed class ShortcutDialog : Form
 
     public ShortcutDialog(string? destination = null)
     {
+        ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         Text = "ショートカットファイルの作成";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         ShowInTaskbar = false;   // ダイアログはタスクバーに出さない（既定は true）

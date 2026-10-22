@@ -25,6 +25,7 @@ public sealed class TextInputDialog : Form
     public TextInputDialog(string caption, string message, string preset,
                            Func<string, string?>? validate = null)
     {
+        ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         Text = caption;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         ShowInTaskbar = false;   // ダイアログはタスクバーに出さない（既定は true）

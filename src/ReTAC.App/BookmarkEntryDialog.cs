@@ -30,6 +30,7 @@ public sealed class BookmarkEntryDialog : Form
     public BookmarkEntryDialog(Bookmark preset, string currentFolder, IReadOnlyList<ExternalTool> tools,
                                Func<CommandTarget, string> label, bool isEdit = true)
     {
+        ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         _preset = preset;
         _currentFolder = currentFolder;
         _tools = tools;

@@ -40,6 +40,7 @@ public sealed class SettingsDialog : Form
     public SettingsDialog(SettingsDraft draft, SettingsPage initial, string currentFolder, Func<SettingsDraft, bool> apply,
         FolderHistory? history = null, QuickAccessList? quickAccess = null)
     {
+        ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         _draft = draft;
         _apply = apply;
 

@@ -45,6 +45,7 @@ public sealed class PromptDialog : Form
     public PromptDialog(PromptDefinition definition, string toolName, FolderHistory history, QuickAccessList? quickAccess,
                         MacroContext context, IReadOnlyDictionary<int, PromptValue> initial)
     {
+        ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         _definition = definition;
         _history = history;
         _quickAccess = quickAccess;

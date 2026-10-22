@@ -27,6 +27,7 @@ public sealed class CommandPickerDialog : Form
 
     private CommandPickerDialog(IReadOnlyList<ExternalTool> tools)
     {
+        ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         Text = "コマンドを追加";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         ShowInTaskbar = false;

@@ -29,6 +29,7 @@ public sealed class PathInputDialog : Form
                            string acceptText, string? secondaryText = null,
                            string[]? hints = null, string? optionText = null, bool optionChecked = false)
     {
+        ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         _history = history;
         _quickAccess = quickAccess;
         _currentFolder = currentFolder;
