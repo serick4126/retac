@@ -73,6 +73,22 @@ public class DisplayTests
     }
 
     [Fact]
+    public void ドライブバーの説明は名前と合計_使用_空きの4行()
+    {
+        // R-32-4: 合計 7452.02GB・空き 2112.21GB のドライブ。1024GB 以上は TB で出る（R-69-2）
+        var gb = 1024.0 * 1024 * 1024;
+        Assert.Equal("ローカル ディスク (K:)\n合計: 7.28TB\n使用: 5.21TB\n空き: 2.06TB",
+            Display.DriveTooltip("ローカル ディスク (K:)", (long)(7452.02 * gb), (long)(2112.21 * gb)));
+    }
+
+    [Fact]
+    public void ドライブバーの説明は容量が取れなければ名前だけ()
+    {
+        // R-32-4: メディアの無いドライブなど
+        Assert.Equal("DVD ドライブ (E:)", Display.DriveTooltip("DVD ドライブ (E:)", 0, 0));
+    }
+
+    [Fact]
     public void 日付は西暦4桁で表示する()
     {
         // 5-1 節「ファイル日付の西暦は 4 桁で表示」

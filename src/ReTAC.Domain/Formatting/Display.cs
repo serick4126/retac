@@ -58,4 +58,8 @@ public static class Display
         var usedPercent = (int)Math.Round((total - free) * 100.0 / total);
         return $"{driveLetter}: 全{Size(total, 2)} 空{Size(free, 2)} Use:{usedPercent}%";
     }
+
+    /// <summary>R-32-4: ドライブバーのドライブの説明。容量はステータスバー（R-34 ①）と同じ書式。total が 0 以下なら名前だけ。</summary>
+    public static string DriveTooltip(string name, long total, long free) =>
+        total <= 0 ? name : $"{name}\n合計: {Size(total, 2)}\n使用: {Size(total - free, 2)}\n空き: {Size(free, 2)}";
 }

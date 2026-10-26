@@ -46,6 +46,14 @@ public sealed class ShellIcons : IDisposable
         return Get("path:" + path, target, 0, useFileAttributes: false);
     }
 
+    /// <summary>
+    /// R-32-4: エクスプローラーが出す名前（<c>ローカル ディスク (C:)</c>）。取れなければ null。
+    /// ドライブに触れるので、UI スレッドから呼ばないこと（N-05）。
+    /// </summary>
+    public static string? DisplayName(string path) =>
+        SHGetFileInfo(path, 0, out var info, (uint)Marshal.SizeOf<SHFILEINFO>(), SHGFI_DISPLAYNAME) != IntPtr.Zero
+        && !string.IsNullOrEmpty(info.szDisplayName) ? info.szDisplayName : null;
+
     public Bitmap? ForFile(string fullPath)
     {
         var extension = Path.GetExtension(fullPath);
@@ -151,6 +159,7 @@ public sealed class ShellIcons : IDisposable
     private const uint SHGFI_LARGEICON = 0x000000000;
     private const uint SHGFI_SMALLICON = 0x000000001;
     private const uint SHGFI_USEFILEATTRIBUTES = 0x000000010;
+    private const uint SHGFI_DISPLAYNAME = 0x000000200;
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct SHFILEINFO

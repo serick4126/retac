@@ -7506,11 +7506,11 @@
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 47
+        "line": 52
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 57
+        "line": 62
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
@@ -7632,27 +7632,27 @@
     "B-15": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 15
-      },
-      {
-        "file": "src/ReTAC.App/DriveBar.cs",
         "line": 16
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 31
+        "line": 17
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 233
+        "line": 32
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 282
+        "line": 238
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 496
+        "line": 287
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 501
       },
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
@@ -8408,7 +8408,7 @@
     "M-4": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 257
+        "line": 262
       }
     ],
     "N-01": [
@@ -8472,15 +8472,15 @@
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 215
+        "line": 220
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 223
+        "line": 228
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 253
+        "line": 258
       },
       {
         "file": "src/ReTAC.App/DriveVisibilityPage.cs",
@@ -8524,7 +8524,11 @@
       },
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
-        "line": 54
+        "line": 51
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellIcons.cs",
+        "line": 62
       },
       {
         "file": "src/ReTAC.Shell/ShellOverlays.cs",
@@ -8606,15 +8610,11 @@
     "P-02": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 16
+        "line": 17
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 223
-      },
-      {
-        "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 496
+        "line": 501
       }
     ],
     "P-14": [
@@ -9172,7 +9172,7 @@
     "R-104-1": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 79
+        "line": 84
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -9656,7 +9656,7 @@
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 324
+        "line": 329
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
@@ -9960,7 +9960,7 @@
     "R-11": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 278
+        "line": 283
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
@@ -10296,7 +10296,7 @@
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 373
+        "line": 378
       },
       {
         "file": "src/ReTAC.App/DropButton.cs",
@@ -10938,7 +10938,7 @@
       },
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
-        "line": 94
+        "line": 102
       },
       {
         "file": "src/ReTAC.Shell/ShellImageInterop.cs",
@@ -11116,7 +11116,7 @@
       },
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
-        "line": 59
+        "line": 67
       }
     ],
     "R-12-2": [
@@ -11628,7 +11628,11 @@
     "R-126": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 271
+        "line": 276
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 541
       },
       {
         "file": "src/ReTAC.App/ErrorLog.cs",
@@ -12580,11 +12584,11 @@
     "R-143": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 47
+        "line": 52
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 57
+        "line": 62
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
@@ -12820,11 +12824,11 @@
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 69
+        "line": 74
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 411
+        "line": 416
       },
       {
         "file": "src/ReTAC.App/DropData.cs",
@@ -12956,7 +12960,7 @@
     "R-18": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 63
+        "line": 68
       },
       {
         "file": "src/ReTAC.App/ExternalToolQueueForm.cs",
@@ -13166,7 +13170,7 @@
     "R-32": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 9
+        "line": 10
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -13180,11 +13184,11 @@
     "R-32-2": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 10
+        "line": 11
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 229
+        "line": 234
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -13194,11 +13198,11 @@
     "R-32-3": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 184
+        "line": 189
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 190
+        "line": 195
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -13207,6 +13211,36 @@
       {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 370
+      }
+    ],
+    "R-32-4": [
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 17
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 37
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 39
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 228
+      },
+      {
+        "file": "src/ReTAC.App/DriveBar.cs",
+        "line": 510
+      },
+      {
+        "file": "src/ReTAC.Domain/Formatting/Display.cs",
+        "line": 62
+      },
+      {
+        "file": "src/ReTAC.Shell/ShellIcons.cs",
+        "line": 50
       }
     ],
     "R-33": [
@@ -13265,6 +13299,10 @@
       {
         "file": "src/ReTAC.Domain/Formatting/Display.cs",
         "line": 54
+      },
+      {
+        "file": "src/ReTAC.Domain/Formatting/Display.cs",
+        "line": 62
       },
       {
         "file": "src/ReTAC.Domain/Selection/ListSummary.cs",
@@ -14280,7 +14318,7 @@
     "R-65": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 46
+        "line": 51
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
@@ -14338,7 +14376,7 @@
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 527
+        "line": 571
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
@@ -14380,11 +14418,11 @@
       },
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
-        "line": 92
+        "line": 100
       },
       {
         "file": "src/ReTAC.Shell/ShellIcons.cs",
-        "line": 94
+        "line": 102
       }
     ],
     "R-66-3": [
@@ -14428,7 +14466,7 @@
     "R-66-4": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 11
+        "line": 12
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -14618,11 +14656,11 @@
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 127
+        "line": 132
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 154
+        "line": 159
       },
       {
         "file": "src/ReTAC.App/DriveSelectForm.cs",
@@ -14680,7 +14718,7 @@
     "R-78": [
       {
         "file": "src/ReTAC.App/DriveBar.cs",
-        "line": 372
+        "line": 377
       },
       {
         "file": "src/ReTAC.App/DriveTreeView.cs",

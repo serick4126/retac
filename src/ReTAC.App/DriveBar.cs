@@ -1,6 +1,7 @@
 ﻿using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
+using ReTAC.Domain.Formatting;
 using ReTAC.Shell;
 
 namespace ReTAC.App;
@@ -13,7 +14,7 @@ namespace ReTAC.App;
 public sealed class DriveBar : Control
 {
     /// <param name="Label">ボタンに描く文字。空ならアイコンだけ（B-15）</param>
-    /// <param name="Tooltip">マウスを置いたときの説明（B-15 / P-02）</param>
+    /// <param name="Tooltip">マウスを置いたときの説明（B-15 / P-02）。ドライブは名前と容量が取れるまでの仮の文（R-32-4）</param>
     /// <param name="ShowIcon">false なら文字だけを中央に描く（Q9 の縮めた表示）</param>
     private sealed record Button(string Label, string Path, Rectangle Bounds, char? DriveLetter, string Tooltip, bool ShowIcon = true);
 
@@ -33,6 +34,10 @@ public sealed class DriveBar : Control
     private bool _compact;
     private readonly ToolTip _tooltip = new() { InitialDelay = TooltipDelay };
     private int _hoverIndex = -1;
+    /// <summary>R-32-4: ドライブ文字 → 最後に取れた説明（名前と容量）。</summary>
+    private readonly Dictionary<char, string> _driveTooltips = [];
+    /// <summary>R-32-4: 説明を取得中のドライブ文字。応答しないドライブの上を往復しても取得を積み上げない。</summary>
+    private readonly HashSet<char> _loadingTooltips = [];
     private int _focusIndex = -1;
     private int _currentIndex = -1;
     private IReadOnlySet<char> _hiddenDrives = new HashSet<char>();
@@ -220,9 +225,9 @@ public sealed class DriveBar : Control
             var fullWidth = iconSize + gap + TextRenderer.MeasureText(measure, letter + ":", Font).Width + padding;
             fullRight += fullWidth + gap;
             var width = _compact ? TextRenderer.MeasureText(measure, letter + ":", Font).Width + padding : fullWidth;
-            // P-02: 文言はドライブ名だけで組む。ボリュームラベルは応答しないドライブで待たされる（N-05）
+            // R-32-4: 名前と容量はマウスが乗ったときに裏で取る。ここで取ると応答しないドライブで待たされる（N-05）
             buttons.Add(new Button(letter + ":", drive.Name, new Rectangle(x, gap, width, buttonHeight), letter,
-                $"{char.ToUpperInvariant(letter)}: ドライブへ移動", ShowIcon: !_compact));
+                $"{char.ToUpperInvariant(letter)}:", ShowIcon: !_compact));
             x += width + gap;
         }
 
@@ -494,8 +499,47 @@ public sealed class DriveBar : Control
         if (index == _hoverIndex) return;
         _hoverIndex = index;
         // B-15 / P-02: DriveBar は 1 つのコントロールにボタンを描いているので、乗っているボタンで文言を差し替える
-        _tooltip.SetToolTip(this, index >= 0 ? _buttons[index].Tooltip : "");
+        var button = index >= 0 ? _buttons[index] : null;
+        _tooltip.SetToolTip(this, button is null ? ""
+            : button.DriveLetter is { } letter && _driveTooltips.TryGetValue(letter, out var known) ? known : button.Tooltip);
+        if (button?.DriveLetter is { } drive) LoadDriveTooltip(drive, button.Path);
         Invalidate();
+    }
+
+    /// <summary>
+    /// R-32-4: ドライブの名前と容量を裏で取り、まだそのドライブの上にいれば説明を差し替える。
+    /// 乗るたびに取り直すのは、転送で減った空きをすぐ見せるため。
+    /// </summary>
+    private void LoadDriveTooltip(char letter, string root)
+    {
+        if (!_loadingTooltips.Add(letter)) return;
+        Task.Run(() =>
+        {
+            var name = ShellIcons.DisplayName(root) ?? $"{char.ToUpperInvariant(letter)}:";
+            try
+            {
+                var drive = new DriveInfo(root);
+                return drive.IsReady ? Display.DriveTooltip(name, drive.TotalSize, drive.AvailableFreeSpace) : name;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                return name;
+            }
+        }).ContinueWith(task =>
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                BeginInvoke(() =>
+                {
+                    _loadingTooltips.Remove(letter);
+                    if (!task.IsCompletedSuccessfully) return;
+                    _driveTooltips[letter] = task.Result;
+                    if (_buttons.ElementAtOrDefault(_hoverIndex)?.DriveLetter == letter) _tooltip.SetToolTip(this, task.Result);
+                });
+            }
+            catch (InvalidOperationException) { }   // 確かめた直後に閉じた。捨てられたタスクの例外として記録に載せない（R-126）
+        });
     }
 
     protected override void OnMouseLeave(EventArgs e)
