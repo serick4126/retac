@@ -13,6 +13,8 @@ public class TerminologyTests
     private static readonly (string Wrong, string Right)[] Terms =
     [
         ("ファイル" + "一覧", "ファイルリスト"),
+        ("マウス" + "を置", "マウスポインターを合わせ"),
+        ("マウス" + "カーソル", "マウスポインター"),
     ];
 
     private static IEnumerable<string> Targets()

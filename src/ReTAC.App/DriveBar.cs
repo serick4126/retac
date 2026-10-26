@@ -14,7 +14,7 @@ namespace ReTAC.App;
 public sealed class DriveBar : Control
 {
     /// <param name="Label">ボタンに描く文字。空ならアイコンだけ（B-15）</param>
-    /// <param name="Tooltip">マウスを置いたときの説明（B-15 / P-02）。ドライブは名前と容量が取れるまでの仮の文（R-32-4）</param>
+    /// <param name="Tooltip">マウスポインターを合わせたときの説明（B-15 / P-02）。ドライブは名前と容量が取れるまでの仮の文（R-32-4）</param>
     /// <param name="ShowIcon">false なら文字だけを中央に描く（Q9 の縮めた表示）</param>
     private sealed record Button(string Label, string Path, Rectangle Bounds, char? DriveLetter, string Tooltip, bool ShowIcon = true);
 
