@@ -54,6 +54,9 @@ LF で書いてから CRLF に直す、というやり直しが何度も起き�
 
 `next_session_prompt.md` は、次に始めるときに読む指示だけにする（状況・やること・注意）。記録の中身は `handoff.md` を指せばよい。
 
+`handoff.md` が 100 KB を超えたら、次のリリースの前に、古いセッション記録を `docs/archive/` へ移す（移す範囲と移し方は `handoff.md` の「運用ルール」。
+超えたままだと、リリースの作業をフックが止める）。古い記録は `archive/` を grep で引く。
+
 ## ドメイン定義書
 
 `docs/domain_definition_retac.md` は、今の ReTAC のドメインの定義で、R 番号の規則の宣言の正本である。
