@@ -3207,6 +3207,34 @@
         "Transfer"
       ]
     },
+    "ReTAC.Domain.Navigation.PathExpression": {
+      "id": "type:ReTAC.Domain.Navigation.PathExpression",
+      "kind": "static class",
+      "file": "src/ReTAC.Domain/Navigation/PathExpression.cs",
+      "doc": "R-147: パスの欄の文字・設定ファイルに保存した値（式）と、実パス・文字の値との行き来。 式から実パスへは 、実パスや文字の値から式へは だけで移る。"
+    },
+    "ReTAC.Domain.Navigation.PathPart": {
+      "id": "type:ReTAC.Domain.Navigation.PathPart",
+      "kind": "struct",
+      "file": "src/ReTAC.Domain/Navigation/PathExpression.cs",
+      "doc": "式に書く部品 1 つ。式の断片（利用者が書いた式・テンプレートの地の文字）か、文字の値（実パス・マクロの値）。",
+      "fields": [
+        {
+          "name": "Text",
+          "type": "string",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        },
+        {
+          "name": "IsExpression",
+          "type": "bool",
+          "nullable": false,
+          "required": false,
+          "mutability": "init"
+        }
+      ]
+    },
     "ReTAC.Domain.Navigation.PathResolver": {
       "id": "type:ReTAC.Domain.Navigation.PathResolver",
       "kind": "static class",
@@ -12949,6 +12977,12 @@
       {
         "file": "src/ReTAC.Shell/VirtualItems.cs",
         "line": 11
+      }
+    ],
+    "R-147": [
+      {
+        "file": "src/ReTAC.Domain/Navigation/PathExpression.cs",
+        "line": 16
       }
     ],
     "R-15": [

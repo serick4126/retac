@@ -29,7 +29,7 @@ public static class PathResolver
     private static readonly char[] InvalidNameChars = Path.GetInvalidFileNameChars();
 
     /// <summary>ルートより後ろの各要素に、名前として使えない文字（`|` `?` `:` `*` など）が混ざっていないか。</summary>
-    private static bool HasInvalidName(string path)
+    internal static bool HasInvalidName(string path)
     {
         var root = Path.GetPathRoot(path);
         var rest = string.IsNullOrEmpty(root) ? path : path[root.Length..];
