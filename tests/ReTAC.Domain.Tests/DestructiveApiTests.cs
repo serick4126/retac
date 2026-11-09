@@ -11,7 +11,7 @@ namespace ReTAC.Domain.Tests;
 /// </summary>
 public class DestructiveApiTests
 {
-    private static readonly Regex Destructive = new(
+    internal static readonly Regex Destructive = new(
         @"Directory\.Delete|File\.Delete|\.Delete\(|File\.Move|Directory\.Move|File\.Copy|File\.Replace|" +
         @"WriteAll(Text|Bytes|Lines)|FileMode\.(Create|Truncate|OpenOrCreate)\b|\.MoveTo\(|\.CopyTo\(|" +
         // Windows のファイル操作（ShellFileOperation の Move・Copy・Rename と、IFileOperation の各項目の操作）
