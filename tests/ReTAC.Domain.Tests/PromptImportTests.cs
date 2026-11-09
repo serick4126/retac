@@ -79,7 +79,7 @@ public class PromptImportTests
     /// <summary>定義を展開した引数（インポートした直後・変換の前後で、送るものが変わらないことを確かめる）</summary>
     private static string[] Sent(PromptDefinition definition, Dictionary<int, PromptValue>? values = null)
     {
-        values ??= new Dictionary<int, PromptValue>(PromptAnswerRules.Defaults(definition, new MacroContext([], null, @"C:\work")).Values!);
+        values ??= new Dictionary<int, PromptValue>(PromptAnswerRules.Defaults(definition, new MacroContext([], null, @"C:\work"), _ => null).Values!);
         var check = PromptAnswerRules.Check(definition, values, @"C:\work", _ => null);
         Assert.Null(check.Error);
         var result = ArgumentExpander.Expand(ArgumentTemplate.Parse("${prompt}"),
@@ -282,7 +282,7 @@ public class PromptImportTests
         foreach (var target in ItemTargets)
         {
             var converted = PromptImport.Convert(new() { Arguments = [PromptArgument.Fixed(value)] }, 0, target);
-            var initial = PromptAnswerRules.Initial(converted, new([], null, @"C:\work"));
+            var initial = PromptAnswerRules.Initial(converted, new([], null, @"C:\work"), _ => null);
             Assert.Null(initial.Error);
             var item = Assert.Single(converted.Items);
             var check = PromptAnswerRules.Check(converted, initial.Values!, @"C:\work", _ => null);

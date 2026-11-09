@@ -11746,7 +11746,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 107
+        "line": 100
       }
     ],
     "R-128": [
@@ -11932,11 +11932,11 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 106
+        "line": 99
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 142
+        "line": 135
       },
       {
         "file": "src/ReTAC.Shell/ShellFileBrowser.cs",
@@ -11962,15 +11962,19 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 49
+        "line": 43
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 59
+        "line": 52
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 149
+        "line": 142
+      },
+      {
+        "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
+        "line": 152
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -11978,11 +11982,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 166
-      },
-      {
-        "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 178
+        "line": 171
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinition.cs",
@@ -12198,19 +12198,19 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 45
+        "line": 39
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 49
+        "line": 43
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 62
+        "line": 55
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 68
+        "line": 61
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptDefinitionRules.cs",
@@ -13090,23 +13090,19 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 40
+        "line": 52
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 59
+        "line": 55
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 62
+        "line": 61
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 68
-      },
-      {
-        "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 159
+        "line": 152
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptImport.cs",
@@ -14458,7 +14454,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
-        "line": 107
+        "line": 100
       }
     ],
     "R-61-3": [

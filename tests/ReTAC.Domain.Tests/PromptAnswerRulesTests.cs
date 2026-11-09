@@ -38,7 +38,7 @@ public class PromptAnswerRulesTests
     [Fact]
     public void 初期値は定義の初期値()
     {
-        var values = PromptAnswerRules.Defaults(All(), new MacroContext([], null, @"C:\work")).Values!;
+        var values = PromptAnswerRules.Defaults(All(), new MacroContext([], null, @"C:\work"), _ => null).Values!;
         Assert.Equal(new PromptValue("既定"), values[1]);
         Assert.Equal(new PromptValue(""), values[2]);
         Assert.Equal(new PromptValue("b.txt"), values[3]);
@@ -49,41 +49,41 @@ public class PromptAnswerRulesTests
     [Fact]
     public void 前回の値を覚えるなら前回の値で開き覚えないなら初期値()
     {
-        var remembered = PromptAnswerRules.Remember(All(remember: true), Input(text: "前回", folder: "out", check: false, choice: 1));
-        var initial = PromptAnswerRules.Initial(remembered, new MacroContext([], null, @"C:\work")).Values!;
+        var remembered = PromptAnswerRules.Remember(All(remember: true), Input(text: "前回", folder: "out", check: false, choice: 1), _ => null);
+        var initial = PromptAnswerRules.Initial(remembered, new MacroContext([], null, @"C:\work"), _ => null).Values!;
         Assert.Equal(new PromptValue("前回"), initial[1]);
         Assert.Equal(new PromptValue("out"), initial[2]);
         Assert.Equal(new PromptValue(Checked: false), initial[4]);
         Assert.Equal(new PromptValue(ChoiceId: 1), initial[5]);
 
-        Assert.Equal(PromptAnswerRules.Defaults(remembered, new MacroContext([], null, @"C:\work")).Values!, PromptAnswerRules.Initial(remembered with { RememberLast = false }, new MacroContext([], null, @"C:\work")).Values!);
+        Assert.Equal(PromptAnswerRules.Defaults(remembered, new MacroContext([], null, @"C:\work"), _ => null).Values!, PromptAnswerRules.Initial(remembered with { RememberLast = false }, new MacroContext([], null, @"C:\work"), _ => null).Values!);
     }
 
     [Fact]
     public void 覚えない定義には前回の値を書かない()
     {
         var definition = All();
-        Assert.Same(definition, PromptAnswerRules.Remember(definition, Input()));
+        Assert.Same(definition, PromptAnswerRules.Remember(definition, Input(), _ => null));
     }
 
     [Fact]
     public void 前回の選択肢が無ければ初期の選択()
     {
         var definition = All(remember: true) with { Items = [.. All().Items.Select(i => i.Id == 5 ? i with { LastChoiceId = 99 } : i)] };
-        Assert.Equal(2, PromptAnswerRules.Initial(definition, new MacroContext([], null, @"C:\work")).Values![5].ChoiceId);
+        Assert.Equal(2, PromptAnswerRules.Initial(definition, new MacroContext([], null, @"C:\work"), _ => null).Values![5].ChoiceId);
     }
 
     [Fact]
     public void 空欄だったことも前回の値として残す()
     {
-        var remembered = PromptAnswerRules.Remember(All(remember: true), Input(text: ""));
-        Assert.Equal("", PromptAnswerRules.Initial(remembered, new MacroContext([], null, @"C:\work")).Values![1].Text);   // 初期値「既定」には戻さない
+        var remembered = PromptAnswerRules.Remember(All(remember: true), Input(text: ""), _ => null);
+        Assert.Equal("", PromptAnswerRules.Initial(remembered, new MacroContext([], null, @"C:\work"), _ => null).Values![1].Text);   // 初期値「既定」には戻さない
     }
 
     [Fact]
     public void 前回の値を消す()
     {
-        var remembered = PromptAnswerRules.Remember(All(remember: true), Input());
+        var remembered = PromptAnswerRules.Remember(All(remember: true), Input(), _ => null);
         var forgotten = PromptAnswerRules.ForgetLast(remembered);
         Assert.All(forgotten.Items, i =>
         {
@@ -213,7 +213,7 @@ public class PromptAnswerRulesTests
     {
         var shown = All(remember: true);
         var tools = new List<ExternalTool> { new() { Id = 1 }, new() { Id = 7, Prompt = shown } };
-        var updated = PromptAnswerRules.RememberIn(tools, 7, shown, Input(text: "新しい"))!;
+        var updated = PromptAnswerRules.RememberIn(tools, 7, shown, Input(text: "新しい"), _ => null)!;
         Assert.Equal("新しい", updated[1].Prompt!.Items[0].LastText);
         Assert.Same(tools[0], updated[0]);
     }
@@ -224,8 +224,8 @@ public class PromptAnswerRulesTests
         // 2 つのウィンドウから同じツールを起動した。最初の OK で定義のインスタンスは新しくなるが、中身（前回の値を除く）は同じ
         var shown = All(remember: true);
         var tools = new List<ExternalTool> { new() { Id = 7, Prompt = shown } };
-        var first = PromptAnswerRules.RememberIn(tools, 7, shown, Input(text: "先"))!;
-        var second = PromptAnswerRules.RememberIn(first, 7, shown, Input(text: "後"))!;
+        var first = PromptAnswerRules.RememberIn(tools, 7, shown, Input(text: "先"), _ => null)!;
+        var second = PromptAnswerRules.RememberIn(first, 7, shown, Input(text: "後"), _ => null)!;
         Assert.Equal("後", second[0].Prompt!.Items[0].LastText);
     }
 
@@ -234,19 +234,19 @@ public class PromptAnswerRulesTests
     {
         var shown = All(remember: true);
         var edited = new List<ExternalTool> { new() { Id = 7, Prompt = shown with { Title = "直した" } } };
-        Assert.Null(PromptAnswerRules.RememberIn(edited, 7, shown, Input()));
+        Assert.Null(PromptAnswerRules.RememberIn(edited, 7, shown, Input(), _ => null));
         var itemEdited = new List<ExternalTool> { new() { Id = 7, Prompt = shown with { Items = [.. shown.Items.Select(i => i with { Label = i.Label + "!" })] } } };
-        Assert.Null(PromptAnswerRules.RememberIn(itemEdited, 7, shown, Input()));
-        Assert.Null(PromptAnswerRules.RememberIn([], 7, shown, Input()));                                       // ツールが消えた
-        Assert.Null(PromptAnswerRules.RememberIn([new ExternalTool { Id = 7 }], 7, shown, Input()));             // 定義が消えた
-        Assert.Null(PromptAnswerRules.RememberIn([new ExternalTool { Id = 7, Prompt = All() }], 7, All(), Input()));   // 覚えない定義
+        Assert.Null(PromptAnswerRules.RememberIn(itemEdited, 7, shown, Input(), _ => null));
+        Assert.Null(PromptAnswerRules.RememberIn([], 7, shown, Input(), _ => null));                                       // ツールが消えた
+        Assert.Null(PromptAnswerRules.RememberIn([new ExternalTool { Id = 7 }], 7, shown, Input(), _ => null));             // 定義が消えた
+        Assert.Null(PromptAnswerRules.RememberIn([new ExternalTool { Id = 7, Prompt = All() }], 7, All(), Input(), _ => null));   // 覚えない定義
     }
 
     [Fact]
     public void 前回の値だけが違う定義は同じ中身()
     {
         var shown = All(remember: true);
-        Assert.True(PromptAnswerRules.SameShape(shown, PromptAnswerRules.Remember(shown, Input(text: "別"))));
+        Assert.True(PromptAnswerRules.SameShape(shown, PromptAnswerRules.Remember(shown, Input(text: "別"), _ => null)));
         Assert.False(PromptAnswerRules.SameShape(shown, shown with { RememberLast = false }));
     }
 
@@ -264,8 +264,8 @@ public class PromptAnswerRulesTests
     {
         // 手で直した設定ファイル。ヘルパーを開いて直せるように、ここでは止めない（重なりは定義の検査が知らせる）
         var broken = new PromptDefinition { Items = [TextItem, TextItem with { Initial = "後" }] };
-        Assert.Equal("後", PromptAnswerRules.Defaults(broken, new MacroContext([], null, @"C:\work")).Values![1].Text);
-        Assert.Equal("後", PromptAnswerRules.Initial(broken with { RememberLast = true }, new MacroContext([], null, @"C:\work")).Values![1].Text);
+        Assert.Equal("後", PromptAnswerRules.Defaults(broken, new MacroContext([], null, @"C:\work"), _ => null).Values![1].Text);
+        Assert.Equal("後", PromptAnswerRules.Initial(broken with { RememberLast = true }, new MacroContext([], null, @"C:\work"), _ => null).Values![1].Text);
     }
 
     [Fact]
@@ -302,7 +302,7 @@ public class PromptAnswerRulesTests
         foreach (var behavior in Enum.GetValues<PromptFolderEmptyBehavior>())
         {
             var definition = new PromptDefinition { RememberLast = true, Items = [FolderItem with { FolderEmptyBehavior = behavior }] };
-            var remembered = PromptAnswerRules.Remember(definition, new Dictionary<int, PromptValue> { [2] = new("") });
+            var remembered = PromptAnswerRules.Remember(definition, new Dictionary<int, PromptValue> { [2] = new("") }, _ => null);
             Assert.Equal("", remembered.Items[0].LastText);
         }
     }
@@ -378,7 +378,7 @@ public class PromptAnswerRulesTests
         Assert.Equal(@"|%%P32_DIR%%\x", Stored(@"%P32_DIR%\x", _ => null));   // 未定義は文字。後で定義されても意味が変わらない
         Assert.Equal("", Stored("", InitEnv));
         // テキストの項目は今までどおり欄の文字のまま
-        var text = PromptAnswerRules.Remember(PathDefinition(PromptItemKind.Text, "", remember: true), new Dictionary<int, PromptValue> { [1] = new("%A%B%") });
+        var text = PromptAnswerRules.Remember(PathDefinition(PromptItemKind.Text, "", remember: true), new Dictionary<int, PromptValue> { [1] = new("%A%B%") }, _ => null);
         Assert.Equal("%A%B%", text.Items[0].LastText);
     }
 

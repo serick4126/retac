@@ -29,28 +29,21 @@ public static class PromptAnswerRules
     /// R-147: 項目の編集の OK で、初期値の欄の文字を項目に残す形にする。フォルダ・ファイルは地の文字の正規の形を設定ファイルの形で残す。
     /// 書き換えていない欄は元の値のまま残す（旧設定の値を、開いて OK しただけで書き換えない）。
     /// </summary>
-    public static string InitialToStore(PromptItem source, string fieldText, Func<string, string?>? env = null) =>
+    public static string InitialToStore(PromptItem source, string fieldText, Func<string, string?> env) =>
         !IsPath(source) ? fieldText
         : fieldText == InitialForDisplay(source) ? source.Initial
-        : PathExpression.Store(ScalarTemplate.Canonical(fieldText, Env(env)));
+        : PathExpression.Store(ScalarTemplate.Canonical(fieldText, env));
 
     private static bool IsPath(PromptItem item) => item.Kind is PromptItemKind.Folder or PromptItemKind.File;
 
-    /// <summary>
-    /// R-147: 環境変数の読み取り。<c>null</c> は何も定義されていない環境（式の `%名前%` は文字のまま）。
-    /// App は <c>Environment.GetEnvironmentVariable</c> を渡す。
-    /// </summary>
-    private static Func<string, string?> Env(Func<string, string?>? env) => env ?? (static _ => null);
-
     /// <summary>R-136: 定義の初期値を展開する。失敗したら部分的な値を返さない。</summary>
-    public static PromptCheck Defaults(PromptDefinition definition, MacroContext context, Func<string, string?>? env = null) =>
+    public static PromptCheck Defaults(PromptDefinition definition, MacroContext context, Func<string, string?> env) =>
         Initial(definition with { RememberLast = false }, context, env);
 
     /// <summary>R-132 / R-136: 前回の文字は再解析せず、前回値がない欄だけ初期値を展開する。</summary>
-    public static PromptCheck Initial(PromptDefinition definition, MacroContext context, Func<string, string?>? env = null)
+    public static PromptCheck Initial(PromptDefinition definition, MacroContext context, Func<string, string?> env)
     {
-        var lookup = Env(env);
-        var values = new Dictionary<int, PromptValue>();
+                var values = new Dictionary<int, PromptValue>();
         foreach (var item in definition.Items)
         {
             var text = "";
@@ -71,7 +64,7 @@ public static class PromptAnswerRules
                     if (IsPath(item))
                     {
                         var parts = template.ExpandParts(context, out emptyRequired);
-                        expanded = parts is null ? null : PathExpression.Write(parts, lookup);
+                        expanded = parts is null ? null : PathExpression.Write(parts, env);
                     }
                     else expanded = template.Expand(context, out emptyRequired);
                     if (expanded is null)
@@ -147,7 +140,7 @@ public static class PromptAnswerRules
             .Select(i => resolved[i.Id].Text)];
 
     /// <summary>R-132: OK した入力を前回の値として残す。入力欄の文字はそのまま（空欄も「空欄だった」として残す）。</summary>
-    public static PromptDefinition Remember(PromptDefinition definition, IReadOnlyDictionary<int, PromptValue> input, Func<string, string?>? env = null)
+    public static PromptDefinition Remember(PromptDefinition definition, IReadOnlyDictionary<int, PromptValue> input, Func<string, string?> env)
     {
         if (!definition.RememberLast) return definition;
         return definition with
@@ -157,7 +150,7 @@ public static class PromptAnswerRules
                 PromptItemKind.CheckBox => i with { LastChecked = value.Checked },
                 PromptItemKind.DropDown => i with { LastChoiceId = value.ChoiceId },
                 // R-147 / R-132: フォルダ・ファイルは正規の形の式を設定ファイルの形で残す（欄の文字が別の PC・後の環境で意味を変えないように）。空欄は空欄のまま
-                PromptItemKind.Folder or PromptItemKind.File => i with { LastText = PathExpression.Store(PathExpression.Canonical(value.Text, Env(env))) },
+                PromptItemKind.Folder or PromptItemKind.File => i with { LastText = PathExpression.Store(PathExpression.Canonical(value.Text, env)) },
                 _ => i with { LastText = value.Text },
             })],
         };
@@ -181,7 +174,7 @@ public static class PromptAnswerRules
     /// </summary>
     /// <returns>書き込んだ一覧。残さないときは null</returns>
     public static List<ExternalTool>? RememberIn(
-        IReadOnlyList<ExternalTool> tools, int toolId, PromptDefinition shown, IReadOnlyDictionary<int, PromptValue> input, Func<string, string?>? env = null)
+        IReadOnlyList<ExternalTool> tools, int toolId, PromptDefinition shown, IReadOnlyDictionary<int, PromptValue> input, Func<string, string?> env)
     {
         if (!shown.RememberLast) return null;
         var list = tools.ToList();

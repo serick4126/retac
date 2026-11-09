@@ -23,14 +23,14 @@ public class PromptMacroTests
             var source = " \t\"${" + name + "}\"　$$$${prompt}";
             var definition = Def(Text(source) with { Kind = kind });
             var expected = ScalarTemplate.Parse(source).Expand(Context, out _);
-            var result = PromptAnswerRules.Initial(definition, Context);
+            var result = PromptAnswerRules.Initial(definition, Context, _ => null);
             Assert.Null(result.Error);
             Assert.Equal(expected, result.Values![1].Text);
             Assert.Equal(source, definition.Items[0].Initial);
         }
-        var mixed = PromptAnswerRules.Defaults(Def(Text("${pathBase}|${fileBasenameNoExtension}")), Context);
+        var mixed = PromptAnswerRules.Defaults(Def(Text("${pathBase}|${fileBasenameNoExtension}")), Context, _ => null);
         Assert.Equal(@"C:\work\v1.2|a", mixed.Values![1].Text);
-        Assert.Equal("", PromptAnswerRules.Initial(Def(Text("${file}")), new([], null, @"C:\work")).Values![1].Text);
+        Assert.Equal("", PromptAnswerRules.Initial(Def(Text("${file}")), new([], null, @"C:\work"), _ => null).Values![1].Text);
     }
 
     [Fact]
@@ -38,8 +38,8 @@ public class PromptMacroTests
     {
         var definition = Def(Text("${file}!") with { LastText = "" }) with { RememberLast = true };
         var context = new MacroContext([], null, @"C:\work");
-        Assert.Equal("", PromptAnswerRules.Initial(definition, context).Values![1].Text);
-        var failure = PromptAnswerRules.Defaults(definition, context);
+        Assert.Equal("", PromptAnswerRules.Initial(definition, context, _ => null).Values![1].Text);
+        var failure = PromptAnswerRules.Defaults(definition, context, _ => null);
         Assert.Null(failure.Values);
         Assert.Equal(1, failure.ItemId);
         Assert.Contains("初期値", failure.Error!);
@@ -51,7 +51,7 @@ public class PromptMacroTests
     public void Initial_RememberedTextIsLiteral()
     {
         var definition = Def(Text("${cwd}") with { LastText = "${unknown} $$" }, Text("${cwdBasename}", 2)) with { RememberLast = true };
-        var result = PromptAnswerRules.Initial(definition, Context);
+        var result = PromptAnswerRules.Initial(definition, Context, _ => null);
         Assert.Equal("${unknown} $$", result.Values![1].Text);
         Assert.Equal("work", result.Values[2].Text);
     }
@@ -97,7 +97,7 @@ public class PromptMacroTests
     public void PerItem_ValuesUseEachTarget()
     {
         var definition = Def(Text("${fileBasenameNoExtension}"), new() { Id = 2, Kind = PromptItemKind.CheckBox, Label = "出力", Value = "${pathBase} ${cursorFileBasenameNoExtension} ${cwdBasename}", InitialChecked = true });
-        var input = new PromptInput(definition, PromptAnswerRules.Initial(definition, Context).Values!);
+        var input = new PromptInput(definition, PromptAnswerRules.Initial(definition, Context, _ => null).Values!);
         var tool = new ExternalTool { Path = "tool.exe", LaunchPerItem = true };
         var requests = LaunchPlanner.Plan(tool, ArgumentTemplate.Parse("${prompt}"), Context.Targets, Context.Cursor, Context.CurrentFolder, input);
         Assert.Equal(3, requests.Count);
