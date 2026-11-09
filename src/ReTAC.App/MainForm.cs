@@ -655,7 +655,7 @@ public sealed class MainForm : Form, IBookmarkHost
         CommandId.ShowBookmarksView => ExecuteLeftPanelCommand(CommandId.ShowBookmarksView),
         CommandId.ShowPreview => ExecuteLeftPanelCommand(CommandId.ShowPreview),
         CommandId.ToggleLeftPanel => ExecuteLeftPanelCommand(CommandId.ToggleLeftPanel),
-        CommandId.BookmarkAddCurrentFolder => AddBookmark(new Bookmark("", BookmarkKind.Folder, _currentFolder)),
+        CommandId.BookmarkAddCurrentFolder => AddBookmark(BookmarkPath.ForRealPath(BookmarkKind.Folder, _currentFolder)),   // R-147
         CommandId.BookmarkAddCursorItem => AddBookmark(CursorBookmark()),
         CommandId.BookmarkManage => ShowBookmarkManager(),
         CommandId.FolderHistory => ShowFolderHistory(),
@@ -2028,8 +2028,8 @@ public sealed class MainForm : Form, IBookmarkHost
 
     /// <summary>R-89: カーソル位置の 1 件。親フォルダ項目（とカーソルが無いとき）は今のフォルダ。</summary>
     private Bookmark CursorBookmark() => _list.State.Cursor is { IsParent: false } entry
-        ? new Bookmark("", entry.Kind == EntryKind.Folder ? BookmarkKind.Folder : BookmarkKind.File, entry.FullPath)
-        : new Bookmark("", BookmarkKind.Folder, _currentFolder);
+        ? BookmarkPath.ForRealPath(entry.Kind == EntryKind.Folder ? BookmarkKind.Folder : BookmarkKind.File, entry.FullPath)   // R-147
+        : BookmarkPath.ForRealPath(BookmarkKind.Folder, _currentFolder);
 
     /// <summary>
     /// R-89: バーの末尾（after を渡せばその後ろ、into を渡せばその並びの末尾）に足す。設定の変更なので「元に戻す」の記録には入れない。
@@ -2137,7 +2137,15 @@ public sealed class MainForm : Form, IBookmarkHost
             BookmarkChanged();
             return;
         }
-        MessageBox.Show(this, $"{bookmark.Target} は見つかりません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show(this, $"{BookmarkPath.Display(bookmark)} は見つかりません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+    }
+
+    // R-147: 保存した式から実パスを作れない項目。取り除かない（別の PC では使えるかもしれない。編集・削除は使える）
+    void IBookmarkHost.BookmarkUnusable(Bookmark bookmark)
+    {
+        var notice = BookmarkPath.Notice(bookmark, Environment.GetEnvironmentVariable) ?? $"{BookmarkPath.Display(bookmark)} は見つかりません。";
+        var legacy = PathExpression.Read(bookmark.Target) is null;
+        MessageBox.Show(this, notice, "ReTAC", MessageBoxButtons.OK, legacy ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
     }
 
     void IBookmarkHost.PathMissing(string path) =>
@@ -2188,12 +2196,15 @@ public sealed class MainForm : Form, IBookmarkHost
         switch (tag)
         {
             case Bookmark b:
-                if (b.Kind == BookmarkKind.Folder) Add("このフォルダへジャンプ(&J)", () => _ = OpenFolderAsync(b.Target));
+                // R-147: 使えない項目はジャンプ・シェルのメニューの対象にしない（編集・削除は使える）
+                var real = BookmarkPath.Resolve(b, Environment.GetEnvironmentVariable);
+                if (b.Kind == BookmarkKind.Folder)
+                    Add("このフォルダへジャンプ(&J)", () => { if (real is not null) _ = OpenFolderAsync(real); else ((IBookmarkHost)this).BookmarkUnusable(b); });
                 Add("ブックマークを編集(&E)...", () => EditBookmark(b));
                 if (onBar) Add("アイコンだけ表示(&L)", () => ToggleIconOnly(b), b.IconOnly);
                 Add("ブックマークを削除(&X)", () => { if (BookmarkRules.Remove(_settings.Bookmarks, b)) BookmarkChanged(); });
                 if (b.Kind != BookmarkKind.Group) Add("クイックアクセスにも追加(&Q)", () => AddToQuickAccess(b));
-                if (b.Kind is BookmarkKind.Folder or BookmarkKind.File) shellPaths = [b.Target];
+                if (real is not null) shellPaths = [real];
                 break;
             case Entry entry:
                 // 展開表示の中身はブックマークではないので、ジャンプとエクスプローラーのメニューだけ
@@ -2206,7 +2217,7 @@ public sealed class MainForm : Form, IBookmarkHost
             // 足した項目は右クリックした項目の後ろへ（空いた所なら末尾）。
             // アクセスキーはエクスプローラーのメニューでよく使われる字（O V F H W A S N T C D R P）を避ける（実機指摘）
             if (rows.Count > 0) Add("", null);
-            Add("現在のフォルダを追加(&K)", () => AddBookmark(new Bookmark("", BookmarkKind.Folder, _currentFolder), bookmark, into));
+            Add("現在のフォルダを追加(&K)", () => AddBookmark(BookmarkPath.ForRealPath(BookmarkKind.Folder, _currentFolder), bookmark, into));   // R-147
             Add("カーソル位置の項目を追加(&I)", () => AddBookmark(CursorBookmark(), bookmark, into));
             Add("コマンドを追加(&M)...", () => AddCommandBookmark(bookmark, into));
             Add("グループを追加(&G)...", () => AddGroupBookmark(bookmark, into));
@@ -2217,7 +2228,7 @@ public sealed class MainForm : Form, IBookmarkHost
         // R-141: シェルのメニューが出るフォルダ（ブックマークのフォルダ・展開の中のフォルダ）だけ
         var newWindowFolder = tag switch
         {
-            Bookmark { Kind: BookmarkKind.Folder } f => f.Target,
+            Bookmark { Kind: BookmarkKind.Folder } f => BookmarkPath.Resolve(f, Environment.GetEnvironmentVariable),   // R-147: 使えない項目は null
             Entry { Kind: EntryKind.Folder } e => e.FullPath,
             _ => null,
         };

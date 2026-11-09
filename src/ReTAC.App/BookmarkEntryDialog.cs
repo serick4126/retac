@@ -130,11 +130,11 @@ public sealed class BookmarkEntryDialog : Form
     {
         if (_preset.Kind is BookmarkKind.Folder or BookmarkKind.File)
         {
-            // Q11: 手入力のパスは、開いているフォルダを基準に絶対パスにする。解決できなければ登録させない
-            var input = InputText.TrimEdge(_path.Text);
-            if (input.Length == 0) return "登録先を入れてください。";
-            if (PathResolver.Resolve(_currentFolder, input, Environment.GetEnvironmentVariable) is not { } resolved) return $"{input} はパスとして読めません。";
-            _target = resolved;
+            // Q11 / R-147: 手入力のパスは 3 つに分けて保存する（置き換えて絶対パスになる式は式のまま、相対パスは
+            // 開いているフォルダ基準の実パスを式に書く）。解決できなければ登録させない。欄を書き換えていなければ前の値のまま
+            var (target, error) = BookmarkPath.FromField(_preset, _path.Text, _currentFolder, Environment.GetEnvironmentVariable);
+            if (target is null) return error;
+            _target = target;
         }
         return BookmarkRules.Validate(Bookmark);
     }

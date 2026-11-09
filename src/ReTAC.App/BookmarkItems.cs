@@ -19,6 +19,8 @@ public interface IBookmarkHost
     void Execute(CommandTarget target);
     /// <summary>ブックマークそのものの登録先が無い。QuickAccessFixMissing に従って取り除くか知らせる（R-89）。</summary>
     void BookmarkMissing(Bookmark bookmark);
+    /// <summary>R-147: 保存した式から実パスを作れない項目（旧設定の値・絶対パスにならない）。知らせるだけで、ブックマークには触れない。</summary>
+    void BookmarkUnusable(Bookmark bookmark);
     /// <summary>展開表示の中の項目が、開いた後に消えていた。知らせるだけで、ブックマークには触れない（R-91）。</summary>
     void PathMissing(string path);
     string LabelOf(CommandTarget target);
@@ -116,9 +118,15 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
         switch (b.Kind)
         {
             case BookmarkKind.Folder:
-                FolderExpansion.Attach((ToolStripDropDownItem)item, b.Target, this, onMissing: () => host.BookmarkMissing(b), childLevel, b.DropMode);   // R-140
+                // R-147: 保存した式から実パスを作る入口は 1 つ。使えない項目（旧設定の値・絶対パスにならない）は開かず知らせる
+                if (BookmarkPath.Resolve(b, Environment.GetEnvironmentVariable) is not { } folder)
+                {
+                    item.Click += (_, e) => { if (!IsRightClick(e)) host.BookmarkUnusable(b); };
+                    break;
+                }
+                FolderExpansion.Attach((ToolStripDropDownItem)item, folder, this, onMissing: () => host.BookmarkMissing(b), childLevel, b.DropMode);   // R-140
                 // R-91-2: バー直下のフォルダのダブルクリック。Group には繋がない（Group はこの分岐に来ない）
-                if (item is BarDropDownButton bar) bar.DoubleClicked += (_, _) => host.JumpTo(b.Target);
+                if (item is BarDropDownButton bar) bar.DoubleClicked += (_, _) => host.JumpTo(folder);
                 break;
             case BookmarkKind.Group:
                 AttachGroup((ToolStripDropDownItem)item, b, childLevel);
@@ -127,7 +135,9 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
                 item.Click += (_, e) =>
                 {
                     if (IsRightClick(e)) return;
-                    if (File.Exists(b.Target)) host.OpenFile(b.Target);
+                    var file = BookmarkPath.Resolve(b, Environment.GetEnvironmentVariable);
+                    if (file is null) host.BookmarkUnusable(b);
+                    else if (File.Exists(file)) host.OpenFile(file);
                     else host.BookmarkMissing(b);
                 };
                 break;
@@ -150,7 +160,7 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
     {
         var key = b.Kind == BookmarkKind.Command && CommandTarget.Parse(b.Target) is { } target ? host.KeyOf(target) : "";
         var lines = new List<string> { key.Length > 0 ? $"{name}（{key}）" : name };
-        if (b.Kind is BookmarkKind.Folder or BookmarkKind.File) lines.Add(b.Target);
+        if (b.Kind is BookmarkKind.Folder or BookmarkKind.File) lines.Add(BookmarkPath.Display(b));   // R-147: 印を外した式
         if (DropModeLine(b) is { } drop) lines.Add(drop);   // R-140-2
         return string.Join(Environment.NewLine, lines);
     }
@@ -332,7 +342,7 @@ public sealed class BookmarkItems(IBookmarkHost host, Control invoker)
     /// </summary>
     internal string? IconPath(object? tag) => (tag switch
     {
-        Bookmark { Kind: BookmarkKind.Folder or BookmarkKind.File } b => b.Target,
+        Bookmark { Kind: BookmarkKind.Folder or BookmarkKind.File } b => BookmarkPath.Resolve(b, Environment.GetEnvironmentVariable),   // R-147: 使えない項目はアイコン無し
         Bookmark { Kind: BookmarkKind.Command } b when CommandTarget.Parse(b.Target) is { } t => host.IconPathOf(t),
         Entry entry => entry.FullPath,
         _ => null,

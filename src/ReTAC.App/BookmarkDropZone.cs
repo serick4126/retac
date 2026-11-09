@@ -171,13 +171,15 @@ internal sealed class BookmarkDropZone
         {
             // R-93: フォルダの中央はそのフォルダへの転送（枠）。判定はファイルリストへのドロップと同じ（先頭の項目・修飾キー・元が許す効果）。
             // 並べ替えは落とせない（ブックマークはファイルではない）。フォルダの有無はここで確かめない（R-91）
-            if (reorder) e.Effect = DragDropEffects.None;
-            else DropFeedback.Apply(e, folder.Target, DropFeedback.FolderLabel(folder.Target), folder.DropMode);   // R-140
+            // R-147: 宛先は保存した式から作った実パス。使えない項目（旧設定の値・絶対パスにならない）は受け付けない
+            var real = BookmarkPath.Resolve(folder, Environment.GetEnvironmentVariable);
+            if (reorder || real is null) e.Effect = DragDropEffects.None;
+            else DropFeedback.Apply(e, real, DropFeedback.FolderLabel(real), folder.DropMode);   // R-140
             message = e.Effect switch
             {
                 _ when string.IsNullOrEmpty(e.Message) => "",   // R-111-2: 右ボタンだけで落とせる所は、メニューで選ぶので説明を出さない
-                DragDropEffects.Copy => $"{DropFeedback.FolderLabel(folder.Target)} へコピー",
-                DragDropEffects.Move => $"{DropFeedback.FolderLabel(folder.Target)} へ移動",
+                DragDropEffects.Copy => $"{DropFeedback.FolderLabel(real!)} へコピー",
+                DragDropEffects.Move => $"{DropFeedback.FolderLabel(real!)} へ移動",
                 _ => "",
             };
         }
@@ -241,19 +243,21 @@ internal sealed class BookmarkDropZone
         var onto = s.Onto ? slots[s.Index].Tag as Bookmark : null;
         if (onto is { Kind: BookmarkKind.Folder })
         {
-            // R-93: 転送。_spot は効果が None でないときだけ立つので、表示が禁止だった所へは来ない
+            // R-93: 転送。_spot は効果が None でないときだけ立つので、表示が禁止だった所へは来ない。
+            // R-147: 転送のダイアログへ渡すのは実パス。作れない項目は宛先にしない（念のため落とす側でも確かめる）
+            if (BookmarkPath.Resolve(onto, Environment.GetEnvironmentVariable) is not { } real) return;
             if (s_dragging is null && e.Data?.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } files)
             {
                 var (ctrl, shift) = DropFeedback.Modifiers(e);   // 後に回すとキーは離されている
                 (slots[s.Index] as ToolStripDropDownItem)?.HideDropDown();   // ホールドで開いていたら閉じる
                 CloseMenus(_strip);
-                _host.TransferDropped(files, onto.Target, e.AllowedEffect, ctrl, shift, onto.DropMode);   // R-140
+                _host.TransferDropped(files, real, e.AllowedEffect, ctrl, shift, onto.DropMode);   // R-140
             }
             else if (s_dragging is null && DropData.CaptureVirtual(e.Data) is { } items)
             {
                 (slots[s.Index] as ToolStripDropDownItem)?.HideDropDown();
                 CloseMenus(_strip);
-                _host.TransferVirtual(items, onto.Target, e.AllowedEffect);   // R-146-1: 指定（R-140）にかかわらずコピー
+                _host.TransferVirtual(items, real, e.AllowedEffect);   // R-146-1: 指定（R-140）にかかわらずコピー
             }
             return;
         }
@@ -282,7 +286,7 @@ internal sealed class BookmarkDropZone
         {
             BookmarkKind? kind = Directory.Exists(path) ? BookmarkKind.Folder : File.Exists(path) ? BookmarkKind.File : null;
             if (kind is not { } k) continue;
-            dest.Insert(index++, new Bookmark("", k, path));
+            dest.Insert(index++, BookmarkPath.ForRealPath(k, path));   // R-147: 実パスは式に書いて保存する
             changed = true;
         }
         return changed;

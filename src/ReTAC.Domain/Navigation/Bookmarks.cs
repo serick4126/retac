@@ -68,7 +68,8 @@ public static class DefaultBookmarks
             new Bookmark("", BookmarkKind.Command, new ToolTarget(DefaultExternalTools.EditorId).Serialize()),
             // ReTAC のフォルダを後で動かすと、ほかの見つからないブックマークと同じ扱いになるだけで起動は止めない。
             // 末尾の区切りは、現在のフォルダを追加する既存の経路（MainForm の現在のフォルダを追加）と同じく持たせない
-            new Bookmark("", BookmarkKind.Folder, Path.TrimEndingDirectorySeparator(appFolder)),
+            // R-147: ブックマークは設定ファイルの形の式を持つ。実パスは式に書く（% を含む場所でも戻る）
+            new Bookmark("", BookmarkKind.Folder, PathExpression.Store(PathExpression.Literal(Path.TrimEndingDirectorySeparator(appFolder)))),
         ],
     };
 }
@@ -251,6 +252,10 @@ public static class BookmarkRules
     {
         _ when !string.IsNullOrWhiteSpace(b.Title) => b.Title,
         { Kind: BookmarkKind.Command } when CommandTarget.Parse(b.Target) is { } target => commandLabel(target),
-        _ => Path.GetFileName(b.Target.TrimEnd('\\')) is { Length: > 0 } name ? name : b.Target,
+        { Kind: BookmarkKind.Folder or BookmarkKind.File } => PathLabel(PathExpression.Read(b.Target) is { } e ? PathExpression.Expand(e, static _ => null) : b.Target),
+        _ => PathLabel(b.Target),
     };
+
+    // R-147: 名前の表示だけに使う。保存の形の `|` と `%%` を外すため、環境変数は置き換えずに読む（変数は書いたまま出る）
+    private static string PathLabel(string path) => Path.GetFileName(path.TrimEnd('\\')) is { Length: > 0 } name ? name : path;
 }

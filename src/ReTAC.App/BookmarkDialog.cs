@@ -127,7 +127,7 @@ public sealed class BookmarkDialog : Form
         foreach (var b in items)
         {
             var node = new TreeNode(BookmarkRules.DisplayName(b, Label)) { Tag = b };
-            if (b.Kind is BookmarkKind.Folder or BookmarkKind.File) node.ToolTipText = b.Target;
+            if (b.Kind is BookmarkKind.Folder or BookmarkKind.File) node.ToolTipText = BookmarkPath.Display(b);   // R-147: 印を外す
             if (ReferenceEquals(b, select)) selected = node;
             if (b.Children is { } children) AddNodes(node.Nodes, children, select, ref selected);
             nodes.Add(node);
@@ -163,13 +163,13 @@ public sealed class BookmarkDialog : Form
 
     private void AddFolder()
     {
-        if (FolderBrowser.Select(this, null, _currentFolder) is { } folder) Insert(new Bookmark("", BookmarkKind.Folder, folder));
+        if (FolderBrowser.Select(this, null, _currentFolder) is { } folder) Insert(BookmarkPath.ForRealPath(BookmarkKind.Folder, folder));   // R-147: 実パスは式に書いて保存する
     }
 
     private void AddFile()
     {
         using var open = new OpenFileDialog { InitialDirectory = _currentFolder, CheckFileExists = true };
-        if (open.ShowDialog(this) == DialogResult.OK) Insert(new Bookmark("", BookmarkKind.File, open.FileName));
+        if (open.ShowDialog(this) == DialogResult.OK) Insert(BookmarkPath.ForRealPath(BookmarkKind.File, open.FileName));   // R-147
     }
 
     private void AddCommand()

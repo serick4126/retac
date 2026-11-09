@@ -132,7 +132,7 @@ public sealed class BookmarkTreeView : TreeView
     /// <summary>R-140-2: ノードの名前（アイコンが無ければ [+] / [−] 付き）とツールチップ（パス＋ドロップの行）。ハンドル無しで作れる。</summary>
     internal static TreeNode NodeFor(Bookmark b, string name, bool iconShown)
     {
-        var tip = b.Kind is BookmarkKind.Folder or BookmarkKind.File ? b.Target : "";
+        var tip = b.Kind is BookmarkKind.Folder or BookmarkKind.File ? BookmarkPath.Display(b) : "";   // R-147: 印を外した式
         if (BookmarkItems.DropModeLine(b) is { } line) tip += Environment.NewLine + line;
         return new TreeNode(BookmarkItems.Shown(b, name, iconShown)) { Tag = b, ToolTipText = tip };
     }
@@ -228,10 +228,13 @@ public sealed class BookmarkTreeView : TreeView
                 node.Toggle();
                 break;
             case Bookmark { Kind: BookmarkKind.Folder } b:
-                _items.Host.JumpTo(b.Target);   // フォーカスはビューに残す（Q52。MainForm が見る）
+                // R-147: 使えない項目は移らず知らせる
+                if (BookmarkPath.Resolve(b, Environment.GetEnvironmentVariable) is { } folder) _items.Host.JumpTo(folder);   // フォーカスはビューに残す（Q52。MainForm が見る）
+                else _items.Host.BookmarkUnusable(b);
                 break;
             case Bookmark { Kind: BookmarkKind.File } b:
-                if (File.Exists(b.Target)) _items.Host.OpenFile(b.Target);
+                if (BookmarkPath.Resolve(b, Environment.GetEnvironmentVariable) is not { } file) _items.Host.BookmarkUnusable(b);
+                else if (File.Exists(file)) _items.Host.OpenFile(file);
                 else _items.Host.BookmarkMissing(b);
                 break;
             case Bookmark { Kind: BookmarkKind.Command } b when CommandTarget.Parse(b.Target) is { } target:
@@ -415,7 +418,8 @@ public sealed class BookmarkTreeView : TreeView
                 drop = BookmarkDrop.Onto(b.Kind, reorder) switch
                 {
                     OntoAction.IntoGroup when b.Children is { } children => new Drop(children, children.Count, null),
-                    OntoAction.Transfer => new Drop(null, 0, b.Target, b.DropMode),   // R-140
+                    // R-140 / R-147: 宛先は保存した式から作った実パス。使えない項目は宛先にしない（受け付けない）
+                    OntoAction.Transfer => BookmarkPath.Resolve(b, Environment.GetEnvironmentVariable) is { } real ? new Drop(null, 0, real, b.DropMode) : null,
                     _ => null,
                 };
             }

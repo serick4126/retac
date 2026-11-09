@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ReTAC.App;
 using ReTAC.Domain.Commands;
 using ReTAC.Domain.Navigation;
 
@@ -338,4 +339,165 @@ public class BookmarkTests
     [InlineData(-1, 3, true, null)]
     public void オーバーフローの一覧の上下は並び順で移り端でボタンへ戻る(int index, int count, bool down, int? expected) =>
         Assert.Equal(expected, BookmarkRules.OverflowListStep(index, count, down));
+
+    // ---- R-147: フォルダ・ファイルのブックマークは設定ファイルの形の式を持つ ----
+
+    private const string Work = @"C:\work";
+
+    private static string? P32Env(string name) => name.ToUpperInvariant() switch
+    {
+        "P32_INNER" => "in",
+        "P32_BASE" => @"D:\base",
+        "P32_REL" => @"rel\x",
+        _ => null,
+    };
+
+    private static Bookmark Folder(string target) => new("", BookmarkKind.Folder, target);
+
+    [Fact]
+    public void 登録_変数を使わない絶対パスは正規の形で保存する()
+    {
+        var (target, error) = BookmarkPath.FromField(Folder(""), @"C:\x\y", Work, P32Env);
+        Assert.Null(error);
+        Assert.Equal(@"C:\x\y", target);
+    }
+
+    [Fact]
+    public void 登録_置き換えると絶対パスになる式は式のまま保存し使うときに置き換える()
+    {
+        var (target, error) = BookmarkPath.FromField(Folder(""), @"%P32_BASE%\sub", Work, P32Env);
+        Assert.Null(error);
+        Assert.Equal(@"%P32_BASE%\sub", PathExpression.Display(target!));
+        Assert.Equal(@"D:\base\sub", BookmarkPath.Resolve(Folder(target!), P32Env));
+        // 未定義の変数は文字として保存する（後で定義されても意味が変わらない）
+        var (undefined, _) = BookmarkPath.FromField(Folder(""), @"C:\%P32_NOSUCH%", Work, P32Env);
+        Assert.Equal(@"|C:\%%P32_NOSUCH%%", undefined);
+    }
+
+    [Fact]
+    public void 登録_置き換えても相対パスならカレントフォルダ基準の実パスを式に書いて保存する()
+    {
+        var (target, error) = BookmarkPath.FromField(Folder(""), @"sub\%P32_INNER%", Work, P32Env);
+        Assert.Null(error);
+        // 変数は残らない
+        Assert.Equal(@"C:\work\sub\in", target);
+        var (rel, _) = BookmarkPath.FromField(Folder(""), @"%P32_REL%", Work, P32Env);
+        Assert.Equal(@"C:\work\rel\x", rel);
+    }
+
+    [Fact]
+    public void 登録_相対のP32_OUTERの例は保存して読み直して使うまで同じ実パス()
+    {
+        // P32_OUTER=sub\%P32_INNER%（値の中の % は置き換えない）、カレントフォルダ C:\work
+        static string? Env(string n) => n switch { "P32_OUTER" => @"sub\%P32_INNER%", "P32_INNER" => "in", _ => null };
+        var (target, error) = BookmarkPath.FromField(Folder(""), "%P32_OUTER%", Work, Env);
+        Assert.Null(error);
+        Assert.Equal(@"|C:\work\sub\%%P32_INNER%%", target);
+        Assert.Equal(@"C:\work\sub\%P32_INNER%", BookmarkPath.Resolve(Folder(target!), Env));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(@"C:\a|b")]
+    [InlineData("%P32_EMPTY%")]
+    public void 登録_空や読めない入力は誤り(string input)
+    {
+        var (target, error) = BookmarkPath.FromField(Folder(""), input, Work, n => n == "P32_EMPTY" ? "" : null);
+        Assert.Null(target);
+        Assert.NotNull(error);
+    }
+
+    [Fact]
+    public void 編集_欄を書き換えていなければ前の保存した値を一字も変えない()
+    {
+        // 旧設定の値（印が無く % が 2 つ以上）を勝手に式にしない
+        const string legacy = @"C:\a%b%c";
+        var preset = Folder(legacy);
+        var (target, error) = BookmarkPath.FromField(preset, PathExpression.Display(preset.Target), Work, P32Env);
+        Assert.Null(error);
+        Assert.Equal(legacy, target);
+
+        var marked = Folder(@"|%P32_BASE%\x");
+        Assert.Equal(marked.Target, BookmarkPath.FromField(marked, PathExpression.Display(marked.Target), Work, P32Env).Target);
+        // 書き換えたら、新しい式として保存し直す（未定義の変数は文字なので % はすべて二重にする）
+        Assert.Equal(@"|C:\a%%b%%c", BookmarkPath.FromField(preset, @"C:\a%b%c ", Work, _ => null).Target);
+    }
+
+    [Theory]
+    [InlineData(@"C:\work\50%")]
+    [InlineData(@"C:\work\%a%b")]
+    [InlineData(@"D:\%TEMP%")]
+    [InlineData(@"C:\100%%")]
+    public void 実パスから作る登録は式に書き保存して読み直すと同じ実パスに戻る(string real)
+    {
+        // 現在のフォルダを追加・カーソル位置・ドラッグ・参照・管理の追加がここを通る
+        var stored = BookmarkPath.Store(real);
+        Assert.Equal(real, BookmarkPath.Resolve(Folder(stored), n => n.ToUpperInvariant() is "TEMP" or "A" ? "VALUE" : null));
+        Assert.Equal(real, BookmarkPath.Resolve(Folder(stored), _ => null));
+    }
+
+    [Fact]
+    public void 実パスの保存はパーセントが2つ以上のときだけ印を付ける()
+    {
+        Assert.Equal(@"C:\work\50%", BookmarkPath.Store(@"C:\work\50%"));
+        Assert.Equal(@"|D:\%%TEMP%%", BookmarkPath.Store(@"D:\%TEMP%"));
+    }
+
+    [Fact]
+    public void ドラッグでの登録は式に書いた値を足す()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "P32_5_%drag%_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);   // 毎回新しい名前。片付けは手で行う（S8）
+        var dest = new List<Bookmark>();
+        Assert.True(BookmarkDropZone.InsertFiles(dest, 0, [dir]));
+        Assert.Equal(BookmarkPath.Store(dir), dest[0].Target);
+        Assert.Equal(dir, BookmarkPath.Resolve(dest[0], _ => null));
+    }
+
+    [Fact]
+    public void 使えない項目_使う入口はnullを返し旧設定の値は登録し直しの知らせ()
+    {
+        var other = Folder(@"|%P32_BASE%\x");
+        Assert.Equal(@"D:\base\x", BookmarkPath.Resolve(other, P32Env));
+        // 環境が変わって変数が相対の値・未定義・空になった
+        Assert.Null(BookmarkPath.Resolve(other, n => n == "P32_BASE" ? "rel" : null));
+        Assert.Null(BookmarkPath.Resolve(other, _ => null));
+        Assert.Null(BookmarkPath.Resolve(other, n => n == "P32_BASE" ? "" : null));
+        Assert.Equal(@"%P32_BASE%\x は見つかりません。", BookmarkPath.Notice(other, _ => null));
+        Assert.Null(BookmarkPath.Notice(other, P32Env));
+
+        // 旧設定の値: 変数が定義されていても使わない
+        var legacy = Folder(@"C:\work\%P32_BASE%\%x%");
+        Assert.Null(BookmarkPath.Resolve(legacy, P32Env));
+        Assert.Equal(@"C:\work\%P32_BASE%\%x% は登録し直してください。", BookmarkPath.Notice(legacy, P32Env));
+        Assert.Null(BookmarkPath.Resolve(new Bookmark("", BookmarkKind.File, @"C:\a%b%c"), P32Env));
+        // 相対の値は作業ディレクトリで解決しない
+        Assert.Null(BookmarkPath.Resolve(Folder("sub"), P32Env));
+    }
+
+    [Fact]
+    public void 管理の追加_フォルダとファイルは実パスを式に書いて足す()
+    {
+        const string real = @"C:\work\%x%y%";
+        var b = BookmarkPath.ForRealPath(BookmarkKind.File, real);
+        Assert.Equal(BookmarkKind.File, b.Kind);
+        Assert.Equal("", b.Title);
+        Assert.Equal(@"|C:\work\%%x%%y%%", b.Target);
+        Assert.Equal(real, BookmarkPath.Resolve(b, _ => null));
+    }
+
+    [Fact]
+    public void ドロップ_宛先は使える項目の実パスだけでそのまま転送の欄の既定値になる()
+    {
+        const string real = @"D:\base\%P32_INNER%\z";
+        var folder = Folder(BookmarkPath.Store(real));
+        var dest = BookmarkPath.Resolve(folder, P32Env);
+        Assert.Equal(real, dest);
+        // 転送の入力欄へは式に書いて入れる。欄を解決すると同じ宛先に戻る（置き換わらない）
+        Assert.Equal(dest, PathResolver.Resolve(Work, PathField.Text(dest!), P32Env));
+        // 使えない項目は宛先にならない
+        Assert.Null(BookmarkPath.Resolve(Folder(@"C:\w\%a%b%"), P32Env));
+        Assert.Null(BookmarkPath.Resolve(Folder(@"|%P32_NOSUCH%\z"), P32Env));
+    }
 }

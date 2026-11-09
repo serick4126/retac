@@ -44,4 +44,15 @@ public class BookmarkDropZoneTests
         Assert.Equal(DragDropEffects.None, e.Effect);
         Assert.False(DragButtonState.Right);   // 消えていないと、続く左ドロップが右ドロップのメニュー扱いになる
     }
+
+    [Fact]
+    public void ドロップの宛先は保存した式の実パスで_使えない項目は受けない()
+    {
+        static string? Env(string n) => n == "P32_BASE" ? @"D:\base" : null;
+        Assert.Equal(@"D:\base\x", BookmarkPath.Resolve(new Bookmark("", BookmarkKind.Folder, @"|%P32_BASE%\x"), Env));
+        Assert.Null(BookmarkPath.Resolve(new Bookmark("", BookmarkKind.Folder, @"|%P32_BASE%\x"), _ => null));
+        Assert.Null(BookmarkPath.Resolve(new Bookmark("", BookmarkKind.Folder, @"C:\a%b%c"), Env));
+        // グループ・コマンドは宛先にならない
+        Assert.Null(BookmarkPath.Resolve(new Bookmark("", BookmarkKind.Group, ""), Env));
+    }
 }

@@ -53,4 +53,13 @@ public class DefaultBookmarksTests
         // R-106-2: コマンドの名前は任意なので、名前が空でも通る
         Assert.All(DefaultBookmarks.Create(AppFolder).Bar, b => Assert.Null(BookmarkRules.Validate(b)));
     }
+
+    [Fact]
+    public void アプリのフォルダは実パスを式に書いた形で登録する()
+    {
+        // R-147: ブックマークは設定ファイルの形の式を持つ。% を 2 つ以上含む場所でも実パスに戻る
+        var set = DefaultBookmarks.Create(@"C:\Apps\%a%b\");
+        Assert.Equal(@"|C:\Apps\%%a%%b", set.Bar[5].Target);
+        Assert.Equal(@"C:\Apps\%a%b", PathExpression.ResolveSaved(set.Bar[5].Target, _ => null));
+    }
 }
