@@ -267,7 +267,7 @@ public static partial class MacroBuildPrompt
     {
         var kind = ExternalToolHelp.PromptValues.First(v => v.Key == $"PromptItemKind.{item.Kind}").Label;
         var parts = new List<string> { $"{kind}「{item.Label}」" };
-        if (item.Initial.Length > 0) parts.Add($"初期値: {item.Initial}");
+        if (item.Initial.Length > 0) parts.Add($"初期値: {PromptAnswerRules.InitialForDisplay(item)}");
         if (item.Prefix.Length > 0) parts.Add($"前に付ける: \"{item.Prefix}\"");
         if (item.Suffix.Length > 0) parts.Add($"後ろに付ける: \"{item.Suffix}\"");
         if (item.Required) parts.Add("入力を必須にする: ON");

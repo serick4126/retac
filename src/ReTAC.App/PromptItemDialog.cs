@@ -93,7 +93,7 @@ public sealed class PromptItemDialog : Form
         switch (item.Kind)
         {
             case PromptItemKind.Text or PromptItemKind.Folder or PromptItemKind.File:
-                _initial.Text = item.Initial;
+                _initial.Text = PromptAnswerRules.InitialForDisplay(item);
                 _prefix.Text = item.Prefix;
                 _suffix.Text = item.Suffix;
                 Row("初期値(&I):", _initial);
@@ -212,7 +212,7 @@ public sealed class PromptItemDialog : Form
     {
         PromptItemKind.Text or PromptItemKind.Folder or PromptItemKind.File => _source with
         {
-            Label = _label.Text, Initial = _initial.Text, Prefix = _prefix.Text, Suffix = _suffix.Text,
+            Label = _label.Text, Initial = PromptAnswerRules.InitialToStore(_source, _initial.Text, Environment.GetEnvironmentVariable), Prefix = _prefix.Text, Suffix = _suffix.Text,
             Required = _required.Checked,
             FolderEmptyBehavior = _source.Kind == PromptItemKind.Folder && _emptyLiteral.Checked
                 ? PromptFolderEmptyBehavior.SendEmpty : PromptFolderEmptyBehavior.CurrentFolder,

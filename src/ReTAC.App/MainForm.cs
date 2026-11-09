@@ -927,7 +927,7 @@ public sealed class MainForm : Form, IBookmarkHost
             }
 
             // R-131: 全項目を 1 つのダイアログで 1 回だけ聞く。このウィンドウだけを止める（他の ReTAC ウィンドウは入力の間も操作できる）
-            var initial = PromptAnswerRules.Initial(definition, context);
+            var initial = PromptAnswerRules.Initial(definition, context, Environment.GetEnvironmentVariable);
             if (initial.Values is null)
             {
                 MessageBox.Show(this, initial.Error, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -939,7 +939,7 @@ public sealed class MainForm : Form, IBookmarkHost
             foreach (var path in dialog.HistoryFolders) _history.Remember(path);    // R-131 / N-02
             // 履歴と前回の値は、このダイアログを OK した時点で確定する。あとの起動の確認で中止しても残す
             // R-132: 開いている間に定義が変わっていなければ、前回の値を残す（ファイルへは終了するときに書く）
-            if (PromptAnswerRules.RememberIn(_settings.ExternalTools, tool.Id, definition, dialog.Values) is { } remembered)
+            if (PromptAnswerRules.RememberIn(_settings.ExternalTools, tool.Id, definition, dialog.Values, Environment.GetEnvironmentVariable) is { } remembered)
                 _settings.ExternalTools = remembered;
         }
 

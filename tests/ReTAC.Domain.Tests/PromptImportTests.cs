@@ -348,4 +348,20 @@ public class PromptImportTests
         var full = before with { Items = [.. Enumerable.Range(1, 10).Select(id => new PromptItem { Id = id })] };
         Assert.Same(full, PromptImport.Convert(full, 0, ConversionTarget.DropDown));
     }
+
+    [Theory]
+    [InlineData(ConversionTarget.FolderItem)]
+    [InlineData(ConversionTarget.FileItem)]
+    public void 固定の引数の変換は元の値を文字の値として式に書く(ConversionTarget target)
+    {
+        const string value = @"C:\%P32_X%\$x";
+        Func<string, string?> env = name => name == "P32_X" ? "other" : null;
+        var converted = PromptImport.Convert(new() { Arguments = [PromptArgument.Fixed(value)] }, 0, target);
+        // $ と % の両方が文字のまま: 式に書いてから $ を逃がす
+        Assert.Equal(@"|C:\%%P32_X%%\$$x", Assert.Single(converted.Items).Initial);
+        var initial = PromptAnswerRules.Initial(converted, new([], null, @"C:\work"), env);
+        Assert.Null(initial.Error);
+        var check = PromptAnswerRules.Check(converted, initial.Values!, @"C:\work", env);
+        Assert.Equal([value], PromptExpander.Expand(new(converted, check.Values!), new([], null, @"C:\work")));
+    }
 }

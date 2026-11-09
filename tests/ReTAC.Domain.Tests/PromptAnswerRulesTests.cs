@@ -1,3 +1,5 @@
+using ReTAC.Domain.Navigation;
+using ReTAC.Domain.Entries;
 using ReTAC.Domain.Tools;
 
 namespace ReTAC.Domain.Tests;
@@ -303,5 +305,139 @@ public class PromptAnswerRulesTests
             var remembered = PromptAnswerRules.Remember(definition, new Dictionary<int, PromptValue> { [2] = new("") });
             Assert.Equal("", remembered.Items[0].LastText);
         }
+    }
+
+    // ---- R-147 / R-136 / R-132: フォルダ・ファイルの初期値と前回の入力（式と設定ファイルの形） ----
+
+    private static readonly Func<string, string?> InitEnv = name => name switch
+    {
+        "P32.a" => "other", "P32_DIR" => @"C:\base", "TEMP" => @"C:\bogus", "P32_DEST" => "other", _ => null,
+    };
+
+    private static MacroContext FileContext(string fileName)
+    {
+        var file = Entry.ForFile(@"C:\work\" + fileName, fileName, 0, 0, default);
+        return new([file], file, @"C:\work");
+    }
+
+    private static PromptDefinition PathDefinition(PromptItemKind kind, string initial, string? last = null, bool remember = false) => new()
+    {
+        RememberLast = remember,
+        Items = [new PromptItem { Id = 1, Kind = kind, Label = "場所", Initial = initial, LastText = last }],
+        Arguments = [PromptArgument.Item(1)],
+    };
+
+    private static string? Sent(PromptDefinition definition, string cwd, MacroContext context)
+    {
+        var initial = PromptAnswerRules.Initial(definition, context, InitEnv);
+        Assert.Null(initial.Error);
+        var check = PromptAnswerRules.Check(definition, initial.Values!, cwd, InitEnv);
+        Assert.Null(check.Error);
+        return Assert.Single(PromptExpander.Expand(new(definition, check.Values!), context)!);
+    }
+
+    [Theory]
+    [InlineData(PromptItemKind.Folder)]
+    [InlineData(PromptItemKind.File)]
+    public void 初期値のマクロの値の変数の形は_連結しても変数にならない(PromptItemKind kind)
+    {
+        // ファイル名 %P32.a% は ${fileBasenameNoExtension} = %P32 と ${fileExtname} = .a% に分かれる。部品ごとに書いて連結すると %P32.a% が変数になる
+        var definition = PathDefinition(kind, @"${cwd}\${fileBasenameNoExtension}${fileExtname}");
+        var context = FileContext("%P32.a%");
+        var initial = PromptAnswerRules.Initial(definition, context, InitEnv).Values![1].Text;
+        Assert.Equal(@"C:\work\%%P32.a%%", initial);
+        Assert.Equal(@"C:\work\%P32.a%", Sent(definition, @"C:\work", context));
+    }
+
+    [Fact]
+    public void 初期値のテンプレートの地の文字の変数は働く()
+    {
+        var definition = PathDefinition(PromptItemKind.Folder, PathExpression.Store(@"%P32_DIR%\${fileBasenameNoExtension}"));
+        var context = FileContext("a.txt");
+        Assert.Equal(@"%P32_DIR%\a", PromptAnswerRules.Initial(definition, context, InitEnv).Values![1].Text);
+        Assert.Equal(@"C:\base\a", Sent(definition, @"C:\work", context));
+    }
+
+    [Fact]
+    public void 前回の入力は参照で選んだ文字のまま往復する()
+    {
+        var definition = PathDefinition(PromptItemKind.Folder, "", remember: true);
+        var picked = PathExpression.Literal(@"D:\%TEMP%");   // 参照の結果は式に書いて欄に入る
+        var remembered = PromptAnswerRules.Remember(definition, new Dictionary<int, PromptValue> { [1] = new(picked) }, InitEnv);
+        Assert.Equal(@"|D:\%%TEMP%%", remembered.Items[0].LastText);
+        Assert.Equal(@"D:\%TEMP%", Sent(remembered, @"C:\work", FileContext("a.txt")));
+    }
+
+    [Fact]
+    public void 前回の入力は正規の形で残り_空欄は空欄のまま()
+    {
+        var definition = PathDefinition(PromptItemKind.File, "", remember: true);
+        string? Stored(string text, Func<string, string?> env) =>
+            PromptAnswerRules.Remember(definition, new Dictionary<int, PromptValue> { [1] = new(text) }, env).Items[0].LastText;
+        Assert.Equal(@"|%P32_DIR%\x", Stored(@"%P32_DIR%\x", InitEnv));
+        Assert.Equal(@"|%%P32_DIR%%\x", Stored(@"%P32_DIR%\x", _ => null));   // 未定義は文字。後で定義されても意味が変わらない
+        Assert.Equal("", Stored("", InitEnv));
+        // テキストの項目は今までどおり欄の文字のまま
+        var text = PromptAnswerRules.Remember(PathDefinition(PromptItemKind.Text, "", remember: true), new Dictionary<int, PromptValue> { [1] = new("%A%B%") });
+        Assert.Equal("%A%B%", text.Items[0].LastText);
+    }
+
+    [Fact]
+    public void 旧設定の初期値は使わず空欄から始まる()
+    {
+        var context = FileContext("a.txt");
+        foreach (var kind in new[] { PromptItemKind.Folder, PromptItemKind.File })
+        {
+            var legacy = PathDefinition(kind, @"C:\work\%P32_DEST%");
+            Assert.Equal("", PromptAnswerRules.Initial(legacy, context, InitEnv).Values![1].Text);
+            // 印の付いた同じ文字は式として働く（陽性対照）
+            var marked = PathDefinition(kind, @"|C:\work\%P32_DEST%");
+            Assert.Equal(@"C:\work\%P32_DEST%", PromptAnswerRules.Initial(marked, context, InitEnv).Values![1].Text);
+            Assert.Equal(@"C:\work\other", Sent(marked, @"C:\work", context));
+            // % が 1 つ以下の旧設定の値は今までどおり使える
+            Assert.Equal(@"C:\work\100%", PromptAnswerRules.Initial(PathDefinition(kind, @"C:\work\100%"), context, InitEnv).Values![1].Text);
+        }
+        // テキストの項目は印を読まない
+        Assert.Equal(@"C:\work\%P32_DEST%", PromptAnswerRules.Initial(PathDefinition(PromptItemKind.Text, @"C:\work\%P32_DEST%"), context, InitEnv).Values![1].Text);
+    }
+
+    [Fact]
+    public void 旧設定の前回の入力は使わず定義の初期値へ進む()
+    {
+        var context = FileContext("a.txt");
+        var legacy = PathDefinition(PromptItemKind.Folder, @"${cwd}\新", last: @"C:\work\%P32_DEST%", remember: true);
+        Assert.Equal(@"C:\work\新", PromptAnswerRules.Initial(legacy, context, InitEnv).Values![1].Text);
+        var marked = PathDefinition(PromptItemKind.Folder, @"${cwd}\新", last: @"|C:\work\%P32_DEST%", remember: true);
+        Assert.Equal(@"C:\work\%P32_DEST%", PromptAnswerRules.Initial(marked, context, InitEnv).Values![1].Text);   // 前回の入力は展開しない（R-132）
+        Assert.Equal(@"C:\work\other", Sent(marked, @"C:\work", context));
+    }
+
+    [Fact]
+    public void 項目の編集の初期値は地の文字の断片ごとに正規の形にして保存の形で残す()
+    {
+        var item = new PromptItem { Id = 1, Kind = PromptItemKind.Folder, Label = "x" };
+        // マクロ（${…}・$$・!）は壊さない。地の文字の未定義の %名前% は文字に直す
+        Assert.Equal(@"|a$$b${file}!%%X%%", PromptAnswerRules.InitialToStore(item, @"a$$b${file}!%X%", _ => null));
+        Assert.Equal(@"|%P32_DIR%\${cwd}", PromptAnswerRules.InitialToStore(item, @"%P32_DIR%\${cwd}", InitEnv));
+        Assert.Equal(@"${cwd}\新", PromptAnswerRules.InitialToStore(item, @"${cwd}\新", InitEnv));
+        // テキストの項目は何もしない
+        Assert.Equal("%A%B%", PromptAnswerRules.InitialToStore(item with { Kind = PromptItemKind.Text }, "%A%B%", InitEnv));
+    }
+
+    [Fact]
+    public void 項目の編集で書き換えていない旧設定の初期値はそのまま残る()
+    {
+        var legacy = new PromptItem { Id = 1, Kind = PromptItemKind.File, Label = "x", Initial = @"C:\work\%P32_DEST%" };
+        Assert.Equal(@"C:\work\%P32_DEST%", PromptAnswerRules.InitialForDisplay(legacy));
+        Assert.Equal(legacy.Initial, PromptAnswerRules.InitialToStore(legacy, PromptAnswerRules.InitialForDisplay(legacy), InitEnv));
+        // 書き換えたら新しい式として残る
+        Assert.Equal(@"|C:\work\%P32_DEST%x", PromptAnswerRules.InitialToStore(legacy, @"C:\work\%P32_DEST%x", InitEnv));
+        // 印付きの値は印を外して見せ、書き換えなければそのまま
+        var marked = legacy with { Initial = @"|C:\work\%%P32_DEST%%" };
+        Assert.Equal(@"C:\work\%%P32_DEST%%", PromptAnswerRules.InitialForDisplay(marked));
+        Assert.Equal(marked.Initial, PromptAnswerRules.InitialToStore(marked, PromptAnswerRules.InitialForDisplay(marked), InitEnv));
+        // 例の表示（決まった値の一覧）にも印を出さない
+        var example = PromptExample.Render(new PromptDefinition { Items = [marked], Arguments = [PromptArgument.Item(1)] });
+        Assert.DoesNotContain("|", example);
     }
 }

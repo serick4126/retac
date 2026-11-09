@@ -198,7 +198,7 @@ public sealed class PromptSettingsDialog : Form
             {
                 PromptItemKind.CheckBox => item.InitialChecked ? "オン" : "オフ",
                 PromptItemKind.DropDown => item.Choices.FirstOrDefault(c => c.Id == item.InitialChoiceId)?.Label ?? "",
-                _ => item.Initial.Length > 0 ? item.Initial : "（空欄）",
+                _ => PromptAnswerRules.InitialForDisplay(item) is { Length: > 0 } shown ? shown : "（空欄）",
             };
             _itemList.Items.Add(new ListViewItem([KindName(item.Kind), item.Label, initial]));
         }
@@ -503,7 +503,7 @@ public sealed class PromptSettingsDialog : Form
         return null;
     }
 
-    internal PromptCheck PreviewInitial() => PromptAnswerRules.Initial(Current(), new MacroContext([], null, _currentFolder));
+    internal PromptCheck PreviewInitial() => PromptAnswerRules.Initial(Current(), new MacroContext([], null, _currentFolder), Environment.GetEnvironmentVariable);
 
     private void Preview()
     {

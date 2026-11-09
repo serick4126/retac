@@ -126,6 +126,12 @@ public static class PromptImport
 
     internal static string EscapeMacroLiteral(string value) => value.Replace("$", "$$", StringComparison.Ordinal);
 
+    /// <summary>
+    /// R-139 / R-147: 固定の引数は文字どおりの値。フォルダ・ファイルの初期値は、元の値を「文字の値」として式に書いてからマクロの記号を逃がし、設定ファイルの形にする。
+    /// 順を逆にして `$` を逃がした後の文字を式として書くと、`%` が 2 つ以上の値が環境変数として読まれる。
+    /// </summary>
+    private static string PathInitial(string value) => PathExpression.Store(EscapeMacroLiteral(PathExpression.Literal(value)));
+
     public static string? ConversionWarning(string value, ConversionTarget target) =>
         target is ConversionTarget.CheckBox or ConversionTarget.DropDown && value.Contains('"')
         ? "元の値に引用符があるため、送る値をそのまま下書きに入れました。保存する前に送る値を編集してください。" : null;
@@ -180,9 +186,9 @@ public static class PromptImport
             ConversionTarget.FolderItem => new PromptItem
             {
                 // 初期値から \ を外さない（C:\ が C: になると、そのドライブのカレントフォルダを指す）。重なった \ は展開で 1 つになる
-                Id = id, Kind = PromptItemKind.Folder, Label = value, Initial = EscapeMacroLiteral(value), Suffix = value.EndsWith('\\') ? @"\" : "",
+                Id = id, Kind = PromptItemKind.Folder, Label = value, Initial = PathInitial(value), Suffix = value.EndsWith('\\') ? @"\" : "",
             },
-            ConversionTarget.FileItem => new PromptItem { Id = id, Kind = PromptItemKind.File, Label = value, Initial = EscapeMacroLiteral(value) },
+            ConversionTarget.FileItem => new PromptItem { Id = id, Kind = PromptItemKind.File, Label = value, Initial = PathInitial(value) },
             ConversionTarget.DropDown => new PromptItem
             {
                 Id = id, Kind = PromptItemKind.DropDown, Label = value, InitialChoiceId = 1,

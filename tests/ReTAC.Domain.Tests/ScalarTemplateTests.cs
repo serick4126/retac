@@ -81,4 +81,24 @@ public class ScalarTemplateTests
         Assert.Equal(@"C:\${missing}.txt", ScalarTemplate.Parse("${file}").Expand(context, out _));
         Assert.Equal("${missing}", ScalarTemplate.Parse("${fileBasenameNoExtension}").Expand(context, out _));
     }
+
+    // R-136 / R-147
+    [Fact]
+    public void 展開は地の文字と値の部品の並びで返る()
+    {
+        var parts = ScalarTemplate.Parse(@"${cwd}\${fileBasenameNoExtension}!x").ExpandParts(Context(), out var empty)!;
+        Assert.Null(empty);
+        Assert.Equal([(@"C:\work", false), (@"\", true), ("a", false), ("x", true)], parts.Select(p => (p.Text, p.IsExpression)));
+        Assert.Equal(@"C:\work\ax", ScalarTemplate.Parse(@"${cwd}\${fileBasenameNoExtension}!x").Expand(Context(), out _));
+        Assert.Null(ScalarTemplate.Parse("${file}!").ExpandParts(new([], null, @"C:\work"), out var required));
+        Assert.Equal(MacroName.File, required);
+    }
+
+    [Fact]
+    public void テンプレートの正規の形はマクロを壊さない()
+    {
+        Assert.Equal(@"a$$b${file}!%%X%%", ScalarTemplate.Canonical(@"a$$b${file}!%X%", _ => null));
+        Assert.Equal("${cwdBasename}${pathBase}", ScalarTemplate.Canonical("${cwdBasename}${pathBase}", _ => null));
+        Assert.Equal("${bad", ScalarTemplate.Canonical("${bad", _ => null));   // 誤りは直さない
+    }
 }

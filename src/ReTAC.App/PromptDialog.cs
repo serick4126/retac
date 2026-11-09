@@ -223,7 +223,7 @@ public sealed class PromptDialog : Form
 
     internal PromptCheck TryResetValues()
     {
-        var check = PromptAnswerRules.Defaults(_definition, _context);
+        var check = PromptAnswerRules.Defaults(_definition, _context, Environment.GetEnvironmentVariable);
         if (check.Values is { } values) SetValues(values);
         return check;
     }
