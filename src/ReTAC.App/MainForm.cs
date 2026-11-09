@@ -2162,7 +2162,9 @@ public sealed class MainForm : Form, IBookmarkHost
             .FirstOrDefault() ?? "";
 
     string? IBookmarkHost.IconPathOf(CommandTarget target) =>
-        target is ToolTarget tool ? _settings.ExternalTools.FirstOrDefault(t => t.Id == tool.ToolId)?.Path : null;
+        target is ToolTarget tool && _settings.ExternalTools.FirstOrDefault(t => t.Id == tool.ToolId) is { } t
+            ? ToolPath.IconPath(t.Path, Environment.GetEnvironmentVariable)   // R-147: 保存した式のまま ShellIcons へ渡さない
+            : null;
 
     IReadOnlyList<Entry> IBookmarkHost.Enumerate(string folder) => FolderEnumerator.Enumerate(folder, _sortOrder, Include);
 

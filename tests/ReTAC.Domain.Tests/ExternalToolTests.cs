@@ -131,16 +131,42 @@ public class ExternalToolTests
         Assert.True(ExternalToolPage.CheckPath(@"C:\%A%\%B%\x.exe", env).Legacy);
     }
 
-    [Theory]
-    [InlineData("ToolProcess.cs")]
-    [InlineData("ExternalToolPage.cs")]
-    public void 起動と設定画面は保存した値を実行ファイルの探し方へ直接渡さない(string file)
+    [Fact]
+    public void アイコンのパスも置き換えた探し方の結果_旧設定の値は無し()
+    {
+        var env = Env(("P32_EDITOR", "notepad.exe"));
+        var viaVariable = ToolPath.IconPath(PathExpression.Store("%P32_EDITOR%"), env);
+        Assert.Equal(ToolPath.IconPath("notepad.exe", Env()), viaVariable);
+        Assert.True(Path.IsPathFullyQualified(viaVariable!));
+        Assert.Null(ToolPath.IconPath(@"C:\%A%\%B%\x.exe", env));
+        Assert.Equal("", ToolPath.IconPath("", env));
+    }
+
+    /// <summary>ExecutableResolver.Resolve( を呼んでよいのは、保存した値を式として読む ToolPath と、実パス・名前を受ける ShellIcons だけ。</summary>
+    private static readonly string[] ResolverAllowList = ["ToolPath.cs", "ShellIcons.cs"];
+
+    internal static IEnumerable<string> ResolverCallers(IEnumerable<(string Name, string Text)> sources) =>
+        sources.Where(s => s.Text.Contains("ExecutableResolver.Resolve(") && !ResolverAllowList.Contains(s.Name)).Select(s => s.Name);
+
+    [Fact]
+    public void 実行ファイルの探し方を直接呼ぶのは許可した所だけ()
     {
         var dir = AppContext.BaseDirectory;
         while (dir is not null && !Directory.Exists(Path.Combine(dir, "src", "ReTAC.App"))) dir = Path.GetDirectoryName(dir);
-        var source = File.ReadAllText(Path.Combine(dir!, "src", "ReTAC.App", file));
-        Assert.Contains("ToolPath.Resolve(", source);
-        Assert.DoesNotContain("ExecutableResolver.Resolve(", source);
+        var sources = new[] { "ReTAC.App", "ReTAC.Shell", "ReTAC.Domain" }
+            .SelectMany(p => Directory.EnumerateFiles(Path.Combine(dir!, "src", p), "*.cs", SearchOption.AllDirectories))
+            .Where(f => !f.Contains(@"\obj\") && !f.Contains(@"\bin\") && Path.GetFileName(f) != "Executables.cs")
+            .Select(f => (Path.GetFileName(f), File.ReadAllText(f))).ToList();
+        Assert.Empty(ResolverCallers(sources));
+        // 起動と設定画面は、置き換える入口を必ず通る
+        foreach (var name in new[] { "ToolProcess.cs", "ExternalToolPage.cs" })
+            Assert.Contains("ToolPath.Resolve(", sources.Single(s => s.Item1 == name).Item2);
+    }
+
+    [Fact]
+    public void 探し方の直接呼び出しの検査は違反を捕まえる()
+    {
+        Assert.Equal(["Bad.cs"], ResolverCallers([("Bad.cs", "var p = ExecutableResolver.Resolve(tool.Path);"), ("ToolPath.cs", "ExecutableResolver.Resolve(x)"), ("Ok.cs", "ToolPath.Resolve(x)")]));
     }
 
     [Fact]

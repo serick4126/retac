@@ -29,6 +29,13 @@ internal static class ToolPath
         return new Result(false, expanded, find(expanded));
     }
 
+    /// <summary>
+    /// ボタン・メニューのアイコンを取るパス。保存した値をそのまま <c>ShellIcons</c> へ渡すと、印 `|` や `%` を含む式では
+    /// 探せずアイコンが出ない。旧設定の値（起動しない）は null。
+    /// </summary>
+    public static string? IconPath(string stored, Func<string, string?> env) =>
+        Resolve(stored, env) is { Legacy: false } r ? r.LaunchPath : null;
+
     /// <summary>旧設定の値で起動しなかったときの知らせ（R-147）</summary>
     public static string LegacyNotice(string stored) => $"{PathExpression.Display(stored)} を登録し直してください。";
 }
