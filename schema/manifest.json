@@ -11742,7 +11742,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
-        "line": 42
+        "line": 43
       },
       {
         "file": "src/ReTAC.Domain/Tools/PromptAnswers.cs",
@@ -12983,6 +12983,14 @@
       {
         "file": "src/ReTAC.Domain/Navigation/PathExpression.cs",
         "line": 16
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
+        "line": 12
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
+        "line": 47
       }
     ],
     "R-15": [
@@ -14030,7 +14038,7 @@
     "R-52-4": [
       {
         "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
-        "line": 46
+        "line": 52
       }
     ],
     "R-52-5": [
@@ -14282,7 +14290,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Navigation/JumpInput.cs",
-        "line": 17
+        "line": 18
       },
       {
         "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
@@ -14296,11 +14304,11 @@
     "R-61-3": [
       {
         "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
-        "line": 12
+        "line": 13
       },
       {
         "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
-        "line": 61
+        "line": 67
       }
     ],
     "R-62": [
@@ -14337,6 +14345,10 @@
       {
         "file": "src/ReTAC.Domain/FileOps/FileNameRules.cs",
         "line": 5
+      },
+      {
+        "file": "src/ReTAC.Domain/Navigation/PathResolver.cs",
+        "line": 48
       }
     ],
     "R-63-2": [

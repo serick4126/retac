@@ -177,7 +177,7 @@ public class PromptExpanderTests
             FolderEmptyBehavior = PromptFolderEmptyBehavior.SendEmpty };
         var definition = new PromptDefinition { Items = [item], Arguments = [PromptArgument.Item(1)] };
         var raw = new Dictionary<int, PromptValue> { [1] = new("") };
-        var check = PromptAnswerRules.Check(definition, raw, Cwd);
+        var check = PromptAnswerRules.Check(definition, raw, Cwd, _ => null);
         Assert.Equal(new[] { expected }, PromptExpander.Expand(new(definition, check.Values!), new([], null, Cwd, PathForm: _ => throw new Exception())));
         Assert.Equal(new[] { "-o", "" }, PromptExpander.ItemArguments(item with { Prefix = "-o ", Suffix = "" }, new(""), new MacroContext([], null, Cwd))!);
         Assert.Equal(new[] { @"C:\work\" }, PromptExpander.ItemArguments(item with { Prefix = "", Suffix = @"\" }, new(@"C:\work\"), new MacroContext([], null, Cwd)));

@@ -140,7 +140,7 @@ public class PromptMacroTests
         var definition = Def(Text("x") with { Label = "${unknown}", Prefix = "${unknown}", Suffix = "$$" }) with { Title = "${unknown}" };
         Assert.Empty(PromptDefinitionRules.Validate(definition));
         var raw = new Dictionary<int, PromptValue> { [1] = new("${unknown}") };
-        Assert.Null(PromptAnswerRules.Check(definition, raw, Context.CurrentFolder).Error);
+        Assert.Null(PromptAnswerRules.Check(definition, raw, Context.CurrentFolder, _ => null).Error);
         Assert.Equal(new[] { "${unknown}${unknown}$$" }, PromptExpander.Expand(new(definition, raw), Context));
     }
 

@@ -133,7 +133,7 @@ public sealed class BookmarkEntryDialog : Form
             // Q11: 手入力のパスは、開いているフォルダを基準に絶対パスにする。解決できなければ登録させない
             var input = InputText.TrimEdge(_path.Text);
             if (input.Length == 0) return "登録先を入れてください。";
-            if (PathResolver.Resolve(_currentFolder, input) is not { } resolved) return $"{input} はパスとして読めません。";
+            if (PathResolver.Resolve(_currentFolder, input, Environment.GetEnvironmentVariable) is not { } resolved) return $"{input} はパスとして読めません。";
             _target = resolved;
         }
         return BookmarkRules.Validate(Bookmark);

@@ -19,7 +19,7 @@ public class PathResolverTests
     [InlineData(@"C:\a\b", @".\x\.\y", @"C:\a\b\x\y")]
     public void 相対パスはカレントフォルダ基準で解決される(string current, string input, string expected)
     {
-        Assert.Equal(expected, PathResolver.Resolve(current, input));
+        Assert.Equal(expected, PathResolver.Resolve(current, input, _ => null));
     }
 
     [Theory]
@@ -29,7 +29,7 @@ public class PathResolverTests
     public void ドライブルートを超える相対パスは無効である(string current, string input)
     {
         // R-61-3
-        Assert.Null(PathResolver.Resolve(current, input));
+        Assert.Null(PathResolver.Resolve(current, input, _ => null));
     }
 
     [Theory]
@@ -39,14 +39,14 @@ public class PathResolverTests
     public void 打てるが解決できない入力は例外ではなく無効として返る(string current, string input)
     {
         // 呼び出し側（宛先入力欄）は catch していない。投げるとアプリごと落ちる
-        Assert.Null(PathResolver.Resolve(current, input));
+        Assert.Null(PathResolver.Resolve(current, input, _ => null));
     }
 
     [Fact]
     public void 長すぎる入力でも落ちない()
     {
         // 長さそのものは無効ではない。転送を試みた時点で OS が IOException で断る（そこは catch 済み）
-        var exception = Record.Exception(() => PathResolver.Resolve(@"C:", new string('x', 40000)));
+        var exception = Record.Exception(() => PathResolver.Resolve(@"C:", new string('x', 40000), _ => null));
         Assert.Null(exception);
     }
 
@@ -54,28 +54,28 @@ public class PathResolverTests
     public void 絶対パスはそのまま採られドライブをまたげる()
     {
         // R-52-4: 宛先を明示的に指定する操作は R-39 の対象外
-        Assert.Equal(@"D:\dest", PathResolver.Resolve(@"C:\a\b", @"D:\dest"));
+        Assert.Equal(@"D:\dest", PathResolver.Resolve(@"C:\a\b", @"D:\dest", _ => null));
     }
 
     [Fact]
     public void 空欄は解決できない()
     {
         // R-63 / R-63-2 の判定は呼び出し側が行う
-        Assert.Null(PathResolver.Resolve(@"C:\a", "   "));
+        Assert.Null(PathResolver.Resolve(@"C:\a", "   ", _ => null));
     }
 
     [Fact]
     public void 末尾に全角空白を持つ名前が宛先として解決できる()
     {
         // B-01: string.Trim() が U+3000 を落としていた
-        var resolved = PathResolver.Resolve(@"C:\work", "フォルダ　　");
+        var resolved = PathResolver.Resolve(@"C:\work", "フォルダ　　", _ => null);
         Assert.Equal(@"C:\work\フォルダ　　", resolved);
     }
 
     [Fact]
     public void 宛先の前後の半角空白は従来どおり落とす()
     {
-        Assert.Equal(@"C:\work\sub", PathResolver.Resolve(@"C:\work", "  sub  "));
+        Assert.Equal(@"C:\work\sub", PathResolver.Resolve(@"C:\work", "  sub  ", _ => null));
     }
 
     [Theory]
@@ -85,7 +85,7 @@ public class PathResolverTests
     [InlineData(@"C:\work", "\"\\\\server\\share\\dir\"", @"\\server\share\dir")]
     [InlineData(@"C:\work", "\"C:\\other\\dir", @"C:\other\dir")]    // 片方だけ
     public void 二重引用符で囲んだパスも解決できる(string current, string input, string expected) =>
-        Assert.Equal(expected, PathResolver.Resolve(current, input));
+        Assert.Equal(expected, PathResolver.Resolve(current, input, _ => null));
 
     [Theory]
     [InlineData("\"C:\\a\" \"C:\\b\"")]   // 複数のパスを 1 つとして読まない
@@ -94,7 +94,58 @@ public class PathResolverTests
     [InlineData("\"\"")]
     [InlineData("\"")]
     public void 途中に引用符が残る入力と_引用符だけの入力は解決できない(string input) =>
-        Assert.Null(PathResolver.Resolve(@"C:\work", input));
+        Assert.Null(PathResolver.Resolve(@"C:\work", input, _ => null));
+
+    // R-147: 実環境を触らない（並列のテストに漏れる）ので、辞書の読み取りを渡す
+    private static Func<string, string?> Env(params (string Name, string Value)[] pairs) =>
+        name => pairs.Where(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)).Select(p => p.Value).FirstOrDefault();
+
+    private static readonly Func<string, string?> P32Env = Env(
+        ("P32_DEST", @"C:\other"), ("P32_SUB", "sub"), ("P32_UP", @"..\sub"), ("P32_SP", "　"),
+        ("P32_OUTER", @"C:\x\%P32_INNER%"), ("P32_INNER", "inner"), ("P32_EMPTY", ""), ("P32_BLANK", " "), ("P32_TAB", "\t"));
+
+    [Theory]
+    [InlineData(@"C:\work", @"%P32_DEST%\d", @"C:\other\d")]           // 定義済み
+    [InlineData(@"C:\work", @"%p32_dest%\d", @"C:\other\d")]           // 大文字・小文字を区別しない
+    [InlineData(@"C:\work", @"%P32_NOSUCH%\d", @"C:\work\%P32_NOSUCH%\d")]   // 未定義はそのまま（相対として残る）
+    [InlineData(@"C:\work", @"C:\100%%\d", @"C:\100%\d")]              // %% は %
+    [InlineData(@"C:\work", @"C:\50%\d", @"C:\50%\d")]                 // 対の無い %
+    [InlineData(@"C:\work", @"%P32_OUTER%", @"C:\x\%P32_INNER%")]      // 1 回だけ置き換える
+    [InlineData(@"C:\work", "\"%P32_DEST%\\d\"", @"C:\other\d")]       // 引用符を外してから置き換える
+    [InlineData(@"C:\work\a", @"%P32_SUB%", @"C:\work\a\sub")]         // 相対に置き換わればカレントフォルダ基準
+    [InlineData(@"C:\work\a", @"%P32_UP%", @"C:\work\sub")]
+    [InlineData(@"C:\work", @"pre %P32_SUB% post", @"C:\work\pre sub post")]
+    public void 環境変数は引用符を外した後に1回だけ置き換えられる(string current, string input, string expected) =>
+        Assert.Equal(expected, PathResolver.Resolve(current, input, P32Env));
+
+    [Fact]
+    public void 置き換えた結果がドライブより上なら無効()
+    {
+        // R-61-3 は置き換えの後でも効く
+        Assert.Null(PathResolver.Resolve(@"C:\a", @"%P32_UP%\..\..", P32Env));
+        Assert.Null(PathResolver.Resolve(@"C:\", "%P32_UP%", P32Env));
+    }
+
+    [Theory]
+    [InlineData("%P32_EMPTY%")]
+    [InlineData("%P32_BLANK%")]       // ASCII の空白
+    [InlineData("%P32_TAB%")]
+    [InlineData(" %P32_BLANK% ")]
+    public void 空や半角空白とタブに置き換わる入力は解決できない(string input)
+    {
+        // R-147: 空欄の扱い（R-63 のリネームコピー）に切り替わらないよう、Resolve が null を返す
+        Assert.Null(PathResolver.Resolve(@"C:\work", input, P32Env));
+    }
+
+    [Theory]
+    [InlineData("　", @"C:\work\　")]                  // 入力そのものが全角空白
+    [InlineData("%P32_SP%", @"C:\work\　")]            // 値が全角空白
+    [InlineData("　%P32_SUB%　", @"C:\work\　sub　")]    // 置き換えた結果の端は落とさない
+    public void 全角空白は名前として使える(string input, string expected)
+    {
+        // IsNullOrWhiteSpace や Trim で空判定すると U+3000 を落としてしまう
+        Assert.Equal(expected, PathResolver.Resolve(@"C:\work", input, P32Env));
+    }
 }
 
 public class ConflictResolverTests

@@ -72,7 +72,7 @@ public static class PromptAnswerRules
     /// R-131: OK のときの検査と、展開に使う値への変換。表示順で最初の誤りだけを返す。
     /// フォルダ・ファイルは端の空白と引用符を外し（R-127）、カレントフォルダ基準で絶対パスにする（R-61）。存在は確かめない。
     /// </summary>
-    public static PromptCheck Check(PromptDefinition definition, IReadOnlyDictionary<int, PromptValue> input, string currentFolder)
+    public static PromptCheck Check(PromptDefinition definition, IReadOnlyDictionary<int, PromptValue> input, string currentFolder, Func<string, string?> env)
     {
         var values = new Dictionary<int, PromptValue>();
         foreach (var item in definition.Items)
@@ -92,7 +92,7 @@ public static class PromptAnswerRules
                         values[item.Id] = value with { Text = item.Kind == PromptItemKind.Folder && item.FolderEmptyBehavior == PromptFolderEmptyBehavior.CurrentFolder ? currentFolder : "" };
                         break;
                     }
-                    if (PathResolver.Resolve(currentFolder, value.Text) is not { } resolved) return Fail(item, $"{item.Label}のパスが正しくありません。");
+                    if (PathResolver.Resolve(currentFolder, value.Text, env) is not { } resolved) return Fail(item, $"{item.Label}のパスが正しくありません。");
                     values[item.Id] = value with { Text = resolved };
                     break;
                 default:

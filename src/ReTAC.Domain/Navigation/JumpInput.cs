@@ -12,10 +12,11 @@ public sealed record JumpTarget(string Folder, string? SelectName);
 public static class JumpInput
 {
     public static JumpTarget? Decide(string currentFolder, string input,
-                                     Func<string, bool> folderExists, Func<string, bool> fileExists)
+                                     Func<string, bool> folderExists, Func<string, bool> fileExists,
+                                     Func<string, string?> env)
     {
         // R-61: 相対パスはカレントフォルダ基準
-        if (PathResolver.Resolve(currentFolder, input) is not { } path) return null;
+        if (PathResolver.Resolve(currentFolder, input, env) is not { } path) return null;
         if (folderExists(path)) return new JumpTarget(path, null);
 
         // ファイルは開かない。置いてあるフォルダへ移り、カーソルを合わせるだけにする

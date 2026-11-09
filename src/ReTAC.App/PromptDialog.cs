@@ -265,7 +265,7 @@ public sealed class PromptDialog : Form
     {
         if (DialogResult != DialogResult.OK) return;
         var raw = ReadValues();
-        var check = PromptAnswerRules.Check(_definition, raw, _currentFolder);
+        var check = PromptAnswerRules.Check(_definition, raw, _currentFolder, Environment.GetEnvironmentVariable);
         if (check.Values is null)
         {
             // R-48: 中止せず、その欄に戻す
@@ -287,7 +287,7 @@ public sealed class PromptDialog : Form
     /// </summary>
     /// <returns>解決したパス。空欄・解決できないときは null（呼び出し側はカレントフォルダで開く）</returns>
     internal static string? BrowseStart(string text, string currentFolder) =>
-        InputText.Unquote(text).Length == 0 ? null : PathResolver.Resolve(currentFolder, text);
+        InputText.Unquote(text).Length == 0 ? null : PathResolver.Resolve(currentFolder, text, Environment.GetEnvironmentVariable);
 
     /// <summary>
     /// ファイルの参照の最初のフォルダとファイル名（R-131）。存在しないフォルダを渡すとカレントフォルダで開かないので、

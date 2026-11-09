@@ -80,7 +80,7 @@ public class PromptImportTests
     private static string[] Sent(PromptDefinition definition, Dictionary<int, PromptValue>? values = null)
     {
         values ??= new Dictionary<int, PromptValue>(PromptAnswerRules.Defaults(definition, new MacroContext([], null, @"C:\work")).Values!);
-        var check = PromptAnswerRules.Check(definition, values, @"C:\work");
+        var check = PromptAnswerRules.Check(definition, values, @"C:\work", _ => null);
         Assert.Null(check.Error);
         var result = ArgumentExpander.Expand(ArgumentTemplate.Parse("${prompt}"),
             new MacroContext([A], A, @"C:\work", new PromptInput(definition, check.Values!)));
@@ -285,9 +285,9 @@ public class PromptImportTests
             var initial = PromptAnswerRules.Initial(converted, new([], null, @"C:\work"));
             Assert.Null(initial.Error);
             var item = Assert.Single(converted.Items);
-            var check = PromptAnswerRules.Check(converted, initial.Values!, @"C:\work");
+            var check = PromptAnswerRules.Check(converted, initial.Values!, @"C:\work", _ => null);
             var expected = item.Kind is PromptItemKind.File or PromptItemKind.Folder
-                ? ReTAC.Domain.Navigation.PathResolver.Resolve(@"C:\work", value) : value;
+                ? ReTAC.Domain.Navigation.PathResolver.Resolve(@"C:\work", value, _ => null) : value;
             if (expected is null) Assert.NotNull(check.Error);
             else Assert.Equal(new[] { expected }, PromptExpander.Expand(new(converted, check.Values!), new([], null, @"C:\work")));
         }

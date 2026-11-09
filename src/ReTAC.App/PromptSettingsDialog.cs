@@ -413,7 +413,7 @@ public sealed class PromptSettingsDialog : Form
             if (PromptImport.Mark(value) == ArgumentMark.Path)
             {
                 var folder = _currentFolder;
-                kind = await Task.Run(() => PathResolver.Resolve(folder, value) is not { } resolved ? PathKind.Missing
+                kind = await Task.Run(() => PathResolver.Resolve(folder, value, Environment.GetEnvironmentVariable) is not { } resolved ? PathKind.Missing
                     : File.Exists(resolved) ? PathKind.File
                     : Directory.Exists(resolved) ? PathKind.Folder
                     : PathKind.Missing);

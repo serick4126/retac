@@ -109,7 +109,7 @@ public class PromptAnswerRulesTests
 
     private static IReadOnlyDictionary<int, PromptValue> Values(Dictionary<int, PromptValue> input)
     {
-        var check = PromptAnswerRules.Check(All(), input, Cwd);
+        var check = PromptAnswerRules.Check(All(), input, Cwd, _ => null);
         Assert.Null(check.Error);
         return check.Values!;
     }
@@ -120,7 +120,7 @@ public class PromptAnswerRulesTests
     public void 必須のテキストは空白だけでも空(string text, string message)
     {
         var definition = All() with { Items = [.. All().Items.Select(i => i.Id == 1 ? i with { Required = true } : i)] };
-        var check = PromptAnswerRules.Check(definition, Input(text: text), Cwd);
+        var check = PromptAnswerRules.Check(definition, Input(text: text), Cwd, _ => null);
         Assert.Null(check.Values);
         Assert.Equal((1, message), (check.ItemId!.Value, check.Error));
     }
@@ -132,7 +132,7 @@ public class PromptAnswerRulesTests
     public void 必須のファイルは空白と引用符を外してから判断する(string file)
     {
         var definition = All() with { Items = [.. All().Items.Select(i => i.Id == 3 ? i with { Required = true } : i)] };
-        var check = PromptAnswerRules.Check(definition, Input(file: file), Cwd);
+        var check = PromptAnswerRules.Check(definition, Input(file: file), Cwd, _ => null);
         Assert.Equal("比較先を入力してください。", check.Error);
     }
 
@@ -141,8 +141,47 @@ public class PromptAnswerRulesTests
     [InlineData(@"..\..")]
     public void 解決できないパスは誤り(string folder)
     {
-        var check = PromptAnswerRules.Check(All(), Input(folder: folder), Cwd);
+        var check = PromptAnswerRules.Check(All(), Input(folder: folder), Cwd, _ => null);
         Assert.Equal((2, "出力先のパスが正しくありません。"), (check.ItemId!.Value, check.Error));
+    }
+
+    // R-147: Check が置き換えた実パスは PromptExpander がそのまま使う（2 回置き換えない）
+    private static readonly Func<string, string?> P32Env = name => name switch
+    {
+        "P32_OUTER" => @"C:\x\%P32_INNER%", "P32_INNER" => "inner", "P32_SUB" => "sub", "P32_UP" => @"..\sub", _ => null,
+    };
+
+    private static string? FinalArgument(PromptItemKind kind, string text, string prefix = "", string suffix = "")
+    {
+        var item = new PromptItem { Id = 1, Kind = kind, Label = "x", Prefix = prefix, Suffix = suffix, Required = true };
+        var definition = new PromptDefinition { Items = [item], Arguments = [PromptArgument.Item(1)] };
+        var check = PromptAnswerRules.Check(definition, new Dictionary<int, PromptValue> { [1] = new(text) }, @"C:\work\cur", P32Env);
+        Assert.Null(check.Error);
+        return Assert.Single(PromptExpander.Expand(new(definition, check.Values!), new([], null, @"C:\work\cur"))!);
+    }
+
+    [Theory]
+    [InlineData(PromptItemKind.Folder)]
+    [InlineData(PromptItemKind.File)]
+    public void 入力の変数は一度だけ置き換わり_値の中の変数は残る(PromptItemKind kind) =>
+        Assert.Equal(@"C:\x\%P32_INNER%", FinalArgument(kind, "%P32_OUTER%"));
+
+    [Theory]
+    [InlineData(PromptItemKind.Folder, "sub", @"C:\work\cur\sub")]
+    [InlineData(PromptItemKind.Folder, "%P32_SUB%", @"C:\work\cur\sub")]
+    [InlineData(PromptItemKind.Folder, @"%P32_UP%", @"C:\work\sub")]
+    [InlineData(PromptItemKind.File, "sub", @"C:\work\cur\sub")]
+    [InlineData(PromptItemKind.File, "%P32_SUB%", @"C:\work\cur\sub")]
+    [InlineData(PromptItemKind.File, @"%P32_UP%", @"C:\work\sub")]
+    [InlineData(PromptItemKind.File, "a b %P32_SUB%", @"C:\work\cur\a b sub")]   // 空白を含む
+    public void 相対や相対に置き換わる入力はカレントフォルダ基準の絶対パス(PromptItemKind kind, string text, string expected) =>
+        Assert.Equal(expected, FinalArgument(kind, text));
+
+    [Fact]
+    public void 前後に付ける文字があっても置き換えは一度だけ()
+    {
+        Assert.Equal(@"-o=C:\x\%P32_INNER%;", FinalArgument(PromptItemKind.Folder, "%P32_OUTER%", "-o=", ";"));
+        Assert.Equal(@"/f:C:\work\cur\sub", FinalArgument(PromptItemKind.File, "%P32_SUB%", "/f:"));
     }
 
     [Fact]
@@ -154,7 +193,7 @@ public class PromptAnswerRulesTests
     [Fact]
     public void 誤りが複数あれば表示順で最初の一つ()
     {
-        var check = PromptAnswerRules.Check(All(), Input(folder: "bad|name", file: "bad|name"), Cwd);
+        var check = PromptAnswerRules.Check(All(), Input(folder: "bad|name", file: "bad|name"), Cwd, _ => null);
         Assert.Equal(2, check.ItemId);
     }
 
@@ -214,7 +253,7 @@ public class PromptAnswerRulesTests
     {
         // R-127: 先頭と末尾の " をそれぞれ 1 つだけ外す。""C:\work\x"" は名前に " を含むパスとして誤り
         Assert.Equal(@"C:\work\x", Values(Input(folder: "\"C:\\work\\x\""))[2].Text);
-        var check = PromptAnswerRules.Check(All(), Input(folder: "\"\"C:\\work\\x\"\""), Cwd);
+        var check = PromptAnswerRules.Check(All(), Input(folder: "\"\"C:\\work\\x\"\""), Cwd, _ => null);
         Assert.Equal("出力先のパスが正しくありません。", check.Error);
     }
 
@@ -237,7 +276,7 @@ public class PromptAnswerRulesTests
             var item = FolderItem with { Required = required, FolderEmptyBehavior = behavior };
             var definition = new PromptDefinition { Items = [item], Arguments = [PromptArgument.Item(item.Id)] };
             var input = new Dictionary<int, PromptValue> { [item.Id] = new(text) };
-            var check = PromptAnswerRules.Check(definition, input, Cwd);
+            var check = PromptAnswerRules.Check(definition, input, Cwd, _ => null);
             if (required)
             {
                 Assert.Null(check.Values);
@@ -251,7 +290,7 @@ public class PromptAnswerRulesTests
                 Assert.Empty(PromptAnswerRules.HistoryFolders(definition, input, check.Values));
             }
         }
-        var nonEmpty = PromptAnswerRules.Check(new() { Items = [FolderItem] }, new Dictionary<int, PromptValue> { [2] = new("　") }, Cwd);
+        var nonEmpty = PromptAnswerRules.Check(new() { Items = [FolderItem] }, new Dictionary<int, PromptValue> { [2] = new("　") }, Cwd, _ => null);
         Assert.Equal(@"C:\work\　", nonEmpty.Values![2].Text);
     }
 

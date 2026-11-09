@@ -1027,7 +1027,7 @@ public sealed class MainForm : Form, IBookmarkHost
         }
 
         // R-61: 相対パスはカレントフォルダ基準で解決する
-        if (PathResolver.Resolve(_currentFolder, dialog.Path) is not { } destination)
+        if (PathResolver.Resolve(_currentFolder, dialog.Path, Environment.GetEnvironmentVariable) is not { } destination)
         {
             MessageBox.Show(this, $"{dialog.Path} は宛先として解決できません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return TransferCore(moving, sources, preset);
@@ -1624,7 +1624,7 @@ public sealed class MainForm : Form, IBookmarkHost
         using var dialog = new ConcatDialog(targets, _history, _currentFolder);
         if (dialog.ShowDialog(this) != DialogResult.OK) return true;
 
-        if (PathResolver.Resolve(_currentFolder, dialog.Destination) is not { } destination)
+        if (PathResolver.Resolve(_currentFolder, dialog.Destination, Environment.GetEnvironmentVariable) is not { } destination)
         {
             MessageBox.Show(this, "連結先を解決できません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return ConcatFiles();
@@ -2398,7 +2398,7 @@ public sealed class MainForm : Form, IBookmarkHost
                 MessageBox.Show(this, "コピー先を指定してください。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 continue;
             }
-            if (PathResolver.Resolve(_currentFolder, dialog.Path) is not { } destination)
+            if (PathResolver.Resolve(_currentFolder, dialog.Path, Environment.GetEnvironmentVariable) is not { } destination)
             {
                 MessageBox.Show(this, $"{dialog.Path} は宛先として解決できません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 continue;
@@ -2500,7 +2500,7 @@ public sealed class MainForm : Form, IBookmarkHost
     /// <summary>R-87: アドレスバーの Enter / Ctrl+Enter。見つからなければダイアログのように出し直さず、入力を残す。</summary>
     private void OnAddressJump(string text, bool explorer)
     {
-        if (JumpInput.Decide(_currentFolder, text, Directory.Exists, File.Exists) is not { } target)
+        if (JumpInput.Decide(_currentFolder, text, Directory.Exists, File.Exists, Environment.GetEnvironmentVariable) is not { } target)
         {
             _addressBar.ShowNotFound();
             _statusBar.ShowMessage($"{text} は見つかりません");
@@ -3030,7 +3030,7 @@ public sealed class MainForm : Form, IBookmarkHost
         if (dialog.ShowDialog(this) != DialogResult.OK) return true;
 
         // R-61 / R-87: 相対パスはカレントフォルダ基準。ファイルのパスはそのフォルダへ移ってカーソルを合わせる
-        if (JumpInput.Decide(_currentFolder, dialog.Path, Directory.Exists, File.Exists) is not { } target)
+        if (JumpInput.Decide(_currentFolder, dialog.Path, Directory.Exists, File.Exists, Environment.GetEnvironmentVariable) is not { } target)
         {
             // R-48: 誤りでも操作は中止せず、入力しなおせるように出し直す
             MessageBox.Show(this, $"{dialog.Path} は見つかりません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
