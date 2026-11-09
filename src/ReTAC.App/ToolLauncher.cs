@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
+using ReTAC.Domain.Navigation;
 using ReTAC.Domain.Tools;
 
 namespace ReTAC.App;
@@ -23,11 +24,18 @@ public static class ToolLauncher
         try
         {
             // パスの解決（File.Exists・レジストリ）と種類の判定（ファイルを読む）も裏のスレッドで行う（R-23 / N-05）
-            await Task.Run(() => Process.Start(ToolProcess.StartInfo(request))?.Dispose());
+            var info = await Task.Run(() => ToolProcess.StartInfo(request, Environment.GetEnvironmentVariable));
+            if (info is null)
+            {
+                // R-147: 旧設定の値は式として読まない。起動しない
+                MessageBox.Show(owner, ToolPath.LegacyNotice(request.Tool.Path), "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            await Task.Run(() => Process.Start(info)?.Dispose());
         }
         catch (Exception ex) when (ex is Win32Exception or IOException or InvalidOperationException)
         {
-            MessageBox.Show(owner, $"{request.Tool.Path} を起動できませんでした。{Environment.NewLine}{ex.Message}",
+            MessageBox.Show(owner, $"{PathExpression.Display(request.Tool.Path)} を起動できませんでした。{Environment.NewLine}{ex.Message}",
                 "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }

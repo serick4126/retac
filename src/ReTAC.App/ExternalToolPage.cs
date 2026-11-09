@@ -28,8 +28,12 @@ public sealed class ExternalToolPage : UserControl
     /// <summary>欄へ流し込む間は、変更を拾わない</summary>
     private bool _loading;
     private readonly string _currentFolder;
+    private static readonly Func<string, string?> Env = Environment.GetEnvironmentVariable;
     private readonly FolderHistory _history;
     private readonly QuickAccessList? _quickAccess;
+    /// <summary>R-147: 欄に出した文字と、そのとき保存されていた値。書き換えていなければ保存した値を一字も変えない</summary>
+    private string _shownText = "";
+    private string _shownStored = "";
     private string _pathWarning = "";
     private bool _pathIsScript;
 
@@ -179,7 +183,9 @@ public sealed class ExternalToolPage : UserControl
         var tool = index >= 0 ? Tools[index] : null;
 
         _name.Text = tool?.Name ?? "";
-        _path.Text = tool?.Path ?? "";
+        _shownStored = tool?.Path ?? "";
+        _shownText = PathExpression.Display(_shownStored);
+        _path.Text = _shownText;
         _arguments.Text = tool?.Arguments ?? "";
         _perItem.Checked = tool?.LaunchPerItem ?? false;
         _popup.Checked = tool?.ShowInPopup ?? false;
@@ -201,7 +207,7 @@ public sealed class ExternalToolPage : UserControl
         tools[_editing] = tools[_editing] with
         {
             Name = _name.Text.Trim(),
-            Path = NormalizePath(_path.Text),
+            Path = StoredFromField(_path.Text, _shownText, _shownStored, Env),
             Arguments = _arguments.Text.Trim(),
             LaunchPerItem = _perItem.Checked,
             ShowInPopup = _popup.Checked,
@@ -253,30 +259,55 @@ public sealed class ExternalToolPage : UserControl
     private async Task CheckPathAsync()
     {
         var editing = _editing;
-        var path = NormalizePath(_path.Text);
+        var path = StoredFromField(_path.Text, _shownText, _shownStored, Env);
         _pathWarning = "";
         _pathIsScript = false;
         RenderWarning();
         if (editing < 0 || path.Length == 0) return;
 
-        var (found, script) = await Task.Run(() =>
-        {
-            var resolved = ExecutableResolver.Resolve(path);
-            // 種類は拡張子で分かるので、まだ置いていないスクリプトでも案内を出す
-            var target = resolved ?? path;
-            return (resolved is not null, System.IO.Path.HasExtension(target) && !ExecutableResolver.IsExecutableType(target));
-        });
+        var (found, script, legacy) = await Task.Run(() => CheckPath(path, Env));
 
         // 調べている間に別のツールを選んだ・パスを打ち直したなら、この結果は捨てる
-        if (IsDisposed || editing != _editing || path != NormalizePath(_path.Text)) return;
+        if (IsDisposed || editing != _editing || path != StoredFromField(_path.Text, _shownText, _shownStored, Env)) return;
 
         var messages = new List<string>();
-        if (!found) messages.Add("パスが見つかりません（後でインストールする場合は、このまま保存できます）。");
+        if (legacy) messages.Add(ToolPath.LegacyNotice(path));
+        else if (!found) messages.Add("パスが見つかりません（後でインストールする場合は、このまま保存できます）。");
         if (script) messages.Add("実行できる種類のファイルではありません。関連付けのアプリで開かれるだけで、実行はされません。");
         _pathWarning = string.Join(Environment.NewLine, messages);
         _pathIsScript = script;
         RenderWarning();
     }
+
+    /// <summary>
+    /// R-147: パスの確認。起動と同じ <see cref="ToolPath.Resolve(string, Func{string, string?})"/> を通す（保存した値を探し方へ直接渡さない）。
+    /// 旧設定の値は「見つからない」ではなく登録し直しの案内にする。
+    /// </summary>
+    internal static (bool Found, bool Script, bool Legacy) CheckPath(string stored, Func<string, string?> env)
+    {
+        var resolved = ToolPath.Resolve(stored, env);
+        if (resolved.Legacy) return (false, false, true);
+        // 種類は拡張子で分かるので、まだ置いていないスクリプトでも案内を出す
+        var target = resolved.LaunchPath;
+        return (resolved.Found is not null, System.IO.Path.HasExtension(target) && !ExecutableResolver.IsExecutableType(target), false);
+    }
+
+    /// <summary>
+    /// R-147: 欄の文字から保存する値を作る。欄を書き換えていなければ前の値を一字も変えない
+    /// （ほかのツールを直して OK しても、書き換えていないツールの旧設定の値は式にならない）。
+    /// 書き換えたら、置き換える前の式を正規の形にして印を付ける（保存した時点の意味を、後で変数が定義されても変えない）。
+    /// </summary>
+    internal static string StoredFromField(string fieldText, string shownText, string shownStored, Func<string, string?> env) =>
+        fieldText == shownText ? shownStored : PathExpression.Store(PathExpression.Canonical(NormalizePath(fieldText), env));
+
+    /// <summary>R-147: 参照で選んだ実パスを欄へ入れる文字（式に書く）。</summary>
+    internal static string FieldTextFor(string realPath) => PathField.Text(realPath);
+
+    /// <summary>
+    /// R-52-2: 参照の最初の場所。欄の式を置き換えた文字（絶対パスに限らない）。旧設定の値・空なら指定しない。
+    /// </summary>
+    internal static string? BrowseStart(string stored, Func<string, string?> env) =>
+        PathExpression.Read(stored) is { Length: > 0 } expression ? PathExpression.Expand(expression, env) : null;
 
     private void RenderWarning()
     {
@@ -309,10 +340,10 @@ public sealed class ExternalToolPage : UserControl
         using var dialog = new OpenFileDialog
         {
             Filter = "プログラム (*.exe;*.bat;*.cmd)|*.exe;*.bat;*.cmd|すべてのファイル (*.*)|*.*",
-            FileName = NormalizePath(_path.Text),
         };
+        if (BrowseStart(StoredFromField(_path.Text, _shownText, _shownStored, Env), Env) is { } start) dialog.FileName = start;
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
-        _path.Text = dialog.FileName;
+        _path.Text = FieldTextFor(dialog.FileName);
         _ = CheckPathAsync();
     }
 
@@ -367,7 +398,7 @@ public sealed class ExternalToolPage : UserControl
 
         if (dialog.ImportedPath is { } path)
         {
-            _path.Text = path;
+            _path.Text = FieldTextFor(path);   // コマンドラインから読んだ実パス。式に書いて入れる
             _arguments.Text = "${prompt}";
             _ = CheckPathAsync();
             return;

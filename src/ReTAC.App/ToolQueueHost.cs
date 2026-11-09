@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using ReTAC.Domain.Navigation;
 using ReTAC.Domain.Tools;
 
 namespace ReTAC.App;
@@ -22,12 +23,15 @@ internal static class ToolQueueHost
         Process? process;
         try
         {
-            process = Process.Start(ToolProcess.StartInfo(request));
+            // R-147: 旧設定の値は起動しない。キューはこの 1 件を失敗として次へ進む（K-3）
+            var info = ToolProcess.StartInfo(request, Environment.GetEnvironmentVariable)
+                ?? throw new InvalidOperationException(ToolPath.LegacyNotice(request.Tool.Path));
+            process = Process.Start(info);
         }
         catch (Exception ex) when (ex is Win32Exception or IOException or InvalidOperationException)
         {
             // V-03: 落とさない。キューはこの 1 件を失敗として次へ進む（K-3）
-            throw new InvalidOperationException($"{request.Tool.Path} を起動できませんでした。{ex.Message}", ex);
+            throw new InvalidOperationException($"{PathExpression.Display(request.Tool.Path)} を起動できませんでした。{ex.Message}", ex);
         }
 
         // 既に動いているアプリへ処理を渡して終わるもの（DDE など）はプロセスが返らない。終わったものとして進む

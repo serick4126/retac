@@ -7972,11 +7972,11 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 211
+        "line": 217
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 234
+        "line": 240
       },
       {
         "file": "src/ReTAC.App/KeyAssignPage.cs",
@@ -8072,11 +8072,15 @@
       },
       {
         "file": "src/ReTAC.App/ToolLauncher.cs",
-        "line": 11
+        "line": 12
       },
       {
         "file": "src/ReTAC.App/ToolLauncher.cs",
-        "line": 17
+        "line": 18
+      },
+      {
+        "file": "src/ReTAC.App/ToolPath.cs",
+        "line": 18
       },
       {
         "file": "src/ReTAC.App/ToolProcess.cs",
@@ -8084,11 +8088,11 @@
       },
       {
         "file": "src/ReTAC.App/ToolProcess.cs",
-        "line": 16
+        "line": 25
       },
       {
         "file": "src/ReTAC.App/ToolProcess.cs",
-        "line": 25
+        "line": 34
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalTool.cs",
@@ -8100,11 +8104,11 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
-        "line": 6
+        "line": 7
       },
       {
         "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
-        "line": 20
+        "line": 21
       },
       {
         "file": "src/ReTAC.Shell/Executables.cs",
@@ -8156,7 +8160,7 @@
       },
       {
         "file": "src/ReTAC.App/ToolQueueHost.cs",
-        "line": 8
+        "line": 9
       },
       {
         "file": "src/ReTAC.Domain/Commands/CommandId.cs",
@@ -8264,11 +8268,11 @@
     "F-09": [
       {
         "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
-        "line": 20
+        "line": 21
       },
       {
         "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
-        "line": 29
+        "line": 30
       }
     ],
     "H-14": [
@@ -8300,7 +8304,11 @@
     "K-3": [
       {
         "file": "src/ReTAC.App/ToolQueueHost.cs",
-        "line": 29
+        "line": 26
+      },
+      {
+        "file": "src/ReTAC.App/ToolQueueHost.cs",
+        "line": 33
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
@@ -8310,7 +8318,7 @@
     "K-4": [
       {
         "file": "src/ReTAC.App/ToolQueueHost.cs",
-        "line": 8
+        "line": 9
       }
     ],
     "K-5": [
@@ -8414,7 +8422,7 @@
     "M-1": [
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 48
+        "line": 52
       },
       {
         "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
@@ -8430,7 +8438,7 @@
     "M-3": [
       {
         "file": "src/ReTAC.App/ToolQueueHost.cs",
-        "line": 86
+        "line": 90
       }
     ],
     "M-4": [
@@ -8516,7 +8524,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 250
+        "line": 256
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -8532,11 +8540,11 @@
       },
       {
         "file": "src/ReTAC.App/ToolLauncher.cs",
-        "line": 18
+        "line": 19
       },
       {
         "file": "src/ReTAC.App/ToolLauncher.cs",
-        "line": 25
+        "line": 26
       },
       {
         "file": "src/ReTAC.Shell/ShellFileType.cs",
@@ -9098,7 +9106,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 78
+        "line": 82
       },
       {
         "file": "src/ReTAC.App/FileViewPage.cs",
@@ -9662,7 +9670,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 49
+        "line": 53
       },
       {
         "file": "src/ReTAC.App/IncrementalSearchBar.cs",
@@ -9688,7 +9696,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 49
+        "line": 53
       },
       {
         "file": "src/ReTAC.App/GroupedListView.cs",
@@ -11798,11 +11806,11 @@
     "R-130": [
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 382
+        "line": 413
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 392
+        "line": 423
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -12012,23 +12020,23 @@
     "R-133": [
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 142
+        "line": 146
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 327
+        "line": 358
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 342
+        "line": 373
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 382
+        "line": 413
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 386
+        "line": 417
       },
       {
         "file": "src/ReTAC.App/PromptArgumentDialog.cs",
@@ -12114,7 +12122,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 343
+        "line": 374
       },
       {
         "file": "src/ReTAC.App/PromptSettingsDialog.cs",
@@ -12752,11 +12760,11 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroBuildPrompt.cs",
-        "line": 6
+        "line": 7
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroBuildPrompt.cs",
-        "line": 14
+        "line": 15
       }
     ],
     "R-145-1": [
@@ -12766,7 +12774,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 91
+        "line": 95
       },
       {
         "file": "src/ReTAC.App/MacroBuildPromptActions.cs",
@@ -12804,7 +12812,7 @@
     "R-145-2": [
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 60
+        "line": 64
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalToolExamples.cs",
@@ -12816,11 +12824,11 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroBuildPrompt.cs",
-        "line": 7
+        "line": 8
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroBuildPrompt.cs",
-        "line": 147
+        "line": 148
       },
       {
         "file": "src/ReTAC.Domain/Tools/MacroCatalog.cs",
@@ -13109,6 +13117,22 @@
         "line": 56
       },
       {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 34
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 283
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 296
+      },
+      {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 303
+      },
+      {
         "file": "src/ReTAC.App/MainForm.cs",
         "line": 658
       },
@@ -13187,6 +13211,26 @@
       {
         "file": "src/ReTAC.App/QuickAccessPath.cs",
         "line": 6
+      },
+      {
+        "file": "src/ReTAC.App/ToolLauncher.cs",
+        "line": 30
+      },
+      {
+        "file": "src/ReTAC.App/ToolPath.cs",
+        "line": 7
+      },
+      {
+        "file": "src/ReTAC.App/ToolPath.cs",
+        "line": 32
+      },
+      {
+        "file": "src/ReTAC.App/ToolProcess.cs",
+        "line": 11
+      },
+      {
+        "file": "src/ReTAC.App/ToolQueueHost.cs",
+        "line": 26
       },
       {
         "file": "src/ReTAC.Domain/Navigation/Bookmarks.cs",
@@ -13346,11 +13390,11 @@
       },
       {
         "file": "src/ReTAC.App/ToolLauncher.cs",
-        "line": 18
+        "line": 19
       },
       {
         "file": "src/ReTAC.App/ToolLauncher.cs",
-        "line": 25
+        "line": 26
       },
       {
         "file": "src/ReTAC.Domain/Tools/ExternalToolQueue.cs",
@@ -13704,15 +13748,15 @@
     "R-37-3": [
       {
         "file": "src/ReTAC.App/ToolLauncher.cs",
-        "line": 12
+        "line": 13
       },
       {
         "file": "src/ReTAC.App/ToolProcess.cs",
-        "line": 30
+        "line": 39
       },
       {
         "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
-        "line": 7
+        "line": 8
       }
     ],
     "R-38": [
@@ -14269,6 +14313,10 @@
         "line": 152
       },
       {
+        "file": "src/ReTAC.App/ExternalToolPage.cs",
+        "line": 307
+      },
+      {
         "file": "src/ReTAC.App/FolderBrowser.cs",
         "line": 11
       },
@@ -14370,7 +14418,7 @@
       },
       {
         "file": "src/ReTAC.App/ToolLauncher.cs",
-        "line": 12
+        "line": 13
       }
     ],
     "R-55": [
@@ -14388,7 +14436,7 @@
       },
       {
         "file": "src/ReTAC.App/ExternalToolPage.cs",
-        "line": 74
+        "line": 78
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -14480,7 +14528,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
-        "line": 25
+        "line": 26
       },
       {
         "file": "src/ReTAC.Domain/Tools/LaunchTargets.cs",
@@ -14816,7 +14864,7 @@
     "R-68": [
       {
         "file": "src/ReTAC.Domain/Tools/LaunchPlanner.cs",
-        "line": 29
+        "line": 30
       },
       {
         "file": "src/ReTAC.Domain/Tools/LaunchTargets.cs",
@@ -16864,11 +16912,11 @@
       },
       {
         "file": "src/ReTAC.App/ToolLauncher.cs",
-        "line": 19
+        "line": 20
       },
       {
         "file": "src/ReTAC.App/ToolQueueHost.cs",
-        "line": 29
+        "line": 33
       },
       {
         "file": "src/ReTAC.Shell/Executables.cs",
@@ -16926,7 +16974,7 @@
     "V-08": [
       {
         "file": "src/ReTAC.App/ToolLauncher.cs",
-        "line": 46
+        "line": 54
       }
     ],
     "V-09": [

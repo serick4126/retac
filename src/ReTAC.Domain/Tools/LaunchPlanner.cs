@@ -1,4 +1,5 @@
 using ReTAC.Domain.Entries;
+using ReTAC.Domain.Navigation;
 using ReTAC.Domain.Selection;
 
 namespace ReTAC.Domain.Tools;
@@ -10,7 +11,7 @@ public sealed record LaunchRequest(ExternalTool Tool, IReadOnlyList<string> Argu
 {
     /// <summary>確認ダイアログに出すコマンドライン。空白を含む引数と空の引数は引用符で囲む。</summary>
     public string DisplayCommandLine() =>
-        string.Join(" ", new[] { Tool.Path }.Concat(Arguments).Select(Quote));
+        string.Join(" ", new[] { PathExpression.Display(Tool.Path) }.Concat(Arguments).Select(Quote));
 
     internal static string Quote(string text) =>
         text.Length == 0 || text.Contains(' ') || text.Contains('\t') ? $"\"{text}\"" : text;

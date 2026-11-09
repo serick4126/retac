@@ -1,4 +1,5 @@
 using System.Text;
+using ReTAC.Domain.Navigation;
 
 namespace ReTAC.Domain.Tools;
 
@@ -231,7 +232,7 @@ public static partial class MacroBuildPrompt
             line("");
             line("````text");
             line($"名前: {tool.Name}");
-            line($"パス: {tool.Path}");
+            line($"パス: {PathExpression.Display(tool.Path)}");
             line("引数:");
             line("```");
             line(tool.Arguments);
