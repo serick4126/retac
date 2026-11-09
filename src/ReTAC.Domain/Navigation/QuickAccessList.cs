@@ -39,14 +39,26 @@ public sealed class QuickAccessList
     }
 
     /// <summary>
+    /// 読み込み・書き戻し用の追加。保存した文字が同じ（末尾の \ と大文字小文字は無視）項目だけを重複とする。
+    /// 環境で同じ場所になるだけの項目は残す（利用者が登録するときだけ断る。保存した項目を黙って落とさない）。
+    /// </summary>
+    public bool AddLoaded(QuickAccessEntry entry)
+    {
+        if (_items.Exists(e => e.Kind == entry.Kind
+            && (entry.Kind == BookmarkKind.Command ? e.Path == entry.Path : PathEquals(e.Path, entry.Path)))) return false;
+        _items.Add(entry);
+        return true;
+    }
+
+    /// <summary>
     /// R-102-3: 中身をまるごと差し替える。INV-QUICKACCESS-SHARED によりこの実体（参照）は全ウィンドウで共有するので、
     /// 設定画面の確定では新しい QuickAccessList を作って差し替えるのではなく、この実体の中身だけを入れ替える。
-    /// Add と同じ重複規則を通すので、渡した並びに重複が混ざっていても後勝ちで弾かれる。
+    /// <see cref="AddLoaded"/> の重複規則を通すので、保存した文字が同じ重複だけが後勝ちで弾かれる。
     /// </summary>
     public void ReplaceAll(IEnumerable<QuickAccessEntry> entries)
     {
         _items.Clear();
-        foreach (var entry in entries) Add(entry);
+        foreach (var entry in entries) AddLoaded(entry);
     }
 
     /// <summary>差し替えられたら true。他の項目と同じフォルダになる差し替えはしない。</summary>

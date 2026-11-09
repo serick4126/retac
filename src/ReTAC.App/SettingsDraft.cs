@@ -115,7 +115,7 @@ public sealed class SettingsDraft
 
         draft.QuickAccess.ShowTitles = quickAccess.ShowTitles;
         draft.QuickAccess.FixMissingAutomatically = quickAccess.FixMissingAutomatically;
-        foreach (var entry in quickAccess.Items) draft.QuickAccess.Add(entry);
+        foreach (var entry in quickAccess.Items) draft.QuickAccess.AddLoaded(entry);
 
         draft.FileViewsBaseline = settings.FileViews;
         return draft;

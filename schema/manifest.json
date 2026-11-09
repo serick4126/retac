@@ -9142,7 +9142,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Navigation/QuickAccessList.cs",
-        "line": 42
+        "line": 54
       }
     ],
     "R-103": [
@@ -15836,7 +15836,7 @@
       },
       {
         "file": "src/ReTAC.Domain/Navigation/QuickAccessList.cs",
-        "line": 66
+        "line": 78
       }
     ],
     "R-93": [

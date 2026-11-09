@@ -273,4 +273,37 @@ public class QuickAccessTests
         var list = new QuickAccessList(P32Env) { ShowTitles = false };
         Assert.Equal(@"C:\%a%b", list.LabelOf(new QuickAccessEntry("t", @"|C:\%a%b")));
     }
+
+    private static string? SameEnv(string name) => name.ToUpperInvariant() is "P32_A" or "P32_B" ? @"D:\same" : null;
+
+    [Fact]
+    public void 読み込み_環境で同じ場所になるだけの項目は両方残り_登録では断る()
+    {
+        var a = new QuickAccessEntry("a", @"|%P32_A%\x");
+        var b = new QuickAccessEntry("b", @"|%P32_B%\x");
+
+        var list = new QuickAccessList(SameEnv);
+        Assert.True(list.AddLoaded(a));
+        Assert.True(list.AddLoaded(b));
+        Assert.Equal([a, b], list.Items);
+
+        list.ReplaceAll([a, b]);
+        Assert.Equal([a, b], list.Items);
+
+        var user = new QuickAccessList(SameEnv);
+        Assert.True(user.Add(a));
+        Assert.False(user.Add(b));
+        Assert.Equal(-1, new QuickAccessList(SameEnv).IndexOf(b));
+    }
+
+    [Fact]
+    public void 読み込み_保存した文字が同じ重複は従来どおり後ろを落とす()
+    {
+        var list = new QuickAccessList(SameEnv);
+        list.ReplaceAll([new QuickAccessEntry("先", @"D:\work"), new QuickAccessEntry("後", @"d:\WORK\"),
+                         new QuickAccessEntry("", "Refresh", BookmarkKind.Command), new QuickAccessEntry("", "Refresh", BookmarkKind.Command),
+                         new QuickAccessEntry("", @"D:\work", BookmarkKind.File)]);
+        Assert.Equal(["先", "", ""], list.Items.Select(e => e.Title));
+        Assert.Equal([BookmarkKind.Folder, BookmarkKind.Command, BookmarkKind.File], list.Items.Select(e => e.Kind));
+    }
 }

@@ -403,7 +403,7 @@ public sealed class AppSettings
 
         var ids = ExternalTools.Select(t => t.Id).ToList();
         var list = new QuickAccessList(Environment.GetEnvironmentVariable);
-        foreach (var entry in QuickAccess) list.Add(entry);
+        foreach (var entry in QuickAccess) list.AddLoaded(entry);
         // 一時の一覧を整理しただけでは QuickAccess は変わらない。書き戻さないと、後で共有の一覧を作るときに整理前の値から作ってしまう
         if (list.DropUnknownTools(ids)) QuickAccess = [.. list.Items];
         BookmarkRules.DropUnknownTools(Bookmarks, ids);
@@ -419,7 +419,7 @@ public sealed class AppSettings
     public QuickAccessList ToQuickAccess()
     {
         var list = new QuickAccessList(Environment.GetEnvironmentVariable) { ShowTitles = QuickAccessShowTitles, FixMissingAutomatically = QuickAccessFixMissing };
-        foreach (var entry in QuickAccess) list.Add(entry);
+        foreach (var entry in QuickAccess) list.AddLoaded(entry);
         return list;
     }
 
