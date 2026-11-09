@@ -14,6 +14,13 @@ public sealed record QuickAccessEntry(string Title, string Path, BookmarkKind Ki
 public sealed class QuickAccessList
 {
     private readonly List<QuickAccessEntry> _items = [];
+    private readonly Func<string, string?> _env;
+
+    /// <param name="env">
+    /// R-147: 環境変数の読み取り。重複の判定で保存した式から実パスを作るのに使う。
+    /// 全ウィンドウで共有する一覧なので、カレントフォルダは持ち込まない（持たせない）。
+    /// </param>
+    public QuickAccessList(Func<string, string?> env) => _env = env;
 
     public IReadOnlyList<QuickAccessEntry> Items => _items;
 
@@ -57,10 +64,19 @@ public sealed class QuickAccessList
 
     /// <summary>
     /// R-92: 同じ登録先を指す項目の位置。種類が同じもの同士だけ比べる（同じパスのフォルダとファイルは別物）。
-    /// フォルダ・ファイルは末尾の \ と大文字小文字を無視し、コマンドは文字列が同じなら同じ。無ければ -1。
+    /// フォルダ・ファイルは保存した式から作った実パスで比べ（変数の形と絶対パスの形が同じ場所なら重複）、
+    /// 実パスにならない項目（旧設定の値・環境が変わって使えない値）は保存した文字で比べる。
+    /// どちらも末尾の \ と大文字小文字を無視する。コマンドは文字列が同じなら同じ。無ければ -1。
     /// </summary>
     public int IndexOf(QuickAccessEntry entry) => _items.FindIndex(e => e.Kind == entry.Kind
-        && (entry.Kind == BookmarkKind.Command ? e.Path == entry.Path : PathEquals(e.Path, entry.Path)));
+        && (entry.Kind == BookmarkKind.Command ? e.Path == entry.Path : SamePlace(e.Path, entry.Path)));
+
+    private bool SamePlace(string a, string b)
+    {
+        var ra = PathExpression.ResolveSaved(a, _env);
+        var rb = PathExpression.ResolveSaved(b, _env);
+        return ra is null && rb is null ? PathEquals(a, b) : ra is not null && rb is not null && PathEquals(ra, rb);
+    }
 
     /// <summary>
     /// Q4 / Q10: Group の項目と、消した外部ツール・読めないコマンドを指す項目を落とす。変わったら true。
@@ -88,7 +104,8 @@ public sealed class QuickAccessList
 
     /// <summary>ポップアップに出す文字列。タイトルを表示しない設定ならパスをそのまま出す。</summary>
     public string LabelOf(QuickAccessEntry entry) =>
-        ShowTitles && !string.IsNullOrWhiteSpace(entry.Title) ? entry.Title : entry.Path;
+        ShowTitles && !string.IsNullOrWhiteSpace(entry.Title) ? entry.Title
+        : entry.Kind == BookmarkKind.Command ? entry.Path : PathExpression.Display(entry.Path);
 
     private bool IsValid(int index) => index >= 0 && index < _items.Count;
 

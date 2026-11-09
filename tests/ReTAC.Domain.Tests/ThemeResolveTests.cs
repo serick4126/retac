@@ -101,7 +101,7 @@ public class ThemeResolveTests
     {
         var settings = new AppSettings { ColorMode = ColorMode.System };
         var custom = Theme.Default with { HiddenColor = Color.Orange, FontSize = 14f };
-        var draft = SettingsDraft.From(settings, settings.ToKeyMap(), custom, new QuickAccessList());
+        var draft = SettingsDraft.From(settings, settings.ToKeyMap(), custom, new QuickAccessList(_ => null));
         using var page = new ColorFontPage(draft);
         page.ResetTarget();
         Assert.Equal(Color.Orange, draft.Theme.HiddenColor);
@@ -116,11 +116,11 @@ public class ThemeResolveTests
     public void 配色モードは下書きを経て保存される()
     {
         var settings = new AppSettings();
-        var draft = SettingsDraft.From(settings, settings.ToKeyMap(), settings.ToTheme(), new QuickAccessList());
+        var draft = SettingsDraft.From(settings, settings.ToKeyMap(), settings.ToTheme(), new QuickAccessList(_ => null));
         Assert.Equal(ColorMode.System, draft.ColorMode);
         draft.ColorMode = ColorMode.Custom;
         Assert.Equal(ColorMode.System, settings.ColorMode);   // 確定までは変えない（R-102-3）
-        draft.CommitTo(settings, new QuickAccessList());
+        draft.CommitTo(settings, new QuickAccessList(_ => null));
         Assert.Equal(ColorMode.Custom, settings.ColorMode);
     }
 }

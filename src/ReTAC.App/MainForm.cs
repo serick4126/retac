@@ -2493,7 +2493,14 @@ public sealed class MainForm : Form, IBookmarkHost
 
     private void AddToQuickAccess(Bookmark bookmark)
     {
-        if (!_quickAccess.Add(new QuickAccessEntry(bookmark.Title, bookmark.Target, bookmark.Kind)))
+        // R-147: 保存した値をそのまま写す。使えない値・旧設定の値は追加しない
+        var (entry, error) = QuickAccessPath.FromBookmark(bookmark, Environment.GetEnvironmentVariable);
+        if (entry is null)
+        {
+            MessageBox.Show(this, error, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        if (!_quickAccess.Add(entry))
         {
             MessageBox.Show(this, "クイックアクセスに登録済みです。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
@@ -3167,16 +3174,24 @@ public sealed class MainForm : Form, IBookmarkHost
     private void GoQuickAccess(QuickAccessEntry entry)
     {
         // R-92: 種類ごとの動作。ファイルは関連付けで開き、コマンドは実行する
+        if (entry.Kind == BookmarkKind.Command)
+        {
+            if (CommandTarget.Parse(entry.Path) is { } target) Execute(target, Keys.None);
+            return;
+        }
+        // R-147: 保存した式から作った実パスで開く。使えない値・旧設定の値は知らせるだけで、項目は取り除かない
+        if (QuickAccessPath.Resolve(entry, Environment.GetEnvironmentVariable) is not { } real)
+        {
+            MessageBox.Show(this, QuickAccessPath.Notice(entry.Path, Environment.GetEnvironmentVariable), "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
         switch (entry.Kind)
         {
-            case BookmarkKind.Command:
-                if (CommandTarget.Parse(entry.Path) is { } target) Execute(target, Keys.None);
+            case BookmarkKind.File when File.Exists(real):
+                OpenWithAssociation(real);
                 return;
-            case BookmarkKind.File when File.Exists(entry.Path):
-                OpenWithAssociation(entry.Path);
-                return;
-            case BookmarkKind.Folder when Directory.Exists(entry.Path):
-                _ = OpenFolderAsync(entry.Path);
+            case BookmarkKind.Folder when Directory.Exists(real):
+                _ = OpenFolderAsync(real);
                 return;
         }
 
@@ -3186,7 +3201,7 @@ public sealed class MainForm : Form, IBookmarkHost
             _quickAccess.RemoveAt(_quickAccess.Items.ToList().IndexOf(entry));
             return;
         }
-        MessageBox.Show(this, $"{entry.Path} は見つかりません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show(this, $"{real} は見つかりません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
     }
 
     /// <summary>クイックアクセスに追加（0x832C）。カーソルがフォルダならそれを、でなければカレントフォルダを。</summary>

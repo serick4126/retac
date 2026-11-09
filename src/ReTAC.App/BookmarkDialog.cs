@@ -223,7 +223,11 @@ public sealed class BookmarkDialog : Form
     private void AddToQuickAccess()
     {
         if (SelectedBookmark is not { Kind: not BookmarkKind.Group } b) return;
-        if (!_quickAccess.Add(new QuickAccessEntry(b.Title, b.Target, b.Kind)))
+        // R-147: 保存した値をそのまま写す。使えない値・旧設定の値は追加しない
+        var (entry, error) = QuickAccessPath.FromBookmark(b, Environment.GetEnvironmentVariable);
+        if (entry is null)
+            MessageBox.Show(this, error, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        else if (!_quickAccess.Add(entry))
             MessageBox.Show(this, "クイックアクセスに登録済みです。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 

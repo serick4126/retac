@@ -13,6 +13,7 @@ public sealed class QuickAccessEntryDialog : Form
     private readonly TextBox _title = new();
     private readonly TextBox _path = new();
     private readonly string _currentFolder;
+    private readonly string? _presetStored;   // 書き換えていない欄は、この保存した値を一字も変えずに返す
 
     /// <param name="preset">入力欄の初期値。null なら空とカレントフォルダ</param>
     /// <param name="isEdit">既存項目の変更なら true。見出しだけが変わる</param>
@@ -21,6 +22,7 @@ public sealed class QuickAccessEntryDialog : Form
     {
         ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         _currentFolder = currentFolder;
+        _presetStored = presetIsRealPath ? null : preset?.Path;
         Text = isEdit ? "アクセスフォルダの変更" : "アクセスフォルダの追加";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         ShowInTaskbar = false;   // ダイアログはタスクバーに出さない（既定は true）
@@ -58,9 +60,9 @@ public sealed class QuickAccessEntryDialog : Form
         FormClosing += (_, e) =>
         {
             if (DialogResult != DialogResult.OK) return;
-            if (Directory.Exists(InputText.Unquote(_path.Text))) return;
+            if (StoredPath().Error is not { } error) return;
             // R-48: 誤りは操作を中止せず入力欄に戻す
-            MessageBox.Show(this, $"{_path.Text} は存在しません。", "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this, error, "ReTAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             e.Cancel = true;
             _path.Focus();
             _path.SelectAll();
@@ -72,8 +74,11 @@ public sealed class QuickAccessEntryDialog : Form
         AutoScaleMode = AutoScaleMode.Dpi;   // R-66: DPI に追従させる
     }
 
-    // R-127: この欄はパスの解決の処理を通らないので、囲みの二重引用符をここで外す
-    public QuickAccessEntry Entry => new(InputText.TrimEdge(_title.Text), InputText.Unquote(_path.Text));
+    /// <summary>R-147: Path は設定ファイルの形（OK の確認を通った後で読む。欄の文字ではない）。</summary>
+    public QuickAccessEntry Entry => new(InputText.TrimEdge(_title.Text), StoredPath().Stored ?? _presetStored ?? "");
+
+    private (string? Stored, string? Error) StoredPath() =>
+        QuickAccessPath.FromField(_presetStored, _path.Text, Environment.GetEnvironmentVariable, Directory.Exists);
 
     /// <summary>
     /// R-147: 欄の初期値。保存した値は印を外すだけ（式のまま）、実パス（今のフォルダを含む）は式に書く。

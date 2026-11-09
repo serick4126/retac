@@ -124,7 +124,7 @@ public sealed class QuickAccessPage : UserControl
 
     /// <summary>コマンドは保存の形（"Refresh" や "tool:3"）ではなく名前で出す。</summary>
     private string TargetText(QuickAccessEntry entry) =>
-        entry.Kind == BookmarkKind.Command ? CommandLabels.Of(CommandTarget.Parse(entry.Path), Tools) : entry.Path;
+        entry.Kind == BookmarkKind.Command ? CommandLabels.Of(CommandTarget.Parse(entry.Path), Tools) : PathExpression.Display(entry.Path);
 
     private static string KindText(BookmarkKind kind) => kind switch
     {
@@ -138,7 +138,7 @@ public sealed class QuickAccessPage : UserControl
     {
         using var open = new OpenFileDialog { InitialDirectory = _currentFolder, CheckFileExists = true };
         if (open.ShowDialog(this) != DialogResult.OK) return;
-        AddEntry(new QuickAccessEntry(Path.GetFileName(open.FileName), open.FileName, BookmarkKind.File));
+        AddEntry(new QuickAccessEntry(Path.GetFileName(open.FileName), QuickAccessPath.Store(open.FileName), BookmarkKind.File));   // R-147
     }
 
     /// <summary>R-92: 組み込みコマンド・外部ツールを登録する。題名は空（表示はコマンドの名前）。</summary>
@@ -208,7 +208,8 @@ public sealed class QuickAccessPage : UserControl
         // R-52-2: 保存した値から実パスを作る。使えない値・旧設定の値ならカレントフォルダで開く
         var start = PathField.BrowseStartFromSaved(entry.Path, Environment.GetEnvironmentVariable);
         if (FolderBrowser.Select(this, start, _currentFolder) is not { } selected) return;
-        if (!List.Replace(index, entry with { Path = selected }))
+        // R-147: 選んだ実パスは式に書いて保存する（そのまま入れると % を含む名前が旧設定の値になる）
+        if (!List.Replace(index, entry with { Path = QuickAccessPath.Store(selected) }))
         {
             MessageBox.Show(this, "このフォルダは既に別の項目で登録済みです。", "ReTAC",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);

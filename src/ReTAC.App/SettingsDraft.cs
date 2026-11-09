@@ -85,7 +85,7 @@ public sealed class SettingsDraft
 
     // --- クイックアクセス（QuickAccessPage） ------------------------------
     /// <summary>共有の実体とは別のインスタンス（INV-QUICKACCESS-SHARED）。確定時に <see cref="QuickAccessList.ReplaceAll"/> で書き戻す。</summary>
-    public QuickAccessList QuickAccess { get; set; } = new();
+    public QuickAccessList QuickAccess { get; set; } = new(Environment.GetEnvironmentVariable);
 
     // --- ページ間のつながり ------------------------------------------
     /// <summary>外部ツールの一覧が変わった（追加・改名・削除）。キー割り当て・クイックアクセスページが一覧を出し直す合図。</summary>

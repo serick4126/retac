@@ -16,7 +16,7 @@ public class SettingsDialogLayoutTests
     public void 全ページが枠の中に収まる()
     {
         var settings = new AppSettings();
-        var draft = SettingsDraft.From(settings, settings.ToKeyMap(), Theme.Default, new QuickAccessList());
+        var draft = SettingsDraft.From(settings, settings.ToKeyMap(), Theme.Default, new QuickAccessList(_ => null));
         using var dialog = new SettingsDialog(draft, SettingsPage.Environment, @"C:\", _ => true);
 
         // 7 ページは UserControl、サイドバーは ListBox、下端は Button なので型で見分けられる

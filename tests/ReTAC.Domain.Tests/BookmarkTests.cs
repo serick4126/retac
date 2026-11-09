@@ -23,7 +23,7 @@ public class BookmarkTests
     [Fact]
     public void クイックアクセスの重複は種類ごとに見る()
     {
-        var list = new QuickAccessList();
+        var list = new QuickAccessList(_ => null);
         Assert.True(list.Add(new QuickAccessEntry("", @"C:\a", BookmarkKind.Folder)));
         Assert.True(list.Add(new QuickAccessEntry("", @"C:\a", BookmarkKind.File)));
         Assert.False(list.Add(new QuickAccessEntry("", @"c:\A\", BookmarkKind.Folder)));
@@ -34,7 +34,7 @@ public class BookmarkTests
     [Fact]
     public void クイックアクセスから消えたツールとグループと読めないコマンドを落とす()
     {
-        var list = new QuickAccessList();
+        var list = new QuickAccessList(_ => null);
         list.Add(new QuickAccessEntry("", @"C:\a"));
         list.Add(new QuickAccessEntry("", Tool1, BookmarkKind.Command));
         list.Add(new QuickAccessEntry("", Tool2, BookmarkKind.Command));

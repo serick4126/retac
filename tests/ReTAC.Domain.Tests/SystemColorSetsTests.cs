@@ -16,7 +16,7 @@ public class SystemColorSetsTests
     private static readonly OsTheme DarkOs = OsTheme.Reference(dark: true);
 
     private static SettingsDraft DraftOf(AppSettings settings) =>
-        SettingsDraft.From(settings, settings.ToKeyMap(), settings.ToTheme(), new QuickAccessList());
+        SettingsDraft.From(settings, settings.ToKeyMap(), settings.ToTheme(), new QuickAccessList(_ => null));
 
     [Fact]
     public void 変えられるのは属性5色とマーク3色()
@@ -33,7 +33,7 @@ public class SystemColorSetsTests
         var draft = DraftOf(settings);
         draft.SystemLight = draft.SystemLight with { HiddenColor = Color.Orange };
         draft.SystemDark = draft.SystemDark with { MarkBackground = Color.Navy, MarkStarColor = Theme.DarkRecommended.MarkStarColor };
-        draft.CommitTo(settings, new QuickAccessList());
+        draft.CommitTo(settings, new QuickAccessList(_ => null));
 
         Assert.Equal(["HiddenColor"], settings.SystemLightColors.Keys);
         Assert.Equal(["MarkBackground"], settings.SystemDarkColors.Keys);
@@ -60,7 +60,7 @@ public class SystemColorSetsTests
         Assert.Equal(ColorTranslator.FromHtml("#010203").ToArgb(), dark.ReadOnlyColor.ToArgb());
 
         // 保存し直すと、無視したキーは消える
-        DraftOf(settings).CommitTo(settings, new QuickAccessList());
+        DraftOf(settings).CommitTo(settings, new QuickAccessList(_ => null));
         Assert.Equal(["ReadOnlyColor"], settings.SystemDarkColors.Keys);
     }
 
@@ -85,7 +85,7 @@ public class SystemColorSetsTests
 
         var draft = DraftOf(settings);
         draft.SystemDark = draft.SystemDark with { HiddenColor = Color.Orange, MarkBackground = Color.Navy };
-        draft.CommitTo(settings, new QuickAccessList());
+        draft.CommitTo(settings, new QuickAccessList(_ => null));
 
         Assert.Equal(before, settings.ToScreenTheme(ColorMode.System, LightOs));
         // 起動時の側の組は、その場で画面に出る
@@ -106,7 +106,7 @@ public class SystemColorSetsTests
     {
         var settings = new AppSettings();
         var custom = Theme.Default with { HiddenColor = Color.Orange, FontSize = 14f };
-        var draft = SettingsDraft.From(settings, settings.ToKeyMap(), custom, new QuickAccessList());
+        var draft = SettingsDraft.From(settings, settings.ToKeyMap(), custom, new QuickAccessList(_ => null));
         draft.SystemLight = draft.SystemLight with { HiddenColor = Color.Red };
         draft.SystemDark = draft.SystemDark with { HiddenColor = Color.Blue };
 

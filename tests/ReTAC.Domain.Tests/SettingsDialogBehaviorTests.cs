@@ -20,7 +20,7 @@ public class SettingsDialogBehaviorTests
     private static SettingsDialog CreateDialog(SettingsPage initial, Counter apply)
     {
         var settings = new AppSettings();
-        var draft = SettingsDraft.From(settings, settings.ToKeyMap(), Theme.Default, new QuickAccessList());
+        var draft = SettingsDraft.From(settings, settings.ToKeyMap(), Theme.Default, new QuickAccessList(_ => null));
         var dialog = new SettingsDialog(draft, initial, @"C:\", _ => { apply.Count++; return true; });
         dialog.ShowValidationMessage = _ => { };   // メッセージボックスはテストでは出さない
         return dialog;
@@ -68,7 +68,7 @@ public class SettingsDialogBehaviorTests
     public void 外部ツールの検証に失敗すると外部ツールのページが選ばれapplyは呼ばれない()
     {
         var settings = new AppSettings();
-        var draft = SettingsDraft.From(settings, settings.ToKeyMap(), Theme.Default, new QuickAccessList());
+        var draft = SettingsDraft.From(settings, settings.ToKeyMap(), Theme.Default, new QuickAccessList(_ => null));
         draft.ExternalTools = [new ExternalTool { Id = 1, Name = "" }];   // 名前なし: 検証に失敗する
         var apply = new Counter();
         using var dialog = new SettingsDialog(draft, SettingsPage.Environment, @"C:\", _ => { apply.Count++; return true; });

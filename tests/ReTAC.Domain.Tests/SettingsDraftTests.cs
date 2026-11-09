@@ -22,7 +22,7 @@ public class SettingsDraftTests
     {
         var settings = new AppSettings();
         var keyMap = settings.ToKeyMap();
-        var quickAccess = new QuickAccessList();
+        var quickAccess = new QuickAccessList(_ => null);
         quickAccess.Add(new QuickAccessEntry("仕事", @"D:\work"));
         quickAccess.Add(new QuickAccessEntry("エディタ", new ToolTarget(DefaultExternalTools.EditorId).Serialize(), BookmarkKind.Command));
         return (settings, keyMap, quickAccess);
