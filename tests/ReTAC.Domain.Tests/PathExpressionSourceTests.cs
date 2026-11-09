@@ -255,4 +255,31 @@ public class PathExpressionSourceTests
         Assert.NotEmpty(RealOsViolations("RealOsTransferTests.cs", "operation.Copy(a, b);\noperation.Copy(c, d);"));
         Assert.NotEmpty(RealOsViolations("TreeWatch.cs", "operation.Copy(a, b);"));
     }
+
+    // ---- 環境変数の読み方 ----
+
+    private static readonly Regex ExpandCall = new(@"\bEnvironment\.ExpandEnvironmentVariables\(");
+
+    /// <summary>OS の PATH の各フォルダと App Paths の値（利用者の式ではない）を OS の読み方で解く所。式は PathExpression だけが解く</summary>
+    private const string OsExpandAllowed = "Executables.cs";
+
+    [Fact]
+    public void 環境変数の置き換えはOSの読み方を使わない()
+    {
+        var root = Path.Combine(SchemaManifest.RepoRoot(), "src");
+        var hits = Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains(@"\obj\") && !f.Contains(@"\bin\") && Path.GetFileName(f) != OsExpandAllowed)
+            .Where(f => ExpandCall.IsMatch(StripComments(File.ReadAllText(f))))
+            .Select(Path.GetFileName).ToList();
+        Assert.Empty(hits);
+    }
+
+    [Theory]
+    [InlineData("var p = Environment.ExpandEnvironmentVariables(text);")]
+    [InlineData("Environment.ExpandEnvironmentVariables (x)")]
+    public void 環境変数の検査は違反を捕まえる(string line) => Assert.Matches(ExpandCall, line.Replace(" (", "("));
+
+    [Fact]
+    public void 環境変数の検査はコメントの例を数えない() =>
+        Assert.DoesNotMatch(ExpandCall, StripComments("var a = 1; // Environment.ExpandEnvironmentVariables(x)"));
 }

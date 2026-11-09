@@ -754,7 +754,7 @@
         "app:PathResolver"
       ],
       "rule": "パスの欄の文字と保存したパス（ブックマーク・クイックアクセスのフォルダ／ファイル・外部ツールの実行ファイル・入力ダイアログのフォルダ／ファイルの項目の初期値と前回の入力）は式である。実パスが式になるのは PathExpression の書き方（Write・Literal・Canonical・Store）を通したときだけ。PathResolver.Resolve に渡すのは式だけで、実パスを渡さない（2 回置き換わる）。設定ファイルで印の無い % が 2 つ以上ある値は旧設定として使わない。読み込みは、環境で解けない・同じ場所になるだけの項目を落とさず、書き換えもしない。",
-      "enforcedBy": "domain:PathExpression.Write・Literal・Canonical・Store・Read・Display・ResolveSaved / PathResolver.Resolve（式の置き換えは入口 1 か所）/ Environment.ExpandEnvironmentVariables を使わない（PathExpressionSourceTests）",
+      "enforcedBy": "domain:PathExpression.Write・Literal・Canonical・Store・Read・Display・ResolveSaved / PathResolver.Resolve（式の置き換えの入口。設計であり、テストでは数えない）/ PathExpressionSourceTests（Environment.ExpandEnvironmentVariables を、OS の PATH と App Paths を解く Executables.cs 以外で使わない）",
       "testedBy": "tests/ReTAC.Domain.Tests/PathExpressionTests.cs（往復・旧設定）/ tests/ReTAC.Domain.Tests/PathAndCopyTests.cs（PathResolverTests）/ tests/ReTAC.Domain.Tests/PathExpressionSourceTests.cs（源の検査）/ tests/ReTAC.Domain.Tests/RealOsTransferTests.cs（誤った宛先の保護）/ tests/ReTAC.Domain.Tests/QuickAccessTests.cs（読み込みで項目を落とさない）/ tests/ReTAC.Domain.Tests/ExternalToolTests.cs（実行ファイルの解決）",
       "note": "旧設定の値を読み込み・保存のついでに式へ変えない（INV-NO-SETTINGS-MIGRATION）。書き換えていない欄は前の値のまま残す。"
     }
