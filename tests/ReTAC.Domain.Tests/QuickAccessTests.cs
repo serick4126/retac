@@ -189,6 +189,17 @@ public class QuickAccessTests
         Assert.Equal((stored, (string?)null), Field(null, PathField.Text(folder)));
     }
 
+    [Theory]
+    [InlineData(@"D:\%TEMP%", "%TEMP%")]   // 実パス（% を含む名前）は式に書いた欄の文字から名前に戻る
+    [InlineData(@"%USERPROFILE%\Downloads", "Downloads")]   // 変数は置き換えない
+    [InlineData(@"C:\work", "work")]
+    [InlineData(@"C:\", @"C:\")]
+    public void タイトルの初期値_欄の式から復号した名前(string realOrSaved, string expected)
+    {
+        var field = realOrSaved.Contains('%') && !realOrSaved.StartsWith('%') ? PathField.Text(realOrSaved) : realOrSaved;
+        Assert.Equal(expected, QuickAccessEntryDialog.TitleFrom(field));
+    }
+
     [Fact]
     public void 重複_変数の形と絶対パスの形は同じ場所なら重複()
     {

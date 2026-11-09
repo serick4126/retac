@@ -89,9 +89,13 @@ public sealed class QuickAccessEntryDialog : Form
         : presetIsRealPath ? PathField.Text(preset.Path)
         : PathExpression.Display(preset.Path);
 
-    /// <summary>フォルダ名をタイトルの初期値にする。ドライブ直下は名前が無いのでパスをそのまま。</summary>
-    private static string TitleFrom(string path)
+    /// <summary>
+    /// フォルダ名をタイトルの初期値にする。ドライブ直下は名前が無いのでパスをそのまま。
+    /// 欄の文字は式なので、`%%` を戻すために環境変数は置き換えずに読む（R-147。BookmarkRules.DisplayName と同じ）。
+    /// </summary>
+    internal static string TitleFrom(string fieldText)
     {
+        var path = PathExpression.Expand(fieldText, static _ => null);
         var name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar));
         return name.Length > 0 ? name : path;
     }

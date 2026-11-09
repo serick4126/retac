@@ -43,7 +43,7 @@ public static class PromptAnswerRules
     /// <summary>R-132 / R-136: 前回の文字は再解析せず、前回値がない欄だけ初期値を展開する。</summary>
     public static PromptCheck Initial(PromptDefinition definition, MacroContext context, Func<string, string?> env)
     {
-                var values = new Dictionary<int, PromptValue>();
+        var values = new Dictionary<int, PromptValue>();
         foreach (var item in definition.Items)
         {
             var text = "";

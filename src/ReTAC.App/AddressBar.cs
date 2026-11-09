@@ -41,8 +41,10 @@ public sealed class AddressBar : Control
     /// <summary>クリックで編集を始めたとき、MouseUp のキャレット位置の設定より後に全選択する（R-46）。</summary>
     private bool _selectAllOnMouseUp;
 
-    /// <summary>Enter（Explorer = false）/ Ctrl+Enter（true）。判定と移動は呼び出し側（JumpInput）。</summary>
-    /// <summary>R-147: 引数の Text はいつも式。欄の文字はそのまま、パンくず・一覧の実パスは式に書いて（PathField.JumpText）出す。</summary>
+    /// <summary>
+    /// Enter（Explorer = false）/ Ctrl+Enter（true）。判定と移動は呼び出し側（JumpInput）。
+    /// R-147: 引数の Text はいつも式。欄の文字はそのまま、パンくず・一覧の実パスは式に書いて（PathField.JumpText）出す。
+    /// </summary>
     public event EventHandler<(string Text, bool Explorer)>? JumpRequested;
 
     /// <summary>Esc で取り消した。呼び出し側がファイルリストへフォーカスを返す。</summary>
