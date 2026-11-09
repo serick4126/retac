@@ -42,6 +42,7 @@ public sealed class AddressBar : Control
     private bool _selectAllOnMouseUp;
 
     /// <summary>Enter（Explorer = false）/ Ctrl+Enter（true）。判定と移動は呼び出し側（JumpInput）。</summary>
+    /// <summary>R-147: 引数の Text はいつも式。欄の文字はそのまま、パンくず・一覧の実パスは式に書いて（PathField.JumpText）出す。</summary>
     public event EventHandler<(string Text, bool Explorer)>? JumpRequested;
 
     /// <summary>Esc で取り消した。呼び出し側がファイルリストへフォーカスを返す。</summary>
@@ -184,8 +185,10 @@ public sealed class AddressBar : Control
         _holding = true;
         try
         {
-            if (FolderBrowser.Select(FindForm()!, _input.Text, _folder) is not { } selected) return;
-            _input.Text = selected;   // R-52-3
+            // R-52-2: 参照の部品は実パスを受け取るので、欄の式を解決してから渡す
+            var start = PathField.BrowseStartFromField(_input.Text, _folder, Environment.GetEnvironmentVariable);
+            if (FolderBrowser.Select(FindForm()!, start, _folder) is not { } selected) return;
+            _input.Text = PathField.Text(selected);   // R-52-3 / R-147
             _input.SelectAll();
         }
         finally
@@ -214,8 +217,8 @@ public sealed class AddressBar : Control
     /// <summary>末尾を見せる。フォーカスが無くても末尾へスクロールし、外れてもそのまま（試作で確認）。</summary>
     private void ShowPath()
     {
-        _input.Text = _folder;
-        _input.Select(_folder.Length, 0);
+        _input.Text = PathField.Text(_folder);   // R-147: 欄は式。% を含むフォルダでも式に書けば元に戻る
+        _input.Select(_input.TextLength, 0);
         _input.ScrollToCaret();
     }
 
@@ -411,7 +414,7 @@ public sealed class AddressBar : Control
     private ToolStripMenuItem JumpItem(string text, string path)
     {
         var item = new ToolStripMenuItem(text.Replace("&", "&&")) { ToolTipText = path };
-        item.Click += (_, _) => JumpRequested?.Invoke(this, (path, false));
+        item.Click += (_, _) => JumpRequested?.Invoke(this, (PathField.JumpText(path), false));
         return item;
     }
 
@@ -608,7 +611,7 @@ public sealed class AddressBar : Control
                 // R-40-2: 最後の段は今のフォルダなので何もしない。開き直すとカーソルが先頭に戻りマークも消える（実機指摘）。
                 // フォルダを移らない限りカーソルとマークを保つのが最重要の原則
                 case PartKind.Segment when part.Index < _segments.Count - 1:
-                    JumpRequested?.Invoke(this, (_segments[part.Index].Path, false));
+                    JumpRequested?.Invoke(this, (PathField.JumpText(_segments[part.Index].Path), false));
                     break;
                 case PartKind.Arrow: ShowChildren(part.Index, part.Bounds); break;
                 case PartKind.Ellipsis: ShowCollapsed(part.Index, part.Bounds); break;

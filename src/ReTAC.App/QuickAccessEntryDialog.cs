@@ -16,7 +16,8 @@ public sealed class QuickAccessEntryDialog : Form
 
     /// <param name="preset">入力欄の初期値。null なら空とカレントフォルダ</param>
     /// <param name="isEdit">既存項目の変更なら true。見出しだけが変わる</param>
-    public QuickAccessEntryDialog(QuickAccessEntry? preset, string currentFolder, bool isEdit = false)
+    /// <param name="presetIsRealPath">preset のパスが実パスなら true（「現在のフォルダを追加」）。false なら保存した値で、欄には印を外して出す。文字からは見分けない</param>
+    public QuickAccessEntryDialog(QuickAccessEntry? preset, string currentFolder, bool isEdit = false, bool presetIsRealPath = false)
     {
         ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
         _currentFolder = currentFolder;
@@ -27,7 +28,7 @@ public sealed class QuickAccessEntryDialog : Form
         MinimizeBox = MaximizeBox = false;
         ClientSize = new Size(440, 150);
 
-        _path.Text = preset?.Path ?? currentFolder;
+        _path.Text = InitialPathText(preset, currentFolder, presetIsRealPath);
         // 卓駆と同じく、タイトルの初期値はフォルダ名。設定ダイアログの「追加」は preset を
         // 持たないので、埋めるのは呼び出し側ではなくここ（どの経路から来ても同じになる）
         _title.Text = preset?.Title is { Length: > 0 } title ? title : TitleFrom(_path.Text);
@@ -74,6 +75,15 @@ public sealed class QuickAccessEntryDialog : Form
     // R-127: この欄はパスの解決の処理を通らないので、囲みの二重引用符をここで外す
     public QuickAccessEntry Entry => new(InputText.TrimEdge(_title.Text), InputText.Unquote(_path.Text));
 
+    /// <summary>
+    /// R-147: 欄の初期値。保存した値は印を外すだけ（式のまま）、実パス（今のフォルダを含む）は式に書く。
+    /// 保存した値に書く形をもう一度かけると `%` が増えるので、取り違えない。
+    /// </summary>
+    internal static string InitialPathText(QuickAccessEntry? preset, string currentFolder, bool presetIsRealPath) =>
+        preset is null ? PathField.Text(currentFolder)
+        : presetIsRealPath ? PathField.Text(preset.Path)
+        : PathExpression.Display(preset.Path);
+
     /// <summary>フォルダ名をタイトルの初期値にする。ドライブ直下は名前が無いのでパスをそのまま。</summary>
     private static string TitleFrom(string path)
     {
@@ -83,9 +93,10 @@ public sealed class QuickAccessEntryDialog : Form
 
     private void Browse()
     {
-        if (FolderBrowser.Select(this, InputText.Unquote(_path.Text), _currentFolder) is { } selected)
+        var start = PathField.BrowseStartFromField(_path.Text, _currentFolder, Environment.GetEnvironmentVariable);   // R-52-2
+        if (FolderBrowser.Select(this, start, _currentFolder) is { } selected)
         {
-            _path.Text = selected;   // R-52-3: 選んだ結果は入力欄へ流し込む
+            _path.Text = PathField.Text(selected);   // R-52-3 / R-147: 選んだ結果は式に書いて入力欄へ流し込む
             _path.SelectAll();
         }
     }

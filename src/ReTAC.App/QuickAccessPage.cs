@@ -205,7 +205,9 @@ public sealed class QuickAccessPage : UserControl
         var index = Selected;
         var entry = List.Items[index];
         if (entry.Kind != BookmarkKind.Folder) return;   // R-92: フォルダの項目だけ
-        if (FolderBrowser.Select(this, entry.Path, _currentFolder) is not { } selected) return;
+        // R-52-2: 保存した値から実パスを作る。使えない値・旧設定の値ならカレントフォルダで開く
+        var start = PathField.BrowseStartFromSaved(entry.Path, Environment.GetEnvironmentVariable);
+        if (FolderBrowser.Select(this, start, _currentFolder) is not { } selected) return;
         if (!List.Replace(index, entry with { Path = selected }))
         {
             MessageBox.Show(this, "このフォルダは既に別の項目で登録済みです。", "ReTAC",

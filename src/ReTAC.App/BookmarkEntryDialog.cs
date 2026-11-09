@@ -94,7 +94,7 @@ public sealed class BookmarkEntryDialog : Form
             }
             else
             {
-                _path.Text = preset.Target;
+                _path.Text = PathExpression.Display(preset.Target);   // R-147: 保存した値は印を外して出す
                 _path.SetBounds(110, 47, 310, 23);
                 var hint = new Label { Text = "※ Shift + Enter : 参照", AutoSize = true, Location = new Point(110, 76) };   // R-47 / N-07
                 Controls.AddRange([_path, hint]);
@@ -149,15 +149,16 @@ public sealed class BookmarkEntryDialog : Form
                 _command.Text = CommandText();
                 return;
             case BookmarkKind.Folder:
-                // R-127: この欄はパスの解決の処理を通らないので、囲みの二重引用符をここで外す
-                if (FolderBrowser.Select(this, InputText.Unquote(_path.Text), _currentFolder) is not { } folder) return;
-                _path.Text = folder;   // R-52-3: 選んだ結果は入力欄へ流し込む
+                // R-52-2: 参照の部品は実パスを受け取るので、欄の式を解決してから渡す（引用符も外れる。R-127）
+                var start = PathField.BrowseStartFromField(_path.Text, _currentFolder, Environment.GetEnvironmentVariable);
+                if (FolderBrowser.Select(this, start, _currentFolder) is not { } folder) return;
+                _path.Text = PathField.Text(folder);   // R-52-3 / R-147: 選んだ結果は式に書いて入力欄へ流し込む
                 break;
             case BookmarkKind.File:
                 using (var open = new OpenFileDialog { InitialDirectory = _currentFolder, CheckFileExists = true })
                 {
                     if (open.ShowDialog(this) != DialogResult.OK) return;
-                    _path.Text = open.FileName;
+                    _path.Text = PathField.Text(open.FileName);   // R-147
                 }
                 break;
             default:

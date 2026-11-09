@@ -7718,7 +7718,7 @@
       },
       {
         "file": "src/ReTAC.App/ConcatDialog.cs",
-        "line": 65
+        "line": 69
       },
       {
         "file": "src/ReTAC.App/ConfirmDialog.cs",
@@ -7762,7 +7762,7 @@
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 70
+        "line": 71
       },
       {
         "file": "src/ReTAC.App/RunDialog.cs",
@@ -7886,7 +7886,7 @@
       },
       {
         "file": "src/ReTAC.App/ConcatDialog.cs",
-        "line": 63
+        "line": 67
       },
       {
         "file": "src/ReTAC.App/ConfirmDialog.cs",
@@ -7918,7 +7918,7 @@
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 68
+        "line": 69
       },
       {
         "file": "src/ReTAC.App/RunDialog.cs",
@@ -7950,7 +7950,7 @@
     "D-08": [
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 167
+        "line": 168
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -8488,7 +8488,7 @@
     "N-05": [
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 68
+        "line": 69
       },
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
@@ -8592,7 +8592,7 @@
     "N-07": [
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 170
+        "line": 171
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
@@ -8600,7 +8600,7 @@
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 169
+        "line": 170
       },
       {
         "file": "src/ReTAC.App/FolderBrowser.cs",
@@ -8620,11 +8620,11 @@
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 41
+        "line": 42
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 95
+        "line": 106
       },
       {
         "file": "src/ReTAC.App/StatusBar.cs",
@@ -9650,7 +9650,7 @@
     "R-108-3": [
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 628
+        "line": 631
       },
       {
         "file": "src/ReTAC.App/ColorFontPage.cs",
@@ -9680,7 +9680,7 @@
     "R-108-4": [
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 628
+        "line": 631
       },
       {
         "file": "src/ReTAC.App/DriveBar.cs",
@@ -10296,7 +10296,7 @@
     "R-111-2": [
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 455
+        "line": 458
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
@@ -11734,7 +11734,7 @@
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 74
+        "line": 75
       },
       {
         "file": "src/ReTAC.Domain/Navigation/InputText.cs",
@@ -12398,15 +12398,15 @@
     "R-141": [
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 56
+        "line": 57
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 432
+        "line": 435
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 588
+        "line": 591
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -12642,7 +12642,7 @@
       },
       {
         "file": "src/ReTAC.App/ConcatDialog.cs",
-        "line": 34
+        "line": 38
       },
       {
         "file": "src/ReTAC.App/ImeBlock.cs",
@@ -12678,7 +12678,7 @@
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 21
+        "line": 22
       },
       {
         "file": "src/ReTAC.App/RunDialog.cs",
@@ -12816,11 +12816,11 @@
     "R-146-1": [
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 65
+        "line": 66
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 507
+        "line": 510
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
@@ -12980,6 +12980,70 @@
       }
     ],
     "R-147": [
+      {
+        "file": "src/ReTAC.App/AddressBar.cs",
+        "line": 45
+      },
+      {
+        "file": "src/ReTAC.App/AddressBar.cs",
+        "line": 191
+      },
+      {
+        "file": "src/ReTAC.App/AddressBar.cs",
+        "line": 220
+      },
+      {
+        "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
+        "line": 97
+      },
+      {
+        "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
+        "line": 155
+      },
+      {
+        "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
+        "line": 161
+      },
+      {
+        "file": "src/ReTAC.App/ConcatDialog.cs",
+        "line": 32
+      },
+      {
+        "file": "src/ReTAC.App/ConcatDialog.cs",
+        "line": 56
+      },
+      {
+        "file": "src/ReTAC.App/PathField.cs",
+        "line": 6
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 55
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 149
+      },
+      {
+        "file": "src/ReTAC.App/PathRecall.cs",
+        "line": 51
+      },
+      {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 312
+      },
+      {
+        "file": "src/ReTAC.App/PromptDialog.cs",
+        "line": 318
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 79
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 99
+      },
       {
         "file": "src/ReTAC.Domain/Navigation/PathExpression.cs",
         "line": 16
@@ -13398,7 +13462,7 @@
       },
       {
         "file": "src/ReTAC.App/ConcatDialog.cs",
-        "line": 52
+        "line": 56
       },
       {
         "file": "src/ReTAC.App/MainForm.cs",
@@ -13538,7 +13602,7 @@
     "R-40-2": [
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 608
+        "line": 611
       },
       {
         "file": "src/ReTAC.App/FileListView.cs",
@@ -13772,7 +13836,7 @@
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 128
+        "line": 129
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
@@ -13792,7 +13856,7 @@
       },
       {
         "file": "src/ReTAC.App/PathRecall.cs",
-        "line": 57
+        "line": 81
       },
       {
         "file": "src/ReTAC.App/PromptDialog.cs",
@@ -13800,7 +13864,7 @@
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 55
+        "line": 56
       },
       {
         "file": "src/ReTAC.App/RunDialog.cs",
@@ -13868,7 +13932,7 @@
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 41
+        "line": 42
       }
     ],
     "R-48": [
@@ -13910,7 +13974,7 @@
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 61
+        "line": 62
       },
       {
         "file": "src/ReTAC.App/TextInputDialog.cs",
@@ -14005,8 +14069,36 @@
     ],
     "R-52-2": [
       {
+        "file": "src/ReTAC.App/AddressBar.cs",
+        "line": 188
+      },
+      {
+        "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
+        "line": 152
+      },
+      {
         "file": "src/ReTAC.App/FolderBrowser.cs",
         "line": 11
+      },
+      {
+        "file": "src/ReTAC.App/PathField.cs",
+        "line": 21
+      },
+      {
+        "file": "src/ReTAC.App/PathField.cs",
+        "line": 27
+      },
+      {
+        "file": "src/ReTAC.App/PathInputDialog.cs",
+        "line": 147
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
+        "line": 96
+      },
+      {
+        "file": "src/ReTAC.App/QuickAccessPage.cs",
+        "line": 208
       },
       {
         "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
@@ -14016,19 +14108,19 @@
     "R-52-3": [
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 188
+        "line": 191
       },
       {
         "file": "src/ReTAC.App/BookmarkEntryDialog.cs",
-        "line": 154
+        "line": 155
       },
       {
         "file": "src/ReTAC.App/PathInputDialog.cs",
-        "line": 148
+        "line": 149
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 88
+        "line": 99
       },
       {
         "file": "src/ReTAC.Shell/ShellFolderBrowser.cs",
@@ -14059,6 +14151,10 @@
       {
         "file": "src/ReTAC.App/PathRecall.cs",
         "line": 22
+      },
+      {
+        "file": "src/ReTAC.App/PathRecall.cs",
+        "line": 38
       }
     ],
     "R-54": [
@@ -14446,7 +14542,7 @@
       },
       {
         "file": "src/ReTAC.App/QuickAccessEntryDialog.cs",
-        "line": 71
+        "line": 72
       },
       {
         "file": "src/ReTAC.App/QuickAccessPage.cs",
@@ -15092,7 +15188,7 @@
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 686
+        "line": 689
       },
       {
         "file": "src/ReTAC.App/IncrementalSearchBar.cs",
@@ -15130,11 +15226,11 @@
     "R-88": [
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 345
+        "line": 348
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 393
+        "line": 396
       },
       {
         "file": "src/ReTAC.App/BookmarkItems.cs",
@@ -15408,7 +15504,7 @@
     "R-91": [
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 472
+        "line": 475
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
@@ -15508,7 +15604,7 @@
       },
       {
         "file": "src/ReTAC.App/PathRecall.cs",
-        "line": 43
+        "line": 61
       },
       {
         "file": "src/ReTAC.App/QuickAccessPage.cs",
@@ -15554,7 +15650,7 @@
     "R-93": [
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 60
+        "line": 61
       },
       {
         "file": "src/ReTAC.App/BookmarkDropZone.cs",
@@ -15648,35 +15744,35 @@
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 53
+        "line": 54
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 60
+        "line": 61
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 81
+        "line": 82
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 86
+        "line": 87
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 226
+        "line": 229
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 255
+        "line": 258
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 422
+        "line": 425
       },
       {
         "file": "src/ReTAC.App/AddressBar.cs",
-        "line": 441
+        "line": 444
       },
       {
         "file": "src/ReTAC.App/FolderExpansion.cs",

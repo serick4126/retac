@@ -52,7 +52,7 @@ public sealed class PathInputDialog : Form
         }
 
         _input.SetBounds(12, y, 300, 23);
-        _input.Text = preset;
+        _input.Text = PathField.Text(preset);   // R-147: preset は実パス（呼び出し側が渡すのは実パスだけ）
 
         // マウスだけでも履歴とクイックアクセスへ行けるようにする（実機指摘）。
         // 一覧の中で区切り線で分ける。キーボードの ↑ ↓ は従来どおり別々に開く
@@ -144,8 +144,9 @@ public sealed class PathInputDialog : Form
 
     private void Browse()
     {
-        if (FolderBrowser.Select(this, Path, _currentFolder) is not { } selected) return;
-        _input.Text = selected;   // R-52-3
+        var start = PathField.BrowseStartFromField(Path, _currentFolder, Environment.GetEnvironmentVariable);   // R-52-2
+        if (FolderBrowser.Select(this, start, _currentFolder) is not { } selected) return;
+        _input.Text = PathField.Text(selected);   // R-52-3 / R-147
         _input.SelectAll();
     }
 }

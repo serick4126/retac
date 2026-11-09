@@ -287,7 +287,7 @@ public sealed class PromptDialog : Form
     /// </summary>
     /// <returns>解決したパス。空欄・解決できないときは null（呼び出し側はカレントフォルダで開く）</returns>
     internal static string? BrowseStart(string text, string currentFolder) =>
-        InputText.Unquote(text).Length == 0 ? null : PathResolver.Resolve(currentFolder, text, Environment.GetEnvironmentVariable);
+        PathField.BrowseStartFromField(text, currentFolder, Environment.GetEnvironmentVariable);
 
     /// <summary>
     /// ファイルの参照の最初のフォルダとファイル名（R-131）。存在しないフォルダを渡すとカレントフォルダで開かないので、
@@ -309,13 +309,13 @@ public sealed class PromptDialog : Form
         if (_folderBoxes.Contains(box))
         {
             if (FolderBrowser.Select(this, resolved, _currentFolder) is not { } selected) return;
-            box.Text = selected;
+            box.Text = PathField.Text(selected);   // R-147
         }
         else
         {
             var (directory, fileName) = FileBrowseStart(box.Text, _currentFolder, Directory.Exists, File.Exists);
             if (FileBrowser.Select(this, directory, fileName) is not { } selected) return;
-            box.Text = selected;
+            box.Text = PathField.Text(selected);   // R-147
         }
         box.SelectAll();
     }

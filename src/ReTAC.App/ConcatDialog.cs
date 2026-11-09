@@ -29,6 +29,10 @@ public sealed class ConcatDialog : Form
         Location = new Point(14, 294),
     };
 
+    /// <summary>R-147: 連結先の初期値。実パスなので式に書く（Path.Combine の結果をそのまま入れない）。</summary>
+    internal static string InitialDestination(string currentFolder) =>
+        PathField.Text(System.IO.Path.Combine(currentFolder, "concat.txt"));
+
     public ConcatDialog(IReadOnlyList<Entry> sources, FolderHistory history, string currentFolder)
     {
         ImeBlock.OwnContext(this);   // R-143-1: 固まった変換をこのダイアログの中で終わらせる（理由は ImeBlock）
@@ -49,8 +53,8 @@ public sealed class ConcatDialog : Form
         up.Click += (_, _) => MoveSelected(-1);
         down.Click += (_, _) => MoveSelected(1);
 
-        _destination.Items.AddRange([.. history.Recent]);   // R-35: 入力欄は履歴を持つ
-        _destination.Text = System.IO.Path.Combine(currentFolder, "concat.txt");
+        _destination.Items.AddRange([.. history.Recent.Select(PathField.Text)]);   // R-35 / R-147: 履歴は実パスなので、式に書いて入れる
+        _destination.Text = InitialDestination(currentFolder);
 
         var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Bounds = new Rectangle(264, 332, 90, 28) };
         var cancel = new Button { Text = "キャンセル", DialogResult = DialogResult.Cancel, Bounds = new Rectangle(364, 332, 90, 28) };

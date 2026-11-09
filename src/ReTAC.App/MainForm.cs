@@ -3185,7 +3185,7 @@ public sealed class MainForm : Form, IBookmarkHost
             ? folder.FullPath
             : _currentFolder;
 
-        using var dialog = new QuickAccessEntryDialog(new QuickAccessEntry("", target), _currentFolder);
+        using var dialog = new QuickAccessEntryDialog(new QuickAccessEntry("", target), _currentFolder, presetIsRealPath: true);
         if (dialog.ShowDialog(this) != DialogResult.OK) return true;
         if (!_quickAccess.Add(dialog.Entry))
         {
