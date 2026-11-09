@@ -113,6 +113,20 @@ public class ExternalToolTests
     }
 
     [Fact]
+    public void 引数の環境変数は置き換えずにそのまま渡す()
+    {
+        // R-147: 置き換えるのは実行ファイルのパスだけ。引数は ${…} のマクロだけを置き換える（cmd に渡す % を壊さない）
+        var tool = new ExternalTool { Id = 1, Name = "t", Path = "notepad.exe", Arguments = "%P32_ARG% x%%y" };
+        var request = Assert.Single(LaunchPlanner.Plan(tool, ArgumentTemplate.Parse(tool.Arguments), [], null, @"C:\w", null));
+        Assert.Equal(["%P32_ARG%", "x%%y"], request.Arguments);
+        var info = ToolProcess.StartInfo(request, Env(("P32_ARG", "expanded")));
+        var passed = string.Join(" ", info!.ArgumentList) + " " + info.Arguments;
+        Assert.Contains("%P32_ARG%", passed);
+        Assert.Contains("x%%y", passed);
+        Assert.DoesNotContain("expanded", passed);
+    }
+
+    [Fact]
     public void コンソール保持の起動も置き換えた探し方の結果を渡す()
     {
         var info = ToolProcess.StartInfo(Request(PathExpression.Store("%P32_EDITOR%"), keepOpen: true), Env(("P32_EDITOR", "cmd.exe")));
